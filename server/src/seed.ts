@@ -1,6 +1,5 @@
 import type { Db } from "./db";
 import { games } from "./db/schema";
-import { listGames } from "./repository";
 import { FIXTURE_GAME } from "./fixture";
 
 /**
@@ -9,6 +8,7 @@ import { FIXTURE_GAME } from "./fixture";
  * (US-2) exists. Idempotent: does nothing once any Game is present.
  */
 export function seedFixtureIfEmpty(db: Db): void {
-  if (listGames(db).length > 0) return;
+  const existing = db.select().from(games).limit(1).all();
+  if (existing.length > 0) return;
   db.insert(games).values(FIXTURE_GAME).run();
 }

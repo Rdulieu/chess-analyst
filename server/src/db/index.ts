@@ -1,37 +1,26 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema";
 
 export type Db = BetterSQLite3Database<typeof schema>;
 
-/**
- * Idempotent schema creation. Runs on every launch so the database is
- * usable the first time the app starts, with no manual migration step
- * (ADR-0003, "schema created automatically on first launch").
- *
- * The DDL is kept in lock-step with `schema.ts` by hand. That is a
- * deliberate trade-off: Drizzle was chosen partly for having no codegen
- * step (ADR-0003), so we prefer this small, readable `CREATE TABLE IF NOT
- * EXISTS` over generating and shipping migration files for a single table.
- */
-export function createSchema(sqlite: Database.Database): void {
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS games (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      pgn TEXT NOT NULL,
-      opponent TEXT NOT NULL,
-      result TEXT NOT NULL,
-      date TEXT NOT NULL,
-      time_control_category TEXT NOT NULL
-    );
-  `);
-}
+// Migrations generated from schema.ts via `npm run db:generate -w server`
+// (drizzle-kit) and committed under ./migrations.
+const migrationsFolder = resolve(dirname(fileURLToPath(import.meta.url)), "migrations");
 
-/** Opens (creating if needed) the SQLite database and applies the schema. */
+/**
+ * Opens (creating if needed) the SQLite database and brings its schema up to
+ * date by running the committed Drizzle migrations. Runs on every launch, so
+ * the database is usable the first time the app starts with no manual step
+ * (ADR-0003, "schema created automatically on first launch").
+ */
 export function openDb(filename: string): { db: Db; sqlite: Database.Database } {
   const sqlite = new Database(filename);
   sqlite.pragma("journal_mode = WAL");
-  createSchema(sqlite);
   const db = drizzle(sqlite, { schema });
+  migrate(db, { migrationsFolder });
   return { db, sqlite };
 }

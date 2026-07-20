@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Chessboard } from "react-chessboard";
-import { fetchGame, fetchGames } from "./api";
-import { startingPosition } from "./chess/history";
+import { fetchGames } from "./api";
+import { Board } from "./components/Board";
 import type { Game } from "./types";
 
 export function App() {
@@ -13,12 +12,12 @@ export function App() {
     (async () => {
       try {
         const games = await fetchGames();
+        if (cancelled) return;
         if (games.length === 0) {
-          if (!cancelled) setError("No game available yet.");
+          setError("No game available yet.");
           return;
         }
-        const full = await fetchGame(games[0].id);
-        if (!cancelled) setGame(full);
+        setGame(games[0]);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load the game.");
       }
@@ -31,8 +30,6 @@ export function App() {
   if (error) return <p role="alert">{error}</p>;
   if (!game) return <p>Loading…</p>;
 
-  const position = startingPosition(game.pgn);
-
   return (
     <main>
       <h1>chess-analyst</h1>
@@ -42,7 +39,7 @@ export function App() {
         </p>
       </section>
       <div style={{ maxWidth: 480 }}>
-        <Chessboard options={{ id: "game-board", position, allowDragging: false }} />
+        <Board pgn={game.pgn} />
       </div>
     </main>
   );
