@@ -1,6 +1,6 @@
 # 03 — Import summary window
 
-Status: ready-for-agent
+Status: done
 Business ref: BACKLOG.md — US-2
 
 **Integration branch.** Implemented on `integration/US-2-import-chess-com`: branch a `feature/*`
@@ -41,3 +41,7 @@ Verify: UI first (the summary window's figures); the Game list confirms no dupli
 ## Blocked by
 
 - Issue 02 (import UI).
+
+## Comments
+
+- Implemented via `/tdd` on `feature/03-import-summary`, auto-merged into `integration/US-2-import-chess-com` on a green local check (build + server 25 / client 26 tests + lint + UI-first FP 5/5 in real Chrome). The import result is now a full summary (totalFetched, imported vs alreadyPresent, per-category counts, W/D/L over in-scope games); an `ImportSummary` component renders it after a successful import. FP verified the summary figures and that re-importing a month reports the Games as already present with no duplicates.
