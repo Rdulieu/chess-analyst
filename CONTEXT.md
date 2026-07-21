@@ -6,9 +6,19 @@ statistics, through an interactive board to navigate the history.
 
 ## Language
 
+**Player**:
+The single owner of the imported history — the person using this solo tool — identified by their
+chess.com username, entered once and retained across sessions. Everything is relative to the
+Player: a Game's `opponent` is whoever the Player faced, its result is scored from the Player's
+side, and Mistakes, Weak openings, and Danger positions are only ever computed for the Player.
+_Avoid_: User, Me, Account, Owner
+
 **Game**:
-A complete chess.com match imported for the player, with its PGN, opponent, result, date, and
-**time control category** (bullet, blitz, rapid, or daily — chess.com's own classification).
+A complete chess.com match imported for the Player, with its PGN, the opponent, the **side the
+Player played** (White or Black), the **result from the Player's side** (win, loss, or draw),
+the date, and the **time control category** (bullet, blitz, rapid, or daily — chess.com's own
+classification). Identified across imports by its chess.com game URL, which is unique and
+immutable.
 _Avoid_: Match, Party
 
 **Opening**:
@@ -50,7 +60,11 @@ shown alongside the proportion so the player can judge its significance themselv
 _Avoid_: Dangerous position, Trap
 
 **Import**:
-The act of fetching a player's game history from the chess.com public API by username.
-**Incremental**: only Games not already retained are fetched and analyzed; once a Game has been
+The act of fetching the Player's Games from the chess.com public API by username. Triggered
+**manually** by the Player and **scoped** to a chosen **single month** (month/year, matching one
+chess.com monthly archive) and a chosen set of **time control categories** (any subset of bullet,
+blitz, rapid, daily) — never automatic, never implicitly all-history.
+**Incremental**: within the chosen scope, only Games not already retained are fetched and
+analyzed; re-importing an overlapping scope adds nothing already present. Once a Game has been
 analyzed, its Moves' Evaluations are retained and never recomputed.
 _Avoid_: Sync, Fetch
