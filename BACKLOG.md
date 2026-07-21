@@ -20,7 +20,7 @@
   > - `05-remember-username` ✅ — mémorisation du username (table `settings`)
   > - `code-decomposition` ✅ — découpage en modules par feature + error boundary (`.scratch/code-decomposition/`)
   >
-  > Suite HP : `docs/test-scenarios/HP-01-import-and-explore.md`. Finding a11y non-bloquant ouvert (adjacence des nombres dans le texte du résumé). Reste `develop → main` (pré-prod, non décidé).
+  > Suite HP : `docs/test-scenarios/HP-01-import-and-explore.md`. Finding a11y **corrigé** (bilan V/N/D annoncé en toutes lettres pour les lecteurs d'écran, mergé dans `develop`). Reste `develop → main` (pré-prod, non décidé).
 
 ## Done
 
