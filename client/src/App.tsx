@@ -1,46 +1,42 @@
 import { useEffect, useState } from "react";
 import { fetchGames } from "./api";
-import { Board } from "./components/Board";
+import { ImportForm } from "./features/import/ImportForm";
+import { GameList } from "./features/games/GameList";
+import { GameViewer } from "./features/games/GameViewer";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { Game } from "./types";
 
 export function App() {
-  const [game, setGame] = useState<Game | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [games, setGames] = useState<Game[] | null>(null);
+  const [selected, setSelected] = useState<Game | null>(null);
+
+  const refresh = async () => setGames(await fetchGames());
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const games = await fetchGames();
-        if (cancelled) return;
-        if (games.length === 0) {
-          setError("No game available yet.");
-          return;
-        }
-        setGame(games[0]);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load the game.");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    fetchGames()
+      .then(setGames)
+      .catch(() => setGames([]));
   }, []);
-
-  if (error) return <p role="alert">{error}</p>;
-  if (!game) return <p>Loading…</p>;
 
   return (
     <main>
       <h1>chess-analyst</h1>
-      <section aria-label="game details">
-        <p>
-          vs {game.opponent} · {game.result} · {game.date} · {game.timeControlCategory}
-        </p>
-      </section>
-      <div style={{ maxWidth: 480 }}>
-        <Board pgn={game.pgn} />
-      </div>
+
+      <ImportForm onImported={refresh} />
+
+      {games && games.length === 0 && (
+        <p>No games yet — import your chess.com history to get started.</p>
+      )}
+
+      {games && games.length > 0 && (
+        <GameList games={games} selected={selected} onSelect={setSelected} />
+      )}
+
+      {selected && (
+        <ErrorBoundary key={selected.id}>
+          <GameViewer game={selected} />
+        </ErrorBoundary>
+      )}
     </main>
   );
 }

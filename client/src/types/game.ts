@@ -1,12 +1,14 @@
 /** chess.com's own time control classification (see CONTEXT.md → Game). */
 export type TimeControlCategory = "bullet" | "blitz" | "rapid" | "daily";
 
-/** The `Game` glossary term as delivered by the local API. */
+/** The `Game` glossary term as delivered by the local API (Player-relative). */
 export interface Game {
   id: number;
+  gameUrl: string;
   pgn: string;
   opponent: string;
-  result: string;
+  playerColor: "white" | "black";
+  result: "win" | "loss" | "draw";
   date: string;
   timeControlCategory: TimeControlCategory;
 }

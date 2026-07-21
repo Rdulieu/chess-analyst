@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0343cc53-8093-4134-a5c4-991d1fa84005",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "ebf8cbed-5a40-44d6-94f6-0af769401268",
+  "prevId": "0343cc53-8093-4134-a5c4-991d1fa84005",
   "tables": {
     "games": {
       "name": "games",
@@ -73,6 +73,30 @@
           "isUnique": true
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "settings": {
+      "name": "settings",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

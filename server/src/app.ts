@@ -1,30 +1,22 @@
 import express, { type Express } from "express";
 import type { Db } from "./db";
-import { listGames, getGame } from "./repository";
+import type { ChessComClient } from "./chesscom";
+import { createGamesRouter } from "./routes/games";
+import { createImportRouter } from "./routes/import";
+import { createSettingsRouter } from "./routes/settings";
 
 /**
- * Builds the local API server over an already-open database. The frontend
- * fetches Games through these endpoints rather than hardcoding them, so US-2
- * can add real Games without the frontend's data-fetching code changing.
- *
- * There are deliberately no chess.com calls here — that relay is US-2's job.
+ * Builds the local API server over an already-open database and a chess.com
+ * client (ADR-0002: this relay is the only thing that talks to chess.com). The
+ * client is injected so tests and the agentic Feature Path can drive imports
+ * against a fixture archive instead of the live API. Routes live per feature
+ * under ./routes; this file just wires them.
  */
-export function createApp(db: Db): Express {
+export function createApp(db: Db, chessCom: ChessComClient): Express {
   const app = express();
-
-  app.get("/api/games", (_req, res) => {
-    res.json(listGames(db));
-  });
-
-  app.get("/api/games/:id", (req, res) => {
-    const id = Number(req.params.id);
-    const game = Number.isInteger(id) ? getGame(db, id) : undefined;
-    if (!game) {
-      res.status(404).json({ error: "Game not found" });
-      return;
-    }
-    res.json(game);
-  });
-
+  app.use(express.json());
+  app.use("/api/games", createGamesRouter(db));
+  app.use("/api/import", createImportRouter(db, chessCom));
+  app.use("/api/settings", createSettingsRouter(db));
   return app;
 }

@@ -26,6 +26,19 @@ describe("parseGame", () => {
     );
     expect(game.plies.at(-1)?.san).toMatch(/^Rd8/);
   });
+
+  it("parses a real chess.com PGN (clock comments and a trailing newline)", () => {
+    // chess.com serves the movetext with {[%clk …]} comments and ends the PGN
+    // with a trailing newline — cm-chess's parser rejects that trailing
+    // whitespace, so parseGame must tolerate it.
+    const pgn =
+      '[Event "Live Chess"]\n[Site "Chess.com"]\n[Result "1-0"]\n[TimeControl "180"]\n\n' +
+      "1. e4 {[%clk 0:03:00]} 1... e5 {[%clk 0:02:58]} 2. Nf3 {[%clk 0:02:55]} 1-0\n";
+
+    const game = parseGame(pgn);
+
+    expect(game.plies.map((p) => p.san)).toEqual(["e4", "e5", "Nf3"]);
+  });
 });
 
 /** Reads the piece char on a square from a FEN's placement field, or null. */

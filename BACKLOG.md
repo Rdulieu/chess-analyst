@@ -2,13 +2,23 @@
 
 ## To do
 
-- **US-2**: Importer mes parties depuis chess.com (relais local + persistance incrémentale), pour remplacer la partie fixture par mon véritable historique.
 - **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
 - **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
 
 ## Doing
 
 ## In review
+
+- **US-2**: Importer mes parties depuis chess.com (relais local + persistance incrémentale), pour remplacer la partie fixture par mon véritable historique.
+  > Grillée, découpée, implémentée sur `integration/US-2-import-chess-com`. PRD : `.scratch/import-chess-com/PRD.md`. **5 slices livrés + 1 US technique de découpage**, chacun validé par sa Feature Path (agentic, Chrome réel) et auto-mergé sur check local vert :
+  > - `01-import-backend` ✅ — schéma (game_url/player_color/result), client chess.com injectable, service, `POST /api/import`
+  > - `02-import-ui` ✅ — formulaire (mois/catégories) + parcours des parties sur le plateau
+  > - `03-import-summary` ✅ — fenêtre de résumé (par cadence, nouvelles vs présentes, bilan V/N/D)
+  > - `04-import-progress` ✅ — indicateur de progression (indéterminé ; SSE différé, cf. issue)
+  > - `05-remember-username` ✅ — mémorisation du username (table `settings`)
+  > - `code-decomposition` ✅ — découpage en modules par feature + error boundary (`.scratch/code-decomposition/`)
+  >
+  > **En attente de la décision humaine `integration → develop`** : avant le PR, jouer le **HP « vrai compte chess.com »** (une fois, `/agentic-tests HP`).
 
 ## Done
 
