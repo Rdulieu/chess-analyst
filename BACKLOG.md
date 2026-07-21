@@ -9,8 +9,10 @@
 
 ## In review
 
+## Done
+
 - **US-2**: Importer mes parties depuis chess.com (relais local + persistance incrémentale), pour remplacer la partie fixture par mon véritable historique.
-  > Grillée, découpée, implémentée sur `integration/US-2-import-chess-com`. PRD : `.scratch/import-chess-com/PRD.md`. **5 slices livrés + 1 US technique de découpage**, chacun validé par sa Feature Path (agentic, Chrome réel) et auto-mergé sur check local vert :
+  > Grillée, découpée, implémentée sur `integration/US-2-import-chess-com`, **fusionnée dans `develop`** (décision humaine `integration → develop` du 2026-07-21). PRD : `.scratch/import-chess-com/PRD.md`. **HP-01 vert 7/7** contre le vrai chess.com (compte DudulSmash, 2026/06 : 54 parties). **5 slices livrés + 1 US technique de découpage**, chacun validé par sa Feature Path (agentic, Chrome réel) et auto-mergé sur check local vert :
   > - `01-import-backend` ✅ — schéma (game_url/player_color/result), client chess.com injectable, service, `POST /api/import`
   > - `02-import-ui` ✅ — formulaire (mois/catégories) + parcours des parties sur le plateau
   > - `03-import-summary` ✅ — fenêtre de résumé (par cadence, nouvelles vs présentes, bilan V/N/D)
@@ -18,7 +20,7 @@
   > - `05-remember-username` ✅ — mémorisation du username (table `settings`)
   > - `code-decomposition` ✅ — découpage en modules par feature + error boundary (`.scratch/code-decomposition/`)
   >
-  > **En attente de la décision humaine `integration → develop`** : avant le PR, jouer le **HP « vrai compte chess.com »** (une fois, `/agentic-tests HP`).
+  > Suite HP : `docs/test-scenarios/HP-01-import-and-explore.md`. Finding a11y non-bloquant ouvert (adjacence des nombres dans le texte du résumé). Reste `develop → main` (pré-prod, non décidé).
 
 ## Done
 
