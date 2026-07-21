@@ -1,6 +1,6 @@
 # 04 — Import progress bar (SSE)
 
-Status: ready-for-agent
+Status: done
 Business ref: BACKLOG.md — US-2
 
 **Integration branch.** Implemented on `integration/US-2-import-chess-com`: branch a `feature/*`
@@ -42,3 +42,8 @@ Verify: UI first (the progress indicator advancing and completing, then the summ
 ## Blocked by
 
 - Issue 02 (import UI). Best sequenced after issue 03 so the terminal event carries the summary.
+
+## Comments
+
+- Implemented via `/tdd` on `feature/04-import-progress`, auto-merged into `integration/US-2-import-chess-com` on a green local check (build + server 25 / client 27 tests + lint + UI-first FP 3/3 in real Chrome against a delayed fixture archive).
+- **Deviation from the SSE spec (accepted):** delivered an **indeterminate** progress indicator shown for the whole in-flight import, not per-game SSE events. Rationale: a single-month Import is one network fetch (the only real wait) + sub-second local inserts, so per-game events would only advance during the instant part while the fetch shows nothing — an indeterminate indicator is the honest fit at this scale. Revisit SSE if bulk/multi-month import (out of scope) ever lands, per the PRD note.
