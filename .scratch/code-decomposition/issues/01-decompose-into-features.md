@@ -1,6 +1,6 @@
 # 01 — Decompose generic files into feature-oriented modules
 
-Status: ready-for-agent
+Status: done
 Type: technical (refactor, behaviour-preserving)
 
 **Integration branch.** Play it on `integration/US-2-import-chess-com`: branch a `feature/*` from
@@ -93,3 +93,9 @@ regression proof.
 ## Blocked by
 
 - `.scratch/import-chess-com/` issue 02 (import UI) — this refactors 01 + 02's code, so play it once the current slice is finished and merged into the integration branch.
+
+## Comments
+
+- Implemented via `/tdd` on `feature/decompose-into-features`, auto-merged into `integration/US-2-import-chess-com` on a green local check. Server: `import.ts` → `import/{service,mapping,errors,index}` (pure mapping now unit-tested), routes → `routes/{games,import}.ts`, thin `app.ts`. Client: `App.tsx` → `features/import/ImportForm` + `features/games/{GameList,GameViewer}`, `api/` + `types/` barrels, new `components/ErrorBoundary` (graceful render-failure). `chesscom.ts` left as-is (P3).
+- Non-regression: every pre-existing test file passed **unchanged**; only `mapping.test.ts` and `ErrorBoundary.test.tsx` added. Build + lint green; server 24 / client 25 tests.
+- FP (UI-first, real Chrome via puppeteer against vite+relay pointed at a fixture archive): 4/4 green — empty-state invitation, import a month → 3 Games listed, open a Game → board renders and Next advances, unknown username → error with Games unchanged. One non-blocking console finding: a 404 logged by the browser, which is the expected response of the unknown-username step.
