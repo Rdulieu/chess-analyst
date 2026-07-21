@@ -7,17 +7,18 @@
 
 ## Doing
 
-- **US-2**: Importer mes parties depuis chess.com (relais local + persistance incrémentale), pour remplacer la partie fixture par mon véritable historique.
-  > Grillée puis découpée. PRD : `.scratch/import-chess-com/PRD.md`. Branche d'intégration `integration/US-2-import-chess-com`. Import mono-mois paramétré (mois/année + catégories de cadence), relais local vers l'API publique chess.com, dédoublonnage par URL, persistance au fil de l'eau + reprise, résumé post-import (par cadence, nouvelles vs déjà présentes, bilan V/N/D). Issues techniques :
-  > - `01-import-backend` — import backend validé sans IHM (schéma, client chess.com, service, `POST /api/import`)
-  > - `02-import-ui` — formulaire d'import + parcours des parties sur le plateau (bloquée par 01)
-  > - `03-import-summary` — fenêtre de résumé d'import (bloquée par 02)
-  > - `04-import-progress` — barre de progression SSE (bloquée par 02)
-  > - `05-remember-username` — mémorisation du username (settings, non prioritaire, bloquée par 02)
-  >
-  > HP (vrai compte chess.com, joué une fois) prévu à la décision humaine `integration → develop`.
-
 ## In review
+
+- **US-2**: Importer mes parties depuis chess.com (relais local + persistance incrémentale), pour remplacer la partie fixture par mon véritable historique.
+  > Grillée, découpée, implémentée sur `integration/US-2-import-chess-com`. PRD : `.scratch/import-chess-com/PRD.md`. **5 slices livrés + 1 US technique de découpage**, chacun validé par sa Feature Path (agentic, Chrome réel) et auto-mergé sur check local vert :
+  > - `01-import-backend` ✅ — schéma (game_url/player_color/result), client chess.com injectable, service, `POST /api/import`
+  > - `02-import-ui` ✅ — formulaire (mois/catégories) + parcours des parties sur le plateau
+  > - `03-import-summary` ✅ — fenêtre de résumé (par cadence, nouvelles vs présentes, bilan V/N/D)
+  > - `04-import-progress` ✅ — indicateur de progression (indéterminé ; SSE différé, cf. issue)
+  > - `05-remember-username` ✅ — mémorisation du username (table `settings`)
+  > - `code-decomposition` ✅ — découpage en modules par feature + error boundary (`.scratch/code-decomposition/`)
+  >
+  > **En attente de la décision humaine `integration → develop`** : avant le PR, jouer le **HP « vrai compte chess.com »** (une fois, `/agentic-tests HP`).
 
 ## Done
 
