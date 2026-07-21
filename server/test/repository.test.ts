@@ -12,9 +12,11 @@ describe("game repository", () => {
     const { db } = tempDb();
     db.insert(games)
       .values({
+        gameUrl: "https://www.chess.com/game/live/1",
         pgn: "1. e4 e5",
         opponent: "Alice",
-        result: "1-0",
+        playerColor: "white",
+        result: "win",
         date: "2026-01-15",
         timeControlCategory: "blitz",
       })
@@ -24,9 +26,11 @@ describe("game repository", () => {
 
     expect(all).toHaveLength(1);
     expect(all[0]).toMatchObject({
+      gameUrl: "https://www.chess.com/game/live/1",
       pgn: "1. e4 e5",
       opponent: "Alice",
-      result: "1-0",
+      playerColor: "white",
+      result: "win",
       date: "2026-01-15",
       timeControlCategory: "blitz",
     });
@@ -38,16 +42,34 @@ describe("game repository", () => {
     const inserted = db
       .insert(games)
       .values({
+        gameUrl: "https://www.chess.com/game/live/2",
         pgn: "1. d4 d5",
         opponent: "Bob",
-        result: "0-1",
+        playerColor: "black",
+        result: "loss",
         date: "2026-02-01",
         timeControlCategory: "rapid",
       })
       .returning()
       .get();
 
-    expect(getGame(db, inserted.id)).toMatchObject({ opponent: "Bob" });
+    expect(getGame(db, inserted.id)).toMatchObject({ opponent: "Bob", playerColor: "black" });
     expect(getGame(db, 9999)).toBeUndefined();
+  });
+
+  it("rejects a second Game with the same chess.com URL (unique dedup key)", () => {
+    const { db } = tempDb();
+    const value = {
+      gameUrl: "https://www.chess.com/game/live/3",
+      pgn: "1. c4",
+      opponent: "Carol",
+      playerColor: "white" as const,
+      result: "draw" as const,
+      date: "2026-03-01",
+      timeControlCategory: "bullet" as const,
+    };
+    db.insert(games).values(value).run();
+
+    expect(() => db.insert(games).values(value).run()).toThrow();
   });
 });
