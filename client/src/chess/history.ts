@@ -32,7 +32,9 @@ export function startingPosition(pgn: string): string {
  */
 export function parseGame(pgn: string): GameHistory {
   const chess = new Chess();
-  chess.loadPgn(pgn);
+  // Trim first: cm-chess's PGN parser rejects trailing whitespace, and chess.com
+  // serves every PGN with a trailing newline.
+  chess.loadPgn(pgn.trim());
   return {
     startFen: chess.setUpFen(),
     plies: chess.history().map((move) => ({ san: move.san, fen: move.fen })),
