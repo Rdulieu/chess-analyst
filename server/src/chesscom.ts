@@ -33,3 +33,30 @@ export interface ChessComClient {
   /** The player's games for the given year/month (empty when none). */
   fetchMonth(username: string, year: number, month: number): Promise<ChessComGame[]>;
 }
+
+const DEFAULT_BASE_URL = "https://api.chess.com";
+
+/**
+ * The real chess.com client, talking to the public Published-Data API over
+ * HTTP. `baseUrl` is configurable (env `CHESSCOM_BASE_URL`, default the live API)
+ * so tests and the agentic Feature Path can point it at a fixture archive.
+ */
+export function createHttpChessComClient(
+  baseUrl: string = process.env.CHESSCOM_BASE_URL ?? DEFAULT_BASE_URL,
+): ChessComClient {
+  const root = baseUrl.replace(/\/$/, "");
+  return {
+    async playerExists(username) {
+      const res = await fetch(`${root}/pub/player/${encodeURIComponent(username)}`);
+      return res.ok;
+    },
+    async fetchMonth(username, year, month) {
+      const mm = String(month).padStart(2, "0");
+      const res = await fetch(`${root}/pub/player/${encodeURIComponent(username)}/games/${year}/${mm}`);
+      if (res.status === 404) return []; // no archive that month
+      if (!res.ok) throw new Error(`chess.com request failed (${res.status})`);
+      const body = (await res.json()) as { games?: ChessComGame[] };
+      return body.games ?? [];
+    },
+  };
+}
