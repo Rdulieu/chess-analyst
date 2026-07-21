@@ -38,7 +38,12 @@ export function createApp(db: Db, chessCom: ChessComClient): Express {
         res.status(404).json({ error: err.message });
         return;
       }
-      throw err;
+      // Any other failure is upstream (chess.com unreachable / rate-limited /
+      // 5xx). Respond with 502 rather than rethrowing: an async throw here is an
+      // unhandled rejection that would take the whole relay down.
+      const message = err instanceof Error ? err.message : "Import failed";
+      console.error("Import failed:", message);
+      res.status(502).json({ error: `Import from chess.com failed: ${message}` });
     }
   });
 

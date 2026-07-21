@@ -117,6 +117,28 @@ describe("import API", () => {
     expect(list.body).toEqual([]);
   });
 
+  it("returns a 502 (and stays responsive) when the chess.com request fails", async () => {
+    const { db } = openDb(":memory:");
+    const failing: ChessComClient = {
+      playerExists: async () => true,
+      fetchMonth: async () => {
+        throw new Error("chess.com request failed (429)");
+      },
+    };
+    const app = createApp(db, failing);
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({ username: "me", year: 2024, month: 1, categories: ["blitz"] });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toMatch(/chess\.com|import/i);
+
+    // The relay must not have crashed: a later request still works.
+    const list = await request(app).get("/api/games");
+    expect(list.status).toBe(200);
+  });
+
   it("POST /api/import reports zero with a clear message for an empty month", async () => {
     const { db } = openDb(":memory:");
     const app = createApp(db, fakeClient([]));
