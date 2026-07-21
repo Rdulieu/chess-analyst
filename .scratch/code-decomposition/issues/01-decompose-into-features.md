@@ -15,12 +15,13 @@ issues 01 (import backend) and 02 (import UI).
 
 ## What to build
 
-Nothing new for the Player — a **behaviour-preserving refactor**. The code currently lives in a few
-generic catch-all files (`client/src/App.tsx` is a god-component; `server/src/import.ts` mixes
-service + pure mapping + error + types; routes all sit in `server/src/app.ts`; `types.ts` is a
-grab-bag). Reorganise into feature-oriented modules so import, games (and later openings, danger
-positions) each have a clear home, and the densest logic (chess.com → Game mapping) is isolated and
-independently testable.
+Mostly a **behaviour-preserving refactor**, plus **one intentional behaviour change**: add a React
+error boundary so a render failure degrades gracefully instead of white-screening the app (see
+below). The code currently lives in a few generic catch-all files (`client/src/App.tsx` is a
+god-component; `server/src/import.ts` mixes service + pure mapping + error + types; routes all sit
+in `server/src/app.ts`; `types.ts` is a grab-bag). Reorganise into feature-oriented modules so
+import, games (and later openings, danger positions) each have a clear home, and the densest logic
+(chess.com → Game mapping) is isolated and independently testable.
 
 The tests are the safety net: they assert observable behaviour, not structure, so they must survive
 the move **unchanged** (imports/paths aside). If a test needs rewriting to keep passing, the
@@ -38,7 +39,8 @@ client/src/
     import/ ImportForm.tsx # form state + submit + status        (out of App)
     games/  GameList.tsx   # list + selection callback           (out of App)
             GameViewer.tsx # selected game details + <Board>      (out of App)
-  components/ Board.tsx     # generic board (unchanged)
+  components/ Board.tsx        # generic board (unchanged)
+              ErrorBoundary.tsx # catches render errors, shows a message  (NEW)
   chess/ history.ts         # PGN parsing (unchanged)
   types/ game.ts            # Game, TimeControlCategory
          import.ts          # ImportParams, ImportResult
@@ -63,7 +65,7 @@ server/src/
 
 ### Priority within this story
 
-1. **High — do:** break up `App.tsx` (`ImportForm` + `GameList` + `GameViewer`, thin `App`); isolate `server/src/import/mapping.ts` (pure functions) from the service.
+1. **High — do:** break up `App.tsx` (`ImportForm` + `GameList` + `GameViewer`, thin `App`); isolate `server/src/import/mapping.ts` (pure functions) from the service; add a React **error boundary** around the game viewer so a render failure (e.g. an unparseable Game) shows a clear message and the rest of the app stays usable — instead of the white screen we hit on the chess.com trailing-newline bug. **This is the one intentional behaviour change** (graceful degradation); everything else preserves behaviour.
 2. **Medium — include if cheap:** feature routers (`routes/games.ts`, `routes/import.ts`); split `api.ts` and `types.ts` by domain.
 3. **Do NOT over-do:** splitting `chesscom.ts` types vs impl is cosmetic for now (one cohesive boundary) — leave until a second call justifies it. No client-side hook/service layer or state manager — premature for a solo tool.
 
@@ -72,7 +74,8 @@ server/src/
 - [ ] `App.tsx` is a thin orchestrator: import form, game list, and game viewer are separate components.
 - [ ] The chess.com → Game mapping (side, win/loss/draw, opponent, date, category) lives in its own pure module, independently unit-tested.
 - [ ] The existing server and client test suites pass **unchanged** in behaviour (only import paths may change); build (`npm run build`) and lint (`npm run lint`) are green.
-- [ ] No user-facing behaviour changes: the US-2 import journey works exactly as before.
+- [ ] A render failure inside the game viewer (e.g. an unparseable Game) shows a clear message and leaves the rest of the app usable — no white screen. Covered by a test that renders the boundary around a throwing child.
+- [ ] Apart from that graceful-degradation boundary, no user-facing behaviour changes: the US-2 import journey works exactly as before.
 - [ ] Priority-1 extractions are done; priority-2 done where cheap; priority-3 explicitly left alone.
 
 ### Feature Path (FP)
