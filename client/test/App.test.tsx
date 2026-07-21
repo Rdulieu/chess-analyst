@@ -94,6 +94,40 @@ describe("App — import UI", () => {
     expect(await screen.findByLabelText(/import summary/i)).toBeTruthy();
   });
 
+  it("shows a progress indicator while an import is in flight, then the summary", async () => {
+    let resolveImport!: (r: Response) => void;
+    const importInFlight = new Promise<Response>((r) => (resolveImport = r));
+    const fetchMock = vi.fn((url: string | URL): Promise<Response> => {
+      const u = url.toString();
+      if (u === "/api/games") return Promise.resolve(jsonResponse([]));
+      if (u === "/api/import") return importInFlight;
+      return Promise.resolve(jsonResponse({}, false, 404));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText(/import your chess\.com history/i);
+    await user.type(screen.getByLabelText(/username/i), "me");
+    await user.click(screen.getByRole("button", { name: /^import$/i }));
+
+    // While the import is pending, a progress indicator is shown.
+    expect(await screen.findByRole("progressbar")).toBeTruthy();
+
+    // Once it resolves, the indicator disappears and the summary shows.
+    resolveImport(
+      jsonResponse({
+        totalFetched: 1,
+        imported: 1,
+        alreadyPresent: 0,
+        byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
+        results: { win: 1, draw: 0, loss: 0 },
+      }),
+    );
+    await screen.findByLabelText(/import summary/i);
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
   it("opens a selected Game on the board", async () => {
     vi.stubGlobal(
       "fetch",

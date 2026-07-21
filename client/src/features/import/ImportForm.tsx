@@ -27,6 +27,7 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
   const [categories, setCategories] = useState<Set<TimeControlCategory>>(new Set(CATEGORIES));
   const [status, setStatus] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const toggleCategory = (c: TimeControlCategory) =>
     setCategories((prev) => {
@@ -41,6 +42,7 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
     const [year, monthNumber] = parseMonth(month);
     setStatus("Importing…");
     setResult(null);
+    setBusy(true);
     try {
       const imported = await importGames({
         username,
@@ -53,6 +55,8 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
       setResult(imported);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -79,13 +83,15 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
         <button type="submit">Import</button>
       </form>
 
+      {busy && <progress aria-label="import progress" />}
+
       {status && (
         <p role="status" aria-label="import status">
           {status}
         </p>
       )}
 
-      {result && <ImportSummary result={result} />}
+      {!busy && result && <ImportSummary result={result} />}
     </>
   );
 }
