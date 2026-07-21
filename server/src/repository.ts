@@ -11,3 +11,8 @@ export function listGames(db: Db): Game[] {
 export function getGame(db: Db, id: number): Game | undefined {
   return db.select().from(games).where(eq(games.id, id)).get();
 }
+
+/** Whether a Game with this chess.com URL is already retained (Import dedup). */
+export function gameExistsByUrl(db: Db, gameUrl: string): boolean {
+  return db.select({ id: games.id }).from(games).where(eq(games.gameUrl, gameUrl)).get() !== undefined;
+}
