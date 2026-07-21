@@ -2,6 +2,7 @@ import type { ImportResult, TimeControlCategory } from "../../types";
 
 const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
 const label = (c: TimeControlCategory) => c[0].toUpperCase() + c.slice(1);
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** Post-import summary: what chess.com had, what was retained, and how the Player did. */
 export function ImportSummary({ result }: { result: ImportResult }) {
@@ -24,7 +25,11 @@ export function ImportSummary({ result }: { result: ImportResult }) {
         </ul>
       )}
       <p aria-label="results">
-        {results.win} W · {results.draw} D · {results.loss} L
+        <span aria-label={count(results.win, "win", "wins")}>{results.win} W</span>
+        {" · "}
+        <span aria-label={count(results.draw, "draw", "draws")}>{results.draw} D</span>
+        {" · "}
+        <span aria-label={count(results.loss, "loss", "losses")}>{results.loss} L</span>
       </p>
     </section>
   );

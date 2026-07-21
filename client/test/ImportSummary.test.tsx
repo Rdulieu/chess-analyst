@@ -30,4 +30,14 @@ describe("ImportSummary", () => {
     expect(text).toMatch(/1\s*D|D\s*1|1 draw/i);
     expect(text).toMatch(/1\s*L|L\s*1|1 loss/i);
   });
+
+  it("announces the win/draw/loss tally in full words for assistive tech", () => {
+    render(<ImportSummary result={result} />);
+
+    // Compact "W · D · L" stays visible, but each figure carries a spelled-out
+    // accessible name (correctly singular/plural).
+    expect(screen.getByLabelText(/^2 wins$/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^1 draw$/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^1 loss$/i)).toBeTruthy();
+  });
 });
