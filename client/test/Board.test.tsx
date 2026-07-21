@@ -67,4 +67,39 @@ describe("Board", () => {
     expect(prev.disabled).toBe(false);
     expect(screen.getByRole("status", { name: "current move" }).textContent).toMatch(/^Rd8/);
   });
+
+  it("jumps directly to the Position after a selected Move, without stepping through", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn={OPERA_PGN} />);
+
+    // From the start, jump straight to White's 12th Move (queenside castling).
+    await user.click(screen.getByRole("button", { name: "O-O-O" }));
+
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("O-O-O");
+    expect(pieceAt(container, "c1")).toBe("wK");
+    expect(pieceAt(container, "d1")).toBe("wR");
+    expect(pieceAt(container, "e1")).toBeNull();
+  });
+
+  it("continues stepping correctly from a jumped-to Position", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn={OPERA_PGN} />);
+    await user.click(screen.getByRole("button", { name: "O-O-O" }));
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("Rd8");
+    expect(pieceAt(container, "d8")).toBe("bR");
+  });
+
+  it("resolves a special Move (promotion) correctly when jumped to directly", async () => {
+    const user = userEvent.setup();
+    const promoPgn = "1. a4 b5 2. axb5 a6 3. bxa6 c6 4. a7 c5 5. axb8=Q";
+    const { container } = render(<Board pgn={promoPgn} />);
+
+    await user.click(screen.getByRole("button", { name: "axb8=Q" }));
+
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("axb8=Q");
+    expect(pieceAt(container, "b8")).toBe("wQ");
+  });
 });
