@@ -1,6 +1,6 @@
 # 01 — Import backend (validated without UI)
 
-Status: ready-for-agent
+Status: done
 Business ref: BACKLOG.md — US-2
 
 **Integration branch.** Implemented on the business-story integration branch
@@ -70,3 +70,7 @@ Verify: no UI yet, so drive the relay endpoints directly and inspect the returne
 ## Blocked by
 
 None - can start immediately.
+
+## Comments
+
+- Implemented via `/tdd` on `feature/01-import-backend`, auto-merged into `integration/US-2-import-chess-com` on a green local check (build + server 20 / client 17 tests + Feature Path). FP run at the API level (no UI yet): the real relay was launched pointed at a fixture archive via `CHESSCOM_BASE_URL`, and import / URL dedup / player-relative mapping / category + variant filtering / unknown-username (404, nothing written) / empty-month (clear message) were all verified end to end. New seams: `ChessComClient` (`chesscom.ts`, injectable + real `createHttpChessComClient`), `importMonth` (`import.ts`), `POST /api/import`. Schema migrated (`game_url` unique, `player_color`, normalised `result`); startup fixture removed (Morphy kept as a test fixture).
