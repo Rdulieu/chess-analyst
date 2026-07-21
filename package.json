@@ -1,0 +1,24 @@
+{
+  "name": "chess-analyst",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c green,cyan \"npm:dev -w server\" \"npm:dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "test": "npm run test -w server && npm run test -w client",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.1.2",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "typescript-eslint": "^8.64.0"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+
+# Embedded SQLite database (created/seeded on first launch — ADR-0003)
+*.db
+*.db-shm
+*.db-wal
