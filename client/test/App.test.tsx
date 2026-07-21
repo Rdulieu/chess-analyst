@@ -128,6 +128,43 @@ describe("App — import UI", () => {
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
+  it("prefills the username from stored settings and saves it on import", async () => {
+    const puts: unknown[] = [];
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit): Promise<Response> => {
+      const u = url.toString();
+      if (u === "/api/settings" && init?.method === "PUT") {
+        const body = JSON.parse(init.body as string);
+        puts.push(body);
+        return jsonResponse(body);
+      }
+      if (u === "/api/settings") return jsonResponse({ username: "storeduser" });
+      if (u === "/api/games") return jsonResponse([]);
+      if (u === "/api/import")
+        return jsonResponse({
+          totalFetched: 0,
+          imported: 0,
+          alreadyPresent: 0,
+          byCategory: { bullet: 0, blitz: 0, rapid: 0, daily: 0 },
+          results: { win: 0, draw: 0, loss: 0 },
+          message: "No games found.",
+        });
+      return jsonResponse({}, false, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    // Username is prefilled from the stored settings.
+    await waitFor(() =>
+      expect((screen.getByLabelText(/username/i) as HTMLInputElement).value).toBe("storeduser"),
+    );
+
+    // Importing persists the username.
+    await user.click(screen.getByRole("button", { name: /^import$/i }));
+    await waitFor(() => expect(puts).toContainEqual({ username: "storeduser" }));
+  });
+
   it("opens a selected Game on the board", async () => {
     vi.stubGlobal(
       "fetch",

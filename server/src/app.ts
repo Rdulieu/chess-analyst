@@ -3,6 +3,7 @@ import type { Db } from "./db";
 import type { ChessComClient } from "./chesscom";
 import { createGamesRouter } from "./routes/games";
 import { createImportRouter } from "./routes/import";
+import { createSettingsRouter } from "./routes/settings";
 
 /**
  * Builds the local API server over an already-open database and a chess.com
@@ -16,5 +17,6 @@ export function createApp(db: Db, chessCom: ChessComClient): Express {
   app.use(express.json());
   app.use("/api/games", createGamesRouter(db));
   app.use("/api/import", createImportRouter(db, chessCom));
+  app.use("/api/settings", createSettingsRouter(db));
   return app;
 }
