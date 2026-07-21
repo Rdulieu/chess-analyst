@@ -18,10 +18,13 @@ npm run dev
 ```
 
 `npm run dev` starts the local server (`http://localhost:3001`) and the Vite frontend
-(`http://localhost:5173`) together. On first launch the SQLite schema is created and a fixture
-Game (Morphy's Opera Game, 1858) is seeded, so the board has something real to show before
-chess.com import (US-2) exists. Open the frontend and the fixture's starting position appears on
-the board.
+(`http://localhost:5173`) together. On first launch the SQLite schema is created (via the
+Drizzle migrations in `server/src/db/migrations/`) and a fixture Game (Morphy's Opera Game,
+1858) is seeded, so the board has something real to show before chess.com import (US-2) exists.
+Open the frontend and the fixture's starting position appears on the board.
+
+The database is a single local file (`server/chess-analyst.db`, git-ignored). It's disposable:
+delete it (`rm server/chess-analyst.db*`) to reset — the next launch re-migrates and re-seeds.
 
 ## Checks
 

@@ -8,12 +8,9 @@
 
 ## Doing
 
-- **US-1**: Squelette de l'application — structure React + serveur Node local + persistance SQLite en place, avec un plateau interactif capable d'afficher et de naviguer dans une partie fixture (pas d'import chess.com, pas d'analyse).
-  > PRD : `.scratch/app-skeleton/PRD.md`. Découpée en 3 issues techniques (`ready-for-agent`) :
-  > `.scratch/app-skeleton/issues/01-boot-skeleton-fixture-board.md`,
-  > `.scratch/app-skeleton/issues/02-forward-backward-navigation.md`,
-  > `.scratch/app-skeleton/issues/03-jump-to-move.md`.
-
 ## In review
+
+- **US-1**: Squelette de l'application — structure React + serveur Node local + persistance SQLite en place, avec un plateau interactif capable d'afficher et de naviguer dans une partie fixture (pas d'import chess.com, pas d'analyse).
+  > PRD : `.scratch/app-skeleton/PRD.md`. Les 3 issues techniques sont implémentées et fusionnées dans `integration/US-1-chess-history-analysis` (01 boot+plateau, 02 navigation avant/arrière, 03 saut vers un coup), chacune validée par sa Feature Path (agentic, Chrome réel). En attente de la décision humaine `integration → develop`. Pas de suite Happy Path pour cette US infrastructurelle (à reconsidérer une fois US-2/3/4).
 
 ## Done
