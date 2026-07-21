@@ -59,6 +59,18 @@ the following 10 moves. No minimum sample size is enforced — the occurrence co
 shown alongside the proportion so the player can judge its significance themselves.
 _Avoid_: Dangerous position, Trap
 
+**Move habit**:
+A Move the player has played from a recurring Position, within the first 20 full moves (40
+Moves) of a Game. Positions are merged across Games by transposition — reaching the same
+position via a different move order still counts as the same Position. Shown with its
+frequency, its win rate (standard chess scoring: `(wins + 0.5 × draws) / games`), and a
+breakdown of how many of those games fall into each time control category (bullet, blitz,
+rapid, daily) — the win rate itself is computed across all time controls combined, not split by
+category. Split **by side** (White/Black), since the player's own choices sit at different
+depths depending on which side they played. No minimum sample size is enforced — the frequency
+is always shown alongside the rate.
+_Avoid_: Opening explorer, Repertoire
+
 **Import**:
 The act of fetching the Player's Games from the chess.com public API by username. Triggered
 **manually** by the Player and **scoped** to a chosen **single month** (month/year, matching one
