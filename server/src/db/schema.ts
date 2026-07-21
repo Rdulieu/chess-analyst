@@ -23,3 +23,12 @@ export const games = sqliteTable("games", {
 
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+
+/**
+ * Key-value app settings (single-user, local — ADR-0002). Currently holds the
+ * Player's chess.com username so it is remembered across sessions.
+ */
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});

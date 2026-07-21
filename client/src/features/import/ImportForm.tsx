@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { importGames } from "../../api";
+import { useEffect, useState, type FormEvent } from "react";
+import { importGames, getSettings, saveSettings } from "../../api";
 import { ImportSummary } from "./ImportSummary";
 import type { ImportResult, TimeControlCategory } from "../../types";
 
@@ -29,6 +29,13 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
   const [result, setResult] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Prefill from the remembered username (best-effort; a missing store is fine).
+  useEffect(() => {
+    getSettings()
+      .then((s) => s.username && setUsername(s.username))
+      .catch(() => {});
+  }, []);
+
   const toggleCategory = (c: TimeControlCategory) =>
     setCategories((prev) => {
       const next = new Set(prev);
@@ -53,6 +60,8 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
       await onImported();
       setStatus(imported.message ?? null);
       setResult(imported);
+      // Remember the username for next time (best-effort).
+      saveSettings(username).catch(() => {});
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Import failed.");
     } finally {

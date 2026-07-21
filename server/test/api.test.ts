@@ -139,6 +139,21 @@ describe("import API", () => {
     expect(list.status).toBe(200);
   });
 
+  it("GET /api/settings then PUT then GET round-trips the Player's username", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient([]));
+
+    const initial = await request(app).get("/api/settings");
+    expect(initial.status).toBe(200);
+    expect(initial.body.username).toBeNull();
+
+    const put = await request(app).put("/api/settings").send({ username: "magnus" });
+    expect(put.status).toBe(200);
+
+    const after = await request(app).get("/api/settings");
+    expect(after.body.username).toBe("magnus");
+  });
+
   it("POST /api/import reports zero with a clear message for an empty month", async () => {
     const { db } = openDb(":memory:");
     const app = createApp(db, fakeClient([]));

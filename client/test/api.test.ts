@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { fetchGame, importGames } from "../src/api";
+import { fetchGame, importGames, getSettings, saveSettings } from "../src/api";
 import { OPERA_GAME } from "./fixtures";
 
 afterEach(() => {
@@ -49,6 +49,34 @@ describe("importGames", () => {
     await expect(
       importGames({ username: "ghost", year: 2024, month: 1, categories: ["blitz"] }),
     ).rejects.toThrow(/ghost/);
+  });
+});
+
+describe("settings", () => {
+  it("getSettings reads the stored username from /api/settings", async () => {
+    const fetchMock = vi.fn(
+      async () => ({ ok: true, status: 200, json: async () => ({ username: "magnus" }) }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const settings = await getSettings();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings");
+    expect(settings.username).toBe("magnus");
+  });
+
+  it("saveSettings PUTs the username to /api/settings", async () => {
+    const fetchMock = vi.fn<(url: string | URL, init?: RequestInit) => Promise<Response>>(
+      async () => ({ ok: true, status: 200, json: async () => ({ username: "magnus" }) }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveSettings("magnus");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/settings");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(init?.body as string)).toEqual({ username: "magnus" });
   });
 });
 
