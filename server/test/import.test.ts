@@ -147,6 +147,30 @@ describe("importMonth", () => {
     expect(listGames(db)).toHaveLength(0);
   });
 
+  it("reports a full summary: total fetched, per-category counts and a win/draw/loss tally", async () => {
+    const { db } = openDb(":memory:");
+    const client = fakeClient([
+      chessComGame({ url: "u1", time_class: "blitz", white: { username: "me", result: "win" }, black: { username: "o", result: "resigned" } }),
+      chessComGame({ url: "u2", time_class: "blitz", white: { username: "o", result: "win" }, black: { username: "me", result: "checkmated" } }),
+      chessComGame({ url: "u3", time_class: "rapid", white: { username: "me", result: "agreed" }, black: { username: "o", result: "agreed" } }),
+      chessComGame({ url: "u4", time_class: "bullet", white: { username: "me", result: "win" }, black: { username: "o", result: "timeout" } }),
+      chessComGame({ url: "u5", time_class: "blitz", rules: "chess960" }), // filtered out
+    ]);
+
+    const result = await importMonth(db, client, {
+      username: "me",
+      year: 2024,
+      month: 1,
+      categories: ["bullet", "blitz", "rapid", "daily"],
+    });
+
+    expect(result.totalFetched).toBe(5);
+    expect(result.imported).toBe(4);
+    expect(result.alreadyPresent).toBe(0);
+    expect(result.byCategory).toEqual({ bullet: 1, blitz: 2, rapid: 1, daily: 0 });
+    expect(result.results).toEqual({ win: 2, draw: 1, loss: 1 });
+  });
+
   it("reports zero imported with a clear message when the month has no matching games", async () => {
     const { db } = openDb(":memory:");
     const client = fakeClient([]); // player exists, but no games that month

@@ -58,7 +58,13 @@ describe("App — import UI", () => {
         if (u === "/api/games") return jsonResponse(imported ? [OPERA_GAME] : []);
         if (u === "/api/import") {
           imported = true;
-          return jsonResponse({ imported: 1, alreadyPresent: 0 });
+          return jsonResponse({
+            totalFetched: 1,
+            imported: 1,
+            alreadyPresent: 0,
+            byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
+            results: { win: 1, draw: 0, loss: 0 },
+          });
         }
         return jsonResponse({}, false, 404);
       },
@@ -84,6 +90,8 @@ describe("App — import UI", () => {
       });
     });
     expect(await screen.findByText(/Duke Karl/)).toBeTruthy();
+    // The post-import summary is shown.
+    expect(await screen.findByLabelText(/import summary/i)).toBeTruthy();
   });
 
   it("opens a selected Game on the board", async () => {
