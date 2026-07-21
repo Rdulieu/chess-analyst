@@ -1,6 +1,6 @@
 # 05 — Remember the Player's username (settings)
 
-Status: ready-for-agent
+Status: done
 Business ref: BACKLOG.md — US-2
 
 **Integration branch.** Implemented on `integration/US-2-import-chess-com`: branch a `feature/*`
@@ -42,3 +42,7 @@ Verify: UI first (the prefilled field after reopening); the settings endpoint co
 ## Blocked by
 
 - Issue 02 (import UI).
+
+## Comments
+
+- Implemented via `/tdd` on `feature/05-remember-username`, auto-merged into `integration/US-2-import-chess-com` on a green local check (build + server 29 / client 30 tests + lint + UI-first FP 2/2 in real Chrome — username prefilled after reopening the app). Key-value `settings` table + `GET/PUT /api/settings`; the form prefills on mount and persists on import (both best-effort).
