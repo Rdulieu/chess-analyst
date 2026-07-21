@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { importGames } from "../../api";
-import type { TimeControlCategory } from "../../types";
+import { ImportSummary } from "./ImportSummary";
+import type { ImportResult, TimeControlCategory } from "../../types";
 
 const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
 
@@ -25,6 +26,7 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
   const [month, setMonth] = useState(thisMonth);
   const [categories, setCategories] = useState<Set<TimeControlCategory>>(new Set(CATEGORIES));
   const [status, setStatus] = useState<string | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
 
   const toggleCategory = (c: TimeControlCategory) =>
     setCategories((prev) => {
@@ -38,17 +40,17 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
     e.preventDefault();
     const [year, monthNumber] = parseMonth(month);
     setStatus("Importing…");
+    setResult(null);
     try {
-      const result = await importGames({
+      const imported = await importGames({
         username,
         year,
         month: monthNumber,
         categories: CATEGORIES.filter((c) => categories.has(c)),
       });
       await onImported();
-      setStatus(
-        result.message ?? `Imported ${result.imported}, ${result.alreadyPresent} already present.`,
-      );
+      setStatus(imported.message ?? null);
+      setResult(imported);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Import failed.");
     }
@@ -82,6 +84,8 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
           {status}
         </p>
       )}
+
+      {result && <ImportSummary result={result} />}
     </>
   );
 }
