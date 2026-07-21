@@ -1,6 +1,6 @@
 # 02 — Import UI and browsing imported Games
 
-Status: ready-for-agent
+Status: done
 Business ref: BACKLOG.md — US-2
 
 **Integration branch.** Implemented on `integration/US-2-import-chess-com`: branch a `feature/*`
@@ -49,3 +49,8 @@ Verify: UI first (the invitation, the form, the resulting Game list, the board).
 ## Blocked by
 
 - Issue 01 (import backend).
+
+## Comments
+
+- Implemented via `/tdd` on `feature/02-import-ui`, auto-merged into `integration/US-2-import-chess-com` after the human validated the UI-first FP. App now shows an empty-state invitation, an import form (username, current-month default, category checkboxes), lists imported Games and opens them on the US-1 board; import errors surface without crashing. Client `Game` type realigned to the backend.
+- Two bugs found during FP validation and fixed on the branch: (1) `POST /api/import` crashed the relay on any non-UnknownUsername error (async throw = unhandled rejection) → now returns 502 with a clear message; (2) opening a real chess.com game white-screened because cm-chess rejects the trailing newline chess.com puts on every PGN → `parseGame` now trims. A React error boundary for graceful render-failure degradation was deferred to the code-decomposition US.
