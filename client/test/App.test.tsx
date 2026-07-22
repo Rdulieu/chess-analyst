@@ -1,4 +1,5 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { App } from "../src/App";
@@ -8,6 +9,15 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, json: async () => body } as Response;
 }
 
+/** Renders the routed app at a chosen entry point (defaults to the landing page). */
+function renderApp(initialEntries: string[] = ["/"]) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <App />
+    </MemoryRouter>,
+  );
+}
+
 /** Current month as the form's default value (YYYY-MM). */
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
@@ -15,6 +25,75 @@ function currentMonth(): string {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("App — routing & navigation", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL): Promise<Response> => {
+        const u = url.toString();
+        if (u === "/api/games") return jsonResponse([OPERA_GAME]);
+        if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse(OPERA_GAME);
+        return jsonResponse({}, false, 404);
+      }),
+    );
+  });
+
+  it("shows the navigation and lands on Mes parties (import form + game list)", async () => {
+    renderApp(["/"]);
+
+    // A navigation menu with the two top-level entries.
+    const nav = screen.getByRole("navigation");
+    expect(nav).toBeTruthy();
+    expect(screen.getByRole("link", { name: /mes parties/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /stats/i })).toBeTruthy();
+
+    // The landing page shows the import form and the game list.
+    expect(await screen.findByRole("form", { name: /import/i })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+  });
+
+  it("navigates to a Game's Analyse page when it is selected, with the board steppable", async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp(["/"]);
+
+    await user.click(await screen.findByRole("button", { name: /Duke Karl/i }));
+
+    // The board (which lives only on the Analyse page) renders the starting position.
+    await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
+
+    // Previous/Next work exactly as before: Next advances one Move.
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("e4");
+  });
+
+  it("renders a placeholder on the Stats page (content owned by US-6)", async () => {
+    renderApp(["/stats"]);
+
+    expect(await screen.findByRole("heading", { name: /stats/i })).toBeTruthy();
+    expect(screen.getByText(/à venir/i)).toBeTruthy();
+  });
+
+  it("loads the Game straight from the URL (reload / deep-link into Analyse)", async () => {
+    const { container } = renderApp([`/analyse/${OPERA_GAME.id}`]);
+
+    // No list visit first: the page loads its own Game from the route param.
+    await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("Start");
+  });
+
+  it("moves between pages through the menu, back to Mes parties", async () => {
+    const user = userEvent.setup();
+    renderApp(["/"]);
+    await screen.findByRole("button", { name: /Duke Karl/i });
+
+    await user.click(screen.getByRole("link", { name: /stats/i }));
+    expect(await screen.findByText(/à venir/i)).toBeTruthy();
+
+    await user.click(screen.getByRole("link", { name: /mes parties/i }));
+    expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+  });
 });
 
 describe("App — import UI", () => {
@@ -30,7 +109,7 @@ describe("App — import UI", () => {
     });
 
     it("invites the Player to import and shows the import form", async () => {
-      render(<App />);
+      renderApp();
 
       await screen.findByText(/import your chess\.com history/i);
       expect(screen.getByLabelText(/username/i)).toBeTruthy();
@@ -43,7 +122,7 @@ describe("App — import UI", () => {
     });
 
     it("defaults the month to the current month", async () => {
-      render(<App />);
+      renderApp();
 
       const month = (await screen.findByLabelText(/month/i)) as HTMLInputElement;
       expect(month.value).toBe(currentMonth());
@@ -72,7 +151,7 @@ describe("App — import UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<App />);
+    renderApp();
     await screen.findByText(/import your chess\.com history/i);
 
     await user.type(screen.getByLabelText(/username/i), "me");
@@ -106,7 +185,7 @@ describe("App — import UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<App />);
+    renderApp();
     await screen.findByText(/import your chess\.com history/i);
     await user.type(screen.getByLabelText(/username/i), "me");
     await user.click(screen.getByRole("button", { name: /^import$/i }));
@@ -153,7 +232,7 @@ describe("App — import UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    render(<App />);
+    renderApp();
 
     // Username is prefilled from the stored settings.
     await waitFor(() =>
@@ -163,26 +242,6 @@ describe("App — import UI", () => {
     // Importing persists the username.
     await user.click(screen.getByRole("button", { name: /^import$/i }));
     await waitFor(() => expect(puts).toContainEqual({ username: "storeduser" }));
-  });
-
-  it("opens a selected Game on the board", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | URL): Promise<Response> => {
-        if (url.toString() === "/api/games") return jsonResponse([OPERA_GAME]);
-        return jsonResponse({}, false, 404);
-      }),
-    );
-    const user = userEvent.setup();
-
-    const { container } = render(<App />);
-    const gameButton = await screen.findByRole("button", { name: /Duke Karl/i });
-
-    await user.click(gameButton);
-
-    await waitFor(() => {
-      expect(container.querySelectorAll("[data-piece]")).toHaveLength(32);
-    });
   });
 
   it("surfaces an import error without crashing", async () => {
@@ -198,7 +257,7 @@ describe("App — import UI", () => {
     );
     const user = userEvent.setup();
 
-    render(<App />);
+    renderApp();
     await screen.findByText(/import your chess\.com history/i);
     await user.type(screen.getByLabelText(/username/i), "ghost");
     await user.click(screen.getByRole("button", { name: /^import$/i }));
