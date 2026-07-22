@@ -135,4 +135,23 @@ describe("ExplorerPage — drill-down", () => {
     expect(await screen.findByText(/aucun coup enregistré/i)).toBeTruthy();
     expect(screen.queryByRole("list", { name: /candidates/i })).toBeNull();
   });
+
+  it("renders the board and descends when a candidate's target square is clicked", async () => {
+    stubDrill();
+    const user = userEvent.setup();
+    const { container } = render(<ExplorerPage />);
+    await screen.findByText("e4");
+
+    // The interactive board is present at the current Position.
+    const e4Square = container.querySelector('[data-square="e4"]');
+    expect(e4Square).toBeTruthy();
+
+    // Clicking the target square of the e4 candidate descends like the list would.
+    await user.click(e4Square!);
+
+    const list = await screen.findByRole("list", { name: /candidates/i });
+    expect(within(list).getByText("e5")).toBeTruthy();
+    const breadcrumb = screen.getByRole("navigation", { name: /breadcrumb/i });
+    expect(within(breadcrumb).getByText("e4")).toBeTruthy();
+  });
 });
