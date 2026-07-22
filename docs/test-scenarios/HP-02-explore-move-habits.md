@@ -32,7 +32,7 @@ surfacing the Player's own habits across their whole imported history.
 1. Import `DudulSmash` for 2026/06 (Blitz + Bullet) → the import completes with a summary.
 2. Navigate to the Move habit explorer page and choose a side (e.g. White) → candidate Moves from the starting Position are shown.
 3. Read the candidates → each shows a frequency, a win rate, and a per-time-control-category breakdown; the exact count behind each is visible.
-4. Observe the board → the candidate Moves are also drawn as arrows, with visibly varying thickness (frequency) and color (win rate).
+4. Observe the board → the candidate Moves are also drawn as arrows, with visibly varying opacity (frequency) and colour hue (win rate). (react-chessboard v5 supports per-arrow colour only, so frequency is encoded as opacity, not stroke thickness — see ADR-0006 context and `client/src/chess/arrows.ts`.)
 5. Descend one level by selecting a candidate **in the list** → the explorer shows the candidates played from the resulting Position, and the breadcrumb reflects the Move taken.
 6. Descend a further level by clicking a candidate **arrow on the board** → the explorer descends exactly as the list would, and the breadcrumb reflects the second Move.
 7. Select an earlier entry in the breadcrumb → the explorer returns to that level.
@@ -42,7 +42,7 @@ surfacing the Player's own habits across their whole imported history.
 ### UI
 - Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games).
 - Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown; the win rate is consistent with standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; the per-cadence counts sum to the candidate's game count; no candidate is hidden for a small sample.
-- Step 4: each listed candidate has a corresponding board arrow; arrow thickness differs between a more- and a less-played candidate, and color differs across the 50% win-rate threshold.
+- Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold.
 - Step 5: selecting a list candidate replaces the shown candidates with those from the resulting Position; the breadcrumb gains that Move.
 - Step 6: clicking a board arrow produces the **same** descent + breadcrumb update as the corresponding list entry would.
 - Step 7: selecting an earlier breadcrumb entry returns to that level, discarding deeper navigation.
