@@ -1,42 +1,28 @@
-import { useEffect, useState } from "react";
-import { fetchGames } from "./api";
-import { ImportForm } from "./features/import/ImportForm";
-import { GameList } from "./features/games/GameList";
-import { GameViewer } from "./features/games/GameViewer";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import type { Game } from "./types";
+import { Routes, Route } from "react-router-dom";
+import { Nav } from "./components/Nav";
+import { GamesPage } from "./pages/GamesPage";
+import { AnalysePage } from "./pages/AnalysePage";
+import { StatsPage } from "./pages/StatsPage";
 
+/**
+ * Router shell: app-level chrome (title + navigation) plus the route table.
+ * One page per journey (ADR-0006). Each feature owns its own route/page —
+ * this shell only wires the pages that already have content.
+ */
 export function App() {
-  const [games, setGames] = useState<Game[] | null>(null);
-  const [selected, setSelected] = useState<Game | null>(null);
-
-  const refresh = async () => setGames(await fetchGames());
-
-  useEffect(() => {
-    fetchGames()
-      .then(setGames)
-      .catch(() => setGames([]));
-  }, []);
-
   return (
-    <main>
-      <h1>chess-analyst</h1>
-
-      <ImportForm onImported={refresh} />
-
-      {games && games.length === 0 && (
-        <p>No games yet — import your chess.com history to get started.</p>
-      )}
-
-      {games && games.length > 0 && (
-        <GameList games={games} selected={selected} onSelect={setSelected} />
-      )}
-
-      {selected && (
-        <ErrorBoundary key={selected.id}>
-          <GameViewer game={selected} />
-        </ErrorBoundary>
-      )}
-    </main>
+    <>
+      <header>
+        <h1>chess-analyst</h1>
+        <Nav />
+      </header>
+      <main>
+        <Routes>
+          <Route path="/" element={<GamesPage />} />
+          <Route path="/analyse/:gameId" element={<AnalysePage />} />
+          <Route path="/stats" element={<StatsPage />} />
+        </Routes>
+      </main>
+    </>
   );
 }
