@@ -37,7 +37,7 @@ Player's real Games.
 2. Enter the chess.com username (`DudulSmash`), choose the month (2026-06) and at least the Blitz and Bullet categories, and start the Import → a progress indicator runs, then a summary appears.
 3. Read the summary → it reports the total games fetched, a per-category breakdown, how many were newly imported vs already present, and a win/draw/loss tally.
 4. See the imported Games listed in the app.
-5. Open one imported Game → its Position renders on the board; stepping forward/backward and jumping to a Move updates the Position accordingly.
+5. Open one imported Game (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → its Position renders on the board; stepping forward/backward and jumping to a Move updates the Position accordingly.
 6. Start the same Import again (same month + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
 7. Reopen the app (reload) → the username is already prefilled from the remembered setting.
 
@@ -47,7 +47,7 @@ Player's real Games.
 - Step 2: a progress indicator is visible during the run and gone once it completes.
 - Step 3: the summary shows a non-zero total, a breakdown naming the categories actually present (Blitz and Bullet for 2026/06), an "imported" count and an "already present" count, and a W · D · L tally whose parts sum to the in-scope game count.
 - Step 4: the number of listed Games matches the imported count from the summary.
-- Step 5: opening a Game shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position.
+- Step 5: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position.
 - Step 6: the second import's summary shows 0 imported / all already present; the listed Game count is unchanged.
 - Step 7: after reload, the username field is pre-filled with `DudulSmash`.
 
