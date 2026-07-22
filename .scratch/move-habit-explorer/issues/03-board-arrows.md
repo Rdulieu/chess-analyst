@@ -1,5 +1,8 @@
 ## Status
-ready-for-agent
+done — auto-merged into `integration/US-5-move-explorer`. Green local check: build + tests
+(server 40, client 50) + agentic Feature Path green on the offline fixture (Black d4 red/opaque
+vs c4 green/less-opaque arrows, click target square descends + breadcrumb, single arrow on
+White), no blocking finding.
 
 ## Parent
 
