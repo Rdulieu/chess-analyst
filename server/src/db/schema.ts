@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, text, primaryKey } from "drizzle-orm/sqlite-core";
 
 /**
  * The `games` table models the `Game` glossary term (see CONTEXT.md): an
@@ -19,10 +19,45 @@ export const games = sqliteTable("games", {
   timeControlCategory: text("time_control_category")
     .notNull()
     .$type<"bullet" | "blitz" | "rapid" | "daily">(),
+  // Set once this Game's Moves have been folded into the move_habits counters,
+  // so the pre-aggregated totals cannot be double-counted (ADR-0005).
+  moveHabitsComputed: integer("move_habits_computed", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+
+/**
+ * Pre-aggregated `Move habit` counters (ADR-0005), keyed by the Position a Move
+ * was played from (`fen`: the 4-field FEN — placement, active colour, castling,
+ * en passant — so transpositions merge; see CONTEXT.md), the side the Player
+ * played (`side`), and the Move (`san`). Records every half-move of a Game up
+ * to the depth cap: the Player's own Moves and the opponent's replies alike.
+ * `count` = games in which that Move was played from that Position (for that
+ * side); `win`/`draw`/`loss` are Player-relative (for standard-scoring win
+ * rate); `bullet`/`blitz`/`rapid`/`daily` break `count` down by time control.
+ */
+export const moveHabits = sqliteTable(
+  "move_habits",
+  {
+    fen: text("fen").notNull(),
+    side: text("side").notNull().$type<"white" | "black">(),
+    san: text("san").notNull(),
+    count: integer("count").notNull().default(0),
+    win: integer("win").notNull().default(0),
+    draw: integer("draw").notNull().default(0),
+    loss: integer("loss").notNull().default(0),
+    bullet: integer("bullet").notNull().default(0),
+    blitz: integer("blitz").notNull().default(0),
+    rapid: integer("rapid").notNull().default(0),
+    daily: integer("daily").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.fen, t.side, t.san] })],
+);
+
+export type MoveHabit = typeof moveHabits.$inferSelect;
 
 /**
  * Key-value app settings (single-user, local — ADR-0002). Currently holds the

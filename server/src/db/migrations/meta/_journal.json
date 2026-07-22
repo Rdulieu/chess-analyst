@@ -15,6 +15,13 @@
       "when": 1784638975766,
       "tag": "0001_quick_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784714869060,
+      "tag": "0002_overconfident_human_torch",
+      "breakpoints": true
     }
   ]
 }
