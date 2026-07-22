@@ -1,5 +1,8 @@
 ## Status
-ready-for-agent
+done — auto-merged into `integration/nav-skeleton` (merge `5abeec3`). Green local check:
+build + tests (server 29, client 35) + agentic Feature Path green (nav visible → select a
+Game → `/analyse/:gameId` with steppable board → `/stats` placeholder → back to Mes parties),
+no blocking finding.
 
 ## Parent
 
