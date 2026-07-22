@@ -1,31 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchMoveHabits } from "../api";
+import { positionAfter } from "../chess/positions";
 import type { MoveHabitCandidate, Side } from "../types";
-
-/** 4-field FEN of the standard starting Position — the explorer's top level. */
-const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
 /**
  * Explorateur (`/explorer`): the `Move habit` explorer. For the chosen side the
- * Player played, lists the candidate Moves recorded from the starting Position
- * with frequency, win rate and a per-time-control breakdown. Drill-down and
- * board arrows arrive in later sub-issues; this slice shows the top level only.
+ * Player played, it lists the candidate Moves recorded from the current
+ * Position (frequency, win rate, per-time-control breakdown) and lets the
+ * Player drill down level by level. Selecting a candidate descends into the
+ * resulting Position; a breadcrumb tracks the path and jumps back up. The
+ * current Position is derived by replaying the path from the start, so the
+ * lookup key matches the server's precomputed one. Board arrows arrive in the
+ * next sub-issue.
  */
 export function ExplorerPage() {
   const [side, setSide] = useState<Side>("white");
+  const [path, setPath] = useState<string[]>([]);
   const [candidates, setCandidates] = useState<MoveHabitCandidate[]>([]);
+
+  const fen = useMemo(() => positionAfter(path), [path]);
 
   useEffect(() => {
     let active = true;
-    fetchMoveHabits(START_FEN, side)
+    fetchMoveHabits(fen, side)
       .then((c) => active && setCandidates(c))
       .catch(() => active && setCandidates([]));
     return () => {
       active = false;
     };
-  }, [side]);
+  }, [fen, side]);
+
+  const descend = (san: string) => setPath((p) => [...p, san]);
 
   return (
     <section aria-labelledby="explorer-heading">
@@ -53,15 +60,39 @@ export function ExplorerPage() {
         </label>
       </fieldset>
 
-      <ul aria-label="candidates">
-        {candidates.map((c) => (
-          <li key={c.san}>
-            <span>{c.san}</span> — {c.count} parties · {percent(c.winRate)} · bullet{" "}
-            {c.byCategory.bullet}, blitz {c.byCategory.blitz}, rapid {c.byCategory.rapid}, daily{" "}
-            {c.byCategory.daily}
+      <nav aria-label="breadcrumb">
+        <ol>
+          <li>
+            <button type="button" onClick={() => setPath([])}>
+              Départ
+            </button>
           </li>
-        ))}
-      </ul>
+          {path.map((san, i) => (
+            <li key={i}>
+              <button type="button" onClick={() => setPath(path.slice(0, i + 1))}>
+                {san}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      {candidates.length === 0 ? (
+        <p>Aucun coup enregistré plus loin dans cette ligne.</p>
+      ) : (
+        <ul aria-label="candidates">
+          {candidates.map((c) => (
+            <li key={c.san}>
+              <button type="button" onClick={() => descend(c.san)}>
+                {c.san}
+              </button>{" "}
+              — {c.count} {c.count > 1 ? "parties" : "partie"} · {percent(c.winRate)} · bullet{" "}
+              {c.byCategory.bullet}, blitz{" "}
+              {c.byCategory.blitz}, rapid {c.byCategory.rapid}, daily {c.byCategory.daily}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

@@ -14,6 +14,8 @@ declare module "cm-chess" {
   export class Chess {
     constructor(fenOrProps?: string | Record<string, unknown>);
     loadPgn(pgn: string, sloppy?: boolean): void;
+    /** Plays a Move (SAN); returns the resulting move (with its `fen`) or null if illegal. */
+    move(move: string): CmMove | null;
     history(): CmMove[];
     /** The initial position's FEN (SetUp header, or the standard start). */
     setUpFen(): string;
