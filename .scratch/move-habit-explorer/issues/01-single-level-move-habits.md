@@ -20,15 +20,18 @@ adds the `/explorer` route and its navigation entry on top of the enabler's rout
 
 Backing this:
 
-- A new Drizzle table keyed by (Position FEN, side, Move) storing count/win/draw/loss and
-  per-time-control sub-counts (ADR-0005).
+- A new Drizzle table keyed by (Position FEN [**4-field**: placement, active colour, castling,
+  en passant — the move counters dropped], the **side the player played**, Move) storing
+  count/win/draw/loss and per-time-control sub-counts (ADR-0005).
 - A `move_habits_computed` flag on the `games` table so a Game is counted **exactly once**
   (the pre-aggregated totals are not idempotent).
 - A **standalone precomputation function** that walks a Game's Moves up to 40 Moves deep via
-  `cm-chess` and updates these counters — merging Positions reached via different move orders
-  (transpositions) into the same entry, and skipping any Game already flagged. It is called from
-  **both** entry points: the real chess.com import path (`importMonth`, per inserted Game) **and**
-  the fixture-seed path — same function, never inlined or duplicated.
+  `cm-chess` and updates these counters, recording **every** half-move (the player's own Moves
+  **and** the opponent's replies) so the drill-down can later walk the whole line — merging
+  Positions reached via different move orders (transpositions) into the same entry (by the
+  4-field FEN), and skipping any Game already flagged. It is called from **both** entry points:
+  the real chess.com import path (`importMonth`, per inserted Game) **and** the fixture-seed
+  path — same function, never inlined or duplicated.
 - A read API endpoint the UI calls for a given Position + side.
 
 Seed a `Move habit` **fixture dataset** (distinct from US-1's single fixture Game): several short
@@ -40,7 +43,7 @@ drill-down yet — this slice only shows the single top level, from the starting
 
 ## Acceptance criteria
 
-- [ ] The explorer is a page at `/explorer` with a side selector (White/Black) that changes which candidates are shown
+- [ ] The explorer is a page at `/explorer` with a side selector (White/Black) — the **side the player played** — that changes which candidates are shown (the explorer aggregates only that side's Games)
 - [ ] Candidate Moves from the starting Position are listed with frequency, win rate, and per-time-control-category breakdown
 - [ ] The two fixture games that transpose into the same Position are merged into a single counted entry, not two
 - [ ] No candidate is hidden or filtered out for having a low sample size — the exact count is always shown alongside the rate

@@ -21,6 +21,27 @@ The counter-update logic lives in **one standalone function**, not inlined into 
 
 This keeps the aggregation logic identical across entry points and lets each feature be wired independently (see `[[feature-independent-functions]]` in the project memory) rather than duplicated.
 
+## The transposition merge key is the 4-field FEN
+
+Positions are merged across Games by transposition (see `Move habit` in `CONTEXT.md`), so the
+aggregate is keyed by the **Position identity**, not the raw `cm-chess` FEN. `cm-chess` emits a
+full 6-field FEN whose last two fields — the halfmove clock and the fullmove number — vary with
+the depth and move order used to reach a position. Keying on the full FEN would therefore split
+genuine transpositions into separate entries and silently break the merge rule (the feature's
+central correctness property).
+
+The merge key is the **first four FEN fields**: piece placement, active colour, castling rights,
+and en-passant target square (together with the player's side — White/Black — as a separate key
+component, since the explorer is scoped to the side the player played). The two move counters are
+dropped.
+
+The en-passant field is kept **as `cm-chess` emits it** (i.e. set whenever a pawn has just made
+a double step, even when no en-passant capture is actually legal). This can, in rare cases, keep
+two otherwise-identical positions from merging. Normalising it (clearing the field unless a
+capture is legal) is deliberately **not** done: the extra logic is not worth it for a local,
+single-user stats tool (ADR-0002), and the miss is a marginal under-merge, never an incorrect
+merge.
+
 ## A per-Game flag guards against double counting
 
 Because the stored structure is **pre-aggregated** (running totals per FEN/side/Move), re-running the precomputation over a Game it already counted would **double-count** — the aggregate is not naturally idempotent, unlike a per-event table would be. Each `games` row therefore carries a `move_habits_computed` flag: the precomputation skips a Game already flagged and sets it once done. A Game is counted **exactly once**, whichever entry point processed it.

@@ -14,8 +14,10 @@ This sub-issue is implemented on the business-story integration branch
 
 Add level-by-level navigation to the explorer: selecting a candidate Move from the list descends
 into the Position that results from it, replacing the displayed candidates with those played
-from the new Position (for the same side), and a breadcrumb shows the path of Moves taken so
-far. Selecting an earlier point in the breadcrumb navigates back up to that level. Descending
+from the new Position within the player's Games of the selected side — i.e. the Moves of
+**whoever is now to move**: the player's own Moves (`Move habit`s) at the player's turn, the
+opponent's replies (`Opponent reply`) at the opponent's turn, each with a player-relative win
+rate — and a breadcrumb shows the path of Moves taken so far. Selecting an earlier point in the breadcrumb navigates back up to that level. Descending
 stops being offered once 40 Moves (20 full moves) of depth is reached, matching the
 precomputation's own depth cap from the previous issue.
 

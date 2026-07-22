@@ -12,16 +12,18 @@ This sub-issue is implemented on the business-story integration branch
 
 ## What to build
 
-Render the currently displayed candidate Moves directly on the interactive board (US-1's
-`react-chessboard` instance) as arrows, with thickness encoding frequency (more played =
-thicker) and color encoding win rate (per the 50% threshold already used for `Weak opening`).
-Clicking an arrow descends a level exactly as clicking the corresponding list entry would (same
-navigation/breadcrumb behavior as the previous issue).
+Render the currently displayed candidates (player Moves and `Opponent reply`s alike) directly on
+the interactive board as arrows, with **hue** encoding win rate (per the 50% threshold already
+used for `Weak opening`) and **opacity** encoding frequency (more played = more opaque). Note:
+`react-chessboard` v5 exposes per-arrow **colour only** (not per-arrow thickness), so frequency
+is carried by the colour's alpha rather than stroke width. Clicking an arrow descends a level
+exactly as clicking the corresponding list entry would (same navigation/breadcrumb behavior as
+the previous issue).
 
 ## Acceptance criteria
 
 - [ ] Every candidate Move currently shown in the list also appears as an arrow on the board
-- [ ] Arrow thickness visibly differs between a frequently played candidate and a rarely played one
+- [ ] Arrow opacity visibly differs between a frequently played candidate and a rarely played one
 - [ ] Arrow color visibly differs between a candidate with a win rate at/above 50% and one below it
 - [ ] Clicking an arrow produces the same descend + breadcrumb update as clicking its corresponding list entry
 
