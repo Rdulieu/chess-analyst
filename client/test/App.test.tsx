@@ -35,6 +35,7 @@ describe("App — routing & navigation", () => {
         const u = url.toString();
         if (u === "/api/games") return jsonResponse([OPERA_GAME]);
         if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse(OPERA_GAME);
+        if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
         return jsonResponse({}, false, 404);
       }),
     );
@@ -66,6 +67,17 @@ describe("App — routing & navigation", () => {
     // Previous/Next work exactly as before: Next advances one Move.
     await user.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("e4");
+  });
+
+  it("navigates to the Explorateur page from the nav", async () => {
+    const user = userEvent.setup();
+    renderApp(["/"]);
+
+    await user.click(screen.getByRole("link", { name: /explorateur/i }));
+
+    expect(await screen.findByRole("heading", { name: /explorateur/i })).toBeTruthy();
+    // The side selector is present (White/Black).
+    expect(screen.getByRole("radio", { name: /blancs/i })).toBeTruthy();
   });
 
   it("renders a placeholder on the Stats page (content owned by US-6)", async () => {

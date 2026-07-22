@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Nav } from "./components/Nav";
 import { GamesPage } from "./pages/GamesPage";
 import { AnalysePage } from "./pages/AnalysePage";
+import { ExplorerPage } from "./pages/ExplorerPage";
 import { StatsPage } from "./pages/StatsPage";
 
 /**
@@ -20,6 +21,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<GamesPage />} />
           <Route path="/analyse/:gameId" element={<AnalysePage />} />
+          <Route path="/explorer" element={<ExplorerPage />} />
           <Route path="/stats" element={<StatsPage />} />
         </Routes>
       </main>

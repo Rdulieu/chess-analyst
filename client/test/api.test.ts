@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { fetchGame, importGames, getSettings, saveSettings } from "../src/api";
+import { fetchGame, fetchMoveHabits, importGames, getSettings, saveSettings } from "../src/api";
 import { OPERA_GAME } from "./fixtures";
 
 afterEach(() => {
@@ -100,5 +100,42 @@ describe("fetchGame", () => {
     );
 
     await expect(fetchGame(999)).rejects.toThrow(/999/);
+  });
+});
+
+describe("fetchMoveHabits", () => {
+  it("requests /api/move-habits with the fen and side and returns the candidates", async () => {
+    const candidates = [
+      {
+        san: "e4",
+        count: 3,
+        win: 1,
+        draw: 1,
+        loss: 1,
+        winRate: 0.5,
+        byCategory: { bullet: 0, blitz: 2, rapid: 1, daily: 0 },
+      },
+    ];
+    const fetchMock = vi.fn<(url: string | URL) => Promise<Response>>(
+      async () => ({ ok: true, status: 200, json: async () => ({ candidates }) }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchMoveHabits("START_FEN", "white");
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("/api/move-habits");
+    expect(url).toContain("side=white");
+    expect(url).toContain("fen=START_FEN");
+    expect(result).toEqual(candidates);
+  });
+
+  it("throws when the response is not ok", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
+    );
+
+    await expect(fetchMoveHabits("FEN", "black")).rejects.toThrow();
   });
 });

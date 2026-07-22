@@ -1,6 +1,7 @@
 import type { Db } from "../db";
 import { games } from "../db/schema";
 import { gameExistsByUrl } from "../repository";
+import { recordMoveHabits } from "../move-habits/precompute";
 import type { ChessComClient, TimeControlCategory } from "../chesscom";
 import { UnknownUsernameError } from "./errors";
 import { toGame } from "./mapping";
@@ -53,7 +54,8 @@ export async function importMonth(
       alreadyPresent++;
       continue;
     }
-    db.insert(games).values(mapped).run();
+    const inserted = db.insert(games).values(mapped).returning().get();
+    recordMoveHabits(db, inserted);
     imported++;
   }
   const summary: ImportResult = {

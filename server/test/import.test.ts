@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest";
+import { and, eq } from "drizzle-orm";
 import { openDb } from "../src/db";
+import { moveHabits } from "../src/db/schema";
 import { listGames } from "../src/repository";
 import { importMonth, UnknownUsernameError } from "../src/import";
 import type { ChessComClient, ChessComGame } from "../src/chesscom";
+
+/** 4-field FEN of the standard starting Position. */
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
 /** A chess.com game as the public API returns it, with sensible defaults. */
 function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
@@ -169,6 +174,26 @@ describe("importMonth", () => {
     expect(result.alreadyPresent).toBe(0);
     expect(result.byCategory).toEqual({ bullet: 1, blitz: 2, rapid: 1, daily: 0 });
     expect(result.results).toEqual({ win: 2, draw: 1, loss: 1 });
+  });
+
+  it("precomputes Move habit counters for each imported Game", async () => {
+    const { db } = openDb(":memory:");
+    const client = fakeClient([
+      chessComGame({
+        pgn: "1. e4 e5",
+        white: { username: "me", result: "win" },
+        black: { username: "opp", result: "resigned" },
+      }),
+    ]);
+
+    await importMonth(db, client, { username: "me", year: 2024, month: 1, categories: ["blitz"] });
+
+    const e4 = db
+      .select()
+      .from(moveHabits)
+      .where(and(eq(moveHabits.fen, START), eq(moveHabits.side, "white"), eq(moveHabits.san, "e4")))
+      .get();
+    expect(e4?.count).toBe(1);
   });
 
   it("reports zero imported with a clear message when the month has no matching games", async () => {
