@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Chessboard } from "react-chessboard";
 import { fetchMoveHabits } from "../api";
-import { positionAfter } from "../chess/positions";
+import { positionAfter, boardFen } from "../chess/positions";
+import { candidateArrows } from "../chess/arrows";
 import type { MoveHabitCandidate, Side } from "../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
@@ -21,6 +23,8 @@ export function ExplorerPage() {
   const [candidates, setCandidates] = useState<MoveHabitCandidate[]>([]);
 
   const fen = useMemo(() => positionAfter(path), [path]);
+  const position = useMemo(() => boardFen(path), [path]);
+  const arrows = useMemo(() => candidateArrows(path, candidates), [path, candidates]);
 
   useEffect(() => {
     let active = true;
@@ -33,6 +37,13 @@ export function ExplorerPage() {
   }, [fen, side]);
 
   const descend = (san: string) => setPath((p) => [...p, san]);
+
+  // react-chessboard v5 has no arrow-click callback, so clicking a candidate's
+  // target square descends it — the board's equivalent of clicking the list.
+  const descendBySquare = (square: string) => {
+    const hit = arrows.find((a) => a.endSquare === square);
+    if (hit) descend(hit.san);
+  };
 
   return (
     <section aria-labelledby="explorer-heading">
@@ -59,6 +70,23 @@ export function ExplorerPage() {
           Noirs
         </label>
       </fieldset>
+
+      <div style={{ maxWidth: 480 }}>
+        <Chessboard
+          options={{
+            id: "explorer-board",
+            position,
+            allowDragging: false,
+            showAnimations: false,
+            arrows: arrows.map(({ startSquare, endSquare, color }) => ({
+              startSquare,
+              endSquare,
+              color,
+            })),
+            onSquareClick: ({ square }) => descendBySquare(square),
+          }}
+        />
+      </div>
 
       <nav aria-label="breadcrumb">
         <ol>
