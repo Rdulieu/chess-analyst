@@ -1,5 +1,8 @@
 ## Status
-ready-for-agent
+done — auto-merged into `integration/US-6-global-stats`. Green local check: build + tests
+(server 46, client 54) + agentic Feature Path green on the offline fixture (Total 6 · 2/1/3 ·
+42%; cadences bullet 50% / blitz 50% / rapid 0% / daily 0 no-rate; sides Blancs 50% / Noirs 33%;
+internally consistent), no blocking finding.
 
 ## Parent
 
