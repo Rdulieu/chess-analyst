@@ -43,13 +43,20 @@ threshold, flagged for review. Never computed for the opponent's moves — this 
 player's own improvement.
 _Avoid_: Blunder (reserve for the most severe mistakes only, if the distinction matters later), Error
 
+**Win rate**:
+The Player's result over a set of Games, using standard chess scoring:
+`(wins + 0.5 × draws) / games`, always **from the Player's side**. No minimum sample size is ever
+enforced — the game count is always shown alongside the rate, so the Player judges its
+significance. The canonical metric reused wherever results are scored: `Weak opening`,
+`Move habit`/`Opponent reply`, and the global stats view. Whether a rate below 50% is highlighted
+is a per-view presentation choice, not part of the definition.
+_Avoid_: Score (ambiguous with a Game's result), Success rate
+
 **Weak opening**:
 An Opening the player has played **as a given side, within a given time control category**
 (White Sicilian in blitz and White Sicilian in rapid are two separate entries), shown with its
-win rate and the number of games it's based on. Win rate uses standard chess scoring:
-`(wins + 0.5 × draws) / games`. Openings with a win rate under 50% are highlighted for review.
-No minimum sample size is enforced — the game count is always shown alongside the rate so the
-player can judge its significance themselves.
+`Win rate` and the number of games it's based on. Openings with a `Win rate` under 50% are
+highlighted for review.
 _Avoid_: Weak spot, Weakness, Problem area
 
 **Danger position**:
@@ -63,13 +70,11 @@ _Avoid_: Dangerous position, Trap
 A Move the **player themselves** has played from a recurring Position, within the first 20 full
 moves (40 Moves) of a Game — the core of the explorer. Positions are merged across Games by
 transposition — reaching the same position via a different move order still counts as the same
-Position. Shown with its frequency, its win rate (standard chess scoring:
-`(wins + 0.5 × draws) / games`, always from the player's side), and a breakdown of how many of
-those games fall into each time control category (bullet, blitz, rapid, daily) — the win rate
-itself is computed across all time controls combined, not split by category. **Scoped by the
-side the player played** (White/Black): the explorer is opened for one side and aggregates only
-the player's Games on that side. No minimum sample size is enforced — the frequency is always
-shown alongside the rate.
+Position. Shown with its frequency, its `Win rate`, and a breakdown of how many of those games fall into
+each time control category (bullet, blitz, rapid, daily) — the `Win rate` itself is computed
+across all time controls combined, not split by category. **Scoped by the side the player
+played** (White/Black): the explorer is opened for one side and aggregates only the player's
+Games on that side. The frequency (count) is always shown alongside the rate.
 _Avoid_: Opening explorer, Repertoire
 
 **Opponent reply**:
@@ -77,7 +82,7 @@ Within the explorer, a Move an **opponent** played from a recurring Position in 
 Games (of the selected side). It is not a habit of the player's, but is surfaced at the
 opponent's turn: the drill-down walks the **whole line**, so player Moves (`Move habit`s) and
 Opponent replies alternate level by level. An Opponent reply is shown with the same frequency
-and a **player-relative** win rate — how the player fared when facing it — so the player can see
+and `Win rate` (player-relative — how the player fared when facing it), so the player can see
 which replies give them trouble. Whether a level shows the player's own Moves or Opponent
 replies follows from the Position's side to move versus the selected side.
 _Avoid_: Opponent move (too vague), Threat

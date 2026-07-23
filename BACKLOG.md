@@ -4,8 +4,8 @@
 
 - **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
 - **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
-- **US-6**: Consulter mes statistiques globales sur l'historique importé (nombre de parties, bilan victoire/nulle/défaite), sur la page `/stats`.
-  > Petite feature qui remplit le placeholder `/stats` réservé par l'ADR-0006 (routage). Agrégation sur **tout** l'historique importé (distincte du bilan V/N/D **par import** déjà affiché par `ImportSummary`). Dépend de l'US technique enabler de navigation.
+- **US-6**: Consulter mes statistiques globales sur l'historique importé, sur la page `/stats`.
+  > Remplit le placeholder `/stats` réservé par l'ADR-0006 (routage). Agrégation sur **tout** l'historique importé (distincte du bilan V/N/D **par import** de `ImportSummary`). **Grillée** ; périmètre retenu : un **Total** (parties · V/N/D · `Win rate`) + deux ventilations, **par cadence** (bullet/blitz/rapid/daily) et **par côté** (Blancs/Noirs), chacune `parties · V/N/D · Win rate`. Sans matrice croisée, sans taille d'échantillon minimale. **Calcul à la volée** sur la table `games` (pas de précalcul). État vide (0 partie) : message d'invitation seul, pas de taux ; cadence/côté absent : ligne à 0 sans taux. `Win rate` = terme canonique du glossaire. Enabler de navigation déjà livré (`develop`).
 
 ## Doing
 
