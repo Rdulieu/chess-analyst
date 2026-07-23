@@ -46,6 +46,36 @@ merge.
 
 Because the stored structure is **pre-aggregated** (running totals per FEN/side/Move), re-running the precomputation over a Game it already counted would **double-count** — the aggregate is not naturally idempotent, unlike a per-event table would be. Each `games` row therefore carries a `move_habits_computed` flag: the precomputation skips a Game already flagged and sets it once done. A Game is counted **exactly once**, whichever entry point processed it.
 
+## Shape at a glance (why it fits the board + arrows)
+
+The aggregate is **read the same way it is drawn**: one lookup by `(fen, side)` returns the
+candidate rows for the Position currently on the board, and each row already carries everything a
+list entry *and* a board arrow need. Drilling down just recomputes `fen` and repeats the lookup —
+`fen` is at once the board's Position and the navigation cursor, so board, arrows and list stay in
+lockstep. Because the key's `fen` is the **4-field** form, every Game that reached the Position
+(via any move order) feeds the *same* arrows (transposition merge). Flipping the `side` filter
+swaps White/Black habits without recomputation; whether a row is a `Move habit` or an
+`Opponent reply` is read from the Position's side to move versus `side` (not stored).
+
+```mermaid
+flowchart LR
+  subgraph store["move_habits — pre-aggregated counters"]
+    key["key: (fen [4-field], side, san)"]
+    val["count · win/draw/loss · bullet/blitz/rapid/daily"]
+  end
+
+  fen(["current position = fen<br/>(also the drill cursor)"]) --> q{{"listCandidates(fen, side)<br/>PK-indexed lookup — no scan"}}
+  store --> q
+  q --> rows["candidate rows — one per san"]
+
+  rows --> list["LIST entry<br/>san · count · win rate · per-cadence"]
+  rows --> arrow["BOARD arrow<br/>san → from/to (cm-chess)<br/>win rate → hue · count → opacity"]
+
+  list -- "click entry" --> descend
+  arrow -- "click target square" --> descend["descend<br/>fen' = positionAfter(path + san)"]
+  descend --> fen
+```
+
 ## Consequences
 
 Adds a real aggregate data structure (positions reached, keyed by FEN, with per-move counters) alongside the raw Game/PGN storage — not just derived, on-demand math. If the depth cap (20 full moves) or the transposition-merging rule (ADR context: `Move habit` in `CONTEXT.md`) ever changes, existing precomputed counters need a one-time recomputation pass, not just a code change.
