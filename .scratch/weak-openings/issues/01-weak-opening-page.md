@@ -1,6 +1,12 @@
 # Weak opening page — win rate per opening, by side and cadence
 
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-3-weak-openings`. Green local check: build +
+tests (server 57, client 59) + agentic Feature Path green on the offline `seed:openings` fixture
+(Sicilian B22 Blancs/blitz 3 · 33% highlighted; Italian C50 Blancs/rapid 100%; French C00
+Noirs/blitz 50% not highlighted; Autre/other bullet 0% highlighted; ordered by games desc,
+internally consistent), no blocking finding. One FP finding (weak-opening highlight not visually
+rendered — the app ships no CSS) fixed in 754125c before merge (inline tint + accessible "à
+revoir" ⚠ marker). `integration → develop` remains a human decision.
 
 ## Parent
 
