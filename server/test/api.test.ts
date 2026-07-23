@@ -207,3 +207,41 @@ describe("move habits API", () => {
     expect(e4.byCategory).toMatchObject({ bullet: 0, blitz: 2, rapid: 0, daily: 0 });
   });
 });
+
+describe("stats API", () => {
+  const game = (over: Record<string, unknown>) => ({
+    gameUrl: `https://chess.com/g/${Math.random()}`,
+    pgn: "1. e4 e5",
+    opponent: "o",
+    playerColor: "white" as const,
+    result: "win" as const,
+    date: "2026-01-01",
+    timeControlCategory: "blitz" as const,
+    ...over,
+  });
+
+  it("GET /api/stats returns the history-wide summary (total, per cadence, per side)", async () => {
+    const { db } = openDb(":memory:");
+    db.insert(games).values(game({ result: "win", timeControlCategory: "blitz", playerColor: "white" })).run();
+    db.insert(games).values(game({ result: "loss", timeControlCategory: "bullet", playerColor: "black" })).run();
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/stats");
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
+    expect(res.body.byCategory.blitz).toMatchObject({ games: 1, win: 1 });
+    expect(res.body.byCategory.rapid).toMatchObject({ games: 0, winRate: null });
+    expect(res.body.bySide.black).toMatchObject({ games: 1, loss: 1 });
+  });
+
+  it("GET /api/stats returns zeros with a null rate on an empty history", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/stats");
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
+  });
+});
