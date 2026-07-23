@@ -1,5 +1,12 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { fetchGame, fetchMoveHabits, importGames, getSettings, saveSettings } from "../src/api";
+import {
+  fetchGame,
+  fetchMoveHabits,
+  fetchStats,
+  importGames,
+  getSettings,
+  saveSettings,
+} from "../src/api";
 import { OPERA_GAME } from "./fixtures";
 
 afterEach(() => {
@@ -137,5 +144,41 @@ describe("fetchMoveHabits", () => {
     );
 
     await expect(fetchMoveHabits("FEN", "black")).rejects.toThrow();
+  });
+});
+
+describe("fetchStats", () => {
+  it("requests /api/stats and returns the summary", async () => {
+    const summary = {
+      total: { games: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 },
+      byCategory: {
+        bullet: { games: 0, win: 0, draw: 0, loss: 0, winRate: null },
+        blitz: { games: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 },
+        rapid: { games: 0, win: 0, draw: 0, loss: 0, winRate: null },
+        daily: { games: 0, win: 0, draw: 0, loss: 0, winRate: null },
+      },
+      bySide: {
+        white: { games: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 },
+        black: { games: 0, win: 0, draw: 0, loss: 0, winRate: null },
+      },
+    };
+    const fetchMock = vi.fn(
+      async () => ({ ok: true, status: 200, json: async () => summary }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchStats();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/stats");
+    expect(result).toEqual(summary);
+  });
+
+  it("throws when the response is not ok", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
+    );
+
+    await expect(fetchStats()).rejects.toThrow();
   });
 });

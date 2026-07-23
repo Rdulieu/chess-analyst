@@ -27,6 +27,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const ZERO = { games: 0, win: 0, draw: 0, loss: 0, winRate: null };
+const STATS_SUMMARY = {
+  total: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 },
+  byCategory: { bullet: ZERO, blitz: ZERO, rapid: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, daily: ZERO },
+  bySide: { white: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, black: ZERO },
+};
+
 describe("App — routing & navigation", () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -36,6 +43,7 @@ describe("App — routing & navigation", () => {
         if (u === "/api/games") return jsonResponse([OPERA_GAME]);
         if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse(OPERA_GAME);
         if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
+        if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
         return jsonResponse({}, false, 404);
       }),
     );
@@ -80,11 +88,13 @@ describe("App — routing & navigation", () => {
     expect(screen.getByRole("radio", { name: /blancs/i })).toBeTruthy();
   });
 
-  it("renders a placeholder on the Stats page (content owned by US-6)", async () => {
+  it("renders the global stats on the Stats page", async () => {
     renderApp(["/stats"]);
 
     expect(await screen.findByRole("heading", { name: /stats/i })).toBeTruthy();
-    expect(screen.getByText(/à venir/i)).toBeTruthy();
+    // The stats content (breakdowns) renders, not a placeholder.
+    expect(await screen.findByText(/par cadence/i)).toBeTruthy();
+    expect(screen.getByText(/par côté/i)).toBeTruthy();
   });
 
   it("loads the Game straight from the URL (reload / deep-link into Analyse)", async () => {
@@ -101,7 +111,7 @@ describe("App — routing & navigation", () => {
     await screen.findByRole("button", { name: /Duke Karl/i });
 
     await user.click(screen.getByRole("link", { name: /stats/i }));
-    expect(await screen.findByText(/à venir/i)).toBeTruthy();
+    expect(await screen.findByText(/par cadence/i)).toBeTruthy();
 
     await user.click(screen.getByRole("link", { name: /mes parties/i }));
     expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
