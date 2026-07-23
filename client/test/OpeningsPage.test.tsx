@@ -59,15 +59,22 @@ describe("OpeningsPage", () => {
     expect(rows[2].textContent).toContain("100");
   });
 
-  it("highlights entries under a 50% Win rate for review, and only those", async () => {
+  it("visibly highlights entries under a 50% Win rate for review, and only those", async () => {
     stub(ENTRIES);
     render(<OpeningsPage />);
 
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
-    // The 25% Sicilian is flagged weak; the 100% Italian is not.
+    // The 25% Sicilian is flagged weak: DOM hook, a visible background tint (the
+    // app has no stylesheet, so the cue must not rely on CSS), and an accessible
+    // "à revoir" marker for assistive tech.
     expect(rows[1].getAttribute("data-weak")).toBe("true");
+    expect(rows[1].style.backgroundColor).not.toBe("");
+    expect(within(rows[1]).getByLabelText(/faible|à revoir/i)).toBeTruthy();
+    // The 100% Italian is not marked in any of those ways.
     expect(rows[2].getAttribute("data-weak")).toBeNull();
+    expect(rows[2].style.backgroundColor).toBe("");
+    expect(within(rows[2]).queryByLabelText(/faible|à revoir/i)).toBeNull();
   });
 
   it("does not highlight an opening at exactly 50%", async () => {
@@ -77,6 +84,8 @@ describe("OpeningsPage", () => {
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
     expect(rows[1].getAttribute("data-weak")).toBeNull();
+    expect(rows[1].style.backgroundColor).toBe("");
+    expect(within(rows[1]).queryByLabelText(/faible|à revoir/i)).toBeNull();
   });
 
   it("shows only an invitation when there are no played openings", async () => {

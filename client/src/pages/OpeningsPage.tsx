@@ -55,6 +55,7 @@ export function OpeningsPage() {
               <tr
                 key={`${o.eco}-${o.side}-${o.cadence}`}
                 data-weak={isWeak(o) ? "true" : undefined}
+                style={isWeak(o) ? { backgroundColor: "#fbe0e0" } : undefined}
               >
                 <td>
                   {o.openingName} · {o.eco}
@@ -65,7 +66,15 @@ export function OpeningsPage() {
                 <td>
                   <Tally win={o.win} draw={o.draw} loss={o.loss} />
                 </td>
-                <td>{o.winRate !== null ? percent(o.winRate) : null}</td>
+                <td>
+                  {o.winRate !== null ? percent(o.winRate) : null}
+                  {isWeak(o) && (
+                    <span title="Ouverture faible, à revoir" aria-label="ouverture faible à revoir">
+                      {" "}
+                      ⚠
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
