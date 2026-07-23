@@ -2,12 +2,14 @@
 
 ## To do
 
-- **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
 - **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
 - **US-6**: Consulter mes statistiques globales sur l'historique importé, sur la page `/stats`.
   > Remplit le placeholder `/stats` réservé par l'ADR-0006 (routage). Agrégation sur **tout** l'historique importé (distincte du bilan V/N/D **par import** de `ImportSummary`). **Grillée** ; périmètre retenu : un **Total** (parties · V/N/D · `Win rate`) + deux ventilations, **par cadence** (bullet/blitz/rapid/daily) et **par côté** (Blancs/Noirs), chacune `parties · V/N/D · Win rate`. Sans matrice croisée, sans taille d'échantillon minimale. **Calcul à la volée** sur la table `games` (pas de précalcul). État vide (0 partie) : message d'invitation seul, pas de taux ; cadence/côté absent : ligne à 0 sans taux. `Win rate` = terme canonique du glossaire. Enabler de navigation déjà livré (`develop`). Découpée en 1 issue technique (`ready-for-agent`) : `.scratch/global-stats/issues/01-global-stats-page.md`. Branche `integration/US-6-global-stats`.
 
 ## Doing
+
+- **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
+  > **Grillée** ; **ADR-0007** : la classification d'ouverture de chess.com (`[ECO]`/`[ECOUrl]`) est stockée sur `games` **à l'import** (colonnes `eco`/`openingName` ; ECO-code = identité, nom pour l'affichage ; parties non classées → catch-all `Other`). Agrégation **à la volée** (`GROUP BY eco/côté/cadence`, pas de table de compteurs) ; primitive `Win rate` extraite vers un module neutre partagé avec US-6. Périmètre : page **`/openings`** (« Ouvertures », route réservée par l'ADR-0006), une ligne par (ouverture, côté, cadence) : nom · ECO · côté · cadence · parties · V/N/D · `Win rate`. **Surlignage < 50 %**, **tri parties décroissantes**, sans taille d'échantillon minimale. État vide (0 partie) : message d'invitation seul. PRD : `.scratch/weak-openings/PRD.md`. Découpée en 1 issue technique (`ready-for-agent`) : `.scratch/weak-openings/issues/01-weak-opening-page.md`. Branche `integration/US-3-weak-openings` (depuis `develop` à jour).
 
 - **US-5**: Explorateur visuel de mes coups joués — parcourir l'arbre de mes coups, avec fréquence et taux de victoire par coup, pour comprendre mes habitudes.
   > PRD : `.scratch/move-habit-explorer/PRD.md`. Indépendante d'US-2 (jeu de fixtures propre). Découpée en 3 issues techniques (`ready-for-agent`) :
