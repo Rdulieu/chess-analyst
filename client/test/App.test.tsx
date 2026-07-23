@@ -44,6 +44,7 @@ describe("App — routing & navigation", () => {
         if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse(OPERA_GAME);
         if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
         if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
+        if (u === "/api/openings") return jsonResponse({ openings: [] });
         return jsonResponse({}, false, 404);
       }),
     );
@@ -86,6 +87,15 @@ describe("App — routing & navigation", () => {
     expect(await screen.findByRole("heading", { name: /explorateur/i })).toBeTruthy();
     // The side selector is present (White/Black).
     expect(screen.getByRole("radio", { name: /blancs/i })).toBeTruthy();
+  });
+
+  it("navigates to the Ouvertures page from the nav", async () => {
+    const user = userEvent.setup();
+    renderApp(["/"]);
+
+    await user.click(screen.getByRole("link", { name: /ouvertures/i }));
+
+    expect(await screen.findByRole("heading", { name: /ouvertures/i })).toBeTruthy();
   });
 
   it("renders the global stats on the Stats page", async () => {

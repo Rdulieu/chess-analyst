@@ -85,6 +85,62 @@ describe("games API", () => {
   });
 });
 
+describe("openings API", () => {
+  function openingGame(over: Partial<import("../src/db/schema").NewGame> = {}) {
+    return {
+      gameUrl: `https://www.chess.com/game/live/${seqUrl++}`,
+      pgn: "1. e4 e5",
+      opponent: "opp",
+      playerColor: "white" as const,
+      result: "win" as const,
+      date: "2026-01-01",
+      timeControlCategory: "blitz" as const,
+      eco: "B22",
+      openingName: "Sicilian Defense Alapin Variation",
+      ...over,
+    };
+  }
+  let seqUrl = 0;
+
+  it("GET /api/openings returns weak-opening entries (by opening, side, cadence) sorted by games desc", async () => {
+    const { db } = openDb(":memory:");
+    db.insert(games)
+      .values([
+        openingGame({ result: "win" }),
+        openingGame({ result: "loss" }),
+        openingGame({ eco: "C50", openingName: "Italian Game", result: "win" }),
+      ])
+      .run();
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/openings");
+
+    expect(res.status).toBe(200);
+    expect(res.body.openings).toHaveLength(2);
+    expect(res.body.openings[0]).toMatchObject({
+      eco: "B22",
+      openingName: "Sicilian Defense Alapin Variation",
+      side: "white",
+      cadence: "blitz",
+      games: 2,
+      win: 1,
+      loss: 1,
+      winRate: 0.5,
+    });
+    expect(res.body.openings[1]).toMatchObject({ eco: "C50", games: 1, winRate: 1 });
+  });
+
+  it("GET /api/openings returns { openings: [] } for an empty history", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/openings");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ openings: [] });
+  });
+});
+
 describe("import API", () => {
   it("POST /api/import imports the month and the Games then show up in GET /api/games", async () => {
     const { db } = openDb(":memory:");

@@ -1,5 +1,6 @@
 import type { NewGame } from "../db/schema";
 import type { ChessComGame } from "../chesscom";
+import { parseOpening } from "./opening";
 
 /**
  * Pure translation from chess.com's game shape to the Player-relative `Game`
@@ -28,6 +29,7 @@ export function normalizeResult(code: string): "win" | "loss" | "draw" {
 export function toGame(game: ChessComGame, username: string): NewGame {
   const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
   const [self, other] = isWhite ? [game.white, game.black] : [game.black, game.white];
+  const { eco, openingName } = parseOpening(game.pgn);
   return {
     gameUrl: game.url,
     pgn: game.pgn,
@@ -36,5 +38,7 @@ export function toGame(game: ChessComGame, username: string): NewGame {
     result: normalizeResult(self.result),
     date: new Date(game.end_time * 1000).toISOString().slice(0, 10),
     timeControlCategory: game.time_class,
+    eco,
+    openingName,
   };
 }

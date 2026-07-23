@@ -50,4 +50,24 @@ describe("toGame", () => {
     );
     expect(g).toMatchObject({ playerColor: "black", opponent: "opp", result: "loss" });
   });
+
+  it("records the Opening from chess.com's ECO/ECOUrl headers (ADR-0007)", () => {
+    const g = toGame(
+      chessComGame({
+        pgn: [
+          '[ECO "B22"]',
+          '[ECOUrl "https://www.chess.com/openings/Sicilian-Defense-Alapin-Variation"]',
+          "",
+          "1. e4 c5 2. c3",
+        ].join("\n"),
+      }),
+      "me",
+    );
+    expect(g).toMatchObject({ eco: "B22", openingName: "Sicilian Defense Alapin Variation" });
+  });
+
+  it("records the Other opening for a Game chess.com did not classify", () => {
+    const g = toGame(chessComGame({ pgn: "1. e4 e5" }), "me");
+    expect(g).toMatchObject({ eco: "other", openingName: "Autre / non classée" });
+  });
 });

@@ -6,6 +6,7 @@ import { createImportRouter } from "./routes/import";
 import { createSettingsRouter } from "./routes/settings";
 import { createMoveHabitsRouter } from "./routes/move-habits";
 import { createStatsRouter } from "./routes/stats";
+import { createOpeningsRouter } from "./routes/openings";
 
 /**
  * Builds the local API server over an already-open database and a chess.com
@@ -22,5 +23,6 @@ export function createApp(db: Db, chessCom: ChessComClient): Express {
   app.use("/api/settings", createSettingsRouter(db));
   app.use("/api/move-habits", createMoveHabitsRouter(db));
   app.use("/api/stats", createStatsRouter(db));
+  app.use("/api/openings", createOpeningsRouter(db));
   return app;
 }
