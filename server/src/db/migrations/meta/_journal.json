@@ -22,6 +22,13 @@
       "when": 1784714869060,
       "tag": "0002_overconfident_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784815246489,
+      "tag": "0003_black_red_wolf",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchStats } from "../api";
+import { Tally } from "../components/Tally";
 import type { Side, StatsBucket, StatsSummary, TimeControlCategory } from "../types";
 
 const CADENCES: { key: TimeControlCategory; label: string }[] = [
@@ -17,20 +18,11 @@ const SIDES: { key: Side; label: string }[] = [
 const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
 
-/** Win/draw/loss tally, spelled out for assistive tech (as in the import summary). */
-function Tally({ bucket }: { bucket: StatsBucket }) {
-  return (
-    <span aria-label={`${bucket.win} victoires, ${bucket.draw} nulles, ${bucket.loss} défaites`}>
-      {bucket.win} V · {bucket.draw} N · {bucket.loss} D
-    </span>
-  );
-}
-
 /** One results line: games · tally · Win rate (rate omitted when there are no games). */
 function Line({ bucket }: { bucket: StatsBucket }) {
   return (
     <>
-      {games(bucket.games)} · <Tally bucket={bucket} />
+      {games(bucket.games)} · <Tally win={bucket.win} draw={bucket.draw} loss={bucket.loss} />
       {bucket.winRate !== null && <> · {percent(bucket.winRate)}</>}
     </>
   );

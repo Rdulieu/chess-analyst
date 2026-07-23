@@ -15,6 +15,9 @@ export function Nav() {
           <NavLink to="/explorer">Explorateur</NavLink>
         </li>
         <li>
+          <NavLink to="/openings">Ouvertures</NavLink>
+        </li>
+        <li>
           <NavLink to="/stats">Stats</NavLink>
         </li>
       </ul>

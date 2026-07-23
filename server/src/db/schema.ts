@@ -19,6 +19,14 @@ export const games = sqliteTable("games", {
   timeControlCategory: text("time_control_category")
     .notNull()
     .$type<"bullet" | "blitz" | "rapid" | "daily">(),
+  // The Game's `Opening` per chess.com's own classification, resolved once at
+  // import from the PGN's [ECO]/[ECOUrl] headers (ADR-0007). `eco` is the
+  // identity (the sentinel "other" when chess.com did not classify the Game);
+  // `openingName` is the human-readable display name. The defaults fill
+  // pre-existing rows on migration — the real values come from re-importing
+  // (dev-phase rule: re-import is cheap, no backfill machinery).
+  eco: text("eco").notNull().default("other"),
+  openingName: text("opening_name").notNull().default("Autre / non classée"),
   // Set once this Game's Moves have been folded into the move_habits counters,
   // so the pre-aggregated totals cannot be double-counted (ADR-0005).
   moveHabitsComputed: integer("move_habits_computed", { mode: "boolean" })
