@@ -22,7 +22,11 @@ immutable.
 _Avoid_: Match, Party
 
 **Opening**:
-The named sequence of initial moves a game follows, identified by its ECO code.
+The named sequence of initial moves a game follows, **identified by its ECO code** and carrying
+a human-readable name (e.g. `B22` → "Sicilian Defense: Alapin Variation"). Both come from
+**chess.com's own classification** of the Game (like the time control category — see `Game`), not
+recomputed locally. A Game chess.com did not classify (aborted or too short) has no opening and
+falls under a single catch-all **Other** opening rather than being dropped.
 _Avoid_: Début, Line
 
 **Position**:
