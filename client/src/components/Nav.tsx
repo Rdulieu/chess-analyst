@@ -1,9 +1,8 @@
 import { NavLink } from "react-router-dom";
 
 /**
- * Top-level navigation between the app's journeys. Explorateur (US-5) and any
- * later explorer add their own entry; Analyse is reached by selecting a Game,
- * not from here, since it is Game-scoped.
+ * Top-level navigation between the app's journeys. Analyse is reached by
+ * selecting a Game, not from here, since it is Game-scoped.
  */
 export function Nav() {
   return (
@@ -11,6 +10,9 @@ export function Nav() {
       <ul>
         <li>
           <NavLink to="/">Mes parties</NavLink>
+        </li>
+        <li>
+          <NavLink to="/explorer">Explorateur</NavLink>
         </li>
         <li>
           <NavLink to="/stats">Stats</NavLink>

@@ -3,8 +3,12 @@ import request from "supertest";
 import { openDb } from "../src/db";
 import { games } from "../src/db/schema";
 import { createApp } from "../src/app";
+import { recordMoveHabits } from "../src/move-habits/precompute";
 import { MORPHY_GAME } from "./fixtures";
 import type { ChessComClient, ChessComGame } from "../src/chesscom";
+
+/** 4-field FEN of the standard starting Position. */
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
 function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
   return {
@@ -165,5 +169,41 @@ describe("import API", () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ imported: 0, alreadyPresent: 0 });
     expect(res.body.message).toMatch(/no games found/i);
+  });
+});
+
+describe("move habits API", () => {
+  it("GET /api/move-habits returns a Position's candidate Moves for a side, with counters and win rate", async () => {
+    const { db } = openDb(":memory:");
+    // Two White games sharing 1. e4 — one win, one loss → win rate 0.5, both blitz.
+    for (const [gameUrl, result] of [
+      ["u1", "win"],
+      ["u2", "loss"],
+    ] as const) {
+      const g = db
+        .insert(games)
+        .values({
+          gameUrl,
+          pgn: "1. e4 e5",
+          opponent: "o",
+          playerColor: "white",
+          result,
+          date: "2026-01-01",
+          timeControlCategory: "blitz",
+        })
+        .returning()
+        .get();
+      recordMoveHabits(db, g);
+    }
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app)
+      .get("/api/move-habits")
+      .query({ side: "white", fen: START });
+
+    expect(res.status).toBe(200);
+    const e4 = res.body.candidates.find((c: { san: string }) => c.san === "e4");
+    expect(e4).toMatchObject({ count: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 });
+    expect(e4.byCategory).toMatchObject({ bullet: 0, blitz: 2, rapid: 0, daily: 0 });
   });
 });

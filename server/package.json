@@ -8,12 +8,14 @@
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
     "build": "tsc --noEmit",
+    "seed:move-habits": "tsx src/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
+    "cm-chess": "^3.6.3",
     "drizzle-orm": "^0.38.4",
     "express": "^4.21.2"
   },
