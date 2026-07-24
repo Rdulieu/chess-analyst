@@ -3,24 +3,26 @@
 ## To do
 
 - **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
-- **US-6**: Consulter mes statistiques globales sur l'historique importé, sur la page `/stats`.
-  > Remplit le placeholder `/stats` réservé par l'ADR-0006 (routage). Agrégation sur **tout** l'historique importé (distincte du bilan V/N/D **par import** de `ImportSummary`). **Grillée** ; périmètre retenu : un **Total** (parties · V/N/D · `Win rate`) + deux ventilations, **par cadence** (bullet/blitz/rapid/daily) et **par côté** (Blancs/Noirs), chacune `parties · V/N/D · Win rate`. Sans matrice croisée, sans taille d'échantillon minimale. **Calcul à la volée** sur la table `games` (pas de précalcul). État vide (0 partie) : message d'invitation seul, pas de taux ; cadence/côté absent : ligne à 0 sans taux. `Win rate` = terme canonique du glossaire. Enabler de navigation déjà livré (`develop`). Découpée en 1 issue technique (`ready-for-agent`) : `.scratch/global-stats/issues/01-global-stats-page.md`. Branche `integration/US-6-global-stats`.
 
 ## Doing
-
-- **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
-  > **Grillée** ; **ADR-0007** : la classification d'ouverture de chess.com (`[ECO]`/`[ECOUrl]`) est stockée sur `games` **à l'import** (colonnes `eco`/`openingName` ; ECO-code = identité, nom pour l'affichage ; parties non classées → catch-all `Other`). Agrégation **à la volée** (`GROUP BY eco/côté/cadence`, pas de table de compteurs) ; primitive `Win rate` extraite vers un module neutre partagé avec US-6. Périmètre : page **`/openings`** (« Ouvertures », route réservée par l'ADR-0006), une ligne par (ouverture, côté, cadence) : nom · ECO · côté · cadence · parties · V/N/D · `Win rate`. **Surlignage < 50 %**, **tri parties décroissantes**, sans taille d'échantillon minimale. État vide (0 partie) : message d'invitation seul. PRD : `.scratch/weak-openings/PRD.md`. Découpée en 1 issue technique (`ready-for-agent`) : `.scratch/weak-openings/issues/01-weak-opening-page.md`. Branche `integration/US-3-weak-openings` (depuis `develop` à jour).
-
-- **US-5**: Explorateur visuel de mes coups joués — parcourir l'arbre de mes coups, avec fréquence et taux de victoire par coup, pour comprendre mes habitudes.
-  > PRD : `.scratch/move-habit-explorer/PRD.md`. Indépendante d'US-2 (jeu de fixtures propre). Découpée en 3 issues techniques (`ready-for-agent`) :
-  > `.scratch/move-habit-explorer/issues/01-single-level-move-habits.md`,
-  > `.scratch/move-habit-explorer/issues/02-drill-down-navigation.md`,
-  > `.scratch/move-habit-explorer/issues/03-board-arrows.md`.
-  > Sur la branche `integration/US-5-move-explorer`, créée à partir d'`integration/US-1-chess-history-analysis` (rebase à prévoir une fois US-1 avancée).
 
 ## In review
 
 ## Done
+
+- **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
+  > Grillée (**ADR-0007**), découpée en 1 issue, implémentée sur `integration/US-3-weak-openings`, **fusionnée dans `develop`** (décision humaine `integration → develop`, PR #4, 2026-07-24). PRD : `.scratch/weak-openings/PRD.md`. Page **`/openings`** : l'ouverture (ECO + nom) est stockée sur `games` **à l'import** depuis les en-têtes chess.com `[ECO]`/`[ECOUrl]` ; agrégation **à la volée** `GROUP BY (eco, côté, cadence)` ; surlignage < 50 %, tri parties décroissantes, bucket `Other`. Primitive `Win rate` extraite vers un module neutre partagé avec US-6. **HP-03 vert** (`docs/test-scenarios/HP-03-weak-openings.md`) contre le vrai chess.com (DudulSmash 2026/06 : 32 entrées, somme des parties = 54). Finding FP (surlignage invisible — l'app n'a pas de CSS) **corrigé** avant merge (teinte inline + marqueur accessible « à revoir ⚠ »). Reste `develop → main` (pré-prod, non décidé).
+
+- **US-6**: Consulter mes statistiques globales sur l'historique importé, sur la page `/stats`.
+  > Grillée, découpée en 1 issue, implémentée sur `integration/US-6-global-stats`, **fusionnée dans `develop`** (décision humaine `integration → develop`, PR #3). PRD : `.scratch/global-stats/PRD.md`. Page **`/stats`** (placeholder réservé par l'ADR-0006) : un **Total** + ventilation **par cadence** et **par côté**, chacune `parties · V/N/D · Win rate`. **Calcul à la volée** sur `games` (pas de précalcul), sans matrice croisée ni taille d'échantillon minimale ; état vide = message d'invitation. Pas de HP dédié (couvert en drive-by). Reste `develop → main`.
+
+- **US-5**: Explorateur visuel de mes coups joués — parcourir l'arbre de mes coups, avec fréquence et taux de victoire par coup, pour comprendre mes habitudes.
+  > PRD : `.scratch/move-habit-explorer/PRD.md`. Découpée en 3 issues techniques, implémentée sur `integration/US-5-move-explorer`, **fusionnée dans `develop`** (décision humaine `integration → develop`) :
+  > - `01-single-level-move-habits` ✅ — candidats par Position (fréquence, `Win rate`, ventilation par cadence)
+  > - `02-drill-down-navigation` ✅ — descente niveau par niveau + fil d'Ariane, bascule de côté
+  > - `03-board-arrows` ✅ — coups candidats dessinés en arêtes sur le plateau (opacité = fréquence, teinte = win rate)
+  >
+  > Précalcul incrémental des compteurs `Move habit` à l'import (**ADR-0005**). **HP-02 vert** (`docs/test-scenarios/HP-02-explore-move-habits.md`) contre le vrai chess.com. Reste `develop → main`.
 
 - **US-2**: Importer mes parties depuis chess.com (relais local + persistance incrémentale), pour remplacer la partie fixture par mon véritable historique.
   > Grillée, découpée, implémentée sur `integration/US-2-import-chess-com`, **fusionnée dans `develop`** (décision humaine `integration → develop` du 2026-07-21). PRD : `.scratch/import-chess-com/PRD.md`. **HP-01 vert 7/7** contre le vrai chess.com (compte DudulSmash, 2026/06 : 54 parties). **5 slices livrés + 1 US technique de découpage**, chacun validé par sa Feature Path (agentic, Chrome réel) et auto-mergé sur check local vert :
