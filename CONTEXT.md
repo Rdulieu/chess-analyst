@@ -41,11 +41,25 @@ _Avoid_: Ply, Turn
 The chess engine's numeric assessment of a position (centipawns, or mate-in-N).
 _Avoid_: Score (ambiguous with the game's result)
 
-**Mistake**:
-One of **the player's own** moves whose evaluation drop against the engine's best move exceeds a
-threshold, flagged for review. Never computed for the opponent's moves — this tool is about the
-player's own improvement.
-_Avoid_: Blunder (reserve for the most severe mistakes only, if the distinction matters later), Error
+**Inaccuracy** / **Mistake** / **Blunder**:
+The three severities of a flawed Move, defined **as Lichess defines them** — by how much the Move
+drops the player's **winning chances** (a probability of winning derived from the engine's
+`Evaluation`, so a given centipawn swing weighs more near equality than when already winning or
+lost), **not** by a raw centipawn threshold. Computed only for **the player's own** Moves (never
+the opponent's — this tool is about the player's own improvement), by comparing the position
+*before* the Move (engine's best play) with the position *after* the Move actually played:
+
+- **Inaccuracy** (`?!`): winning-chances drop of **10–20%**.
+- **Mistake** (`?`): drop of **20–30%**.
+- **Blunder** (`??`): drop of **30% or more**.
+
+A Move dropping the chances by less than 10% is not flagged. Because winning chances saturate near
+the extremes, a weak Move played while **already completely winning (or already lost)** is not
+flagged either — it barely moves the chances (this is why the winning-chances method is used rather
+than raw centipawns). `Mistake` is also used as the **umbrella** for "a flaw worth counting" where a
+coarser notion is needed (e.g. `Danger position`); which severities that umbrella spans is stated
+where it is used.
+_Avoid_: Error, Bévue (use Blunder), Score (ambiguous with the game's result)
 
 **Win rate**:
 The Player's result over a set of Games, using standard chess scoring:

@@ -1,5 +1,11 @@
 # Stockfish runs client-side as WASM, single-threaded lite build
 
+> **Status:** superseded by [ADR-0008](0008-engine-runs-in-local-node-server.md) — the engine now
+> runs in the **local Node server** behind a swappable `Engine` interface (US-4). ADR-0001's
+> rejection of a "server" engine assumed a *hosted/remote* backend; that objection does not apply to
+> this app's local Node process. The engine-choice reasoning below (WASM vs native, threading) is
+> retained as context; only the **location** (browser → local server) is reversed.
+
 We need to evaluate positions with a chess engine. We chose to run **Stockfish compiled to
 WebAssembly, entirely in the browser** (no analysis backend), using the **single-threaded
 "lite" build** (e.g. `nmrugg/stockfish.js`'s lite-single variant) rather than the multi-threaded
