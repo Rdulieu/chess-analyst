@@ -78,10 +78,16 @@ highlighted for review.
 _Avoid_: Weak spot, Weakness, Problem area
 
 **Danger position**:
-A recurring Position, scoped to a single time control category, shown with two figures: how many
-times the player has reached it, and in what proportion of those times a Mistake occurred within
-the following 10 moves. No minimum sample size is enforced — the occurrence count is always
-shown alongside the proportion so the player can judge its significance themselves.
+A recurring Position — **identified by its 4-field FEN** (piece placement, active colour, castling,
+en passant; the halfmove/fullmove counters dropped so **transpositions merge**, exactly the Position
+identity `Move habit` uses). **Not scoped by time control category, nor by the side the player
+played** — a Danger position is a property of the Position itself (the FEN's active-colour field
+already separates White-to-move from Black-to-move). Shown with two figures: how many times the
+player has **reached** it, and in what proportion of those reaches a **serious error** — a `Mistake`
+**or** `Blunder` (a winning-chances drop of 20%+); `Inaccuracy`s do not count — occurred within the
+following **10 Moves** (10 half-moves — about five of the player's own moves; `Move` is a half-move
+here). No minimum sample size is enforced — the occurrence count is always shown alongside the
+proportion so the player can judge its significance themselves.
 _Avoid_: Dangerous position, Trap
 
 **Move habit**:
