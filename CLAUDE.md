@@ -1,5 +1,19 @@
 # chess-analyst
 
+## Dev phase (current)
+
+We are in a development phase (pre-prod, throwaway local data — cf. ADR-0002). While this holds,
+two standing rules:
+
+- **Reworking the DB schema is fair game.** Don't shy away from a design decision because it
+  changes the SQLite schema. There is no production data and no migration burden to protect;
+  pick the cleanest model, not the one that avoids touching the schema.
+- **Re-importing Games is not a problem.** Import dedups by game URL and is fast; wiping the
+  local DB and re-importing (or backfilling a new column via re-import) is an acceptable,
+  automatable step, never a blocker. No retro-backfill machinery is owed to pre-existing rows.
+
+Revisit these rules once there is a pre-prod / real data to protect.
+
 ## Agentic tests (concept)
 
 Apex of the pyramid: a subagent validates the **real running app** through tech-agnostic

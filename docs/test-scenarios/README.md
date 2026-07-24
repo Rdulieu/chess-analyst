@@ -12,3 +12,4 @@ drive-by onto an existing HP.
 |---|---|---|---|
 | HP-01 | Import and explore my chess.com history | Import, Game, Move, Position | active |
 | HP-02 | Explore my move habits | Move habit, Position, Move, Import | active |
+| HP-03 | Spot my weak openings | Weak opening, Opening, Win rate, Import | active |

@@ -9,6 +9,7 @@
     "start": "tsx src/main.ts",
     "build": "tsc --noEmit",
     "seed:move-habits": "tsx src/seed.ts",
+    "seed:openings": "tsx src/seed-openings.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate"
