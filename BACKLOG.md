@@ -2,11 +2,13 @@
 
 ## To do
 
-- **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
 
 ## Doing
+
+- **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
+  > **Grillée** ; **ADR-0008** (moteur dans le Node local derrière une interface `Engine` — WASM défaut, natif opt-in `STOCKFISH_PATH`, fake injecté ; **supersede ADR-0001**) + **ADR-0009** (stocker les `Evaluation`s brutes par demi-coup, dériver qualité + danger **à la volée**). Qualité `Inaccuracy`/`Mistake`/`Blunder` façon **Lichess** (chute winning chances 10/20/30 %), depth 16. `Danger position` = **FEN-4** (transpositions fusionnées, ni cadence ni côté), fenêtre **10 demi-coups**, ombrelle **Mistake+Blunder**, page **`/danger`** (diagrammes, tri occurrences desc, surlignage ≥ 50 %). Passe d'analyse **manuelle incrémentale** avec sélection + flag `analyzed`. PRD : `.scratch/danger-positions/PRD.md`. Découpée en **2 issues** (`ready-for-agent`) : `.scratch/danger-positions/issues/01-analysis-pass.md`, `.scratch/danger-positions/issues/02-danger-positions-view.md` (02 bloquée par 01). Branche `integration/US-4-danger-positions`. Stockfish (dép. externe) **jamais testé** en FP (Engine fixture / évals seedées). Annotations par coup sur Analyse → différées en **US-7**.
 
 ## In review
 
