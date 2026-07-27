@@ -1,6 +1,16 @@
 # Analysis pass — evaluate selected Games with the local engine and store per-ply Evaluations
 
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-4-danger-positions`. Green local check: build +
+tests (server 70, client 63) + agentic Feature Path green on the fixture `Engine` (Player selects
+imported Games on "Mes parties", starts the analysis, progress readout advances to completion,
+"analysée" badge appears, re-running reports nothing left to analyze), no blocking finding —
+validated manually against the real running app. WASM Stockfish backend (`stockfish@18.0.8`,
+`lite-single` build, `worker_thread`) verified for real with `tsx server/src/engine/verify-wasm.ts`
+(starting position + a mate-in-1 both solved correctly); confirmed the search runs off the main
+thread (a `setInterval` kept ticking through a multi-second depth-20 search). The native
+`STOCKFISH_PATH` backend is wired and shares the same `UciDriver` as WASM, but is **not empirically
+verified** — no native Stockfish binary is available on this machine; follow-up if/when one is
+installed. `integration → develop` remains a human decision.
 
 ## Parent
 
