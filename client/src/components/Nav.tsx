@@ -18,6 +18,9 @@ export function Nav() {
           <NavLink to="/openings">Ouvertures</NavLink>
         </li>
         <li>
+          <NavLink to="/danger">Positions dangereuses</NavLink>
+        </li>
+        <li>
           <NavLink to="/stats">Stats</NavLink>
         </li>
       </ul>

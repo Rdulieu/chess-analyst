@@ -45,6 +45,7 @@ describe("App — routing & navigation", () => {
         if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
         if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
         if (u === "/api/openings") return jsonResponse({ openings: [] });
+        if (u === "/api/danger") return jsonResponse({ dangers: [] });
         return jsonResponse({}, false, 404);
       }),
     );
@@ -96,6 +97,15 @@ describe("App — routing & navigation", () => {
     await user.click(screen.getByRole("link", { name: /ouvertures/i }));
 
     expect(await screen.findByRole("heading", { name: /ouvertures/i })).toBeTruthy();
+  });
+
+  it("navigates to the Positions dangereuses page from the nav", async () => {
+    const user = userEvent.setup();
+    renderApp(["/"]);
+
+    await user.click(screen.getByRole("link", { name: /positions dangereuses/i }));
+
+    expect(await screen.findByRole("heading", { name: /positions dangereuses/i })).toBeTruthy();
   });
 
   it("renders the global stats on the Stats page", async () => {

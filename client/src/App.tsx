@@ -4,6 +4,7 @@ import { GamesPage } from "./pages/GamesPage";
 import { AnalysePage } from "./pages/AnalysePage";
 import { ExplorerPage } from "./pages/ExplorerPage";
 import { OpeningsPage } from "./pages/OpeningsPage";
+import { DangerPage } from "./pages/DangerPage";
 import { StatsPage } from "./pages/StatsPage";
 
 /**
@@ -24,6 +25,7 @@ export function App() {
           <Route path="/analyse/:gameId" element={<AnalysePage />} />
           <Route path="/explorer" element={<ExplorerPage />} />
           <Route path="/openings" element={<OpeningsPage />} />
+          <Route path="/danger" element={<DangerPage />} />
           <Route path="/stats" element={<StatsPage />} />
         </Routes>
       </main>
