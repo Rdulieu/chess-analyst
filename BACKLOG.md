@@ -7,12 +7,29 @@
 
 ## Doing
 
-- **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
-  > **Grillée** ; **ADR-0008** (moteur dans le Node local derrière une interface `Engine` — WASM défaut, natif opt-in `STOCKFISH_PATH`, fake injecté ; **supersede ADR-0001**) + **ADR-0009** (stocker les `Evaluation`s brutes par demi-coup, dériver qualité + danger **à la volée**). Qualité `Inaccuracy`/`Mistake`/`Blunder` façon **Lichess** (chute winning chances 10/20/30 %), depth 16. `Danger position` = **FEN-4** (transpositions fusionnées, ni cadence ni côté), fenêtre **10 demi-coups**, ombrelle **Mistake+Blunder**, page **`/danger`** (diagrammes, tri occurrences desc, surlignage ≥ 50 %). Passe d'analyse **manuelle incrémentale** avec sélection + flag `analyzed`. PRD : `.scratch/danger-positions/PRD.md`. Découpée en **2 issues** (`ready-for-agent`) : `.scratch/danger-positions/issues/01-analysis-pass.md`, `.scratch/danger-positions/issues/02-danger-positions-view.md` (02 bloquée par 01). Branche `integration/US-4-danger-positions`. Stockfish (dép. externe) **jamais testé** en FP (Engine fixture / évals seedées). Annotations par coup sur Analyse → différées en **US-7**.
-
 ## In review
 
 ## Done
+
+- **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
+  > Grillée (**ADR-0008** : moteur dans le Node local derrière une interface `Engine` — WASM
+  > défaut, natif opt-in `STOCKFISH_PATH`, fake injecté ; supersède ADR-0001 — + **ADR-0009** :
+  > `Evaluation`s brutes stockées par demi-coup, qualité + danger dérivés **à la volée**), découpée
+  > en 2 issues, implémentée sur `integration/US-4-danger-positions`, **fusionnée dans `develop`**
+  > (décision humaine `integration → develop`, PR #6). PRD : `.scratch/danger-positions/PRD.md`.
+  > - `01-analysis-pass` ✅ — moteur derrière `Engine` (WASM `worker_thread` par défaut, natif
+  >   `STOCKFISH_PATH` en option, fixture en tests), passe d'analyse incrémentale (sélection sur
+  >   "Mes parties", flag `analyzed`, `POST /api/analyze` + `GET /api/analyze/status`)
+  > - `02-danger-positions-view` ✅ — `Inaccuracy`/`Mistake`/`Blunder` façon Lichess (chute
+  >   winning-chances 10/20/30 %, depth 16), `Danger position` = FEN-4 (transpositions fusionnées,
+  >   ni cadence ni côté), fenêtre 10 demi-coups, page `/danger` (diagrammes, tri occurrences desc,
+  >   surlignage ≥ 50 %)
+  >
+  > Chaque issue validée par sa Feature Path (agentic ; fixture `seed:danger` pour la 02, jamais le
+  > vrai Stockfish en tests). Pas de HP dédié (plafond de 3 atteint) : greffé en drive-by sur
+  > **HP-01** (étape 8 — analyse réelle WASM + `/danger`), vert contre le vrai chess.com. Backend
+  > natif (`STOCKFISH_PATH`) câblé mais **jamais vérifié empiriquement** (pas de binaire UCI
+  > disponible). Annotations par coup sur Analyse → différées en **US-7**. Reste `develop → main`.
 
 - **US-3**: Identifier mes ouvertures faibles par statistiques de résultat (Weak opening — taux de victoire par ouverture, par côté et par cadence).
   > Grillée (**ADR-0007**), découpée en 1 issue, implémentée sur `integration/US-3-weak-openings`, **fusionnée dans `develop`** (décision humaine `integration → develop`, PR #4, 2026-07-24). PRD : `.scratch/weak-openings/PRD.md`. Page **`/openings`** : l'ouverture (ECO + nom) est stockée sur `games` **à l'import** depuis les en-têtes chess.com `[ECO]`/`[ECOUrl]` ; agrégation **à la volée** `GROUP BY (eco, côté, cadence)` ; surlignage < 50 %, tri parties décroissantes, bucket `Other`. Primitive `Win rate` extraite vers un module neutre partagé avec US-6. **HP-03 vert** (`docs/test-scenarios/HP-03-weak-openings.md`) contre le vrai chess.com (DudulSmash 2026/06 : 32 entrées, somme des parties = 54). Finding FP (surlignage invisible — l'app n'a pas de CSS) **corrigé** avant merge (teinte inline + marqueur accessible « à revoir ⚠ »). Reste `develop → main` (pré-prod, non décidé).
