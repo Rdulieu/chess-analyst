@@ -1,8 +1,8 @@
-import { Chess } from "cm-chess";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { games, evaluations, type Game } from "../db/schema";
 import { ANALYSIS_DEPTH, type Engine } from "../engine/types";
+import { gamePositions } from "../chess/positions";
 
 /**
  * Runs the engine analysis pass over one Game (ADR-0009): evaluate **every**
@@ -26,11 +26,7 @@ export async function analyzeGame(db: Db, engine: Engine, game: Game): Promise<v
     .get()?.analyzed;
   if (done) return;
 
-  const chess = new Chess();
-  chess.loadPgn(game.pgn.trim());
-
-  // Position 0 is the initial one; position i+1 is the FEN after half-move i.
-  const fens = [chess.setUpFen(), ...chess.history().map((move) => move.fen)];
+  const fens = gamePositions(game.pgn);
   for (let ply = 0; ply < fens.length; ply++) {
     const { cp, mate } = await engine.evaluate(fens[ply], ANALYSIS_DEPTH);
     db.insert(evaluations).values({ gameId: game.id, ply, cp, mate }).run();

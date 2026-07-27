@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { openDb } from "../src/db";
-import { games } from "../src/db/schema";
+import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { recordMoveHabits } from "../src/move-habits/precompute";
@@ -206,6 +206,51 @@ describe("openings API", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ openings: [] });
+  });
+});
+
+describe("danger API", () => {
+  it("GET /api/danger returns Danger position entries sorted by reach count descending", async () => {
+    const { db } = openDb(":memory:");
+    db.insert(games)
+      .values({
+        gameUrl: "https://www.chess.com/game/live/1",
+        pgn: "1. e4",
+        opponent: "opp",
+        playerColor: "white",
+        result: "win",
+        date: "2026-01-01",
+        timeControlCategory: "blitz",
+        analyzed: true,
+      })
+      .run();
+    db.insert(evaluations)
+      .values([
+        { gameId: 1, ply: 0, cp: 0 },
+        { gameId: 1, ply: 1, cp: 0 },
+      ])
+      .run();
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/danger");
+
+    expect(res.status).toBe(200);
+    expect(res.body.dangers).toContainEqual({
+      fen: START,
+      reached: 1,
+      seriousErrors: 0,
+      proportion: 0,
+    });
+  });
+
+  it("GET /api/danger returns { dangers: [] } when no Game has been analyzed", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/danger");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ dangers: [] });
   });
 });
 
