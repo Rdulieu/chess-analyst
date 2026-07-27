@@ -1,16 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchGames } from "../api";
+import { fetchGames, startAnalysis, fetchAnalysisStatus } from "../api";
 import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
-import type { Game } from "../types";
+import type { AnalysisStatus, Game } from "../types";
+
+/** How often to poll the analysis-pass status while it runs (ms). */
+const POLL_MS = 500;
 
 /**
- * Mes parties (`/`): the import form and the Game list. Selecting a Game
- * navigates to its Analyse page rather than rendering a viewer inline.
+ * Mes parties (`/`): the import form, the Game list, and the engine-analysis
+ * pass (US-4). The Player selects Games (checkboxes) and starts an analysis; a
+ * determinate progress readout shows while it runs (polling the status), and
+ * each analyzed Game gets an "analysée" badge once done. Selecting a Game's row
+ * button navigates to its Analyse page.
  */
 export function GamesPage() {
   const [games, setGames] = useState<Game[] | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [status, setStatus] = useState<AnalysisStatus | null>(null);
   const navigate = useNavigate();
 
   const refresh = async () => setGames(await fetchGames());
@@ -21,6 +29,29 @@ export function GamesPage() {
       .catch(() => setGames([]));
   }, []);
 
+  const toggleSelect = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const analyze = async () => {
+    let progress = await startAnalysis([...selected]);
+    setStatus(progress);
+    while (progress.running) {
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      progress = await fetchAnalysisStatus();
+      setStatus(progress);
+    }
+    setStatus(null);
+    setSelected(new Set());
+    await refresh();
+  };
+
+  const running = status?.running ?? false;
+
   return (
     <>
       <ImportForm onImported={refresh} />
@@ -30,7 +61,24 @@ export function GamesPage() {
       )}
 
       {games && games.length > 0 && (
-        <GameList games={games} onSelect={(g) => navigate(`/analyse/${g.id}`)} />
+        <>
+          <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
+            Analyser la sélection
+          </button>
+
+          {status && (
+            <p role="status">
+              {status.done}/{status.total} parties analysées
+            </p>
+          )}
+
+          <GameList
+            games={games}
+            onSelect={(g) => navigate(`/analyse/${g.id}`)}
+            selectedIds={selected}
+            onToggleSelect={toggleSelect}
+          />
+        </>
       )}
     </>
   );

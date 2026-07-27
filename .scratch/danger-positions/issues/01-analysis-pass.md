@@ -56,17 +56,17 @@ GET  /api/games                            → Game[] now includes `analyzed: bo
 
 ## Acceptance criteria
 
-- [ ] The engine is reached only through an `Engine` interface; the real backend is a WASM Stockfish run in the Node server in a `worker_thread`, and a fixture/fake backend is selectable at runtime (so tests and the FP never invoke real Stockfish)
-- [ ] An optional native backend is used when `STOCKFISH_PATH` is set (same UCI driver); WASM is the default otherwise
-- [ ] The analysis service evaluates every Position of a Game and stores one `Evaluation` (centipawns or mate) per half-move in the `evaluations` table
-- [ ] A per-Game `analyzed` flag is set once a Game is analyzed; re-analyzing an already-analyzed Game is a no-op (no duplicate evaluations, no re-run)
-- [ ] `POST /api/analyze` analyzes only the not-yet-analyzed among the given `gameIds`, runs as a background job (returns without blocking), and is single-flighted (one job at a time)
-- [ ] `GET /api/analyze/status` returns determinate progress `{ running, total, done }` that advances to `done === total` and then `running: false`
-- [ ] `GET /api/games` exposes `analyzed` on each `Game`
-- [ ] On "Mes parties", the Player can select Games and start an analysis; a progress indicator shows while it runs; analyzed Games show an "analysée" badge
-- [ ] Search runs at a fixed depth (16); analysis blocks neither the API nor the UI while running
-- [ ] Schema change only (new `evaluations` table + `games.analyzed`); no move-quality severity is stored and no `Danger position` table is created (both derived in slice 02); Import is unchanged
-- [ ] No per-Move annotation on the Analyse board (US-7), no `/danger` view yet (slice 02)
+- [x] The engine is reached only through an `Engine` interface; the real backend is a WASM Stockfish run in the Node server in a `worker_thread`, and a fixture/fake backend is selectable at runtime (so tests and the FP never invoke real Stockfish)
+- [ ] An optional native backend is used when `STOCKFISH_PATH` is set (same UCI driver); WASM is the default otherwise — implemented and type-checked, but **not empirically verified**: no native Stockfish UCI binary is available on this machine's PATH, and per the task's own instruction none was to be installed. `createNativeEngine` shares `uci-driver.ts` with the WASM backend (only the transport differs), and `createEngine()` does route to it when `STOCKFISH_PATH` is set / to WASM otherwise — but no real process has actually been driven end-to-end.
+- [x] The analysis service evaluates every Position of a Game and stores one `Evaluation` (centipawns or mate) per half-move in the `evaluations` table
+- [x] A per-Game `analyzed` flag is set once a Game is analyzed; re-analyzing an already-analyzed Game is a no-op (no duplicate evaluations, no re-run)
+- [x] `POST /api/analyze` analyzes only the not-yet-analyzed among the given `gameIds`, runs as a background job (returns without blocking), and is single-flighted (one job at a time)
+- [x] `GET /api/analyze/status` returns determinate progress `{ running, total, done }` that advances to `done === total` and then `running: false`
+- [x] `GET /api/games` exposes `analyzed` on each `Game`
+- [x] On "Mes parties", the Player can select Games and start an analysis; a progress indicator shows while it runs; analyzed Games show an "analysée" badge
+- [x] Search runs at a fixed depth (16); analysis blocks neither the API nor the UI while running
+- [x] Schema change only (new `evaluations` table + `games.analyzed`); no move-quality severity is stored and no `Danger position` table is created (both derived in slice 02); Import is unchanged
+- [x] No per-Move annotation on the Analyse board (US-7), no `/danger` view yet (slice 02)
 
 ### Feature Path (FP)
 
