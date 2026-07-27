@@ -1,6 +1,6 @@
 ---
 id: HP-01
-covers: [Import, Game, Move, Position]
+covers: [Import, Game, Move, Position, Evaluation, Danger position]
 ---
 
 # HP-01 — Import and explore my chess.com history
@@ -21,6 +21,9 @@ Player's real Games.
 - Progress indicator while the import is in flight.
 - Board navigation (Previous / Next / jump-to-Move) on an imported Game.
 - Incremental Import: re-importing the same month adds no duplicate.
+- Engine analysis pass (US-4, graft — no dedicated HP; the 3-HP cap is already spent): analyzing
+  one imported Game with the real engine marks it "analysée" and the resulting `Danger position`
+  view (`/danger`) renders without error.
 
 ## Preconditions
 - App started locally with its single command, talking to the **real** chess.com
@@ -40,6 +43,10 @@ Player's real Games.
 5. Open one imported Game (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → its Position renders on the board; stepping forward/backward and jumping to a Move updates the Position accordingly.
 6. Start the same Import again (same month + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
 7. Reopen the app (reload) → the username is already prefilled from the remembered setting.
+8. (Drive-by, US-4) Select **one** imported Game and start the analysis pass (real WASM Stockfish,
+   depth 16 — allow it real time to finish) → it is marked "analysée"; open "Positions dangereuses"
+   (`/danger`) → the view renders at least one Position (no error), shape only (real game, no fixed
+   figures expected).
 
 ## Checks
 ### UI
@@ -50,6 +57,8 @@ Player's real Games.
 - Step 5: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position.
 - Step 6: the second import's summary shows 0 imported / all already present; the listed Game count is unchanged.
 - Step 7: after reload, the username field is pre-filled with `DudulSmash`.
+- Step 8: after the analysis pass completes, the selected Game shows the "analysée" badge; `/danger`
+  renders a list (not the empty-state invitation) with at least the starting Position present.
 
 ### Backing store (optional)
 - The embedded SQLite database holds one row per imported Game with its chess.com URL, the Player's side, and the Player-relative result; the same URL never appears twice (dedup). The `settings` table holds the username.

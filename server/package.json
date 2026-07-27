@@ -10,6 +10,7 @@
     "build": "tsc --noEmit",
     "seed:move-habits": "tsx src/seed.ts",
     "seed:openings": "tsx src/seed-openings.ts",
+    "seed:danger": "tsx src/seed-danger.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate"
@@ -18,7 +19,8 @@
     "better-sqlite3": "^11.8.1",
     "cm-chess": "^3.6.3",
     "drizzle-orm": "^0.38.4",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "stockfish": "^18.0.8"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

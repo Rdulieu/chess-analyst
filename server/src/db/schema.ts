@@ -32,10 +32,40 @@ export const games = sqliteTable("games", {
   moveHabitsComputed: integer("move_habits_computed", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Set once this Game has been through the engine analysis pass and its per-ply
+  // `Evaluation`s are stored (ADR-0009, US-4). The analysis twin of
+  // `moveHabitsComputed`: makes the pass incremental and idempotent, so already-
+  // analyzed Games are skipped and their Evaluations are never recomputed.
+  analyzed: integer("analyzed", { mode: "boolean" }).notNull().default(false),
 });
 
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+
+/**
+ * Raw per-ply engine `Evaluation`s (ADR-0009), one row per analyzed Position of
+ * a Game: `ply` 0 is the initial Position, `ply` N the Position after the N-th
+ * half-move. Exactly one of `cp` (centipawns, side-to-move relative) or `mate`
+ * (signed mate-in-N) is set. We store **only** these raw Evaluations and derive
+ * move quality (`Inaccuracy`/`Mistake`/`Blunder`) and `Danger position`s on the
+ * fly (slice B), so thresholds, the look-ahead window and the cp→win% curve can
+ * change with no engine re-run.
+ */
+export const evaluations = sqliteTable(
+  "evaluations",
+  {
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => games.id),
+    ply: integer("ply").notNull(),
+    cp: integer("cp"),
+    mate: integer("mate"),
+  },
+  (t) => [primaryKey({ columns: [t.gameId, t.ply] })],
+);
+
+export type Evaluation = typeof evaluations.$inferSelect;
+export type NewEvaluation = typeof evaluations.$inferInsert;
 
 /**
  * Pre-aggregated `Move habit` counters (ADR-0005), keyed by the Position a Move

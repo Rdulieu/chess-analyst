@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { openDb } from "../src/db";
-import { games } from "../src/db/schema";
+import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
+import { createFixtureEngine } from "../src/engine/fixture";
 import { recordMoveHabits } from "../src/move-habits/precompute";
 import { MORPHY_GAME } from "./fixtures";
 import type { ChessComClient, ChessComGame } from "../src/chesscom";
@@ -85,6 +86,73 @@ describe("games API", () => {
   });
 });
 
+describe("analysis API", () => {
+  let seq = 0;
+  function appWithGames(pgns: string[]) {
+    const { db } = openDb(":memory:");
+    for (const pgn of pgns) {
+      db.insert(games)
+        .values({
+          gameUrl: `https://www.chess.com/game/live/${seq++}`,
+          pgn,
+          opponent: "o",
+          playerColor: "white",
+          result: "win",
+          date: "2026-01-01",
+          timeControlCategory: "blitz",
+        })
+        .run();
+    }
+    return createApp(db, fakeClient([]), createFixtureEngine());
+  }
+
+  /** Polls the status endpoint until the pass reports it is no longer running. */
+  async function waitDone(app: ReturnType<typeof appWithGames>) {
+    for (let i = 0; i < 50; i++) {
+      const res = await request(app).get("/api/analyze/status");
+      if (!res.body.running) return res.body;
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error("analysis did not finish in time");
+  }
+
+  const idsOf = async (app: ReturnType<typeof appWithGames>) =>
+    (await request(app).get("/api/games")).body.map((g: { id: number }) => g.id);
+
+  it("POST /api/analyze starts a background pass (202) and /status advances to done === total, then running:false", async () => {
+    const app = appWithGames(["1. e4 e5", "1. d4 d5"]);
+
+    const started = await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    expect(started.status).toBe(202);
+    expect(started.body).toMatchObject({ running: true, total: 2 });
+
+    expect(await waitDone(app)).toEqual({ running: false, total: 2, done: 2 });
+  });
+
+  it("re-analyzing an already-analyzed selection reports nothing left to do (total 0, not running)", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    const ids = await idsOf(app);
+    await request(app).post("/api/analyze").send({ gameIds: ids });
+    await waitDone(app);
+
+    const again = await request(app).post("/api/analyze").send({ gameIds: ids });
+    expect(again.status).toBe(202);
+    expect(again.body).toEqual({ running: false, total: 0, done: 0 });
+  });
+
+  it("GET /api/games exposes the analyzed flag — false before, true after the pass", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    const before = await request(app).get("/api/games");
+    expect(before.body[0].analyzed).toBe(false);
+
+    await request(app).post("/api/analyze").send({ gameIds: [before.body[0].id] });
+    await waitDone(app);
+
+    const after = await request(app).get("/api/games");
+    expect(after.body[0].analyzed).toBe(true);
+  });
+});
+
 describe("openings API", () => {
   function openingGame(over: Partial<import("../src/db/schema").NewGame> = {}) {
     return {
@@ -138,6 +206,51 @@ describe("openings API", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ openings: [] });
+  });
+});
+
+describe("danger API", () => {
+  it("GET /api/danger returns Danger position entries sorted by reach count descending", async () => {
+    const { db } = openDb(":memory:");
+    db.insert(games)
+      .values({
+        gameUrl: "https://www.chess.com/game/live/1",
+        pgn: "1. e4",
+        opponent: "opp",
+        playerColor: "white",
+        result: "win",
+        date: "2026-01-01",
+        timeControlCategory: "blitz",
+        analyzed: true,
+      })
+      .run();
+    db.insert(evaluations)
+      .values([
+        { gameId: 1, ply: 0, cp: 0 },
+        { gameId: 1, ply: 1, cp: 0 },
+      ])
+      .run();
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/danger");
+
+    expect(res.status).toBe(200);
+    expect(res.body.dangers).toContainEqual({
+      fen: START,
+      reached: 1,
+      seriousErrors: 0,
+      proportion: 0,
+    });
+  });
+
+  it("GET /api/danger returns { dangers: [] } when no Game has been analyzed", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get("/api/danger");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ dangers: [] });
   });
 });
 
