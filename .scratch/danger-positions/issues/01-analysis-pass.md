@@ -56,8 +56,8 @@ GET  /api/games                            → Game[] now includes `analyzed: bo
 
 ## Acceptance criteria
 
-- [ ] The engine is reached only through an `Engine` interface; the real backend is a WASM Stockfish run in the Node server in a `worker_thread`, and a fixture/fake backend is selectable at runtime (so tests and the FP never invoke real Stockfish)
-- [ ] An optional native backend is used when `STOCKFISH_PATH` is set (same UCI driver); WASM is the default otherwise
+- [x] The engine is reached only through an `Engine` interface; the real backend is a WASM Stockfish run in the Node server in a `worker_thread`, and a fixture/fake backend is selectable at runtime (so tests and the FP never invoke real Stockfish)
+- [ ] An optional native backend is used when `STOCKFISH_PATH` is set (same UCI driver); WASM is the default otherwise — implemented and type-checked, but **not empirically verified**: no native Stockfish UCI binary is available on this machine's PATH, and per the task's own instruction none was to be installed. `createNativeEngine` shares `uci-driver.ts` with the WASM backend (only the transport differs), and `createEngine()` does route to it when `STOCKFISH_PATH` is set / to WASM otherwise — but no real process has actually been driven end-to-end.
 - [ ] The analysis service evaluates every Position of a Game and stores one `Evaluation` (centipawns or mate) per half-move in the `evaluations` table
 - [ ] A per-Game `analyzed` flag is set once a Game is analyzed; re-analyzing an already-analyzed Game is a no-op (no duplicate evaluations, no re-run)
 - [ ] `POST /api/analyze` analyzes only the not-yet-analyzed among the given `gameIds`, runs as a background job (returns without blocking), and is single-flighted (one job at a time)
