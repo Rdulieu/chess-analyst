@@ -1,6 +1,15 @@
 # Danger position view — derive move quality and recurring danger Positions on the fly (/danger)
 
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-4-danger-positions`. Green local check: build +
+tests (server 86, client 67) + agentic Feature Path green against the real running app, seeded via
+`npm run seed:danger` (offline, no engine): "after 1. e4 e5" 3 reached/33% not highlighted, "after
+1. d4 d5" 2 reached/100% highlighted, the pre-3.Nc3 Position merged by transposition into one entry
+(2 reached/0%, not highlighted, not duplicated); highlighting confirmed threshold-driven across all
+20 entries (exactly the ≥50% ones flagged); empty-DB state showed the invitation only, no list. No
+blocking finding (one non-blocking note: the starting Position sits at 43%, not 0%, because the
+10-half-move look-ahead from ply 0 naturally catches the early blunders seeded in other Games — this
+is correct derivation, not a bug, and was a wrong assumption in the FP briefing, not in the app).
+`integration → develop` remains a human decision.
 
 ## Parent
 
@@ -44,19 +53,19 @@ GET /api/danger → { dangers: [ { fen, reached, seriousErrors, proportion } ] }
 
 ## Acceptance criteria
 
-- [ ] Move quality is classified by winning-chances drop (Lichess method) — 10–20% `Inaccuracy`, 20–30% `Mistake`, 30%+ `Blunder` — for the Player's own Moves only, comparing the Position's eval (best) with the next Position's eval (played)
-- [ ] A Move is not flagged when it drops the chances by < 10%, nor when the Player is already (near-)winning/lost (winning chances saturate) — no flag from a negligible change
-- [ ] Mate is handled via winning chances (~100%/0%), never an arbitrary centipawn value
-- [ ] `Danger position`s are grouped by 4-field FEN so transpositions merge; they are not scoped by time control category or by the side the Player played
-- [ ] For each reached Position, a serious error (`Mistake` or `Blunder`, not `Inaccuracy`) within the following 10 half-moves counts toward its proportion
-- [ ] Each entry carries a reach count and a serious-error proportion; no minimum sample size is enforced; the count is always shown beside the proportion
-- [ ] `GET /api/danger` returns entries sorted by reach count descending
-- [ ] Everything is derived on the fly from the stored `evaluations` — no `Danger position` table, no stored severity, no engine call on this path
-- [ ] The `/danger` page renders each Position as a board diagram with its reach count and proportion, sorted by reach count descending
-- [ ] Entries with a serious-error proportion ≥ 50% are visibly highlighted (perceivable without relying on colour alone — the client ships no stylesheet)
-- [ ] With no analyzed Games, `/danger` shows an invitation to run an analysis — no table
-- [ ] A "Positions dangereuses" nav entry and the `/danger` route are added; the app-level routing test asserts the page renders on the route
-- [ ] `npm run seed:danger` seeds a deterministic offline fixture of Games **with pre-stored per-ply `Evaluation`s** (no engine), covering several recurring Positions incl. at least one transposition, at least one Position with a ≥50% serious-error proportion and one below, and an unclassified/empty case
+- [x] Move quality is classified by winning-chances drop (Lichess method) — 10–20% `Inaccuracy`, 20–30% `Mistake`, 30%+ `Blunder` — for the Player's own Moves only, comparing the Position's eval (best) with the next Position's eval (played)
+- [x] A Move is not flagged when it drops the chances by < 10%, nor when the Player is already (near-)winning/lost (winning chances saturate) — no flag from a negligible change
+- [x] Mate is handled via winning chances (~100%/0%), never an arbitrary centipawn value
+- [x] `Danger position`s are grouped by 4-field FEN so transpositions merge; they are not scoped by time control category or by the side the Player played
+- [x] For each reached Position, a serious error (`Mistake` or `Blunder`, not `Inaccuracy`) within the following 10 half-moves counts toward its proportion
+- [x] Each entry carries a reach count and a serious-error proportion; no minimum sample size is enforced; the count is always shown beside the proportion
+- [x] `GET /api/danger` returns entries sorted by reach count descending
+- [x] Everything is derived on the fly from the stored `evaluations` — no `Danger position` table, no stored severity, no engine call on this path
+- [x] The `/danger` page renders each Position as a board diagram with its reach count and proportion, sorted by reach count descending
+- [x] Entries with a serious-error proportion ≥ 50% are visibly highlighted (perceivable without relying on colour alone — the client ships no stylesheet)
+- [x] With no analyzed Games, `/danger` shows an invitation to run an analysis — no table
+- [x] A "Positions dangereuses" nav entry and the `/danger` route are added; the app-level routing test asserts the page renders on the route
+- [x] `npm run seed:danger` seeds a deterministic offline fixture of Games **with pre-stored per-ply `Evaluation`s** (no engine), covering several recurring Positions incl. at least one transposition, at least one Position with a ≥50% serious-error proportion and one below, and an unclassified/empty case
 
 ### Feature Path (FP)
 
