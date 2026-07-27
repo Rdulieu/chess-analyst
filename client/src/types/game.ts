@@ -11,4 +11,6 @@ export interface Game {
   result: "win" | "loss" | "draw";
   date: string;
   timeControlCategory: TimeControlCategory;
+  /** Whether this Game has been through the engine analysis pass (US-4). */
+  analyzed: boolean;
 }

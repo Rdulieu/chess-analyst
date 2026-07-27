@@ -29,4 +29,5 @@ export const OPERA_GAME: Game = {
   result: "win",
   date: "1858-11-02",
   timeControlCategory: "rapid",
+  analyzed: false,
 };
