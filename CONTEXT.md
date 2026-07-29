@@ -37,6 +37,17 @@ _Avoid_: Board state, State
 A single half-move played by one side within a game.
 _Avoid_: Ply, Turn
 
+**Analysis pass**:
+The act of running the chess engine over a chosen set of Games to produce and store their
+`Evaluation`s. Triggered **manually** by the Player (never automatic, never implicit on `Import`)
+and runs as a **background job** the Player can watch progress on (done/total Games). Once
+started it moves through three states: **running**, **completed** (every selected Game reached
+`analyzed`), or **interrupted** (stopped before completing all selected Games, because of a
+backend error — the Player is told how many were reached before the stop, not which Game or why).
+**Incremental**, mirroring `Import`'s own incrementality: an already-analyzed Game is skipped, so
+re-running a pass over a broader or overlapping selection only analyzes what's missing.
+_Avoid_: Analysis job (too technical), Scan
+
 **Evaluation**:
 The chess engine's numeric assessment of a position (centipawns, or mate-in-N).
 _Avoid_: Score (ambiguous with the game's result)
