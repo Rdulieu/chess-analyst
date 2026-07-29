@@ -2,10 +2,18 @@
 
 ## To do
 
+## Doing
+
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
-
-## Doing
+  > Grillée (pas de nouvelle ADR — conséquence directe d'ADR-0009 ; `CONTEXT.md` : terme `Evaluation`
+  > précisé, repère Blancs à l'affichage vs. stocké relatif au trait), découpée en 3 issues,
+  > implémentation à venir sur `integration/US-7-mistake-annotations-on-analysis`. PRD :
+  > `.scratch/move-annotations/PRD.md`.
+  > - `01-move-quality-list` — dérivation partagée avec `/danger`, endpoint
+  >   `GET /api/games/:id/annotations`, liste de coups annotée + toggle
+  > - `02-position-balance-and-highlight` — balance winning-chances + surlignage plateau (bloquée par 01)
+  > - `03-analyze-from-analyse-page` — déclenchement d'analyse pour une seule partie (bloquée par 01)
 
 ## In review
 
