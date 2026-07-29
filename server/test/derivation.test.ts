@@ -15,6 +15,20 @@ describe("gameAnnotations", () => {
     expect(annotations[0]).toMatchObject({ ply: 0, whiteEval: { cp: 25, mate: null }, severity: null });
   });
 
+  it("whiteEval is a clean {cp, mate} pair, never leaking the stored row's other fields", () => {
+    const game = { pgn: "1. e4", playerColor: "white" as const };
+    // A DB-select row carries more than {cp, mate} (e.g. gameId, ply) — the
+    // White-to-move branch must not return it as-is.
+    const evals = [
+      { ply: 0, cp: 25, mate: null, gameId: 1 },
+      { ply: 1, cp: 0, mate: null, gameId: 1 },
+    ];
+
+    const annotations = gameAnnotations(game, evals);
+
+    expect(annotations[0].whiteEval).toEqual({ cp: 25, mate: null });
+  });
+
   it("ply 1 (Black to move, after White's Move) flips the stored Evaluation to stay White-relative", () => {
     const game = { pgn: "1. e4 e5", playerColor: "white" as const };
     const evals = [

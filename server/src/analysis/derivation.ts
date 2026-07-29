@@ -65,12 +65,14 @@ function moverAt(ply: number): Game["playerColor"] {
   return ply % 2 === 0 ? "white" : "black";
 }
 
-/** Converts a side-to-move-relative `Evaluation` to White-relative (CONTEXT.md). */
+/** Converts a side-to-move-relative `Evaluation` to White-relative (CONTEXT.md),
+ *  always as a clean `{cp, mate}` pair — never the stored row as-is (which may
+ *  carry other columns, e.g. `gameId`). */
 function toWhiteRelative(evaluation: CpOrMate, mover: Game["playerColor"]): CpOrMate {
-  if (mover === "white") return evaluation;
+  const flip = mover === "black";
   return {
-    cp: evaluation.cp === null ? null : -evaluation.cp,
-    mate: evaluation.mate === null ? null : -evaluation.mate,
+    cp: evaluation.cp === null ? null : flip ? -evaluation.cp : evaluation.cp,
+    mate: evaluation.mate === null ? null : flip ? -evaluation.mate : evaluation.mate,
   };
 }
 
