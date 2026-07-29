@@ -84,6 +84,58 @@ describe("games API", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
+
+  it("GET /api/games/:id/annotations returns 404 for an unknown id", async () => {
+    const app = appWithGame();
+
+    const res = await request(app).get("/api/games/9999/annotations");
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /api/games/:id/annotations reports analyzed:false and no plies for a not-yet-analyzed Game", async () => {
+    const app = appWithGame();
+    const list = await request(app).get("/api/games");
+    const id = list.body[0].id as number;
+
+    const res = await request(app).get(`/api/games/${id}/annotations`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ analyzed: false, plies: [] });
+  });
+
+  it("GET /api/games/:id/annotations returns the per-ply annotations for an analyzed Game", async () => {
+    const { db } = openDb(":memory:");
+    const game = db
+      .insert(games)
+      .values({
+        gameUrl: "https://www.chess.com/game/live/annot-1",
+        pgn: "1. e4 e5",
+        opponent: "opp",
+        playerColor: "white",
+        result: "win",
+        date: "2026-01-01",
+        timeControlCategory: "blitz",
+        analyzed: true,
+      })
+      .returning()
+      .get();
+    db.insert(evaluations)
+      .values([
+        { gameId: game.id, ply: 0, cp: 0, mate: null },
+        { gameId: game.id, ply: 1, cp: 0, mate: null },
+        { gameId: game.id, ply: 2, cp: 0, mate: null },
+      ])
+      .run();
+    const app = createApp(db, fakeClient([]));
+
+    const res = await request(app).get(`/api/games/${game.id}/annotations`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.analyzed).toBe(true);
+    expect(res.body.plies).toHaveLength(3);
+    expect(res.body.plies[0]).toMatchObject({ ply: 0, severity: null });
+  });
 });
 
 describe("analysis API", () => {

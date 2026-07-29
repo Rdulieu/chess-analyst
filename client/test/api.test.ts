@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   fetchGame,
+  fetchGameAnnotations,
   fetchMoveHabits,
   fetchStats,
   importGames,
@@ -107,6 +108,28 @@ describe("fetchGame", () => {
     );
 
     await expect(fetchGame(999)).rejects.toThrow(/999/);
+  });
+});
+
+describe("fetchGameAnnotations", () => {
+  it("requests /api/games/:id/annotations and returns the response", async () => {
+    const body = { analyzed: true, plies: [{ ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null }] };
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => body }) as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchGameAnnotations(42);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/games/42/annotations");
+    expect(result).toEqual(body);
+  });
+
+  it("throws when the response is not ok", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }) as Response),
+    );
+
+    await expect(fetchGameAnnotations(999)).rejects.toThrow(/999/);
   });
 });
 

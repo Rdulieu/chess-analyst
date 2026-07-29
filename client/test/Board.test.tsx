@@ -5,6 +5,7 @@ import { fenStringToPositionObject } from "react-chessboard";
 import { Board } from "../src/components/Board";
 import { startingPosition } from "../src/chess/history";
 import { OPERA_PGN } from "./fixtures";
+import type { MoveAnnotation } from "../src/types";
 
 function pieceAt(container: HTMLElement, square: string): string | null {
   const piece = container.querySelector(`[data-square="${square}"] [data-piece]`);
@@ -90,6 +91,24 @@ describe("Board", () => {
 
     expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("Rd8");
     expect(pieceAt(container, "d8")).toBe("bR");
+  });
+
+  it("shows a severity glyph only next to the Player's own flawed Move, and the Evaluation for both sides", () => {
+    // "1. e4 e5": ply 1 is White's Move (e4, flagged a blunder here), ply 2 is
+    // Black's reply (e5, never flagged regardless of its own Evaluation).
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null },
+    ];
+    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+
+    const items = screen.getAllByRole("listitem");
+
+    expect(items[0].textContent).toContain("??"); // e4: blunder glyph present
+    expect(items[0].textContent).toContain("-4.0"); // e4: White-relative Evaluation
+    expect(items[1].textContent).not.toContain("?"); // e5: no glyph, even though it dropped chances
+    expect(items[1].textContent).toContain("-3.8"); // e5: Evaluation still shown
   });
 
   it("resolves a special Move (promotion) correctly when jumped to directly", async () => {

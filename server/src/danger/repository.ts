@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "../db";
-import { games, evaluations, type Game } from "../db/schema";
-import { gamePositions } from "../chess/positions";
-import { winningChances } from "./winning-chances";
-import { classifyMove, type MoveSeverity } from "./move-quality";
+import { games, evaluations } from "../db/schema";
+import { gamePlies, moveSeverities } from "../analysis/derivation";
 
 export interface DangerEntry {
   fen: string;
@@ -18,41 +16,6 @@ const LOOKAHEAD_PLIES = 10;
 /** The 4-field FEN identity `Danger position` shares with `Move habit` (CONTEXT.md). */
 function fourFieldFen(fen: string): string {
   return fen.split(" ").slice(0, 4).join(" ");
-}
-
-interface Ply {
-  fen: string;
-  /** Winning chances (0–100) for whoever is to move at this Position. */
-  winChances: number;
-}
-
-/** One analyzed Game's per-Position FENs and win% (ply 0 = initial Position). */
-function gamePlies(game: Game, evals: { ply: number; cp: number | null; mate: number | null }[]): Ply[] {
-  const fens = gamePositions(game.pgn);
-  const evalByPly = new Map(evals.map((e) => [e.ply, e]));
-  return fens.map((fen, ply) => ({ fen, winChances: winningChances(evalByPly.get(ply)!) }));
-}
-
-/**
- * The severity of each half-move of the Game, Player-relative — `null` when
- * the half-move is not the Player's own (CONTEXT.md: severities are only ever
- * computed for the Player). `severities[i]` is the Move from `plies[i]` to
- * `plies[i + 1]`. The Position's `winChances` is already relative to whoever
- * is about to move there; the resulting Position's is relative to the
- * *opponent* (their turn next), so it is flipped (`100 -`) to stay
- * Player-relative for the drop.
- */
-function moveSeverities(plies: Ply[], playerColor: Game["playerColor"]): (MoveSeverity | null)[] {
-  const severities: (MoveSeverity | null)[] = [];
-  for (let i = 0; i < plies.length - 1; i++) {
-    const mover = i % 2 === 0 ? "white" : "black";
-    if (mover !== playerColor) {
-      severities.push(null);
-      continue;
-    }
-    severities.push(classifyMove(plies[i].winChances, 100 - plies[i + 1].winChances));
-  }
-  return severities;
 }
 
 /**
