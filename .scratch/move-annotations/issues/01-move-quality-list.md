@@ -1,4 +1,9 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-7-mistake-annotations-on-analysis` (PR #9).
+Green local check: build + 97 server tests + 77 client tests. Feature Path verified against the
+`seed:danger` fixture (direct API check + manual browser confirmation — no Chrome extension
+available this session). One bug found and fixed during FP verification: `whiteEval` leaked the
+raw `evaluations` row shape (`gameId`, `ply`) instead of a clean `{cp, mate}` pair for White-to-move
+plies (regression test added).
 
 ## Parent
 

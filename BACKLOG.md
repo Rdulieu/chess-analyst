@@ -8,12 +8,14 @@
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
   > Grillée (pas de nouvelle ADR — conséquence directe d'ADR-0009 ; `CONTEXT.md` : terme `Evaluation`
   > précisé, repère Blancs à l'affichage vs. stocké relatif au trait), découpée en 3 issues,
-  > implémentation à venir sur `integration/US-7-mistake-annotations-on-analysis`. PRD :
+  > implémentée sur `integration/US-7-mistake-annotations-on-analysis`. PRD :
   > `.scratch/move-annotations/PRD.md`.
-  > - `01-move-quality-list` — dérivation partagée avec `/danger`, endpoint
-  >   `GET /api/games/:id/annotations`, liste de coups annotée + toggle
-  > - `02-position-balance-and-highlight` — balance winning-chances + surlignage plateau (bloquée par 01)
-  > - `03-analyze-from-analyse-page` — déclenchement d'analyse pour une seule partie (bloquée par 01)
+  > - `01-move-quality-list` ✅ — dérivation partagée avec `/danger` (extraite sans régression),
+  >   endpoint `GET /api/games/:id/annotations`, liste de coups annotée (`?!`/`?`/`??` + Evaluation
+  >   au repère Blancs) + toggle par défaut activé. Bug trouvé et corrigé en Feature Path
+  >   (`whiteEval` fuitait des colonnes SQLite brutes).
+  > - `02-position-balance-and-highlight` — balance winning-chances + surlignage plateau (bloquée par 01, débloquée)
+  > - `03-analyze-from-analyse-page` — déclenchement d'analyse pour une seule partie (bloquée par 01, débloquée)
 
 ## In review
 
