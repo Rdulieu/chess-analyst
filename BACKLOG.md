@@ -5,14 +5,6 @@
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
 
-- **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
-  > Pas encore grillée. Un indicateur de progression et une coche "analysée" existent déjà
-  > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
-  > confirmation — incertitude sur le fait que ça se soit bien passé. La coche "analysée" actuelle
-  > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
-  > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
-  > forme/visibilité.
-
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
   > Pas encore grillée. Aujourd'hui un import ne couvre qu'**un seul mois** (`ImportParams` côté
   > client et serveur, `POST /api/import` : un seul appel à `fetchMonth`) — pas qu'une limite
@@ -29,6 +21,15 @@
   >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
 
 ## Doing
+
+- **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
+  > Grillée (pas de nouvelle ADR — petit correctif additif ; `CONTEXT.md` : nouveau terme
+  > `Analysis pass`, cycle de vie running/completed/interrupted), découpée en 1 issue,
+  > implémentation à venir sur `integration/US-8-analysis-completion-feedback`. PRD :
+  > `.scratch/analysis-completion-feedback/PRD.md`.
+  > - `01-completion-message` — message permanent (completed/interrompu) dérivé de
+  >   `{running, total, done}` existant, fetch du statut au chargement de la page, aucun
+  >   changement d'API. Aucun bloqueur.
 
 ## In review
 
