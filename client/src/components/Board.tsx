@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
+import { formatEvaluation } from "../chess/formatEvaluation";
+import type { MoveAnnotation } from "../types";
+
+const SEVERITY_GLYPH: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
+  inaccuracy: "?!",
+  mistake: "?",
+  blunder: "??",
+};
 
 /**
  * Interactive board for a Game: renders a Position, steps through the Game's
@@ -12,8 +20,13 @@ import { parseGame } from "../chess/history";
  * set that index, so a jumped-to Position is computed identically to a
  * stepped-to one — and castling/en passant/promotion (from cm-chess's rule
  * engine) resolve the same either way.
+ *
+ * `annotations` (US-7), when present, is index-aligned with the Position
+ * index (ply 0 = start) — `annotations[i + 1]` is the Move at `plies[i]`.
+ * Absent (the toggle off, or a not-yet-analyzed Game) renders exactly as
+ * without US-7: no glyph, no Evaluation.
  */
-export function Board({ pgn }: { pgn: string }) {
+export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnnotation[] }) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
   const [index, setIndex] = useState(0);
 
@@ -44,17 +57,24 @@ export function Board({ pgn }: { pgn: string }) {
         }}
       />
       <ol aria-label="moves">
-        {plies.map((ply, i) => (
-          <li key={i}>
-            <button
-              type="button"
-              aria-current={index === i + 1 ? "true" : undefined}
-              onClick={() => setIndex(i + 1)}
-            >
-              {ply.san}
-            </button>
-          </li>
-        ))}
+        {plies.map((ply, i) => {
+          const annotation = annotations?.[i + 1];
+          return (
+            <li key={i}>
+              <button
+                type="button"
+                aria-current={index === i + 1 ? "true" : undefined}
+                onClick={() => setIndex(i + 1)}
+              >
+                {ply.san}
+              </button>
+              {annotation?.severity && (
+                <span aria-label={annotation.severity}>{SEVERITY_GLYPH[annotation.severity]}</span>
+              )}
+              {annotation && <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>}
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
