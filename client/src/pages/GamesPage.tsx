@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchGames, startAnalysis, fetchAnalysisStatus } from "../api";
+import { fetchGames } from "../api";
+import { runAnalysis } from "../features/analysis/runAnalysis";
 import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
 import type { AnalysisStatus, Game } from "../types";
-
-/** How often to poll the analysis-pass status while it runs (ms). */
-const POLL_MS = 500;
 
 /**
  * Mes parties (`/`): the import form, the Game list, and the engine-analysis
@@ -38,13 +36,7 @@ export function GamesPage() {
     });
 
   const analyze = async () => {
-    let progress = await startAnalysis([...selected]);
-    setStatus(progress);
-    while (progress.running) {
-      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-      progress = await fetchAnalysisStatus();
-      setStatus(progress);
-    }
+    await runAnalysis([...selected], setStatus);
     setStatus(null);
     setSelected(new Set());
     await refresh();

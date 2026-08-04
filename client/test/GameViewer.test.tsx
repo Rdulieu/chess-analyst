@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GameViewer } from "../src/features/games/GameViewer";
 import { OPERA_GAME } from "./fixtures";
@@ -52,5 +52,62 @@ describe("GameViewer", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.queryByRole("checkbox", { name: /afficher les annotations/i })).toBeNull();
+  });
+
+  it("shows an explicit invitation and a per-Game 'Analyser' action for a not-yet-analyzed Game, instead of a blank board", () => {
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    expect(screen.getByText(/n'a pas encore été analysée/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /analyser cette partie/i })).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "moves" })).toBeNull();
+  });
+
+  it("scopes 'Analyser cette partie' to only this Game and shows progress while the pass runs", async () => {
+    // Two polls before completion, so the in-progress render isn't immediately
+    // overwritten by completion in the same tick.
+    let statusPolls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url === "/api/analyze" && opts?.method === "POST") {
+          expect(JSON.parse(opts.body as string)).toEqual({ gameIds: [OPERA_GAME.id] });
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 1, done: 0 }) } as Response;
+        }
+        if (url === "/api/analyze/status") {
+          statusPolls += 1;
+          const running = statusPolls < 2;
+          return { ok: true, status: 200, json: async () => ({ running, total: 1, done: running ? 0 : 1 }) } as Response;
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
+
+    expect((await screen.findByRole("status")).textContent).toBe("0/1 parties analysées");
+  });
+
+  it("notifies once the analysis pass completes, so the Game and its annotations can refresh", async () => {
+    const onAnalyzed = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url === "/api/analyze" && opts?.method === "POST") {
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 1, done: 0 }) } as Response;
+        }
+        if (url === "/api/analyze/status") {
+          return { ok: true, status: 200, json: async () => ({ running: false, total: 1, done: 1 }) } as Response;
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} onAnalyzed={onAnalyzed} />);
+
+    await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
+
+    await waitFor(() => expect(onAnalyzed).toHaveBeenCalledTimes(1));
   });
 });
