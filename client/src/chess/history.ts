@@ -1,9 +1,11 @@
 import { Chess } from "cm-chess";
 
-/** A half-move: its standard notation and the Position (FEN) it leads to. */
+/** A half-move: its standard notation, destination square, and the Position (FEN) it leads to. */
 export interface Ply {
   san: string;
   fen: string;
+  /** The moving piece's destination square (the king's, for castling) — from the rule engine's move data. */
+  to: string;
 }
 
 /** A Game's navigable history: the starting Position plus every half-move. */
@@ -37,6 +39,8 @@ export function parseGame(pgn: string): GameHistory {
   chess.loadPgn(pgn.trim());
   return {
     startFen: chess.setUpFen(),
-    plies: chess.history().map((move) => ({ san: move.san, fen: move.fen })),
+    // `to` is typed optional (chess.js also models variants with drop moves), but every
+    // played standard-chess move has one.
+    plies: chess.history().map((move) => ({ san: move.san, fen: move.fen, to: move.to! })),
   };
 }

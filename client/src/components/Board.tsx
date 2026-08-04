@@ -2,12 +2,20 @@ import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
+import { WinningChancesBar } from "./WinningChancesBar";
 import type { MoveAnnotation } from "../types";
 
 const SEVERITY_GLYPH: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
   inaccuracy: "?!",
   mistake: "?",
   blunder: "??",
+};
+
+/** Distinct per-severity board tint — supplementary to the move list's glyph, never the only signal. */
+const SEVERITY_TINT: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
+  inaccuracy: "#fff3b0",
+  mistake: "#ffcc80",
+  blunder: "#ff8a80",
 };
 
 /**
@@ -23,8 +31,10 @@ const SEVERITY_GLYPH: Record<NonNullable<MoveAnnotation["severity"]>, string> = 
  *
  * `annotations` (US-7), when present, is index-aligned with the Position
  * index (ply 0 = start) — `annotations[i + 1]` is the Move at `plies[i]`.
- * Absent (the toggle off, or a not-yet-analyzed Game) renders exactly as
- * without US-7: no glyph, no Evaluation.
+ * Drives the move-list glyphs/Evaluations, the current-Position readout and
+ * balance bar, and the destination-square tint for the currently-viewed
+ * flawed Move. Absent (the toggle off, or a not-yet-analyzed Game) renders
+ * exactly as without US-7: no glyph, no Evaluation, no bar, no tint.
  */
 export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnnotation[] }) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
@@ -34,6 +44,12 @@ export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnn
   const currentMove = index === 0 ? "Start" : plies[index - 1].san;
   const atStart = index === 0;
   const atEnd = index === plies.length;
+
+  const currentAnnotation = annotations?.[index];
+  const squareStyles =
+    index > 0 && currentAnnotation?.severity
+      ? { [plies[index - 1].to]: { backgroundColor: SEVERITY_TINT[currentAnnotation.severity] } }
+      : undefined;
 
   return (
     <div>
@@ -47,13 +63,16 @@ export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnn
       </div>
       <p role="status" aria-label="current move">
         {currentMove}
+        {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
       </p>
+      {currentAnnotation && <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />}
       <Chessboard
         options={{
           id: "game-board",
           position,
           allowDragging: false,
           showAnimations: false,
+          squareStyles,
         }}
       />
       <ol aria-label="moves">
