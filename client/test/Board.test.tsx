@@ -12,6 +12,11 @@ function pieceAt(container: HTMLElement, square: string): string | null {
   return piece?.getAttribute("data-piece") ?? null;
 }
 
+function squareBackground(container: HTMLElement, square: string): string {
+  const squareDiv = container.querySelector<HTMLElement>(`[data-square="${square}"] > div`);
+  return squareDiv?.style.backgroundColor ?? "";
+}
+
 describe("Board", () => {
   it("renders the Game's starting position — the right piece on every occupied square", () => {
     const { container } = render(<Board pgn={OPERA_PGN} />);
@@ -109,6 +114,76 @@ describe("Board", () => {
     expect(items[0].textContent).toContain("-4.0"); // e4: White-relative Evaluation
     expect(items[1].textContent).not.toContain("?"); // e5: no glyph, even though it dropped chances
     expect(items[1].textContent).toContain("-3.8"); // e5: Evaluation still shown
+  });
+
+  it("shows the current Position's formatted Evaluation next to the status line, updating on navigation", async () => {
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+    ];
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4" annotations={annotations} />);
+
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toContain("+0.3");
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(screen.getByRole("status", { name: "current move" }).textContent).toContain("-4.0");
+  });
+
+  it("renders a winning-chances balance bar for the current Position, updating on navigation", async () => {
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+    ];
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4" annotations={annotations} />);
+
+    expect(screen.getByRole("img", { name: /55/ })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(screen.getByRole("img", { name: /blancs 5%/i })).toBeTruthy();
+  });
+
+  it("tints the destination square of the current Position's flawed Move, distinctly per severity", async () => {
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy" },
+    ];
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const next = screen.getByRole("button", { name: /next/i });
+
+    await user.click(next); // Position after e4 (blunder)
+    const e4Tint = squareBackground(container, "e4");
+    expect(e4Tint).toBeTruthy();
+
+    await user.click(next); // Position after e5 (inaccuracy)
+    const e5Tint = squareBackground(container, "e5");
+    expect(e5Tint).toBeTruthy();
+    expect(e5Tint).not.toBe(e4Tint);
+    expect(squareBackground(container, "e4")).not.toBeTruthy(); // no longer the current Position
+  });
+
+  it("tints no square when the current Position follows a clean Move, an opponent's Move, or is the start", async () => {
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null }, // clean
+      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null }, // opponent's Move, never flagged
+    ];
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+
+    expect(squareBackground(container, "e2")).not.toBeTruthy(); // start Position
+
+    const next = screen.getByRole("button", { name: /next/i });
+    await user.click(next);
+    expect(squareBackground(container, "e4")).not.toBeTruthy(); // clean Move
+
+    await user.click(next);
+    expect(squareBackground(container, "e5")).not.toBeTruthy(); // opponent's Move
   });
 
   it("resolves a special Move (promotion) correctly when jumped to directly", async () => {
