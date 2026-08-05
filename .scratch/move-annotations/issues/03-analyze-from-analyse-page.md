@@ -1,4 +1,12 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-7-mistake-annotations-on-analysis` (PR #11, stacked
+on PR #10 then auto-retargeted by GitHub once #10 merged).
+Green local check: server build + 98 tests, client typecheck + tests (incl. new
+`runAnalysis.test.ts`, `AnalysePage.test.tsx`, extended `GameViewer.test.tsx`), lint. Feature Path
+verified against a live server (throwaway DB, `ENGINE_BACKEND=fixture`, `seed:move-habits`
+fixture) via the real API contract — no Chrome extension available this session. Regression fixed
+along the way: `App.test.tsx`'s deep-link fixture Game was implicitly not-yet-analyzed, which now
+renders the new invitation instead of the board — updated to an analyzed fixture so it still
+exercises the board.
 
 ## Parent
 

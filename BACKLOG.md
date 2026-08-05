@@ -14,8 +14,19 @@
   >   endpoint `GET /api/games/:id/annotations`, liste de coups annotée (`?!`/`?`/`??` + Evaluation
   >   au repère Blancs) + toggle par défaut activé. Bug trouvé et corrigé en Feature Path
   >   (`whiteEval` fuitait des colonnes SQLite brutes).
-  > - `02-position-balance-and-highlight` — balance winning-chances + surlignage plateau (bloquée par 01, débloquée)
-  > - `03-analyze-from-analyse-page` — déclenchement d'analyse pour une seule partie (bloquée par 01, débloquée)
+  > - `02-position-balance-and-highlight` ✅ — balance winning-chances + Evaluation à côté du
+  >   plateau, surlignage de la case d'arrivée du coup fautif courant (teinte par sévérité,
+  >   glyph de la liste des coups reste la source accessible).
+  > - `03-analyze-from-analyse-page` ✅ — action "Analyser cette partie" scopée à une seule Game
+  >   directement sur Analyse, boucle start+poll extraite (`runAnalysis`, réutilisée par "Mes
+  >   parties"), rafraîchissement automatique de la Game + des annotations sans reload.
+  >
+  > Les 3 issues validées par leur Feature Path (agentique ; fixtures `seed:danger`/
+  > `seed:move-habits`, jamais le vrai Stockfish). Pas d'extension Chrome disponible cette
+  > session : FP vérifiées via le contrat API réel contre le serveur en direct + les tests
+  > composant (jsdom), pas de confirmation visuelle navigateur (idem 01). Reste
+  > `integration → develop` (décision humaine, HP budget déjà à 3/3 — cf. PRD, greffe drive-by
+  > possible plutôt qu'un 4e HP).
 
 ## In review
 

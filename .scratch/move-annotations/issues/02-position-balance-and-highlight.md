@@ -1,4 +1,8 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-7-mistake-annotations-on-analysis` (PR #10).
+Green local check: server build + 98 tests, client typecheck + tests (incl. new
+`WinningChancesBar.test.tsx` + extended `Board.test.tsx`), lint. Feature Path verified against a
+live server (throwaway DB, `ENGINE_BACKEND=fixture`, `seed:danger` fixture) via the real API
+contract — no Chrome extension available this session (same constraint as issue 01).
 
 ## Parent
 
