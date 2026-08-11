@@ -54,12 +54,21 @@ describe("GameViewer", () => {
     expect(screen.queryByRole("checkbox", { name: /afficher les annotations/i })).toBeNull();
   });
 
-  it("shows an explicit invitation and a per-Game 'Analyser' action for a not-yet-analyzed Game, instead of a blank board", () => {
+  it("shows an explicit invitation and a per-Game 'Analyser' action for a not-yet-analyzed Game, alongside the board", () => {
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
     expect(screen.getByText(/n'a pas encore été analysée/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: /analyser cette partie/i })).toBeTruthy();
-    expect(screen.queryByRole("list", { name: "moves" })).toBeNull();
+    // The board is never withheld: a Game is explorable as soon as it is imported.
+    expect(screen.getByRole("list", { name: "moves" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Next" })).toBeTruthy();
+  });
+
+  it("keeps the board free of annotations until the Game has been analyzed", () => {
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expect(screen.queryByLabelText("evaluation")).toBeNull();
   });
 
   it("scopes 'Analyser cette partie' to only this Game and shows progress while the pass runs", async () => {
@@ -86,7 +95,9 @@ describe("GameViewer", () => {
 
     await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
 
-    expect((await screen.findByRole("status")).textContent).toBe("0/1 parties analysées");
+    expect((await screen.findByRole("status", { name: /progression de l'analyse/i })).textContent).toBe(
+      "0/1 parties analysées",
+    );
   });
 
   it("notifies once the analysis pass completes, so the Game and its annotations can refresh", async () => {
