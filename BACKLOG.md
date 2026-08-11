@@ -4,6 +4,8 @@
 
 ## Doing
 
+## In review
+
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
   > Grillée (pas de nouvelle ADR — conséquence directe d'ADR-0009 ; `CONTEXT.md` : terme `Evaluation`
@@ -24,11 +26,23 @@
   > Les 3 issues validées par leur Feature Path (agentique ; fixtures `seed:danger`/
   > `seed:move-habits`, jamais le vrai Stockfish). Pas d'extension Chrome disponible cette
   > session : FP vérifiées via le contrat API réel contre le serveur en direct + les tests
-  > composant (jsdom), pas de confirmation visuelle navigateur (idem 01). Reste
-  > `integration → develop` (décision humaine, HP budget déjà à 3/3 — cf. PRD, greffe drive-by
-  > possible plutôt qu'un 4e HP).
-
-## In review
+  > composant (jsdom), pas de confirmation visuelle navigateur (idem 01).
+  >
+  > **En revue** — PR #12 `integration → develop`, ouverte le 2026-08-11 (le merge reste la
+  > décision humaine). Suite **HP jouée pour de vrai, UI-first** cette fois (Chrome système piloté
+  > en CDP, vraie API chess.com, vrai Stockfish WASM, DB repartie de zéro, `DudulSmash` 2026/06) :
+  > HP-02 et HP-03 vertes, **HP-01 rouge à l'étape 5** — une Game non analysée n'affichait plus
+  > aucun plateau, régression d'`03-analyze-from-analyse-page` **corrigée sur la branche**
+  > (`657b6ad`). Le test unitaire existant verrouillait le bug, d'où le silence des étages sous
+  > l'apex : il a été inversé. 3 findings non bloquants laissés ouverts dans la PR (progression
+  > d'analyse figée à `0/1`, bouton Import non désactivé pendant l'import, `/danger` sans garde
+  > d'échantillon minimal). Cap de profondeur d'HP-02 non exerçable sur 54 parties réelles.
+  >
+  > ⚠️ **PR #12 en conflit de merge** (`mergeable=CONFLICTING`) : `develop` a avancé sur
+  > **`BACKLOG.md`** (US-8/9/10 ajoutées par la PR #8), seul fichier en conflit. À résoudre en
+  > mergeant `develop` dans la branche d'intégration avant la revue.
+  >
+  > HP budget à 3/3 : greffe d'US-7 sur l'étape 8 d'HP-01 proposée dans la PR plutôt qu'un 4e HP.
 
 ## Done
 
