@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Board } from "../../components/Board";
 import { fetchGameAnnotations } from "../../api";
-import { runAnalysis } from "../analysis/runAnalysis";
-import type { AnalysisStatus, Game, MoveAnnotation } from "../../types";
+import { useAnalysisPass } from "../analysis/useAnalysisPass";
+import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
+import type { Game, MoveAnnotation } from "../../types";
 
 /**
  * Shows one selected Game on the interactive board. When the Game has been
@@ -17,7 +18,7 @@ import type { AnalysisStatus, Game, MoveAnnotation } from "../../types";
 export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () => void | Promise<void> }) {
   const [annotations, setAnnotations] = useState<MoveAnnotation[] | null>(null);
   const [showAnnotations, setShowAnnotations] = useState(true);
-  const [status, setStatus] = useState<AnalysisStatus | null>(null);
+  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass();
 
   useEffect(() => {
     if (!game.analyzed) return;
@@ -27,8 +28,7 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
   }, [game.id, game.analyzed]);
 
   const analyze = async () => {
-    await runAnalysis([game.id], setStatus);
-    setStatus(null);
+    await run([game.id]);
     await onAnalyzed?.();
   };
 
@@ -46,14 +46,10 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
       ) : (
         <div>
           <p>Cette partie n'a pas encore été analysée.</p>
-          <button type="button" onClick={analyze} disabled={status?.running ?? false}>
+          <button type="button" onClick={analyze} disabled={running}>
             Analyser cette partie
           </button>
-          {status && (
-            <p role="status" aria-label="progression de l'analyse">
-              {status.done}/{status.total} parties analysées
-            </p>
-          )}
+          <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
         </div>
       )}
       <Board pgn={game.pgn} annotations={showAnnotations ? (annotations ?? undefined) : undefined} />

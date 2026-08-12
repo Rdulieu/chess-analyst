@@ -14,11 +14,11 @@ describe("runAnalysis", () => {
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/analyze" && opts?.method === "POST") {
           expect(JSON.parse(opts.body as string)).toEqual({ gameIds: [7] });
-          return json({ running: true, total: 1, done: 0 }, 202);
+          return json({ running: true, total: 3, done: 0, games: 1 }, 202);
         }
         if (url === "/api/analyze/status") {
           statusPolls += 1;
-          return json({ running: false, total: 1, done: 1 });
+          return json({ running: false, total: 3, done: 3, games: 1 });
         }
         throw new Error(`unexpected fetch: ${url}`);
       }),
@@ -29,8 +29,8 @@ describe("runAnalysis", () => {
 
     expect(statusPolls).toBe(1);
     expect(seen).toEqual([
-      { running: true, total: 1, done: 0 },
-      { running: false, total: 1, done: 1 },
+      { running: true, total: 3, done: 0, games: 1 },
+      { running: false, total: 3, done: 3, games: 1 },
     ]);
   });
 });

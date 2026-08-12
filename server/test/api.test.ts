@@ -130,7 +130,9 @@ describe("games API", () => {
 
 describe("analysis API", () => {
   let seq = 0;
-  function appWithGames(pgns: string[]) {
+  /** An app over a fresh store holding the given Games; the store is returned
+   *  too, so a second app can be built over it (restart scenarios). */
+  function appAndStore(pgns: string[]) {
     const { db } = openDb(":memory:");
     for (const pgn of pgns) {
       db.insert(games)
@@ -145,8 +147,10 @@ describe("analysis API", () => {
         })
         .run();
     }
-    return createApp(db, fakeClient({}), createFixtureEngine());
+    return { app: createApp(db, fakeClient({}), createFixtureEngine()), db };
   }
+
+  const appWithGames = (pgns: string[]) => appAndStore(pgns).app;
 
   /** Polls the status endpoint until the pass reports it is no longer running. */
   async function waitDone(app: ReturnType<typeof appWithGames>) {
@@ -161,25 +165,84 @@ describe("analysis API", () => {
   const idsOf = async (app: ReturnType<typeof appWithGames>) =>
     (await request(app).get("/api/games")).body.map((g: { id: number }) => g.id);
 
-  it("POST /api/analyze starts a background pass (202) and /status advances to done === total, then running:false", async () => {
-    const app = appWithGames(["1. e4 e5", "1. d4 d5"]);
+  it("POST /api/analyze starts a background pass (202) and /status advances in Positions, reporting how many Games it covers", async () => {
+    const app = appWithGames(["1. e4 e5", "1. d4 d5"]); // 2 Games, 3 Positions each
 
     const started = await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
     expect(started.status).toBe(202);
-    expect(started.body).toMatchObject({ running: true, total: 2 });
+    expect(started.body).toMatchObject({ running: true, total: 6, games: 2 });
 
-    expect(await waitDone(app)).toEqual({ running: false, total: 2, done: 2 });
+    expect(await waitDone(app)).toEqual({
+      running: false,
+      total: 6,
+      done: 6,
+      games: 2,
+      acknowledged: false,
+      outcome: "completed",
+      error: null,
+    });
   });
 
-  it("re-analyzing an already-analyzed selection reports nothing left to do (total 0, not running)", async () => {
+  it("re-analyzing an already-analyzed selection opens no new pass — the last one is still reported", async () => {
     const app = appWithGames(["1. e4 e5"]);
     const ids = await idsOf(app);
     await request(app).post("/api/analyze").send({ gameIds: ids });
-    await waitDone(app);
+    const finished = await waitDone(app);
 
     const again = await request(app).post("/api/analyze").send({ gameIds: ids });
     expect(again.status).toBe(202);
-    expect(again.body).toEqual({ running: false, total: 0, done: 0 });
+    // An empty pass is not a pass: the previous one is reported, untouched.
+    expect(again.body).toEqual({ ...finished, started: false });
+  });
+
+  it("POST /api/analyze/acknowledge marks the last pass as seen, and is harmless twice", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    expect(await waitDone(app)).toMatchObject({ acknowledged: false });
+
+    expect((await request(app).post("/api/analyze/acknowledge")).status).toBe(204);
+    expect((await request(app).get("/api/analyze/status")).body).toMatchObject({
+      acknowledged: true,
+      done: 3,
+      games: 1,
+    });
+
+    expect((await request(app).post("/api/analyze/acknowledge")).status).toBe(204);
+    expect((await request(app).get("/api/analyze/status")).body).toMatchObject({
+      acknowledged: true,
+    });
+  });
+
+  it("POST /api/analyze says whether it actually started a pass, so 'nothing to do' is not guesswork", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    const ids = await idsOf(app);
+
+    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).body).toMatchObject({
+      started: true,
+    });
+    await waitDone(app);
+
+    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).body).toMatchObject({
+      started: false,
+    });
+  });
+
+  it("GET /api/analyze/status reports the last pass to a freshly built app (it outlives the process)", async () => {
+    const { app, db } = appAndStore(["1. e4 e5"]);
+    await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    await waitDone(app);
+
+    // A second app over the same store — as after a restart.
+    const restarted = createApp(db, fakeClient({}), createFixtureEngine());
+    expect((await request(restarted).get("/api/analyze/status")).body).toEqual({
+      running: false,
+      total: 3,
+      done: 3,
+      games: 1,
+      acknowledged: false,
+      outcome: "completed",
+      error: null,
+    });
   });
 
   it("GET /api/games exposes the analyzed flag — false before, true after the pass", async () => {

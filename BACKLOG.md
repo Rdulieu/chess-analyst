@@ -2,14 +2,6 @@
 
 ## To do
 
-- **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
-  > Pas encore grillée. Un indicateur de progression et une coche "analysée" existent déjà
-  > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
-  > confirmation — incertitude sur le fait que ça se soit bien passé. La coche "analysée" actuelle
-  > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
-  > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
-  > forme/visibilité.
-
 - **US-10**: Voir clairement qui joue Blancs/Noirs sur un échiquier, et ne pas attendre dans le vide sur "Positions dangereuses".
   > Pas encore grillée, deux préoccupations distinctes réunies ici :
   > - Aucun échiquier affiché dans l'app (Analyse, Explorateur, Positions dangereuses) ne montre
@@ -20,6 +12,51 @@
   >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
 
 ## Doing
+
+- **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
+  > Un indicateur de progression et une coche "analysée" existent déjà
+  > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
+  > confirmation — incertitude sur le fait que ça se soit bien passé. La coche "analysée" actuelle
+  > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
+  > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
+  > forme/visibilité.
+  > **Grillée** (**ADR-0010** : le pass est persisté, sa progression reste dérivée des
+  > `Evaluation`s stockées ; `CONTEXT.md` : nouveau terme **`Analysis pass`** — le glossaire n'en
+  > avait aucun pour le pass, introduit pourtant par US-4). Découpée en 4 issues, implémentée sur
+  > `integration/US-8-analysis-pass-completion` (worktree dédié). PRD :
+  > `.scratch/analysis-pass-completion/PRD.md`.
+  > - `01-positions-progress-on-a-persisted-pass` ✅ — table `analysis_passes`, `done` dérivé du
+  >   `COUNT` sur `evaluations`, progression en Positions, ligne de progression extraite en
+  >   composant unique. Bug trouvé et corrigé en Feature Path (le compteur n'atteignait jamais son
+  >   total : la remise à zéro fusionnait avec la dernière progression).
+  > - `02-completion-summary-and-acknowledgement` ✅ — résumé de fin persistant (survit au
+  >   rechargement **et** au redémarrage serveur, vérifié), acquitté par le Player
+  >   (`POST /api/analyze/acknowledge`), « rien à analyser » explicite
+  > - `03-interrupted-and-failed-outcomes` ✅ — les trois issues du pass, réconciliation au boot
+  >   (jamais de reprise automatique), erreur moteur enfin visible, greffe sur HP-01 (budget à
+  >   3/3). Mine du cadrage désamorcée (partie à moitié évaluée vs. clé primaire). Finding
+  >   bloquant trouvé en FP : un moteur natif cassé tuait le serveur au démarrage, donc l'issue
+  >   `failed` n'était atteignable par aucune configuration réelle — corrigé.
+  > - `04-analysis-state-at-a-glance-in-the-game-list` ✅ — badge renforcé (pastille encadrée) +
+  >   décompte global dérivé des Games déjà chargées, sans appel réseau supplémentaire
+  >
+  > Les 4 issues validées par leur Feature Path (agentique, UI-first contre l'app réelle : Chrome
+  > en CDP, vrai Stockfish WASM, fixture `seed:move-habits`). **Trois bugs trouvés par l'étage
+  > agentique et invisibles aux étages inférieurs** : le compteur n'atteignait jamais son total
+  > (la remise à zéro fusionnait avec la dernière progression) ; un moteur natif cassé tuait le
+  > serveur au démarrage, rendant l'issue `failed` inatteignable ; un moteur muet aurait laissé un
+  > pass tourner sans fin. HP-01 étape 8 porte la confirmation de fin (budget HP à 3/3).
+  >
+  > - `05-readable-readouts-and-one-live-region` ✅ — tranche de finition : lever la confusion entre
+  >   le décompte d'historique et le résumé de pass, et ne laisser qu'une région live à nous sur
+  >   la page Analyse (celle de `react-chessboard` est tierce, non supprimable)
+  >
+  > Le finding « un résumé non acquitté est silencieusement remplacé par un pass plus récent » est
+  > **assumé** : décision enregistrée dans les Conséquences d'**ADR-0010** (la promesse d'US-8 est
+  > qu'on ne rate pas une confirmation *sans agir*, et relancer une analyse est un acte).
+  >
+  > **Puis revue `integration → develop`** : rejouer la suite HP après la 05, puis ouvrir la PR
+  > (décision humaine).
 
 ## In review
 

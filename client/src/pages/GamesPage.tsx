@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchGames } from "../api";
-import { runAnalysis } from "../features/analysis/runAnalysis";
+import { useAnalysisPass } from "../features/analysis/useAnalysisPass";
+import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
 import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
-import type { AnalysisStatus, Game } from "../types";
+import { AnalyzedCount } from "../features/games/AnalyzedCount";
+import type { Game } from "../types";
 
 /**
  * Mes parties (`/`): the import form, the Game list, and the engine-analysis
@@ -16,7 +18,7 @@ import type { AnalysisStatus, Game } from "../types";
 export function GamesPage() {
   const [games, setGames] = useState<Game[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [status, setStatus] = useState<AnalysisStatus | null>(null);
+  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass();
   const navigate = useNavigate();
 
   const refresh = async () => setGames(await fetchGames());
@@ -36,13 +38,10 @@ export function GamesPage() {
     });
 
   const analyze = async () => {
-    await runAnalysis([...selected], setStatus);
-    setStatus(null);
+    await run([...selected]);
     setSelected(new Set());
     await refresh();
   };
-
-  const running = status?.running ?? false;
 
   return (
     <>
@@ -54,15 +53,13 @@ export function GamesPage() {
 
       {games && games.length > 0 && (
         <>
+          <AnalyzedCount games={games} />
+
           <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
             Analyser la sélection
           </button>
 
-          {status && (
-            <p role="status">
-              {status.done}/{status.total} parties analysées
-            </p>
-          )}
+          <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
 
           <GameList
             games={games}

@@ -44,13 +44,34 @@ describe("GameViewer", () => {
     expect(items[0].textContent).not.toContain("-4.0");
   });
 
+  it("keeps a single live region of ours: the pass progress, not the move readout", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("no fetch expected"); }));
+
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    // Stepping through moves answers the Player's own click and is already on
+    // screen; announcing it competes for speech with a pass that runs for
+    // minutes. It keeps its name and its text, it just stops being live.
+    // react-chessboard emits its own unlabelled live region for drag-and-drop —
+    // third-party, not ours to remove — so we assert on the ones we own.
+    const ours = [...container.querySelectorAll('[role="status"]')].filter((el) =>
+      el.hasAttribute("aria-label"),
+    );
+    expect(ours).toHaveLength(0); // no pass running here, and the move readout is no longer live
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+  });
+
   it("does not fetch annotations, and shows no toggle, for a not-yet-analyzed Game", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    // The annotations endpoint specifically — the page does ask for the last
+    // pass on mount, so that an unacknowledged summary reappears (US-8 02).
+    expect(fetchMock.mock.calls.map(([url]) => url as string)).not.toContain(
+      `/api/games/${OPERA_GAME.id}/annotations`,
+    );
     expect(screen.queryByRole("checkbox", { name: /afficher les annotations/i })).toBeNull();
   });
 
@@ -80,12 +101,12 @@ describe("GameViewer", () => {
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/analyze" && opts?.method === "POST") {
           expect(JSON.parse(opts.body as string)).toEqual({ gameIds: [OPERA_GAME.id] });
-          return { ok: true, status: 202, json: async () => ({ running: true, total: 1, done: 0 }) } as Response;
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 3, done: 0, games: 1 }) } as Response;
         }
         if (url === "/api/analyze/status") {
           statusPolls += 1;
           const running = statusPolls < 2;
-          return { ok: true, status: 200, json: async () => ({ running, total: 1, done: running ? 0 : 1 }) } as Response;
+          return { ok: true, status: 200, json: async () => ({ running, total: 3, done: running ? 0 : 3, games: 1 }) } as Response;
         }
         throw new Error(`unexpected fetch: ${url}`);
       }),
@@ -96,7 +117,7 @@ describe("GameViewer", () => {
     await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
 
     expect((await screen.findByRole("status", { name: /progression de l'analyse/i })).textContent).toBe(
-      "0/1 parties analysées",
+      "0/3 positions évaluées",
     );
   });
 
@@ -106,10 +127,10 @@ describe("GameViewer", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/analyze" && opts?.method === "POST") {
-          return { ok: true, status: 202, json: async () => ({ running: true, total: 1, done: 0 }) } as Response;
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 3, done: 0, games: 1 }) } as Response;
         }
         if (url === "/api/analyze/status") {
-          return { ok: true, status: 200, json: async () => ({ running: false, total: 1, done: 1 }) } as Response;
+          return { ok: true, status: 200, json: async () => ({ running: false, total: 3, done: 3, games: 1 }) } as Response;
         }
         throw new Error(`unexpected fetch: ${url}`);
       }),

@@ -77,7 +77,7 @@ describe("App — routing & navigation", () => {
 
     // Previous/Next work exactly as before: Next advances one Move.
     await user.click(screen.getByRole("button", { name: /next/i }));
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("e4");
+    expect(screen.getByLabelText("current move").textContent).toBe("e4");
   });
 
   it("navigates to the Explorateur page from the nav", async () => {
@@ -123,7 +123,7 @@ describe("App — routing & navigation", () => {
 
     // No list visit first: the page loads its own Game from the route param.
     await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("Start");
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
   });
 
   it("moves between pages through the menu, back to Mes parties", async () => {

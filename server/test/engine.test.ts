@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createNativeEngine } from "../src/engine/native";
 import { createFixtureEngine } from "../src/engine/fixture";
 
 /** Full FEN of the standard starting Position. */
@@ -27,5 +28,24 @@ describe("fixture Engine", () => {
     const start = await engine.evaluate(START);
     const afterE4 = await engine.evaluate(AFTER_E4);
     expect(start.cp).not.toBe(afterE4.cp);
+  });
+});
+
+describe("native Engine — an unusable backend", () => {
+  it("surfaces the failure through evaluate, instead of taking the process down at construction", async () => {
+    // A path that cannot be a UCI engine. Building the Engine must not throw,
+    // and must not kill the app: the relay has to stay up so the Player is told
+    // the *pass* failed (US-8) rather than losing the whole app.
+    const engine = createNativeEngine("/nonexistent/stockfish");
+
+    await expect(engine.evaluate("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1))
+      .rejects.toThrow();
+  });
+
+  it("does the same for a binary that spawns but speaks no UCI", async () => {
+    const engine = createNativeEngine("/bin/false");
+
+    await expect(engine.evaluate("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1))
+      .rejects.toThrow();
   });
 });
