@@ -2,7 +2,7 @@
  * Determinate progress of the `Analysis pass` (GET /api/analyze/status),
  * counted in **Positions evaluated** — a pass evaluates every Position of every
  * Game it covers, so counting whole Games left a single-Game pass reading `0/1`
- * for its entire run (US-8, ADR-0010).
+ * for its entire run (US-8, ADR-0011).
  */
 export interface AnalysisStatus {
   running: boolean;

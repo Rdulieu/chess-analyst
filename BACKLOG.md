@@ -13,6 +13,35 @@
 
 ## Doing
 
+## In review
+
+- **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
+  > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
+  > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
+  > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
+  > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
+  > (confirmation UI au-delà de 24 mois). Un seul contrat d'import : le mono-mois devient une plage
+  > à bornes égales. `CONTEXT.md` : `Import` re-scopé, terme `Monthly import` ajouté.
+  > Nouvelle **ADR-0010** (revient sur une remarque de portée d'ADR-0008, annotée en conséquence).
+  > PRD : `.scratch/multi-month-import/PRD.md`. Découpée en 3 issues, implémentée sur
+  > `integration/US-9-multi-month-import` :
+  > - `01-range-import-background-job` ✅ — tracer bullet : plage + job + polling + progression en
+  >   mois + résumé consolidé.
+  > - `02-monthly-import-lines-and-fault-tolerance` ✅ — ligne par mois, un mois en échec n'interrompt
+  >   pas l'Import (bloquée par 01).
+  > - `03-range-input-guardrails` ✅ — plage inversée (400), bornage au mois courant, 404 synchrone
+  >   sur username inconnu, confirmation au-delà de 24 mois.
+  >
+  > Les 3 issues validées par leur Feature Path (fixture d'archive via `CHESSCOM_BASE_URL`), puis la
+  > **suite HP rejouée en entier contre la vraie API chess.com** : HP-01/02/03 vertes. HP-01 a été
+  > réécrit pour couvrir la plage (`2026-05 → 2026-06`, 82 parties) au lieu d'un mois unique, et
+  > asserte désormais des chiffres durs relevés sur le compte réel. Pas de 4e HP : la plage est
+  > absorbée dans le scénario d'import existant.
+  >
+  > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
+
+## Done
+
 - **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
   > Un indicateur de progression et une coche "analysée" existent déjà
   > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
@@ -20,7 +49,7 @@
   > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
   > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
   > forme/visibilité.
-  > **Grillée** (**ADR-0010** : le pass est persisté, sa progression reste dérivée des
+  > **Grillée** (**ADR-0011** : le pass est persisté, sa progression reste dérivée des
   > `Evaluation`s stockées ; `CONTEXT.md` : nouveau terme **`Analysis pass`** — le glossaire n'en
   > avait aucun pour le pass, introduit pourtant par US-4). Découpée en 4 issues, implémentée sur
   > `integration/US-8-analysis-pass-completion` (worktree dédié). PRD :
@@ -52,40 +81,33 @@
   >   la page Analyse (celle de `react-chessboard` est tierce, non supprimable)
   >
   > Le finding « un résumé non acquitté est silencieusement remplacé par un pass plus récent » est
-  > **assumé** : décision enregistrée dans les Conséquences d'**ADR-0010** (la promesse d'US-8 est
+  > **assumé** : décision enregistrée dans les Conséquences d'**ADR-0011** (la promesse d'US-8 est
   > qu'on ne rate pas une confirmation *sans agir*, et relancer une analyse est un acte).
   >
-  > **Puis revue `integration → develop`** : rejouer la suite HP après la 05, puis ouvrir la PR
-  > (décision humaine).
-
-## In review
-
-- **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
-  > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
-  > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
-  > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
-  > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
-  > (confirmation UI au-delà de 24 mois). Un seul contrat d'import : le mono-mois devient une plage
-  > à bornes égales. `CONTEXT.md` : `Import` re-scopé, terme `Monthly import` ajouté.
-  > Nouvelle **ADR-0010** (revient sur une remarque de portée d'ADR-0008, annotée en conséquence).
-  > PRD : `.scratch/multi-month-import/PRD.md`. Découpée en 3 issues, implémentée sur
-  > `integration/US-9-multi-month-import` :
-  > - `01-range-import-background-job` ✅ — tracer bullet : plage + job + polling + progression en
-  >   mois + résumé consolidé.
-  > - `02-monthly-import-lines-and-fault-tolerance` ✅ — ligne par mois, un mois en échec n'interrompt
-  >   pas l'Import (bloquée par 01).
-  > - `03-range-input-guardrails` ✅ — plage inversée (400), bornage au mois courant, 404 synchrone
-  >   sur username inconnu, confirmation au-delà de 24 mois.
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #22, mergée le
+  > 2026-08-12). `develop` (US-9) fusionnée dans la branche **avant** l'ouverture : quatre
+  > conflits réels, pas seulement le backlog — US-9 avait remodelé l'API d'import et renuméroté le
+  > parcours HP-01 ; le merge a cassé deux choses que les tests ont rattrapées. Mergeabilité
+  > revérifiée après ouverture : `CLEAN`.
   >
-  > Les 3 issues validées par leur Feature Path (fixture d'archive via `CHESSCOM_BASE_URL`), puis la
-  > **suite HP rejouée en entier contre la vraie API chess.com** : HP-01/02/03 vertes. HP-01 a été
-  > réécrit pour couvrir la plage (`2026-05 → 2026-06`, 82 parties) au lieu d'un mois unique, et
-  > asserte désormais des chiffres durs relevés sur le compte réel. Pas de 4e HP : la plage est
-  > absorbée dans le scénario d'import existant.
+  > **Suite HP rejouée en entier après ce merge** (la première exécution portait sur l'import
+  > mono-mois, donc périmée) : HP-01 9/9, HP-02, HP-03 — vertes, contre la vraie API chess.com
+  > (`DudulSmash`, 2026-05 → 2026-06, 82 parties) et le vrai Stockfish WASM, sans erreur console.
+  > Le **plafond de profondeur d'HP-02**, noté « non exerçable » depuis US-7, l'est enfin : 40
+  > demi-coups atteints.
   >
-  > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
-
-## Done
+  > **Collision d'ADR corrigée** : US-9 et US-8 avaient toutes deux créé une `ADR-0010` en
+  > parallèle, sans conflit git (noms de fichiers différents). Celle d'US-9 étant déjà sur
+  > `develop`, celle d'US-8 est renumérotée en **ADR-0011**, avec ses 14 références.
+  >
+  > Findings non bloquants ouverts : la ligne de progression ne se nomme pas pendant l'exécution ;
+  > la région live résiduelle de `react-chessboard` est `assertive` et sans libellé (tierce) ; le
+  > backend moteur natif reste non vérifié sur son chemin nominal (seuls ses modes de panne le
+  > sont). Un flake observé une fois sur `GameViewer` (annotations), non reproduit, non diagnostiqué.
+  >
+  > ⚠️ La PR #22 a été mergée sur `5953c78` alors que le dernier commit de la branche
+  > (`5460b15`) n'y était pas encore : la renumérotation d'ADR et cette mise à jour du backlog
+  > sont arrivées par une PR de rattrapage. Reste `develop → main` (pré-prod, non décidé).
 
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.

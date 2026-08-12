@@ -6,7 +6,7 @@ import type { AnalysisStatus } from "../../types";
  * Analyse page), never inlined twice.
  *
  * While the pass runs it shows the live count, in **Positions evaluated** (US-8,
- * ADR-0010) — a pass evaluates every Position of every Game it covers, so
+ * ADR-0011) — a pass evaluates every Position of every Game it covers, so
  * counting whole Games left a single-Game pass reading `0/1` for its entire
  * multi-minute run. "Positions" is also what the store holds (one `Evaluation`
  * per Position), so the figure shown and the figure recorded are the same thing.

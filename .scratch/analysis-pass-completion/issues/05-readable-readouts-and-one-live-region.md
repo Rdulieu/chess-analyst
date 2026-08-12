@@ -10,7 +10,7 @@ unlabelled (third-party, empty outside drag-and-drop).
 
 ## Parent
 
-`.scratch/analysis-pass-completion/PRD.md` (US-8 — BACKLOG.md). Decisions: **ADR-0010**.
+`.scratch/analysis-pass-completion/PRD.md` (US-8 — BACKLOG.md). Decisions: **ADR-0011**.
 
 Implemented on the business-story integration branch
 `integration/US-8-analysis-pass-completion` — branch sub-work from it and merge back into it via
@@ -20,7 +20,7 @@ Path) is green.
 **Finishing slice**: closes the two contained findings the agentic runs raised across slices 02
 and 04, before the HP suite is replayed — so the HP validates the final wording rather than one
 we are about to change. The third finding (an unacknowledged summary superseded by a newer pass)
-is **not** in scope: it was deliberately accepted and is now recorded in ADR-0010's Consequences.
+is **not** in scope: it was deliberately accepted and is now recorded in ADR-0011's Consequences.
 
 ## What to build
 

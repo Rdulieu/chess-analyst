@@ -30,7 +30,7 @@ export interface AnalysisStatus {
 
 /**
  * Positions evaluated so far among `gameIds` — **derived**, never a stored
- * counter (ADR-0010): the `evaluations` rows *are* the progress, so there is no
+ * counter (ADR-0011): the `evaluations` rows *are* the progress, so there is no
  * second figure that can drift when the process dies between an insert and an
  * increment.
  */
@@ -72,7 +72,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
   let current: Promise<void> = Promise.resolve();
 
   // A pass row with no end was killed by a shutdown: close it as `interrupted`
-  // (ADR-0010). Done here, at construction, so a job cannot exist without having
+  // (ADR-0011). Done here, at construction, so a job cannot exist without having
   // reconciled — there is no separate call anyone could forget. The dead pass is
   // deliberately **not** resumed: every engine run in this app is
   // Player-triggered, as `Import` is, and silently burning minutes of CPU at

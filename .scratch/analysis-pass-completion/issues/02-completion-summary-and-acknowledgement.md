@@ -12,7 +12,7 @@ when a new pass starts, since only the last pass is ever reported.
 
 ## Parent
 
-`.scratch/analysis-pass-completion/PRD.md` (US-8 — BACKLOG.md). Decisions: **ADR-0010**; glossary
+`.scratch/analysis-pass-completion/PRD.md` (US-8 — BACKLOG.md). Decisions: **ADR-0011**; glossary
 term **`Analysis pass`** (CONTEXT.md).
 
 Implemented on the business-story integration branch

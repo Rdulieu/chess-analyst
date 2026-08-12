@@ -4,7 +4,7 @@ Status: ready-for-agent
 Business ref: BACKLOG.md — US-8
 Integration branch: `integration/US-8-analysis-pass-completion` (cut from up-to-date `develop`,
 worked in the worktree `../chess-analyst-US-8` while the main checkout hosts another grilling).
-Decisions: **ADR-0010** (persist the `Analysis pass`, keep its progress derived from the stored
+Decisions: **ADR-0011** (persist the `Analysis pass`, keep its progress derived from the stored
 `Evaluation`s) — written during this story's grilling, commit `3f8e11c`.
 Glossary terms (CONTEXT.md): **`Analysis pass`** (new entry, added during grilling — the glossary
 had no term for the pass at all), `Position`, `Evaluation`, `Game`, `Player`, `Import`
@@ -105,7 +105,7 @@ Give the `Analysis pass` a persisted life cycle and tell the Player, explicitly,
   **total** number of Positions to evaluate, `started_at`, `ended_at`, `outcome`, an optional
   error message, and `acknowledged_at`.
 - **No progress column.** `done` is derived: a `COUNT` over the `evaluations` rows of the pass's
-  Games, served by that table's existing `(game_id, ply)` primary key. Per ADR-0010, an
+  Games, served by that table's existing `(game_id, ply)` primary key. Per ADR-0011, an
   incremented counter would be a second source of truth that drifts the moment the process dies
   between an `INSERT` and the increment.
 - `total` is computed once at pass start by counting the Positions of each pending Game from its

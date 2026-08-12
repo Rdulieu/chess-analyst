@@ -12,7 +12,7 @@ which is issue 02's scope.
 
 ## Parent
 
-`.scratch/analysis-pass-completion/PRD.md` (US-8 — BACKLOG.md). Decisions: **ADR-0010**; glossary
+`.scratch/analysis-pass-completion/PRD.md` (US-8 — BACKLOG.md). Decisions: **ADR-0011**; glossary
 term **`Analysis pass`** (CONTEXT.md).
 
 Implemented on the business-story integration branch
@@ -28,7 +28,7 @@ its entire ~75 s.
 
 - **Schema**: an `analysis_passes` table recording what a pass *is* — the Games it covers, the
   **total** number of Positions to evaluate, and when it started and ended. **No progress
-  column**: per ADR-0010, `done` is derived as a `COUNT` over the `evaluations` rows of the pass's
+  column**: per ADR-0011, `done` is derived as a `COUNT` over the `evaluations` rows of the pass's
   Games (served by that table's existing `(game_id, ply)` primary key). An incremented counter
   would be a second source of truth that drifts the moment the process dies between an `INSERT`
   and the increment. Dev-phase rules apply — new table, no backfill.
