@@ -50,7 +50,11 @@ describe("GameViewer", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    // The annotations endpoint specifically — the page does ask for the last
+    // pass on mount, so that an unacknowledged summary reappears (US-8 02).
+    expect(fetchMock.mock.calls.map(([url]) => url as string)).not.toContain(
+      `/api/games/${OPERA_GAME.id}/annotations`,
+    );
     expect(screen.queryByRole("checkbox", { name: /afficher les annotations/i })).toBeNull();
   });
 

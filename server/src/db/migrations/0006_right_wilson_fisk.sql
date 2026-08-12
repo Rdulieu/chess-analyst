@@ -1,0 +1,1 @@
+ALTER TABLE `analysis_passes` ADD `acknowledged_at` text;

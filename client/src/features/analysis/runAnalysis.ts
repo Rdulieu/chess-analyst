@@ -13,12 +13,14 @@ const POLL_MS = 500;
 export async function runAnalysis(
   gameIds: number[],
   onProgress: (status: AnalysisStatus) => void,
-): Promise<void> {
-  let status = await startAnalysis(gameIds);
+): Promise<{ started: boolean }> {
+  const start = await startAnalysis(gameIds);
+  let status: AnalysisStatus = start;
   onProgress(status);
   while (status.running) {
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
     status = await fetchAnalysisStatus();
     onProgress(status);
   }
+  return { started: start.started };
 }

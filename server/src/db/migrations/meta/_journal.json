@@ -43,6 +43,13 @@
       "when": 1786526213284,
       "tag": "0005_worried_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786528392939,
+      "tag": "0006_right_wilson_fisk",
+      "breakpoints": true
     }
   ]
 }

@@ -4,5 +4,5 @@ export { fetchStats } from "./stats";
 export { fetchWeakOpenings } from "./openings";
 export { fetchDangerPositions } from "./danger";
 export { importGames } from "./import";
-export { startAnalysis, fetchAnalysisStatus } from "./analyze";
+export { startAnalysis, fetchAnalysisStatus, acknowledgeAnalysis } from "./analyze";
 export { getSettings, saveSettings, type Settings } from "./settings";

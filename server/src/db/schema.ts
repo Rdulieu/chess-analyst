@@ -83,6 +83,9 @@ export const analysisPasses = sqliteTable("analysis_passes", {
   total: integer("total").notNull(),
   startedAt: text("started_at").notNull(),
   endedAt: text("ended_at"),
+  // When the Player dismissed this pass's summary. Display only: it hides the
+  // summary and changes neither what the pass did nor the Evaluations it kept.
+  acknowledgedAt: text("acknowledged_at"),
 });
 
 export type AnalysisPass = typeof analysisPasses.$inferSelect;
