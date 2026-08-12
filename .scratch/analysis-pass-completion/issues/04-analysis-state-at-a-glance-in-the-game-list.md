@@ -1,4 +1,14 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-8-analysis-pass-completion` (PR #18).
+Green local check: build + lint + 213 tests (110 server, 103 client). Feature Path 3/3 green,
+no console error. Step 2 ("apparent at a glance") was judged on a **screenshot of the running
+app**, not on an assertion: the pills stand out from each row's label in a way the previous bold
+text did not. The visual reinforcement therefore ships with **no unit test of its own** — no
+automated assertion honestly says "this is noticeable"; a test does lock the two project
+constraints (inline style, never a CSS class; textual cue kept).
+Non-blocking finding raised: the global count and the pass summary use the same visual pattern
+and sit adjacent ("6 parties · 3 analysées" vs "1 partie · 3 positions évaluées ✓"), which reads
+as one correcting the other. It emerges from their juxtaposition — neither slice 02 nor 04 could
+see it alone.
 
 ## Parent
 

@@ -43,8 +43,21 @@
   >   3/3). Mine du cadrage désamorcée (partie à moitié évaluée vs. clé primaire). Finding
   >   bloquant trouvé en FP : un moteur natif cassé tuait le serveur au démarrage, donc l'issue
   >   `failed` n'était atteignable par aucune configuration réelle — corrigé.
-  > - `04-analysis-state-at-a-glance-in-the-game-list` — badge renforcé + compteur global
-  >   (indépendante, parallélisable avec la 01)
+  > - `04-analysis-state-at-a-glance-in-the-game-list` ✅ — badge renforcé (pastille encadrée) +
+  >   décompte global dérivé des Games déjà chargées, sans appel réseau supplémentaire
+  >
+  > Les 4 issues validées par leur Feature Path (agentique, UI-first contre l'app réelle : Chrome
+  > en CDP, vrai Stockfish WASM, fixture `seed:move-habits`). **Trois bugs trouvés par l'étage
+  > agentique et invisibles aux étages inférieurs** : le compteur n'atteignait jamais son total
+  > (la remise à zéro fusionnait avec la dernière progression) ; un moteur natif cassé tuait le
+  > serveur au démarrage, rendant l'issue `failed` inatteignable ; un moteur muet aurait laissé un
+  > pass tourner sans fin. HP-01 étape 8 porte la confirmation de fin (budget HP à 3/3).
+  >
+  > **Prêt pour la revue `integration → develop`** : rejouer la suite HP, puis ouvrir la PR
+  > (décision humaine). Findings non bloquants restant ouverts : un résumé non acquitté est
+  > silencieusement remplacé par un pass plus récent ; le décompte global et le résumé de pass
+  > partagent le même motif visuel côte à côte ; deux régions live concurrentes sur la page
+  > Analyse (pré-existant, US-7).
 
 ## In review
 
