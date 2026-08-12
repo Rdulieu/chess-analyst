@@ -23,11 +23,19 @@ export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
  * month cannot tell one month's contribution from another's. A month with no
  * entry answers empty, like chess.com's own 404-for-no-archive.
  */
-export function fakeClient(archives: Record<string, ChessComGame[]>, exists = true): ChessComClient {
+export function fakeClient(
+  archives: Record<string, ChessComGame[] | Error>,
+  exists = true,
+): ChessComClient {
   return {
     playerExists: async () => exists,
-    fetchMonth: async (_username, year, month) =>
-      archives[`${year}-${String(month).padStart(2, "0")}`] ?? [],
+    fetchMonth: async (_username, year, month) => {
+      const archive = archives[`${year}-${String(month).padStart(2, "0")}`];
+      // An Error entry stands for a month chess.com could not answer for
+      // (unreachable, 5xx, rate-limited) — the failure an Import must survive.
+      if (archive instanceof Error) throw archive;
+      return archive ?? [];
+    },
   };
 }
 
