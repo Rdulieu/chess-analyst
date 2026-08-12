@@ -21,5 +21,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./test/setup.ts"],
     include: ["test/**/*.test.{ts,tsx}"],
+    // Board tests walk a whole Game through userEvent clicks; jsdom + a real
+    // rule engine put them past the 5s default on a loaded machine, which
+    // showed up as a flake (green in isolation, red in a full run).
+    testTimeout: 20000,
   },
 });

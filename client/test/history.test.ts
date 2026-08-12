@@ -24,6 +24,7 @@ describe("parseGame", () => {
     expect(game.plies[0].fen).toBe(
       "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
     );
+    expect(game.plies[0].to).toBe("e4");
     expect(game.plies.at(-1)?.san).toMatch(/^Rd8/);
   });
 
@@ -67,6 +68,7 @@ describe("parseGame — special moves resolve to the correct Position", () => {
     expect(pieceOn(ply.fen, "g1")).toBe("K");
     expect(pieceOn(ply.fen, "f1")).toBe("R");
     expect(pieceOn(ply.fen, "e1")).toBeNull();
+    expect(ply.to).toBe("g1"); // the king's destination, not the rook's
   });
 
   it("handles en passant (capturing pawn lands behind, captured pawn removed)", () => {

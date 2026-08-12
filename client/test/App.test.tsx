@@ -41,7 +41,8 @@ describe("App — routing & navigation", () => {
       vi.fn(async (url: string | URL): Promise<Response> => {
         const u = url.toString();
         if (u === "/api/games") return jsonResponse([OPERA_GAME]);
-        if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse(OPERA_GAME);
+        // Analyzed here so the deep-link test below exercises the board, not US-7's not-yet-analyzed path.
+        if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse({ ...OPERA_GAME, analyzed: true });
         if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
         if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
         if (u === "/api/openings") return jsonResponse({ openings: [] });

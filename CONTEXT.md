@@ -38,7 +38,12 @@ A single half-move played by one side within a game.
 _Avoid_: Ply, Turn
 
 **Evaluation**:
-The chess engine's numeric assessment of a position (centipawns, or mate-in-N).
+The chess engine's numeric assessment of a position (centipawns, or mate-in-N). **Stored**
+relative to the side to move (standard UCI convention — positive favours whoever has the
+move), which is what `winningChances`/`Mistake` severity are derived from. Anywhere an
+Evaluation is **shown to the Player** (a numeric value, an advantage bar), it is converted to
+**White-relative** (chess.com/Lichess convention — positive always favours White) so the sign
+doesn't flip with every half-move.
 _Avoid_: Score (ambiguous with the game's result)
 
 **Inaccuracy** / **Mistake** / **Blunder**:

@@ -5,3 +5,4 @@ export type { WeakOpeningEntry } from "./opening";
 export type { DangerEntry } from "./danger";
 export type { ImportParams, ImportResult } from "./import";
 export type { AnalysisStatus } from "./analysis";
+export type { MoveAnnotation, GameAnnotations } from "./annotation";

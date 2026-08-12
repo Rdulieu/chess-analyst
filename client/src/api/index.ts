@@ -1,4 +1,4 @@
-export { fetchGames, fetchGame } from "./games";
+export { fetchGames, fetchGame, fetchGameAnnotations } from "./games";
 export { fetchMoveHabits } from "./move-habits";
 export { fetchStats } from "./stats";
 export { fetchWeakOpenings } from "./openings";
