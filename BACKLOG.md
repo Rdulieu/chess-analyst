@@ -39,6 +39,9 @@
   >   suppression d'un profil, et ce qu'on fait des données existantes (règle de phase dev : le
   >   ré-import est bon marché, un profil par défaut migré ou une DB repartie de zéro sont
   >   acceptables).
+  >
+  > **À griller avant US-12** (import Lichess) : le `Profile` est le porteur naturel du couple
+  > plateforme + compte, donc c'est ici que la question se tranche.
 
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
@@ -48,19 +51,51 @@
   > résolue depuis les en-têtes PGN `[ECO]`/`[ECOUrl]` **propres à chess.com** (ADR-0007). Le reste
   > du domaine est en revanche neutre (PGN, `Game`, dedup par URL de partie), donc le travail est
   > surtout de faire émerger un port « source de parties » et de brancher un second adaptateur.
+  >
+  > **À griller après US-11** — l'ordre n'est pas indifférent : c'est US-11 qui décide si un
+  > `Profile` porte la plateforme, donc où vit le choix de la source. Griller US-12 d'abord
+  > obligerait à trancher deux fois la même question.
+  >
+  > Ce que dit l'API Lichess (spec OpenAPI officielle
+  > [`lichess-org/api`](https://github.com/lichess-org/api/blob/master/doc/specs/tags/games/api-games-user-username.yaml),
+  > vérifiée le 2026-08-12) — elle est **plus proche de nos besoins que chess.com**, mais pas
+  > alignée sur nos archives mensuelles :
+  > - `GET /api/games/user/{username}` : **un seul appel par plage**, bornée par `since`/`until`
+  >   (timestamps ms), tri `dateAsc`/`dateDesc`, `max` optionnel. Pas de pagination par mois — la
+  >   réponse est un **flux** à consommer en streaming (NDJSON via `Accept: application/x-ndjson`,
+  >   ou PGN via `application/x-chess-pgn`).
+  > - **Débit annoncé** : 20 parties/s en anonyme, 30 authentifié, 60 pour ses propres parties.
+  >   Jeton **non obligatoire** pour l'export public. Un `429` impose d'attendre une minute entière ;
+  >   Lichess ne documente pas de limites de requêtes chiffrées au-delà.
+  > - Existence d'un compte : `GET /api/user/{username}` (200 / 404) — équivalent direct de notre
+  >   `playerExists`.
+  > - Filtre variantes/cadences par `perfType` (`ultraBullet`, `bullet`, `blitz`, `rapid`,
+  >   `classical`, `correspondence` + variantes `chess960`, `crazyhouse`, …), et champ `speed` sur
+  >   chaque partie.
+  > - En NDJSON, `opening` est un **objet `{ eco, name, ply }`** : il s'aligne directement sur nos
+  >   colonnes `eco`/`opening_name`, sans passer par un en-tête PGN. Le PGN est disponible dans le
+  >   même flux avec `pgnInJson=true`.
+  > - Identité de la partie : `id` (URL `https://lichess.org/{id}`), donc notre dedup par URL tient.
+  > - Résultat : pas de code par joueur comme chess.com, mais `winner` (`white`/`black`, absent si
+  >   nulle) + `status` (`mate`, `resign`, `outoftime`, `draw`, …).
+  >
   > Points à trancher au grilling :
-  > - Forme du port : garder le découpage par mois pour toutes les sources, ou une plage de dates
-  >   (US-9 a déjà introduit la plage côté domaine) ? L'API Lichess ne s'aligne pas sur des archives
-  >   mensuelles — **sa forme exacte reste à vérifier** (export par intervalle, pagination,
-  >   *rate limits*, jeton d'API nécessaire ou non) ; je ne l'ai pas consultée en écrivant cette
-  >   entrée.
-  > - Cadences et variantes : mapper les catégories Lichess sur `TimeControlCategory`
-  >   (`bullet`/`blitz`/`rapid`/`daily`) ou étendre le vocabulaire (`classical`, `correspondence`) —
-  >   ça touche `CONTEXT.md`, `move_habits` et les ventilations de `/stats`.
-  > - `Opening` : sans `[ECOUrl]`, d'où vient le nom affiché ? ADR-0007 est à réexaminer, pas à
-  >   contourner en silence.
-  > - Où vit le choix de la source : lié au **`Profile`** d'US-11 (un profil = une plateforme + un
-  >   compte) ou choisi à chaque import ? Dépendance forte à trancher — voir US-11.
+  > - Forme du port : `since`/`until` en millisecondes couvre nativement la plage introduite par
+  >   US-9, alors que chess.com impose le découpage mensuel. Le port expose-t-il une **plage de
+  >   dates** (chess.com la découpe en mois en interne, Lichess la passe telle quelle), ou garde-t-on
+  >   le mois comme unité commune ? La progression comptée en mois d'US-9 en dépend.
+  > - Streaming : les 20-60 parties/s et un flux non paginé cadrent mal avec notre `fetchMonth`
+  >   qui renvoie un tableau complet. Consommer en flux (et rendre la progression continue) ou
+  >   accumuler par tranches ?
+  > - Cadences : `ultraBullet`, `classical` et `correspondence` n'existent pas dans
+  >   `TimeControlCategory` (`bullet`/`blitz`/`rapid`/`daily`). Étendre le vocabulaire ou replier
+  >   (`correspondence` → `daily`, `ultraBullet` → `bullet`) ? Ça touche `CONTEXT.md`, `move_habits`
+  >   et les ventilations de `/stats` et `/openings`.
+  > - `Opening` : ADR-0007 fixe « la classification de chess.com, jamais recalculée ». Lichess
+  >   fournit sa propre `{ eco, name }` — deux classifications pour le même concept, à assumer
+  >   explicitement dans l'ADR plutôt qu'à mélanger en silence dans les agrégats par ECO.
+  > - Où vit le choix de la source : porté par le **`Profile`** d'US-11 (un profil = une plateforme +
+  >   un compte) ou choisi à chaque import ? Voir la dépendance ci-dessus.
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
 
