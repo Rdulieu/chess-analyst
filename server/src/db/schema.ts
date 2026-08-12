@@ -68,7 +68,7 @@ export type Evaluation = typeof evaluations.$inferSelect;
 export type NewEvaluation = typeof evaluations.$inferInsert;
 
 /**
- * One row per `Analysis pass` (ADR-0010, US-8). Records what a pass **is** — the
+ * One row per `Analysis pass` (ADR-0011, US-8). Records what a pass **is** — the
  * Games it covers (`game_ids`, a JSON array), how many Positions it set out to
  * evaluate (`total`), and when it started and ended — so the Player's readout
  * survives a page reload and a restart, instead of dying with the process.
