@@ -116,6 +116,19 @@ which replies give them trouble. Whether a level shows the player's own Moves or
 replies follows from the Position's side to move versus the selected side.
 _Avoid_: Opponent move (too vague), Threat
 
+**Analysis pass**:
+The act of running the chess engine over a chosen set of Games to produce and retain their
+`Evaluation`s — one per `Position` of each Game. Triggered **manually** by the Player (from the
+Game list, or for a single Game while reviewing it) and **never automatic**, like `Import`.
+**Incremental**: a Game already analyzed is skipped, and its Evaluations are never recomputed.
+A pass advances in **Positions evaluated**, and always ends in one of three **outcomes**, which
+the Player is told explicitly rather than left to infer: **completed** (every Position of every
+Game in the pass was evaluated), **interrupted** (the pass stopped before the end without
+failing — the app was shut down mid-pass), or **failed** (the engine errored). An interrupted or
+failed pass keeps whatever Evaluations it had already retained; re-running a pass resumes from
+the Games still unanalyzed.
+_Avoid_: Analysis (too vague), Scan, Job, Batch
+
 **Import**:
 The act of fetching the Player's Games from the chess.com public API by username. Triggered
 **manually** by the Player and **scoped** to a chosen **single month** (month/year, matching one
