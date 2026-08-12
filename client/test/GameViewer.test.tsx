@@ -80,12 +80,12 @@ describe("GameViewer", () => {
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/analyze" && opts?.method === "POST") {
           expect(JSON.parse(opts.body as string)).toEqual({ gameIds: [OPERA_GAME.id] });
-          return { ok: true, status: 202, json: async () => ({ running: true, total: 1, done: 0 }) } as Response;
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 3, done: 0, games: 1 }) } as Response;
         }
         if (url === "/api/analyze/status") {
           statusPolls += 1;
           const running = statusPolls < 2;
-          return { ok: true, status: 200, json: async () => ({ running, total: 1, done: running ? 0 : 1 }) } as Response;
+          return { ok: true, status: 200, json: async () => ({ running, total: 3, done: running ? 0 : 3, games: 1 }) } as Response;
         }
         throw new Error(`unexpected fetch: ${url}`);
       }),
@@ -96,7 +96,7 @@ describe("GameViewer", () => {
     await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
 
     expect((await screen.findByRole("status", { name: /progression de l'analyse/i })).textContent).toBe(
-      "0/1 parties analysées",
+      "0/3 positions évaluées",
     );
   });
 
@@ -106,10 +106,10 @@ describe("GameViewer", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/analyze" && opts?.method === "POST") {
-          return { ok: true, status: 202, json: async () => ({ running: true, total: 1, done: 0 }) } as Response;
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 3, done: 0, games: 1 }) } as Response;
         }
         if (url === "/api/analyze/status") {
-          return { ok: true, status: 200, json: async () => ({ running: false, total: 1, done: 1 }) } as Response;
+          return { ok: true, status: 200, json: async () => ({ running: false, total: 3, done: 3, games: 1 }) } as Response;
         }
         throw new Error(`unexpected fetch: ${url}`);
       }),

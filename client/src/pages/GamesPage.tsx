@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchGames } from "../api";
 import { runAnalysis } from "../features/analysis/runAnalysis";
+import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
 import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
 import type { AnalysisStatus, Game } from "../types";
@@ -36,8 +37,10 @@ export function GamesPage() {
     });
 
   const analyze = async () => {
+    // The final progress is deliberately *not* discarded: the Player must be
+    // left with the figure the pass reached (US-8). Issue 02 turns it into an
+    // acknowledgeable summary.
     await runAnalysis([...selected], setStatus);
-    setStatus(null);
     setSelected(new Set());
     await refresh();
   };
@@ -58,11 +61,7 @@ export function GamesPage() {
             Analyser la sélection
           </button>
 
-          {status && (
-            <p role="status">
-              {status.done}/{status.total} parties analysées
-            </p>
-          )}
+          <AnalysisPassStatus status={status} />
 
           <GameList
             games={games}
