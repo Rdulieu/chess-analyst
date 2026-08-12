@@ -1,6 +1,6 @@
 # 01 — Import d'une plage de mois en job de fond, avec progression comptée en mois
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
@@ -78,3 +78,29 @@ Vérifier par l'UI d'abord. Serveur pointé sur une **archive de fixture** via `
 ## Blocked by
 
 None - can start immediately.
+
+## Comments
+
+**2026-08-12 — implémentée et fusionnée dans `integration/US-9-multi-month-import`.**
+
+13 cycles TDD (rouge → vert), 201 tests verts (108 serveur, 93 client), build et lint propres.
+
+Écarts au plan, délibérés :
+- `runImport` **rend** son statut final au lieu de le faire capturer par le callback — le résumé
+  consolidé y vit, le faire transiter par une fermeture était gratuit (et TypeScript narrowait la
+  variable capturée à `never`). `runAnalysis` garde son `void` : il n'a rien à rendre.
+- `playerExists` est sorti de `importMonth` vers la route ; son test a suivi, d'`import.test.ts`
+  vers `api.test.ts`, seul endroit où le 404 synchrone est observable.
+- L'ancien test « 502 quand chess.com échoue » a disparu : avec le job, un mois qui lève n'a plus
+  de réponse HTTP à teinter. Remplacé par « le relais reste répondant ». Le **rapport** de cet
+  échec au Player est le sujet de l'issue 02.
+
+**Feature Path : verte, 5/5**, jouée UI-first contre l'app lancée, chess.com remplacé par une
+archive de fixture (2024-01 : 2 parties · 2024-02 : aucune · 2024-03 : 3 parties), base vierge.
+Progression observée `0/3` → `3/3 mois importés` ; résumé `5 imported, 0 already present`,
+Blitz 4 / Rapid 1, `3 W · 0 D · 2 L` ; rejeu de la plage → `0 imported, 5 already present`.
+Le mois vide est traversé sans incident.
+
+Finding fermé au passage : le finding non bloquant d'US-7 « le bouton Import reste actif pendant
+un import » ne se reproduit plus (bouton désactivé pendant toute la passe, sondé au runtime).
+Aucune erreur console.
