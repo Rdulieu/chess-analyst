@@ -1,4 +1,14 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-8-analysis-pass-completion` (PR #15).
+Green local check: build + lint + 193 tests (102 server, 91 client). Feature Path run UI-first
+against the running app (Chrome over CDP, real Stockfish WASM, throwaway DB seeded with the
+`seed:move-habits` fixture) — all three steps green. One bug found and fixed during the FP
+(`84ad88f`): both entry points cleared the status right after the poll loop, so React coalesced
+the last progress update with the reset and the completed figure was never painted — the readout
+just vanished. The lower tiers missed it (they asserted the values handed to the component, not
+what stayed on screen); a client test now locks it.
+Non-blocking findings left open: the Analyse page carries two live regions (`role="status"`) plus
+an unlabelled empty one — pre-existing, from US-7; and the summary does not survive a reload,
+which is issue 02's scope.
 
 ## Parent
 

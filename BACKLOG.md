@@ -31,9 +31,10 @@
   > avait aucun pour le pass, introduit pourtant par US-4). Découpée en 4 issues, implémentée sur
   > `integration/US-8-analysis-pass-completion` (worktree dédié). PRD :
   > `.scratch/analysis-pass-completion/PRD.md`.
-  > - `01-positions-progress-on-a-persisted-pass` — table `analysis_passes`, `done` dérivé du
+  > - `01-positions-progress-on-a-persisted-pass` ✅ — table `analysis_passes`, `done` dérivé du
   >   `COUNT` sur `evaluations`, progression en Positions, ligne de progression extraite en
-  >   composant unique
+  >   composant unique. Bug trouvé et corrigé en Feature Path (le compteur n'atteignait jamais son
+  >   total : la remise à zéro fusionnait avec la dernière progression).
   > - `02-completion-summary-and-acknowledgement` — résumé de fin persistant, acquitté par le
   >   Player (`POST /api/analyze/acknowledge`)
   > - `03-interrupted-and-failed-outcomes` — les trois issues du pass, réconciliation au boot,
