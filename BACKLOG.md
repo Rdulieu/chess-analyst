@@ -53,7 +53,7 @@
   > serveur au démarrage, rendant l'issue `failed` inatteignable ; un moteur muet aurait laissé un
   > pass tourner sans fin. HP-01 étape 8 porte la confirmation de fin (budget HP à 3/3).
   >
-  > - `05-readable-readouts-and-one-live-region` — tranche de finition : lever la confusion entre
+  > - `05-readable-readouts-and-one-live-region` ✅ — tranche de finition : lever la confusion entre
   >   le décompte d'historique et le résumé de pass, et ne laisser qu'une région live à nous sur
   >   la page Analyse (celle de `react-chessboard` est tierce, non supprimable)
   >

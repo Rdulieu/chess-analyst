@@ -1,4 +1,12 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-8-analysis-pass-completion` (PR #21).
+Green local check: build + lint + 214 tests (110 server, 104 client). Feature Path 3/3 green, no
+console error. Step 2 was the telling one: during a pass both figures move simultaneously and
+differently (history 2 → 3, pass 0/3 → done) — outright misleading under the old wording. Step 3
+inspected the page's accessibility roles: none of our live regions remain on Analyse.
+Non-blocking findings raised: the running readout does not name itself ("0/3 positions évaluées"
+bare) — the collision is gone since the shapes no longer match, but the labelling stops at the
+finished pass; and react-chessboard's remaining live region is `aria-live="assertive"` and
+unlabelled (third-party, empty outside drag-and-drop).
 
 ## Parent
 
