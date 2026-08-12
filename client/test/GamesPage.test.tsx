@@ -52,8 +52,10 @@ describe("GamesPage — analysis pass", () => {
     await userEvent.click(await screen.findByLabelText(/sélectionner la partie vs opp/i));
     await userEvent.click(screen.getByRole("button", { name: /analyser la sélection/i }));
 
-    // The list refreshes once the pass completes and the Game flips to analyzed.
+    // The list refreshes once the pass completes and the Game flips to analyzed,
+    // and the global count follows along with it.
     expect(await screen.findByLabelText(/analysée/i)).toBeTruthy();
+    expect(await screen.findByText(/1 partie · 1 analysée/i)).toBeTruthy();
     expect(statusPolls).toBeGreaterThan(0);
   });
 
@@ -229,6 +231,68 @@ describe("GamesPage — analysis pass", () => {
 
     expect(await screen.findByLabelText(/analysée/i)).toBeTruthy(); // the page did load
     expect(screen.queryByText(/positions évaluées/i)).toBeNull();
+  });
+
+  it("states how much of the history is analyzed, on arrival", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/games")
+          return json([
+            { ...GAME, id: 1, opponent: "a", analyzed: true },
+            { ...GAME, id: 2, opponent: "b", analyzed: false },
+            { ...GAME, id: 3, opponent: "c", analyzed: false },
+          ]);
+        if (url === "/api/analyze/status")
+          return json({
+            running: false,
+            total: 0,
+            done: 0,
+            games: 0,
+            acknowledged: false,
+            outcome: null,
+            error: null,
+          });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/3 parties · 1 analysée/i)).toBeTruthy();
+  });
+
+  it("shows no count at all on an empty history", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/games") return json([]);
+        if (url === "/api/analyze/status")
+          return json({
+            running: false,
+            total: 0,
+            done: 0,
+            games: 0,
+            acknowledged: false,
+            outcome: null,
+            error: null,
+          });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/no games yet/i)).toBeTruthy();
+    expect(screen.queryByText(/analysée/i)).toBeNull();
   });
 
   it("disables 'Analyser la sélection' until at least one Game is selected", async () => {
