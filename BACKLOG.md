@@ -35,8 +35,9 @@
   >   `COUNT` sur `evaluations`, progression en Positions, ligne de progression extraite en
   >   composant unique. Bug trouvé et corrigé en Feature Path (le compteur n'atteignait jamais son
   >   total : la remise à zéro fusionnait avec la dernière progression).
-  > - `02-completion-summary-and-acknowledgement` — résumé de fin persistant, acquitté par le
-  >   Player (`POST /api/analyze/acknowledge`)
+  > - `02-completion-summary-and-acknowledgement` ✅ — résumé de fin persistant (survit au
+  >   rechargement **et** au redémarrage serveur, vérifié), acquitté par le Player
+  >   (`POST /api/analyze/acknowledge`), « rien à analyser » explicite
   > - `03-interrupted-and-failed-outcomes` — les trois issues du pass, réconciliation au boot,
   >   erreur moteur enfin visible ; porte la greffe sur HP-01 (budget à 3/3)
   > - `04-analysis-state-at-a-glance-in-the-game-list` — badge renforcé + compteur global

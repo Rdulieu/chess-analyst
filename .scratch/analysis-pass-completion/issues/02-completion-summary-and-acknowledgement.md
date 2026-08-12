@@ -1,4 +1,14 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-8-analysis-pass-completion` (PR #16).
+Green local check: build + lint + 199 tests (104 server, 95 client). Feature Path run UI-first
+against the running app (Chrome over CDP, real Stockfish WASM, throwaway DB seeded with the
+`seed:move-habits` fixture) — 5/5 green, no console error. Three extra checks the ACs promise:
+the summary survives an actual **server restart** (process killed and relaunched), it shows on the
+Analyse page too, and a new pass takes the readout back over. Store probe: acknowledging touched
+only its timestamp, the Evaluations are intact.
+Non-blocking findings left open: the "Fermer" button sits inside the `role="status"` live region
+(every announcement ends with "Fermer", and the accessible text runs together) — to be fixed in
+issue 03, which touches the same component; and an unacknowledged summary is silently superseded
+when a new pass starts, since only the last pass is ever reported.
 
 ## Parent
 
