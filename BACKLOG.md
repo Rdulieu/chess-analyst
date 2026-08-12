@@ -11,6 +11,114 @@
   >   montre aucun état de chargement — écran vide pendant le calcul. À trancher : job + polling
   >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
 
+- **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
+  > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
+  > seul username chess.com (clé/valeur), et `games` n'a **aucune notion de propriétaire** — même
+  > chose pour les agrégats (`move_habits`, stats `/stats`, `/openings`, `/danger` et les
+  > `evaluations`), calculés sur *toutes* les lignes. Importer un second compte mélangerait donc
+  > silencieusement les historiques et fausserait tous les indicateurs. Le besoin : un **Profil**
+  > sélectionnable, sous lequel on retrouve son propre historique importé **et son état d'analyse**
+  > (parties déjà analysées conservées, pas à re-analyser en changeant de profil).
+  > Points à trancher au grilling :
+  > - Terminologie et périmètre : un `Profile` = un compte chess.com, ou un libellé libre pouvant
+  >   regrouper plusieurs comptes ? Rapport avec le terme `Player` de `CONTEXT.md`.
+  > - Une même `Game` peut-elle appartenir à deux profils (partie entre deux comptes suivis) — et
+  >   `player_color`/`result` sont **relatifs au joueur**, donc dépendants du profil.
+  > - Portée du scoping : import, liste des parties, `move_habits` (précalculés, cf. ADR-0005),
+  >   stats/openings/danger. Les `evaluations` sont-elles partageables (propriété de la position,
+  >   pas du joueur) ?
+  > - Sélection et persistance du profil courant (remplace la mémorisation du username), création /
+  >   suppression d'un profil, et ce qu'on fait des données existantes (règle de phase dev : le
+  >   ré-import est bon marché, un profil par défaut migré ou une DB repartie de zéro sont
+  >   acceptables).
+  >
+  > **À griller avant US-12** (import Lichess) : le `Profile` est le porteur naturel du couple
+  > plateforme + compte, donc c'est ici que la question se tranche.
+
+- **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
+  > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
+  > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
+  > modelé sur chess.com** — `fetchMonth(username, year, month)` (archives mensuelles),
+  > `time_class`, `rules` pour écarter les variantes, codes de résultat maison, et l'`Opening` est
+  > résolue depuis les en-têtes PGN `[ECO]`/`[ECOUrl]` **propres à chess.com** (ADR-0007). Le reste
+  > du domaine est en revanche neutre (PGN, `Game`, dedup par URL de partie), donc le travail est
+  > surtout de faire émerger un port « source de parties » et de brancher un second adaptateur.
+  >
+  > **À griller après US-11** — l'ordre n'est pas indifférent : c'est US-11 qui décide si un
+  > `Profile` porte la plateforme, donc où vit le choix de la source. Griller US-12 d'abord
+  > obligerait à trancher deux fois la même question.
+  >
+  > Ce que dit l'API Lichess (spec OpenAPI officielle
+  > [`lichess-org/api`](https://github.com/lichess-org/api/blob/master/doc/specs/tags/games/api-games-user-username.yaml),
+  > vérifiée le 2026-08-12) — elle est **plus proche de nos besoins que chess.com**, mais pas
+  > alignée sur nos archives mensuelles :
+  > - `GET /api/games/user/{username}` : **un seul appel par plage**, bornée par `since`/`until`
+  >   (timestamps ms), tri `dateAsc`/`dateDesc`, `max` optionnel. Pas de pagination par mois — la
+  >   réponse est un **flux** à consommer en streaming (NDJSON via `Accept: application/x-ndjson`,
+  >   ou PGN via `application/x-chess-pgn`).
+  > - **Débit annoncé** : 20 parties/s en anonyme, 30 authentifié, 60 pour ses propres parties.
+  >   Jeton **non obligatoire** pour l'export public. Un `429` impose d'attendre une minute entière ;
+  >   Lichess ne documente pas de limites de requêtes chiffrées au-delà.
+  > - Existence d'un compte : `GET /api/user/{username}` (200 / 404) — équivalent direct de notre
+  >   `playerExists`.
+  > - Filtre variantes/cadences par `perfType` (`ultraBullet`, `bullet`, `blitz`, `rapid`,
+  >   `classical`, `correspondence` + variantes `chess960`, `crazyhouse`, …), et champ `speed` sur
+  >   chaque partie.
+  > - En NDJSON, `opening` est un **objet `{ eco, name, ply }`** : il s'aligne directement sur nos
+  >   colonnes `eco`/`opening_name`, sans passer par un en-tête PGN. Le PGN est disponible dans le
+  >   même flux avec `pgnInJson=true`.
+  > - Identité de la partie : `id` (URL `https://lichess.org/{id}`), donc notre dedup par URL tient.
+  > - Résultat : pas de code par joueur comme chess.com, mais `winner` (`white`/`black`, absent si
+  >   nulle) + `status` (`mate`, `resign`, `outoftime`, `draw`, …).
+  >
+  > Points à trancher au grilling :
+  > - Forme du port : `since`/`until` en millisecondes couvre nativement la plage introduite par
+  >   US-9, alors que chess.com impose le découpage mensuel. Le port expose-t-il une **plage de
+  >   dates** (chess.com la découpe en mois en interne, Lichess la passe telle quelle), ou garde-t-on
+  >   le mois comme unité commune ? La progression comptée en mois d'US-9 en dépend.
+  > - Streaming : les 20-60 parties/s et un flux non paginé cadrent mal avec notre `fetchMonth`
+  >   qui renvoie un tableau complet. Consommer en flux (et rendre la progression continue) ou
+  >   accumuler par tranches ?
+  > - Cadences : `ultraBullet`, `classical` et `correspondence` n'existent pas dans
+  >   `TimeControlCategory` (`bullet`/`blitz`/`rapid`/`daily`). Étendre le vocabulaire ou replier
+  >   (`correspondence` → `daily`, `ultraBullet` → `bullet`) ? Ça touche `CONTEXT.md`, `move_habits`
+  >   et les ventilations de `/stats` et `/openings`.
+  > - `Opening` : ADR-0007 fixe « la classification de chess.com, jamais recalculée ». Lichess
+  >   fournit sa propre `{ eco, name }` — deux classifications pour le même concept, à assumer
+  >   explicitement dans l'ADR plutôt qu'à mélanger en silence dans les agrégats par ECO.
+  > - Où vit le choix de la source : porté par le **`Profile`** d'US-11 (un profil = une plateforme +
+  >   un compte) ou choisi à chaque import ? Voir la dépendance ci-dessus.
+  > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
+  >   seul interlocuteur des sources externes).
+
+- **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
+  > Pas encore grillée. État vérifié : **il n'existe aucun CSS dans le projet** — zéro fichier
+  > `.css`, aucun `<link>` dans `client/index.html`, aucune bibliothèque de style. L'app s'affiche
+  > donc avec les styles par défaut du navigateur. Cinq composants portent des `style={{…}}` inline
+  > (`GameViewer`, `GameList`, `DangerPage`, `ExplorerPage`, `WinningChancesBar`), non par choix
+  > esthétique mais **parce qu'il n'y avait pas de feuille de style où mettre un sélecteur** : ce
+  > sont des surlignages **porteurs de sens** (teinte de win rate, sévérité d'un `Mistake`, barre de
+  > winning chances), chacun doublé d'un **repère non chromatique** pour rester accessible.
+  >
+  > **Pas de maquette, et c'est la contrainte structurante** de cette US, pas un manque à combler en
+  > douce : le grilling doit produire la référence visuelle avant tout code, sinon chaque écran sera
+  > stylé au jugé et l'ensemble ne tiendra pas. Points à trancher :
+  > - Ce qui fait office de référence : un jeu de **tokens** (palette, échelle typographique,
+  >   espacements, rayons) écrit et validé au grilling ? Un écran pilote stylé d'abord, puis décliné ?
+  >   Une capture avant/après par écran pour arbitrer ?
+  > - Approche technique : CSS vanilla + variables custom, modules CSS, ou une bibliothèque
+  >   (utilitaire ou composants) ? Dans un projet volontairement mince (Vite + React, pas de
+  >   dépendance de style à ce jour), en ajouter une est une décision à motiver — ADR probable.
+  > - **Ne pas régresser les surlignages sémantiques.** Migrer l'inline vers des classes est
+  >   souhaitable, mais la teinte reste une info métier et le repère non chromatique doit survivre.
+  >   Le finding a11y d'US-3 (surlignage invisible faute de CSS) est le précédent à ne pas rejouer à
+  >   l'envers.
+  > - Critère d'acceptation d'une US esthétique : sur quoi juge-t-on « présentable » ? Une Feature
+  >   Path agentique constate qu'un style est **appliqué** et qu'un contraste est suffisant, elle ne
+  >   juge pas le goût. À définir explicitement, sinon l'US n'a pas de fin.
+  > - Périmètre : tous les écrans (`/`, `/stats`, `/openings`, `/danger`, explorateur, analyse) ou un
+  >   sous-ensemble ? Le mode sombre et le responsive sont-ils dedans ou différés ?
+
 ## Doing
 
 ## In review
