@@ -1,4 +1,22 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-8-analysis-pass-completion` (PR #17).
+Green local check: build + lint + 209 tests (110 server, 99 client). Feature Path 4/4 green,
+UI-first against the running app (Chrome over CDP, real Stockfish WASM). A long Game (34 Positions)
+was inserted to get a *real* mid-flight kill — the fixture Games analyse too fast to interrupt.
+Store probe: 34 Evaluations / 34 distinct plies for the interrupted-then-resumed Game (no
+duplicate, no key violation), all three outcomes present, no error in the server log.
+
+**Blocking finding found by the FP, fixed in `41cf1fe`**: step 1 was unexercisable. The native
+Engine spawns at construction, so a missing `STOCKFISH_PATH` killed the server on ENOENT and a
+non-UCI binary killed it on EPIPE — both before any pass could exist. The `failed` outcome this
+issue introduces was therefore unreachable at runtime: a broken engine gave a dead app, not a
+failed pass. The reproducing test did not even reject, it hung forever — a mute backend would have
+left a pass running with no end. `createNativeEngine` now captures the child's error/exit and the
+stdin EPIPE, and `evaluate` rejects with the reason.
+
+Also defused the landmine flagged at grilling (half-evaluated Game vs the `(game_id, ply)` primary
+key) and fixed slice 02's a11y finding (the dismiss button left the live region).
+Non-blocking finding left open: an unacknowledged summary is silently superseded when a new pass
+starts, since only the last pass is ever reported.
 
 ## Parent
 

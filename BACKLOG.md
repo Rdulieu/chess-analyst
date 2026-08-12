@@ -38,8 +38,11 @@
   > - `02-completion-summary-and-acknowledgement` ✅ — résumé de fin persistant (survit au
   >   rechargement **et** au redémarrage serveur, vérifié), acquitté par le Player
   >   (`POST /api/analyze/acknowledge`), « rien à analyser » explicite
-  > - `03-interrupted-and-failed-outcomes` — les trois issues du pass, réconciliation au boot,
-  >   erreur moteur enfin visible ; porte la greffe sur HP-01 (budget à 3/3)
+  > - `03-interrupted-and-failed-outcomes` ✅ — les trois issues du pass, réconciliation au boot
+  >   (jamais de reprise automatique), erreur moteur enfin visible, greffe sur HP-01 (budget à
+  >   3/3). Mine du cadrage désamorcée (partie à moitié évaluée vs. clé primaire). Finding
+  >   bloquant trouvé en FP : un moteur natif cassé tuait le serveur au démarrage, donc l'issue
+  >   `failed` n'était atteignable par aucune configuration réelle — corrigé.
   > - `04-analysis-state-at-a-glance-in-the-game-list` — badge renforcé + compteur global
   >   (indépendante, parallélisable avec la 01)
 
