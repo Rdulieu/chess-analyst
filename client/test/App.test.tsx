@@ -196,6 +196,10 @@ describe("App — import UI", () => {
               alreadyPresent: 0,
               byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
               results: { win: 1, draw: 0, loss: 0 },
+              months: [
+                { month: { year: 2024, month: 2 }, imported: 0, alreadyPresent: 0 },
+                { month: { year: 2024, month: 3 }, imported: 1, alreadyPresent: 0 },
+              ],
             },
           });
         }
@@ -263,6 +267,7 @@ describe("App — import UI", () => {
           alreadyPresent: 0,
           byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
           results: { win: 1, draw: 0, loss: 0 },
+          months: [{ month: { year: 2024, month: 1 }, imported: 1, alreadyPresent: 0 }],
         },
       }),
     );

@@ -316,7 +316,8 @@ describe("import API", () => {
 
     // 202: the range is under way, the summary is not there yet (ADR-0010).
     expect(res.status).toBe(202);
-    expect(res.body).toMatchObject({ running: true, total: 3, done: 0, result: null });
+    expect(res.body).toMatchObject({ running: true, total: 3, done: 0 });
+    expect(res.body.result).toMatchObject({ imported: 0, months: [] });
 
     const final = await importDone(app);
     expect(final).toMatchObject({ running: false, total: 3, done: 3 });
@@ -325,6 +326,38 @@ describe("import API", () => {
     const list = await request(app).get("/api/games");
     expect(list.body).toHaveLength(2);
     expect(list.body[0]).toMatchObject({ playerColor: "white", result: "win" });
+  });
+
+  it("GET /api/import/status carries a line per month, a failed month included, without aborting", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(
+      db,
+      fakeClient({
+        "2024-01": [chessComGame()],
+        "2024-02": new Error("chess.com request failed (429)"),
+        "2024-03": [chessComGame()],
+      }),
+    );
+
+    await request(app)
+      .post("/api/import")
+      .send({
+        username: "me",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 3 },
+        categories: ["blitz"],
+      });
+
+    const final = await importDone(app);
+    // A partly successful Import is not a failed one: no global failure state.
+    expect(final.running).toBe(false);
+    expect(final.result.imported).toBe(2);
+    expect(final.result.months).toHaveLength(3);
+    expect(final.result.months[1].failure).toMatch(/429/);
+    expect(final.result.months[0].failure).toBeUndefined();
+
+    const list = await request(app).get("/api/games");
+    expect(list.body).toHaveLength(2);
   });
 
   it("POST /api/import returns an error and starts nothing for an unknown username", async () => {

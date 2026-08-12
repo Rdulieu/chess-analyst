@@ -15,6 +15,18 @@ export interface ImportParams {
   categories: TimeControlCategory[];
 }
 
+/**
+ * One month's slice of an Import — the unit the Player is shown outcome by.
+ * A month the Player was inactive in reads as zeros; only a month chess.com
+ * could not answer for carries a `failure`.
+ */
+export interface MonthlyImport {
+  month: MonthRef;
+  imported: number;
+  alreadyPresent: number;
+  failure?: string;
+}
+
 /** Outcome of an Import — the figures shown in the post-import summary. */
 export interface ImportResult {
   totalFetched: number;
@@ -22,6 +34,8 @@ export interface ImportResult {
   alreadyPresent: number;
   byCategory: Record<TimeControlCategory, number>;
   results: { win: number; loss: number; draw: number };
+  /** One line per month of the range, in order. */
+  months: MonthlyImport[];
   message?: string;
 }
 

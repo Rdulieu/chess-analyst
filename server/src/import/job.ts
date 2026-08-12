@@ -9,7 +9,12 @@ export interface ImportStatus {
   running: boolean;
   total: number;
   done: number;
-  /** The range's consolidated summary; null until the pass has finished. */
+  /**
+   * The range's consolidated summary. It **fills in as the Import goes** — a
+   * month's line appears as soon as that month is covered — so `running` is
+   * what tells you whether it is final, not its presence. Null only before any
+   * Import has been started.
+   */
   result: ImportResult | null;
 }
 
@@ -51,13 +56,13 @@ export function createImportJob(db: Db, client: ChessComClient): ImportJob {
         running: true,
         total: monthsInRange(params.from, params.to).length,
         done: 0,
-        result: null,
+        result: emptySummary(),
       };
 
       current = (async () => {
         try {
-          const result = await importRange(db, client, params, () => {
-            status = { ...status, done: status.done + 1 };
+          const result = await importRange(db, client, params, (soFar) => {
+            status = { ...status, done: status.done + 1, result: soFar };
           });
           status = { ...status, result };
         } catch (err) {
@@ -75,3 +80,13 @@ export function createImportJob(db: Db, client: ChessComClient): ImportJob {
     idle: () => current,
   };
 }
+
+/** The summary an Import starts from: everything at zero, no month covered yet. */
+const emptySummary = (): ImportResult => ({
+  totalFetched: 0,
+  imported: 0,
+  alreadyPresent: 0,
+  byCategory: { bullet: 0, blitz: 0, rapid: 0, daily: 0 },
+  results: { win: 0, loss: 0, draw: 0 },
+  months: [],
+});

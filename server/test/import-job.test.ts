@@ -15,13 +15,44 @@ const range: ImportRangeParams = {
 };
 
 describe("createImportJob", () => {
+  it("fills the summary as it goes: a month's line is there before the pass ends", async () => {
+    const { db } = openDb(":memory:");
+    let release!: () => void;
+    const secondMonth = new Promise<void>((r) => (release = r));
+    const client = fakeClient({ "2024-01": [chessComGame()], "2024-02": [chessComGame()] });
+    const slow = {
+      ...client,
+      fetchMonth: async (u: string, y: number, m: number) => {
+        if (m === 2) await secondMonth;
+        return client.fetchMonth(u, y, m);
+      },
+    };
+    const job = createImportJob(db, slow);
+
+    job.start({ ...range, to: { year: 2024, month: 2 } });
+    // Wait for January to land while February is still held.
+    while (job.status().done < 1) await new Promise((r) => setTimeout(r, 5));
+
+    const midway = job.status();
+    expect(midway.running).toBe(true);
+    expect(midway.result?.months).toHaveLength(1);
+    expect(midway.result?.months[0]).toMatchObject({ month: { year: 2024, month: 1 }, imported: 1 });
+
+    release();
+    await job.idle();
+    expect(job.status().result?.months).toHaveLength(2);
+  });
+
   it("reports the range's months as the total and returns before the pass has run", async () => {
     const { db } = openDb(":memory:");
     const job = createImportJob(db, fakeClient({ "2024-01": [chessComGame()] }));
 
     const started = job.start(range);
 
-    expect(started).toEqual({ running: true, total: 3, done: 0, result: null });
+    // The summary starts empty and fills in month by month, rather than
+    // appearing all at once at the end.
+    expect(started).toMatchObject({ running: true, total: 3, done: 0 });
+    expect(started.result).toMatchObject({ imported: 0, months: [] });
     expect(listGames(db)).toHaveLength(0); // not awaited: nothing imported yet
     await job.idle();
   });

@@ -70,6 +70,77 @@ describe("importRange", () => {
     expect(listGames(db)).toHaveLength(2);
   });
 
+  it("reports one line per month of the range, in order, an inactive month included at zero", async () => {
+    const { db } = openDb(":memory:");
+    const client = fakeClient({
+      "2024-01": [chessComGame()],
+      // 2024-02 left out: the Player simply did not play that month.
+      "2024-03": [chessComGame(), chessComGame()],
+    });
+
+    const result = await importRange(db, client, { ...params(), to: { year: 2024, month: 3 } });
+
+    expect(result.months).toEqual([
+      { month: { year: 2024, month: 1 }, imported: 1, alreadyPresent: 0 },
+      { month: { year: 2024, month: 2 }, imported: 0, alreadyPresent: 0 },
+      { month: { year: 2024, month: 3 }, imported: 2, alreadyPresent: 0 },
+    ]);
+  });
+
+  it("carries on past a month chess.com cannot answer for, and says so on that month's line", async () => {
+    const { db } = openDb(":memory:");
+    const client = fakeClient({
+      "2024-01": [chessComGame()],
+      "2024-02": new Error("chess.com request failed (429)"),
+      "2024-03": [chessComGame()],
+    });
+
+    const result = await importRange(db, client, { ...params(), to: { year: 2024, month: 3 } });
+
+    // The month after the failure was still covered — the Import did not abort.
+    expect(result.months.map((m) => m.month.month)).toEqual([1, 2, 3]);
+    expect(result.months[1]).toMatchObject({ imported: 0, failure: expect.stringMatching(/429/) });
+    expect(result.months[0].failure).toBeUndefined();
+    expect(result.months[2]).toMatchObject({ imported: 1 });
+    expect(listGames(db)).toHaveLength(2);
+  });
+
+  it("consolidates only the months it actually covered", async () => {
+    const { db } = openDb(":memory:");
+    const client = fakeClient({
+      "2024-01": [chessComGame()],
+      "2024-02": new Error("unreachable"),
+      "2024-03": [chessComGame()],
+    });
+
+    const result = await importRange(db, client, { ...params(), to: { year: 2024, month: 3 } });
+
+    expect(result.imported).toBe(2);
+    expect(result.totalFetched).toBe(2);
+    expect(result.message).toBeUndefined(); // a partly successful Import is not a failed one
+  });
+
+  it("catches up only the missing month when the range is replayed", async () => {
+    const { db } = openDb(":memory:");
+    const failing = fakeClient({
+      "2024-01": [chessComGame({ url: "https://chess.com/g/jan" })],
+      "2024-02": new Error("unreachable"),
+    });
+    const recovered = fakeClient({
+      "2024-01": [chessComGame({ url: "https://chess.com/g/jan" })],
+      "2024-02": [chessComGame({ url: "https://chess.com/g/feb" })],
+    });
+    const range = { ...params(), to: { year: 2024, month: 2 } };
+
+    await importRange(db, failing, range);
+    const replay = await importRange(db, recovered, range);
+
+    expect(replay.imported).toBe(1); // only February
+    expect(replay.alreadyPresent).toBe(1); // January was already retained
+    expect(replay.months.every((m) => m.failure === undefined)).toBe(true);
+    expect(listGames(db)).toHaveLength(2);
+  });
+
   it("reports nothing found over the whole range, not month by month", async () => {
     const { db } = openDb(":memory:");
     const client = fakeClient({});
