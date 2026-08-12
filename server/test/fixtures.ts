@@ -1,4 +1,35 @@
 import type { NewGame } from "../src/db/schema";
+import type { ChessComClient, ChessComGame } from "../src/chesscom";
+
+let urlSeq = 0;
+
+/** A chess.com game as the public API returns it, with sensible defaults. */
+export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
+  return {
+    url: `https://www.chess.com/game/live/${urlSeq++}`,
+    pgn: "1. e4 e5",
+    time_class: "blitz",
+    rules: "chess",
+    end_time: 1704067200, // 2024-01-01T00:00:00Z
+    white: { username: "me", result: "win" },
+    black: { username: "opp", result: "resigned" },
+    ...over,
+  };
+}
+
+/**
+ * A ChessComClient stubbed with one archive per month, keyed `YYYY-MM` — an
+ * Import now spans a range, so a fake that answers the same games whatever the
+ * month cannot tell one month's contribution from another's. A month with no
+ * entry answers empty, like chess.com's own 404-for-no-archive.
+ */
+export function fakeClient(archives: Record<string, ChessComGame[]>, exists = true): ChessComClient {
+  return {
+    playerExists: async () => exists,
+    fetchMonth: async (_username, year, month) =>
+      archives[`${year}-${String(month).padStart(2, "0")}`] ?? [],
+  };
+}
 
 /**
  * Paul Morphy's "Opera Game" (Paris, 1858), kept purely as a **test fixture**

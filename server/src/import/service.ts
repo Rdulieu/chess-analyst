@@ -3,7 +3,6 @@ import { games } from "../db/schema";
 import { gameExistsByUrl } from "../repository";
 import { recordMoveHabits } from "../move-habits/precompute";
 import type { ChessComClient, TimeControlCategory } from "../chesscom";
-import { UnknownUsernameError } from "./errors";
 import { toGame } from "./mapping";
 
 export interface ImportParams {
@@ -29,15 +28,15 @@ export interface ImportResult {
 /**
  * Imports the Player's games for one month from chess.com, mapping each to the
  * Player-relative Game shape and persisting it (incrementally, deduped by URL).
+ *
+ * The username is **not** validated here: an Import spans a range of months and
+ * the check is made once by the route, before any month is fetched (ADR-0010).
  */
 export async function importMonth(
   db: Db,
   client: ChessComClient,
   params: ImportParams,
 ): Promise<ImportResult> {
-  if (!(await client.playerExists(params.username))) {
-    throw new UnknownUsernameError(params.username);
-  }
   const monthGames = await client.fetchMonth(params.username, params.year, params.month);
   const wanted = new Set(params.categories);
   let imported = 0;
