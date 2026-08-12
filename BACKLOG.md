@@ -53,11 +53,16 @@
   > serveur au démarrage, rendant l'issue `failed` inatteignable ; un moteur muet aurait laissé un
   > pass tourner sans fin. HP-01 étape 8 porte la confirmation de fin (budget HP à 3/3).
   >
-  > **Prêt pour la revue `integration → develop`** : rejouer la suite HP, puis ouvrir la PR
-  > (décision humaine). Findings non bloquants restant ouverts : un résumé non acquitté est
-  > silencieusement remplacé par un pass plus récent ; le décompte global et le résumé de pass
-  > partagent le même motif visuel côte à côte ; deux régions live concurrentes sur la page
-  > Analyse (pré-existant, US-7).
+  > - `05-readable-readouts-and-one-live-region` — tranche de finition : lever la confusion entre
+  >   le décompte d'historique et le résumé de pass, et ne laisser qu'une région live à nous sur
+  >   la page Analyse (celle de `react-chessboard` est tierce, non supprimable)
+  >
+  > Le finding « un résumé non acquitté est silencieusement remplacé par un pass plus récent » est
+  > **assumé** : décision enregistrée dans les Conséquences d'**ADR-0010** (la promesse d'US-8 est
+  > qu'on ne rate pas une confirmation *sans agir*, et relancer une analyse est un acte).
+  >
+  > **Puis revue `integration → develop`** : rejouer la suite HP après la 05, puis ouvrir la PR
+  > (décision humaine).
 
 ## In review
 

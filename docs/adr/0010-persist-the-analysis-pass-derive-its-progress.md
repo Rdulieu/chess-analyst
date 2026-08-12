@@ -40,3 +40,12 @@ instead of sitting at `0/1` for its whole ~75 s.
 - `GET /api/analyze/status` reports the **last** pass, running or not, so the summary survives a
   reload; its response gains the outcome and the acknowledgement, and its progress unit changes
   from Games to Positions.
+- **Only the last pass is ever reported, so starting a new pass supersedes an unacknowledged
+  summary — accepted deliberately.** Raised as a finding during US-8's agentic runs: a Player who
+  runs two passes without reading the first never sees the first's confirmation. We keep it. US-8's
+  promise is that a confirmation cannot be missed *without acting*, and starting another analysis
+  is an action taken with the page in view. The alternatives — reporting the oldest unacknowledged
+  pass, or aggregating the unread ones — each buy that edge case at the price of a permanent
+  notion (a queue of summaries to dismiss one by one, or an "unread since" aggregate) in a
+  single-Player local tool. Revisit if a pass can ever start somewhere the Player is not looking
+  (a schedule, another device).
