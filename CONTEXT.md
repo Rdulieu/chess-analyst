@@ -118,10 +118,25 @@ _Avoid_: Opponent move (too vague), Threat
 
 **Import**:
 The act of fetching the Player's Games from the chess.com public API by username. Triggered
-**manually** by the Player and **scoped** to a chosen **single month** (month/year, matching one
-chess.com monthly archive) and a chosen set of **time control categories** (any subset of bullet,
-blitz, rapid, daily) — never automatic, never implicitly all-history.
+**manually** by the Player and **scoped** to a **contiguous range of months** (a first and a last
+month, each matching one chess.com monthly archive — a single month is simply a range of one) and
+a chosen set of **time control categories** (any subset of bullet, blitz, rapid, daily) — never
+automatic, never implicitly all-history. The range is not capped: rebuilding a whole history in
+one Import is a legitimate use.
 **Incremental**: within the chosen scope, only Games not already retained are fetched and
 analyzed; re-importing an overlapping scope adds nothing already present. Once a Game has been
-analyzed, its Moves' Evaluations are retained and never recomputed.
-_Avoid_: Sync, Fetch
+analyzed, its Moves' Evaluations are retained and never recomputed. This is what makes an Import
+**safe to re-run**: recovering from a partial Import means replaying the same range, not resuming
+it.
+_Avoid_: Sync, Fetch, Backfill
+
+**Monthly import**:
+One month's slice of an Import — the unit the Player is shown progress and outcome by. An Import
+covers its months **one at a time, in order**, and reports each as its own line: how many Games it
+brought in, how many were already retained, and whether chess.com could be reached for that month
+at all. A month that fails does **not** abort the Import: the remaining months are still covered,
+and the failure is carried on that month's line rather than as a global verdict — an Import whose
+months mostly succeeded is not a failed Import. A month the Player was simply inactive in is
+reported the same way as any other, at zero, which is why the per-month lines exist at all: a gap
+in the history must be distinguishable from a gap in the fetching.
+_Avoid_: Import batch, Chunk, Archive (chess.com's own word for the underlying endpoint)

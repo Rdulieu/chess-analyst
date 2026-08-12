@@ -1,6 +1,9 @@
 # The chess engine runs in the local Node server, behind a swappable Engine interface
 
 > **Status:** accepted — **supersedes [ADR-0001](0001-stockfish-client-side-wasm.md)** (engine location).
+> The remark below contrasting this pass with the *"network-bound Import"* no longer holds since
+> [ADR-0010](0010-range-import-as-fault-tolerant-background-job.md): a range Import is long-running
+> too and runs as a background job. The two passes remain separate operations.
 
 US-4 needs engine `Evaluation`s to detect the player's `Inaccuracy`/`Mistake`/`Blunder`s and, from
 those, `Danger position`s. ADR-0001 put Stockfish **client-side** (browser WASM) and rejected a
