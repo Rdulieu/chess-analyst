@@ -182,7 +182,13 @@ describe("analysis API", () => {
     expect(started.status).toBe(202);
     expect(started.body).toMatchObject({ running: true, total: 6, games: 2 });
 
-    expect(await waitDone(app)).toEqual({ running: false, total: 6, done: 6, games: 2 });
+    expect(await waitDone(app)).toEqual({
+      running: false,
+      total: 6,
+      done: 6,
+      games: 2,
+      acknowledged: false,
+    });
   });
 
   it("re-analyzing an already-analyzed selection opens no new pass — the last one is still reported", async () => {
@@ -193,7 +199,40 @@ describe("analysis API", () => {
 
     const again = await request(app).post("/api/analyze").send({ gameIds: ids });
     expect(again.status).toBe(202);
-    expect(again.body).toEqual(finished); // an empty pass is not a pass
+    // An empty pass is not a pass: the previous one is reported, untouched.
+    expect(again.body).toEqual({ ...finished, started: false });
+  });
+
+  it("POST /api/analyze/acknowledge marks the last pass as seen, and is harmless twice", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    expect(await waitDone(app)).toMatchObject({ acknowledged: false });
+
+    expect((await request(app).post("/api/analyze/acknowledge")).status).toBe(204);
+    expect((await request(app).get("/api/analyze/status")).body).toMatchObject({
+      acknowledged: true,
+      done: 3,
+      games: 1,
+    });
+
+    expect((await request(app).post("/api/analyze/acknowledge")).status).toBe(204);
+    expect((await request(app).get("/api/analyze/status")).body).toMatchObject({
+      acknowledged: true,
+    });
+  });
+
+  it("POST /api/analyze says whether it actually started a pass, so 'nothing to do' is not guesswork", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    const ids = await idsOf(app);
+
+    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).body).toMatchObject({
+      started: true,
+    });
+    await waitDone(app);
+
+    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).body).toMatchObject({
+      started: false,
+    });
   });
 
   it("GET /api/analyze/status reports the last pass to a freshly built app (it outlives the process)", async () => {
@@ -208,6 +247,7 @@ describe("analysis API", () => {
       total: 3,
       done: 3,
       games: 1,
+      acknowledged: false,
     });
   });
 

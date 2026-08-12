@@ -117,7 +117,7 @@ describe("analysis job", () => {
     expect(started).toMatchObject({ running: true, total: 3 });
 
     await job.idle();
-    expect(job.status()).toEqual({ running: false, total: 3, done: 3, games: 1 });
+    expect(job.status()).toEqual({ running: false, total: 3, done: 3, games: 1, acknowledged: false });
     expect(db.select().from(games).where(eq(games.id, pending.id)).get()!.analyzed).toBe(true);
   });
 
@@ -153,7 +153,14 @@ describe("analysis job", () => {
     await analyzeGame(db, createFixtureEngine(), game);
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    expect(job.start([game.id])).toEqual({ running: false, total: 0, done: 0, games: 0 });
+    expect(job.start([game.id])).toEqual({
+      running: false,
+      total: 0,
+      done: 0,
+      games: 0,
+      acknowledged: false,
+      started: false,
+    });
   });
 
   it("ends the pass (running:false) instead of crashing when the engine backend fails", async () => {

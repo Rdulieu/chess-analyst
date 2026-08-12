@@ -17,6 +17,14 @@ export function createAnalyzeRouter(job: AnalysisJob): Router {
     res.status(202).json(job.start(gameIds));
   });
 
+  // Acknowledging is a display concern: it hides the summary, and leaves the
+  // pass's own record untouched — hence no body and no pass identifier, the
+  // client only ever knows "the last pass".
+  router.post("/acknowledge", (_req, res) => {
+    job.acknowledge();
+    res.status(204).end();
+  });
+
   router.get("/status", (_req, res) => {
     res.json(job.status());
   });

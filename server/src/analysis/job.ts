@@ -20,6 +20,8 @@ export interface AnalysisStatus {
   done: number;
   /** Games the pass covers, for the Player-facing summary line. */
   games: number;
+  /** Whether the Player has dismissed this pass's summary. */
+  acknowledged: boolean;
 }
 
 /**
@@ -48,7 +50,9 @@ export interface AnalysisJob {
    * pass). Single-flighted: if a pass is already running, this is ignored and
    * the running status is returned unchanged.
    */
-  start(gameIds: number[]): AnalysisStatus;
+  start(gameIds: number[]): AnalysisStatus & { started: boolean };
+  /** Marks the last pass's summary as seen by the Player. Display only. */
+  acknowledge(): void;
   /** Resolves when the current pass (if any) has finished — for tests/shutdown. */
   idle(): Promise<void>;
 }
@@ -69,12 +73,13 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
 
   const snapshot = (): AnalysisStatus => {
     const pass = lastPass();
-    if (!pass) return { running: false, total: 0, done: 0, games: 0 };
+    if (!pass) return { running: false, total: 0, done: 0, games: 0, acknowledged: false };
     return {
       running,
       total: pass.total,
       done: evaluatedPositions(db, pass.gameIds),
       games: pass.gameIds.length,
+      acknowledged: pass.acknowledgedAt !== null,
     };
   };
 
@@ -82,7 +87,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
     status: snapshot,
 
     start(gameIds) {
-      if (running) return snapshot();
+      if (running) return { ...snapshot(), started: false };
 
       const pending = gameIds
         .map((id) => getGame(db, id))
@@ -90,7 +95,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
 
       // Nothing to analyze: no pass is opened at all — an empty pass is not a
       // pass, and must not overwrite the one the Player last ran.
-      if (pending.length === 0) return snapshot();
+      if (pending.length === 0) return { ...snapshot(), started: false };
 
       const pass = db
         .insert(analysisPasses)
@@ -122,7 +127,17 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
             .run();
         }
       })();
-      return snapshot();
+      return { ...snapshot(), started: true };
+    },
+
+    acknowledge() {
+      const pass = lastPass();
+      if (pass) {
+        db.update(analysisPasses)
+          .set({ acknowledgedAt: new Date().toISOString() })
+          .where(eq(analysisPasses.id, pass.id))
+          .run();
+      }
     },
 
     idle: () => current,

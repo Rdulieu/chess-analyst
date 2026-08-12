@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchGames } from "../api";
-import { runAnalysis } from "../features/analysis/runAnalysis";
+import { useAnalysisPass } from "../features/analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
 import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
-import type { AnalysisStatus, Game } from "../types";
+import type { Game } from "../types";
 
 /**
  * Mes parties (`/`): the import form, the Game list, and the engine-analysis
@@ -17,7 +17,7 @@ import type { AnalysisStatus, Game } from "../types";
 export function GamesPage() {
   const [games, setGames] = useState<Game[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [status, setStatus] = useState<AnalysisStatus | null>(null);
+  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass();
   const navigate = useNavigate();
 
   const refresh = async () => setGames(await fetchGames());
@@ -37,15 +37,10 @@ export function GamesPage() {
     });
 
   const analyze = async () => {
-    // The final progress is deliberately *not* discarded: the Player must be
-    // left with the figure the pass reached (US-8). Issue 02 turns it into an
-    // acknowledgeable summary.
-    await runAnalysis([...selected], setStatus);
+    await run([...selected]);
     setSelected(new Set());
     await refresh();
   };
-
-  const running = status?.running ?? false;
 
   return (
     <>
@@ -61,7 +56,7 @@ export function GamesPage() {
             Analyser la sélection
           </button>
 
-          <AnalysisPassStatus status={status} />
+          <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
 
           <GameList
             games={games}

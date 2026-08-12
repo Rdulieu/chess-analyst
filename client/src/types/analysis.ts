@@ -12,4 +12,6 @@ export interface AnalysisStatus {
   done: number;
   /** Games the pass covers, for the Player-facing summary line. */
   games: number;
+  /** Whether the Player has dismissed this pass's summary. */
+  acknowledged: boolean;
 }
