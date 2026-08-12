@@ -99,6 +99,34 @@
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
 
+- **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
+  > Pas encore grillée. État vérifié : **il n'existe aucun CSS dans le projet** — zéro fichier
+  > `.css`, aucun `<link>` dans `client/index.html`, aucune bibliothèque de style. L'app s'affiche
+  > donc avec les styles par défaut du navigateur. Cinq composants portent des `style={{…}}` inline
+  > (`GameViewer`, `GameList`, `DangerPage`, `ExplorerPage`, `WinningChancesBar`), non par choix
+  > esthétique mais **parce qu'il n'y avait pas de feuille de style où mettre un sélecteur** : ce
+  > sont des surlignages **porteurs de sens** (teinte de win rate, sévérité d'un `Mistake`, barre de
+  > winning chances), chacun doublé d'un **repère non chromatique** pour rester accessible.
+  >
+  > **Pas de maquette, et c'est la contrainte structurante** de cette US, pas un manque à combler en
+  > douce : le grilling doit produire la référence visuelle avant tout code, sinon chaque écran sera
+  > stylé au jugé et l'ensemble ne tiendra pas. Points à trancher :
+  > - Ce qui fait office de référence : un jeu de **tokens** (palette, échelle typographique,
+  >   espacements, rayons) écrit et validé au grilling ? Un écran pilote stylé d'abord, puis décliné ?
+  >   Une capture avant/après par écran pour arbitrer ?
+  > - Approche technique : CSS vanilla + variables custom, modules CSS, ou une bibliothèque
+  >   (utilitaire ou composants) ? Dans un projet volontairement mince (Vite + React, pas de
+  >   dépendance de style à ce jour), en ajouter une est une décision à motiver — ADR probable.
+  > - **Ne pas régresser les surlignages sémantiques.** Migrer l'inline vers des classes est
+  >   souhaitable, mais la teinte reste une info métier et le repère non chromatique doit survivre.
+  >   Le finding a11y d'US-3 (surlignage invisible faute de CSS) est le précédent à ne pas rejouer à
+  >   l'envers.
+  > - Critère d'acceptation d'une US esthétique : sur quoi juge-t-on « présentable » ? Une Feature
+  >   Path agentique constate qu'un style est **appliqué** et qu'un contraste est suffisant, elle ne
+  >   juge pas le goût. À définir explicitement, sinon l'US n'a pas de fin.
+  > - Périmètre : tous les écrans (`/`, `/stats`, `/openings`, `/danger`, explorateur, analyse) ou un
+  >   sous-ensemble ? Le mode sombre et le responsive sont-ils dedans ou différés ?
+
 ## Doing
 
 ## In review
