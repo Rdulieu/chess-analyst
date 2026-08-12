@@ -13,6 +13,8 @@
 
 ## Doing
 
+## In review
+
 - **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
   > Un indicateur de progression et une coche "analysée" existent déjà
   > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
@@ -20,7 +22,7 @@
   > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
   > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
   > forme/visibilité.
-  > **Grillée** (**ADR-0010** : le pass est persisté, sa progression reste dérivée des
+  > **Grillée** (**ADR-0011** : le pass est persisté, sa progression reste dérivée des
   > `Evaluation`s stockées ; `CONTEXT.md` : nouveau terme **`Analysis pass`** — le glossaire n'en
   > avait aucun pour le pass, introduit pourtant par US-4). Découpée en 4 issues, implémentée sur
   > `integration/US-8-analysis-pass-completion` (worktree dédié). PRD :
@@ -52,13 +54,29 @@
   >   la page Analyse (celle de `react-chessboard` est tierce, non supprimable)
   >
   > Le finding « un résumé non acquitté est silencieusement remplacé par un pass plus récent » est
-  > **assumé** : décision enregistrée dans les Conséquences d'**ADR-0010** (la promesse d'US-8 est
+  > **assumé** : décision enregistrée dans les Conséquences d'**ADR-0011** (la promesse d'US-8 est
   > qu'on ne rate pas une confirmation *sans agir*, et relancer une analyse est un acte).
   >
-  > **Puis revue `integration → develop`** : rejouer la suite HP après la 05, puis ouvrir la PR
-  > (décision humaine).
-
-## In review
+  > **En revue** — PR #22 `integration → develop`, ouverte le 2026-08-12 (le merge reste la
+  > décision humaine). `develop` (US-9) fusionnée dans la branche **avant** l'ouverture : quatre
+  > conflits réels, pas seulement le backlog — US-9 avait remodelé l'API d'import et renuméroté le
+  > parcours HP-01 ; le merge a cassé deux choses que les tests ont rattrapées. Mergeabilité
+  > revérifiée après ouverture : `CLEAN`.
+  >
+  > **Suite HP rejouée en entier après ce merge** (la première exécution portait sur l'import
+  > mono-mois, donc périmée) : HP-01 9/9, HP-02, HP-03 — vertes, contre la vraie API chess.com
+  > (`DudulSmash`, 2026-05 → 2026-06, 82 parties) et le vrai Stockfish WASM, sans erreur console.
+  > Le **plafond de profondeur d'HP-02**, noté « non exerçable » depuis US-7, l'est enfin : 40
+  > demi-coups atteints.
+  >
+  > **Collision d'ADR corrigée** : US-9 et US-8 avaient toutes deux créé une `ADR-0010` en
+  > parallèle, sans conflit git (noms de fichiers différents). Celle d'US-9 étant déjà sur
+  > `develop`, celle d'US-8 est renumérotée en **ADR-0011**, avec ses 14 références.
+  >
+  > Findings non bloquants ouverts : la ligne de progression ne se nomme pas pendant l'exécution ;
+  > la région live résiduelle de `react-chessboard` est `assertive` et sans libellé (tierce) ; le
+  > backend moteur natif reste non vérifié sur son chemin nominal (seuls ses modes de panne le
+  > sont). Un flake observé une fois sur `GameViewer` (annotations), non reproduit, non diagnostiqué.
 
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
   > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).

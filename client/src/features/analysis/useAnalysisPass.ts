@@ -10,7 +10,7 @@ import type { AnalysisStatus } from "../../types";
  *
  * - **on arrival**, the last pass is loaded, so a summary the Player has not yet
  *   acknowledged reappears after a reload or a restart (the pass is persisted
- *   server-side, ADR-0010 — the page just has to ask);
+ *   server-side, ADR-0011 — the page just has to ask);
  * - **run**, which drives the start+poll loop and keeps the final figure on
  *   screen rather than discarding it;
  * - **acknowledge**, which dismisses the summary for good.
