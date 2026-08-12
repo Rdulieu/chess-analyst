@@ -50,6 +50,13 @@
       "when": 1786528392939,
       "tag": "0006_right_wilson_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786533048292,
+      "tag": "0007_careful_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }

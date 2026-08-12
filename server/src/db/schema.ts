@@ -83,6 +83,12 @@ export const analysisPasses = sqliteTable("analysis_passes", {
   total: integer("total").notNull(),
   startedAt: text("started_at").notNull(),
   endedAt: text("ended_at"),
+  // How the pass ended (CONTEXT.md, `Analysis pass`): `completed` when every
+  // Position was evaluated, `interrupted` when the app was shut down mid-pass,
+  // `failed` when the engine errored — `error` then carries what went wrong.
+  // Null while the pass is still running.
+  outcome: text("outcome").$type<"completed" | "interrupted" | "failed">(),
+  error: text("error"),
   // When the Player dismissed this pass's summary. Display only: it hides the
   // summary and changes neither what the pass did nor the Evaluations it kept.
   acknowledgedAt: text("acknowledged_at"),

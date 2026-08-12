@@ -1,4 +1,4 @@
-import { inArray, count, desc, eq } from "drizzle-orm";
+import { inArray, count, desc, eq, isNull } from "drizzle-orm";
 import type { Db } from "../db";
 import type { Engine } from "../engine/types";
 import { analysisPasses, evaluations, type Game } from "../db/schema";
@@ -22,6 +22,10 @@ export interface AnalysisStatus {
   games: number;
   /** Whether the Player has dismissed this pass's summary. */
   acknowledged: boolean;
+  /** How the pass ended; null while it runs (CONTEXT.md, `Analysis pass`). */
+  outcome: "completed" | "interrupted" | "failed" | null;
+  /** What went wrong, on a failed pass. */
+  error: string | null;
 }
 
 /**
@@ -67,19 +71,42 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
   let running = false;
   let current: Promise<void> = Promise.resolve();
 
+  // A pass row with no end was killed by a shutdown: close it as `interrupted`
+  // (ADR-0010). Done here, at construction, so a job cannot exist without having
+  // reconciled — there is no separate call anyone could forget. The dead pass is
+  // deliberately **not** resumed: every engine run in this app is
+  // Player-triggered, as `Import` is, and silently burning minutes of CPU at
+  // startup would break that. The Evaluations it did produce stay put, and the
+  // next pass picks up where it left off.
+  db.update(analysisPasses)
+    .set({ endedAt: new Date().toISOString(), outcome: "interrupted" })
+    .where(isNull(analysisPasses.endedAt))
+    .run();
+
   /** The pass this job reports on: the most recent row, or none yet. */
   const lastPass = () =>
     db.select().from(analysisPasses).orderBy(desc(analysisPasses.id)).limit(1).get();
 
   const snapshot = (): AnalysisStatus => {
     const pass = lastPass();
-    if (!pass) return { running: false, total: 0, done: 0, games: 0, acknowledged: false };
+    if (!pass)
+      return {
+        running: false,
+        total: 0,
+        done: 0,
+        games: 0,
+        acknowledged: false,
+        outcome: null,
+        error: null,
+      };
     return {
       running,
       total: pass.total,
       done: evaluatedPositions(db, pass.gameIds),
       games: pass.gameIds.length,
       acknowledged: pass.acknowledgedAt !== null,
+      outcome: running ? null : pass.outcome,
+      error: pass.error,
     };
   };
 
@@ -109,20 +136,25 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
         .returning()
         .get();
       running = true;
+      let failure: string | null = null;
       current = (async () => {
         try {
           for (const game of pending) {
             await analyzeGame(db, engine, game);
           }
         } catch (err) {
-          // A backend failure (e.g. the WASM/native engine not being wired yet)
-          // must not take the relay down — end the pass cleanly, as the Import
-          // route does for upstream failures.
-          console.error("Analysis pass failed:", err instanceof Error ? err.message : err);
+          // A backend failure (e.g. the engine not being wired up) must not take
+          // the relay down — but it must not vanish into a log either: the
+          // Player is told, on screen, that the pass failed and why (US-8).
+          failure = err instanceof Error ? err.message : String(err);
         } finally {
           running = false;
           db.update(analysisPasses)
-            .set({ endedAt: new Date().toISOString() })
+            .set({
+              endedAt: new Date().toISOString(),
+              outcome: failure === null ? "completed" : "failed",
+              error: failure,
+            })
             .where(eq(analysisPasses.id, pass.id))
             .run();
         }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { openDb } from "../src/db";
-import { games, evaluations, type NewGame } from "../src/db/schema";
+import { games, evaluations, analysisPasses, type NewGame } from "../src/db/schema";
 import { analyzeGame } from "../src/analysis/service";
 import { createAnalysisJob } from "../src/analysis/job";
 import { createFixtureEngine } from "../src/engine/fixture";
@@ -63,6 +63,37 @@ describe("analyzeGame", () => {
 
     expect(evalsOf(db, game.id)).toHaveLength(3);
   });
+
+  it("resumes a Game left half-evaluated, without recomputing what is already stored", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" }); // 4 Positions
+
+    // A pass cut off after two Positions — what a shutdown mid-pass leaves
+    // behind: rows stored, `analyzed` still false.
+    let evaluated = 0;
+    const dying: Engine = {
+      async evaluate(fen, depth) {
+        if (evaluated++ === 2) throw new Error("cut off");
+        return createFixtureEngine().evaluate(fen, depth);
+      },
+    };
+    await analyzeGame(db, dying, game).catch(() => {});
+    expect(evalsOf(db, game.id)).toHaveLength(2);
+
+    // The next pass must pick up at the third Position, not collide on the first.
+    let reEvaluated = 0;
+    const counting: Engine = {
+      async evaluate(fen, depth) {
+        reEvaluated++;
+        return createFixtureEngine().evaluate(fen, depth);
+      },
+    };
+    await analyzeGame(db, counting, game);
+
+    expect(reEvaluated).toBe(2); // only the two missing Positions
+    expect(evalsOf(db, game.id)).toHaveLength(4);
+    expect(db.select().from(games).where(eq(games.id, game.id)).get()!.analyzed).toBe(true);
+  });
 });
 
 describe("analysis job", () => {
@@ -117,7 +148,15 @@ describe("analysis job", () => {
     expect(started).toMatchObject({ running: true, total: 3 });
 
     await job.idle();
-    expect(job.status()).toEqual({ running: false, total: 3, done: 3, games: 1, acknowledged: false });
+    expect(job.status()).toEqual({
+      running: false,
+      total: 3,
+      done: 3,
+      games: 1,
+      acknowledged: false,
+      outcome: "completed",
+      error: null,
+    });
     expect(db.select().from(games).where(eq(games.id, pending.id)).get()!.analyzed).toBe(true);
   });
 
@@ -132,6 +171,44 @@ describe("analysis job", () => {
     // A fresh job over the same store — as after an app restart.
     const rebuilt = createAnalysisJob(db, createFixtureEngine());
     expect(rebuilt.status()).toMatchObject({ running: false, total: 4, done: 4 });
+  });
+
+  it("closes a pass left open by a shutdown as interrupted, keeping what it evaluated", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" }); // 4 Positions
+
+    // A pass killed mid-flight: rows stored, the pass row never closed — what
+    // the store looks like after the app was shut down.
+    let evaluated = 0;
+    const dying: Engine = {
+      async evaluate(fen, depth) {
+        if (evaluated++ === 2) throw new Error("killed");
+        return createFixtureEngine().evaluate(fen, depth);
+      },
+    };
+    const killed = createAnalysisJob(db, dying);
+    killed.start([game.id]);
+    await killed.idle();
+    db.update(analysisPasses).set({ endedAt: null, outcome: null, error: null }).run();
+
+    // Restart: building a job is what reconciles — no separate call to forget.
+    let engineUsed = false;
+    const onRestart: Engine = {
+      async evaluate(fen, depth) {
+        engineUsed = true;
+        return createFixtureEngine().evaluate(fen, depth);
+      },
+    };
+    const rebuilt = createAnalysisJob(db, onRestart);
+
+    expect(rebuilt.status()).toMatchObject({
+      running: false,
+      outcome: "interrupted",
+      done: 2, // the Positions it did evaluate are kept
+      total: 4,
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(engineUsed).toBe(false); // a dead pass is never auto-resumed
   });
 
   it("is single-flighted — a second start while one is running is ignored", async () => {
@@ -159,8 +236,41 @@ describe("analysis job", () => {
       done: 0,
       games: 0,
       acknowledged: false,
+      outcome: null,
+      error: null,
       started: false,
     });
+  });
+
+  it("records a failed outcome and what went wrong, instead of swallowing it into a log", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+    const failing: Engine = {
+      async evaluate() {
+        throw new Error("engine backend unavailable");
+      },
+    };
+
+    const job = createAnalysisJob(db, failing);
+    job.start([game.id]);
+    await job.idle();
+
+    expect(job.status()).toMatchObject({
+      running: false,
+      outcome: "failed",
+      error: "engine backend unavailable",
+    });
+  });
+
+  it("marks a completed pass as such", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+
+    const job = createAnalysisJob(db, createFixtureEngine());
+    job.start([game.id]);
+    await job.idle();
+
+    expect(job.status()).toMatchObject({ outcome: "completed", error: null });
   });
 
   it("ends the pass (running:false) instead of crashing when the engine backend fails", async () => {

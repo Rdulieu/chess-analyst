@@ -188,6 +188,8 @@ describe("analysis API", () => {
       done: 6,
       games: 2,
       acknowledged: false,
+      outcome: "completed",
+      error: null,
     });
   });
 
@@ -248,6 +250,8 @@ describe("analysis API", () => {
       done: 3,
       games: 1,
       acknowledged: false,
+      outcome: "completed",
+      error: null,
     });
   });
 

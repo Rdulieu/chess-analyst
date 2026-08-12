@@ -5,22 +5,21 @@ import type { AnalysisStatus } from "../../types";
  * called from every entry point that can start a pass ("Mes parties" and the
  * Analyse page), never inlined twice.
  *
- * Two states:
+ * While the pass runs it shows the live count, in **Positions evaluated** (US-8,
+ * ADR-0010) — a pass evaluates every Position of every Game it covers, so
+ * counting whole Games left a single-Game pass reading `0/1` for its entire
+ * multi-minute run. "Positions" is also what the store holds (one `Evaluation`
+ * per Position), so the figure shown and the figure recorded are the same thing.
  *
- * - **while it runs**: the live count, in **Positions evaluated** (US-8,
- *   ADR-0010) — a pass evaluates every Position of every Game it covers, so
- *   counting whole Games left a single-Game pass reading `0/1` for its entire
- *   multi-minute run. "Positions" is also what the store holds (one `Evaluation`
- *   per Position), so the figure shown and the figure recorded are the same
- *   thing; CONTEXT.md keeps `Position` and `Move` distinct and this is a
- *   Position count.
- * - **once it is over**: a summary the Player can check against what they
- *   selected — hence the Game count, which the running readout has no use for.
- *   It stays until **dismissed**, so a Player who stepped away during a
- *   minutes-long pass cannot miss the confirmation, and an acknowledged one
- *   never comes back.
+ * Once it is over, the Player is told **how it ended** rather than left to infer
+ * it from a number (CONTEXT.md, `Analysis pass`): completed, interrupted by a
+ * shutdown, or failed — the failure carrying what went wrong, which used to
+ * reach the server console only. The message stays until **dismissed**, so a
+ * Player who stepped away during a minutes-long pass cannot miss it, and an
+ * acknowledged one never comes back.
  *
- * `role="status"` so a long-running pass stays announced to assistive tech.
+ * The dismiss control sits **outside** the `role="status"` live region: inside,
+ * assistive tech would read "Fermer" at the end of every progress announcement.
  */
 export function AnalysisPassStatus({
   status,
@@ -33,12 +32,7 @@ export function AnalysisPassStatus({
 }) {
   // The Player asked for an analysis and none was needed. Said plainly, so an
   // instantly-finished action does not read as a failure or as a stale summary.
-  if (nothingToDo)
-    return (
-      <p role="status" aria-label="progression de l'analyse">
-        Rien à analyser : la sélection est déjà analysée.
-      </p>
-    );
+  if (nothingToDo) return <Live>Rien à analyser : la sélection est déjà analysée.</Live>;
 
   // Nothing to report: no pass has ever run, or the Player has already seen
   // this one.
@@ -47,18 +41,34 @@ export function AnalysisPassStatus({
 
   if (status.running) {
     return (
-      <p role="status" aria-label="progression de l'analyse">
+      <Live>
         {status.done}/{status.total} positions évaluées
-      </p>
+      </Live>
     );
   }
 
+  const games = `${status.games} ${status.games > 1 ? "parties" : "partie"}`;
+  const message =
+    status.outcome === "failed"
+      ? `Échec de l'analyse après ${status.done}/${status.total} positions évaluées — ${status.error ?? "cause inconnue"}`
+      : status.outcome === "interrupted"
+        ? `Analyse interrompue à ${status.done}/${status.total} positions évaluées — relancez-la pour reprendre`
+        : `${games} · ${status.done} positions évaluées ✓`;
+
   return (
-    <p role="status" aria-label="progression de l'analyse">
-      {status.games} {status.games > 1 ? "parties" : "partie"} · {status.done} positions évaluées ✓
-      <button type="button" onClick={onAcknowledge} style={{ marginLeft: "0.5rem" }}>
+    <>
+      <Live>{message}</Live>
+      <button type="button" onClick={onAcknowledge}>
         Fermer
       </button>
+    </>
+  );
+}
+
+function Live({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="status" aria-label="progression de l'analyse">
+      {children}
     </p>
   );
 }

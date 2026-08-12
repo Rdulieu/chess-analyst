@@ -43,10 +43,13 @@ Player's real Games.
 5. Open one imported Game (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → its Position renders on the board; stepping forward/backward and jumping to a Move updates the Position accordingly.
 6. Start the same Import again (same month + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
 7. Reopen the app (reload) → the username is already prefilled from the remembered setting.
-8. (Drive-by, US-4) Select **one** imported Game and start the analysis pass (real WASM Stockfish,
-   depth 16 — allow it real time to finish) → it is marked "analysée"; open "Positions dangereuses"
-   (`/danger`) → the view renders at least one Position (no error), shape only (real game, no fixed
-   figures expected).
+8. (Drive-by, US-4 + US-8) Select **one** imported Game and start the analysis pass (real WASM
+   Stockfish, depth 16 — allow it real time to finish) → while it runs, a count of **Positions
+   evaluated** advances (it does not sit at zero); when it ends, an explicit confirmation states
+   how many Games and Positions were covered, and the Game is marked "analysée". Dismiss the
+   confirmation → it disappears, and does not come back after a reload. Open "Positions
+   dangereuses" (`/danger`) → the view renders at least one Position (no error), shape only (real
+   game, no fixed figures expected).
 
 ## Checks
 ### UI
