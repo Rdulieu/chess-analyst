@@ -156,7 +156,8 @@ describe("App — import UI", () => {
 
       await screen.findByText(/import your chess\.com history/i);
       expect(screen.getByLabelText(/username/i)).toBeTruthy();
-      expect(screen.getByLabelText(/month/i)).toBeTruthy();
+      expect(screen.getByLabelText(/^du$/i)).toBeTruthy();
+      expect(screen.getByLabelText(/^au$/i)).toBeTruthy();
       expect(screen.getByRole("button", { name: /^import$/i })).toBeTruthy();
       // A checkbox per time control category.
       for (const cat of ["bullet", "blitz", "rapid", "daily"]) {
@@ -164,11 +165,13 @@ describe("App — import UI", () => {
       }
     });
 
-    it("defaults the month to the current month", async () => {
+    it("defaults both ends of the range to the current month", async () => {
       renderApp();
 
-      const month = (await screen.findByLabelText(/month/i)) as HTMLInputElement;
-      expect(month.value).toBe(currentMonth());
+      const from = (await screen.findByLabelText(/^du$/i)) as HTMLInputElement;
+      const to = screen.getByLabelText(/^au$/i) as HTMLInputElement;
+      expect(from.value).toBe(currentMonth());
+      expect(to.value).toBe(currentMonth());
     });
   });
 
@@ -180,12 +183,24 @@ describe("App — import UI", () => {
         if (u === "/api/games") return jsonResponse(imported ? [OPERA_GAME] : []);
         if (u === "/api/import") {
           imported = true;
+          return jsonResponse({ running: true, total: 2, done: 0, result: null }, true, 202);
+        }
+        if (u === "/api/import/status") {
           return jsonResponse({
-            totalFetched: 1,
-            imported: 1,
-            alreadyPresent: 0,
-            byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
-            results: { win: 1, draw: 0, loss: 0 },
+            running: false,
+            total: 2,
+            done: 2,
+            result: {
+              totalFetched: 1,
+              imported: 1,
+              alreadyPresent: 0,
+              byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
+              results: { win: 1, draw: 0, loss: 0 },
+              months: [
+                { month: { year: 2024, month: 2 }, imported: 0, alreadyPresent: 0 },
+                { month: { year: 2024, month: 3 }, imported: 1, alreadyPresent: 0 },
+              ],
+            },
           });
         }
         return jsonResponse({}, false, 404);
@@ -198,7 +213,8 @@ describe("App — import UI", () => {
     await screen.findByText(/import your chess\.com history/i);
 
     await user.type(screen.getByLabelText(/username/i), "me");
-    fireEvent.change(screen.getByLabelText(/month/i), { target: { value: "2024-03" } });
+    fireEvent.change(screen.getByLabelText(/^du$/i), { target: { value: "2024-02" } });
+    fireEvent.change(screen.getByLabelText(/^au$/i), { target: { value: "2024-03" } });
     await user.click(screen.getByRole("button", { name: /^import$/i }));
 
     await waitFor(() => {
@@ -206,8 +222,8 @@ describe("App — import UI", () => {
       expect(call).toBeTruthy();
       expect(JSON.parse((call![1] as RequestInit).body as string)).toEqual({
         username: "me",
-        year: 2024,
-        month: 3,
+        from: { year: 2024, month: 2 },
+        to: { year: 2024, month: 3 },
         categories: ["bullet", "blitz", "rapid", "daily"],
       });
     });
@@ -216,13 +232,15 @@ describe("App — import UI", () => {
     expect(await screen.findByLabelText(/import summary/i)).toBeTruthy();
   });
 
-  it("shows a progress indicator while an import is in flight, then the summary", async () => {
-    let resolveImport!: (r: Response) => void;
-    const importInFlight = new Promise<Response>((r) => (resolveImport = r));
+  it("shows how many months are done while an Import is in flight, then the summary", async () => {
+    let resolveStatus!: (r: Response) => void;
+    const statusInFlight = new Promise<Response>((r) => (resolveStatus = r));
     const fetchMock = vi.fn((url: string | URL): Promise<Response> => {
       const u = url.toString();
       if (u === "/api/games") return Promise.resolve(jsonResponse([]));
-      if (u === "/api/import") return importInFlight;
+      if (u === "/api/import")
+        return Promise.resolve(jsonResponse({ running: true, total: 3, done: 1, result: null }, true, 202));
+      if (u === "/api/import/status") return statusInFlight;
       return Promise.resolve(jsonResponse({}, false, 404));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -233,21 +251,28 @@ describe("App — import UI", () => {
     await user.type(screen.getByLabelText(/username/i), "me");
     await user.click(screen.getByRole("button", { name: /^import$/i }));
 
-    // While the import is pending, a progress indicator is shown.
-    expect(await screen.findByRole("progressbar")).toBeTruthy();
+    // While the Import runs, progress is determinate and counted in months.
+    const progress = await screen.findByLabelText(/import progress/i);
+    expect(progress.textContent).toMatch(/1\s*\/\s*3/);
 
-    // Once it resolves, the indicator disappears and the summary shows.
-    resolveImport(
+    // Once it finishes, the readout disappears and the summary shows.
+    resolveStatus(
       jsonResponse({
-        totalFetched: 1,
-        imported: 1,
-        alreadyPresent: 0,
-        byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
-        results: { win: 1, draw: 0, loss: 0 },
+        running: false,
+        total: 3,
+        done: 3,
+        result: {
+          totalFetched: 1,
+          imported: 1,
+          alreadyPresent: 0,
+          byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
+          results: { win: 1, draw: 0, loss: 0 },
+          months: [{ month: { year: 2024, month: 1 }, imported: 1, alreadyPresent: 0 }],
+        },
       }),
     );
     await screen.findByLabelText(/import summary/i);
-    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByLabelText(/import progress/i)).toBeNull();
   });
 
   it("prefills the username from stored settings and saves it on import", async () => {
