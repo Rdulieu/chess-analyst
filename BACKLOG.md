@@ -21,7 +21,10 @@
 
 ## Doing
 
+## In review
+
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
+  > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
   > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
   > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
   > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
@@ -30,16 +33,20 @@
   > Nouvelle **ADR-0010** (revient sur une remarque de portée d'ADR-0008, annotée en conséquence).
   > PRD : `.scratch/multi-month-import/PRD.md`. Découpée en 3 issues, implémentée sur
   > `integration/US-9-multi-month-import` :
-  > - `01-range-import-background-job` — tracer bullet : plage + job + polling + progression en
+  > - `01-range-import-background-job` ✅ — tracer bullet : plage + job + polling + progression en
   >   mois + résumé consolidé.
-  > - `02-monthly-import-lines-and-fault-tolerance` — ligne par mois, un mois en échec n'interrompt
+  > - `02-monthly-import-lines-and-fault-tolerance` ✅ — ligne par mois, un mois en échec n'interrompt
   >   pas l'Import (bloquée par 01).
-  > - `03-range-input-guardrails` — plage inversée (400), bornage au mois courant, 404 synchrone sur
-  >   username inconnu, confirmation au-delà de 24 mois (bloquée par 01).
+  > - `03-range-input-guardrails` ✅ — plage inversée (400), bornage au mois courant, 404 synchrone
+  >   sur username inconnu, confirmation au-delà de 24 mois.
+  >
+  > Les 3 issues validées par leur Feature Path (fixture d'archive via `CHESSCOM_BASE_URL`), puis la
+  > **suite HP rejouée en entier contre la vraie API chess.com** : HP-01/02/03 vertes. HP-01 a été
+  > réécrit pour couvrir la plage (`2026-05 → 2026-06`, 82 parties) au lieu d'un mois unique, et
+  > asserte désormais des chiffres durs relevés sur le compte réel. Pas de 4e HP : la plage est
+  > absorbée dans le scénario d'import existant.
   >
   > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
-
-## In review
 
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
