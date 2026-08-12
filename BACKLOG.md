@@ -10,12 +10,6 @@
   > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
   > forme/visibilité.
 
-- **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
-  > Pas encore grillée. Aujourd'hui un import ne couvre qu'**un seul mois** (`ImportParams` côté
-  > client et serveur, `POST /api/import` : un seul appel à `fetchMonth`) — pas qu'une limite
-  > d'UI, la forme de la requête/réponse devrait changer (plage de mois ? sélection multiple ?
-  > un résumé consolidé ou par mois ?). Ce sont des questions à trancher au grilling.
-
 - **US-10**: Voir clairement qui joue Blancs/Noirs sur un échiquier, et ne pas attendre dans le vide sur "Positions dangereuses".
   > Pas encore grillée, deux préoccupations distinctes réunies ici :
   > - Aucun échiquier affiché dans l'app (Analyse, Explorateur, Positions dangereuses) ne montre
@@ -26,6 +20,24 @@
   >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
 
 ## Doing
+
+- **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
+  > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
+  > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
+  > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
+  > (confirmation UI au-delà de 24 mois). Un seul contrat d'import : le mono-mois devient une plage
+  > à bornes égales. `CONTEXT.md` : `Import` re-scopé, terme `Monthly import` ajouté.
+  > Nouvelle **ADR-0010** (revient sur une remarque de portée d'ADR-0008, annotée en conséquence).
+  > PRD : `.scratch/multi-month-import/PRD.md`. Découpée en 3 issues, implémentée sur
+  > `integration/US-9-multi-month-import` :
+  > - `01-range-import-background-job` — tracer bullet : plage + job + polling + progression en
+  >   mois + résumé consolidé.
+  > - `02-monthly-import-lines-and-fault-tolerance` — ligne par mois, un mois en échec n'interrompt
+  >   pas l'Import (bloquée par 01).
+  > - `03-range-input-guardrails` — plage inversée (400), bornage au mois courant, 404 synchrone sur
+  >   username inconnu, confirmation au-delà de 24 mois (bloquée par 01).
+  >
+  > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
 
 ## In review
 
