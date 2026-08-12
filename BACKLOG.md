@@ -29,6 +29,8 @@
 
 ## In review
 
+## Done
+
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
   > Grillée (pas de nouvelle ADR — conséquence directe d'ADR-0009 ; `CONTEXT.md` : terme `Evaluation`
@@ -51,8 +53,8 @@
   > session : FP vérifiées via le contrat API réel contre le serveur en direct + les tests
   > composant (jsdom), pas de confirmation visuelle navigateur (idem 01).
   >
-  > **En revue** — PR #12 `integration → develop`, ouverte le 2026-08-11 (le merge reste la
-  > décision humaine). Suite **HP jouée pour de vrai, UI-first** cette fois (Chrome système piloté
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #12, mergée le 2026-08-12 ;
+  > conflit `BACKLOG.md` avec l'ajout d'US-8/9/10 résolu avant merge). Suite **HP jouée pour de vrai, UI-first** cette fois (Chrome système piloté
   > en CDP, vraie API chess.com, vrai Stockfish WASM, DB repartie de zéro, `DudulSmash` 2026/06) :
   > HP-02 et HP-03 vertes, **HP-01 rouge à l'étape 5** — une Game non analysée n'affichait plus
   > aucun plateau, régression d'`03-analyze-from-analyse-page` **corrigée sur la branche**
@@ -61,13 +63,8 @@
   > d'analyse figée à `0/1`, bouton Import non désactivé pendant l'import, `/danger` sans garde
   > d'échantillon minimal). Cap de profondeur d'HP-02 non exerçable sur 54 parties réelles.
   >
-  > ⚠️ **PR #12 en conflit de merge** (`mergeable=CONFLICTING`) : `develop` a avancé sur
-  > **`BACKLOG.md`** (US-8/9/10 ajoutées par la PR #8), seul fichier en conflit. À résoudre en
-  > mergeant `develop` dans la branche d'intégration avant la revue.
-  >
   > HP budget à 3/3 : greffe d'US-7 sur l'étape 8 d'HP-01 proposée dans la PR plutôt qu'un 4e HP.
-
-## Done
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
   > Grillée (**ADR-0008** : moteur dans le Node local derrière une interface `Engine` — WASM
