@@ -14,4 +14,8 @@ export interface AnalysisStatus {
   games: number;
   /** Whether the Player has dismissed this pass's summary. */
   acknowledged: boolean;
+  /** How the pass ended; null while it runs (CONTEXT.md, `Analysis pass`). */
+  outcome: "completed" | "interrupted" | "failed" | null;
+  /** What went wrong, on a failed pass. */
+  error: string | null;
 }

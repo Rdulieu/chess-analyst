@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import type { Db } from "../db";
 import { games, evaluations, type Game } from "../db/schema";
 import { ANALYSIS_DEPTH, type Engine } from "../engine/types";
@@ -26,8 +26,15 @@ export async function analyzeGame(db: Db, engine: Engine, game: Game): Promise<v
     .get()?.analyzed;
   if (done) return;
 
+  // A pass cut short (shutdown, engine failure) leaves Evaluations behind
+  // *without* the flag. Resume at the first Position still missing rather than
+  // colliding on the rows already stored: Evaluations are retained and never
+  // recomputed (CONTEXT.md, `Analysis pass`), so no engine time is spent twice.
+  const stored =
+    db.select({ n: count() }).from(evaluations).where(eq(evaluations.gameId, game.id)).get()?.n ?? 0;
+
   const fens = gamePositions(game.pgn);
-  for (let ply = 0; ply < fens.length; ply++) {
+  for (let ply = stored; ply < fens.length; ply++) {
     const { cp, mate } = await engine.evaluate(fens[ply], ANALYSIS_DEPTH);
     db.insert(evaluations).values({ gameId: game.id, ply, cp, mate }).run();
   }
