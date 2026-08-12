@@ -3,7 +3,6 @@ import { games } from "../db/schema";
 import { gameExistsByUrl } from "../repository";
 import { recordMoveHabits } from "../move-habits/precompute";
 import type { ChessComClient, TimeControlCategory } from "../chesscom";
-import { UnknownUsernameError } from "./errors";
 import { toGame } from "./mapping";
 
 export interface ImportParams {
@@ -13,8 +12,24 @@ export interface ImportParams {
   categories: TimeControlCategory[];
 }
 
-export interface ImportResult {
-  /** Total games chess.com returned for the month (all categories/variants). */
+/**
+ * One month's slice of an Import — the unit the Player is shown progress and
+ * outcome by (CONTEXT.md, "Monthly import"). A month with no entry in the
+ * Player's history is reported at zero like any other; only a month chess.com
+ * could not answer for carries a `failure`, so a gap in the history stays
+ * distinguishable from a gap in the fetching.
+ */
+export interface MonthlyImport {
+  month: { year: number; month: number };
+  imported: number;
+  alreadyPresent: number;
+  /** Set only when the month could not be fetched; absent means covered. */
+  failure?: string;
+}
+
+/** The figures an Import reports, whether over one month or a whole range. */
+export interface ImportFigures {
+  /** Total games chess.com returned (all categories/variants). */
   totalFetched: number;
   imported: number;
   alreadyPresent: number;
@@ -27,17 +42,26 @@ export interface ImportResult {
 }
 
 /**
+ * An Import's summary: the figures **consolidated over the whole range**, plus
+ * one line per month for traceability. The rich aggregates are deliberately not
+ * repeated per month — a 12 x 9 table of numbers is not a summary (ADR-0010).
+ */
+export interface ImportResult extends ImportFigures {
+  months: MonthlyImport[];
+}
+
+/**
  * Imports the Player's games for one month from chess.com, mapping each to the
  * Player-relative Game shape and persisting it (incrementally, deduped by URL).
+ *
+ * The username is **not** validated here: an Import spans a range of months and
+ * the check is made once by the route, before any month is fetched (ADR-0010).
  */
 export async function importMonth(
   db: Db,
   client: ChessComClient,
   params: ImportParams,
-): Promise<ImportResult> {
-  if (!(await client.playerExists(params.username))) {
-    throw new UnknownUsernameError(params.username);
-  }
+): Promise<ImportFigures> {
   const monthGames = await client.fetchMonth(params.username, params.year, params.month);
   const wanted = new Set(params.categories);
   let imported = 0;
@@ -58,7 +82,7 @@ export async function importMonth(
     recordMoveHabits(db, inserted);
     imported++;
   }
-  const summary: ImportResult = {
+  const summary: ImportFigures = {
     totalFetched: monthGames.length,
     imported,
     alreadyPresent,

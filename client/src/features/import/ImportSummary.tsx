@@ -1,12 +1,37 @@
-import type { ImportResult, TimeControlCategory } from "../../types";
+import type { ImportResult, MonthlyImport, TimeControlCategory } from "../../types";
 
 const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
 const label = (c: TimeControlCategory) => c[0].toUpperCase() + c.slice(1);
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
+const yyyymm = ({ year, month }: MonthlyImport["month"]) =>
+  `${year}-${String(month).padStart(2, "0")}`;
+
+/**
+ * One month of the range. The month's own contribution is shown, and a month
+ * chess.com could not answer for says so **in words** as well as in style: the
+ * client has no stylesheet, so a tint can never be the only cue (and a failed
+ * month must stay distinguishable from a month the Player was inactive in,
+ * which reads as a plain zero).
+ */
+function MonthLine({ line }: { line: MonthlyImport }) {
+  const failed = line.failure !== undefined;
+  return (
+    <li
+      aria-label={yyyymm(line.month)}
+      style={failed ? { fontWeight: "bold", color: "#b3261e" } : undefined}
+    >
+      {yyyymm(line.month)} —{" "}
+      {failed
+        ? `échec : ${line.failure}`
+        : `${line.imported} importée${line.imported === 1 ? "" : "s"}, ${line.alreadyPresent} déjà présente${line.alreadyPresent === 1 ? "" : "s"}`}
+    </li>
+  );
+}
+
 /** Post-import summary: what chess.com had, what was retained, and how the Player did. */
 export function ImportSummary({ result }: { result: ImportResult }) {
-  const { totalFetched, imported, alreadyPresent, byCategory, results } = result;
+  const { totalFetched, imported, alreadyPresent, byCategory, results, months } = result;
   const played = CATEGORIES.filter((c) => byCategory[c] > 0);
 
   return (
@@ -31,6 +56,13 @@ export function ImportSummary({ result }: { result: ImportResult }) {
         {" · "}
         <span aria-label={count(results.loss, "loss", "losses")}>{results.loss} L</span>
       </p>
+      {months.length > 0 && (
+        <ul aria-label="by month">
+          {months.map((line) => (
+            <MonthLine key={yyyymm(line.month)} line={line} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

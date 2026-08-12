@@ -30,6 +30,39 @@ We speak of MR/PR (depending on the technical backlog, see `docs/agents/issue-tr
 - **`integration/*` -> `develop`**: human decision. Before the PR, the agent **runs the HP suite** (`/agentic-tests HP`) and **pastes the result** into the PR (pass/fail + findings); if the feature warrants it, it **proposes co-creating an HP** — **at most 3 HP** (otherwise: merge two journeys, drop a non-critical one, or graft drive-by). The PR **lists the included issues** for a readable batch review. The agent opens the PR and gives the link; never merges.
 - **`develop` -> `main`**: human decision. On request, the agent opens the PR and gives the link; never merges.
 
+## After opening a PR — check it is still mergeable
+
+**Opening the PR is not the end of the job.** `develop` moves while you work, and a PR that was
+clean at creation can be `CONFLICTING` minutes later. Before handing back to the human, **re-check
+the PR's mergeability** — and re-check it again if time passed between the last check and the
+hand-off. Handing over a conflicted PR without saying so wastes the reviewer's first move.
+
+`BACKLOG.md` is the usual culprit, and structurally so: **every** story transition rewrites the same
+region (the `## To do` / `## Doing` / `## In review` / `## Done` boundaries), so two stories in
+flight collide there almost by construction. Expect it rather than being surprised by it.
+
+**Who resolves what:**
+
+- **The conflict opposes no decision -> the agent resolves it, in autonomy, before handing back.**
+  That is the case when both sides' intentions **compose** and only their placement collides: one
+  side moved a section heading while the other inserted an entry, two stories were added to
+  different sections, a story moved to `Done` while another moved to `In review`. Keep both
+  intentions, order them correctly, verify nothing else was lost (the rest of the file usually
+  auto-merged — read it, do not assume), re-run build + tests, push, and **state in the hand-off
+  what was resolved and why it opposed nothing**.
+- **The conflict opposes decisions -> stop and hand back to the human**, with the analysis: what
+  each side asserts, and why they cannot both hold. That is the case when the two sides give the
+  same story contradictory statuses or contents, when one deletes what the other edits, or when
+  resolving would mean choosing between two intents. Do not pick for the human.
+
+The dividing line is not the file, nor the size of the diff: it is whether resolving requires a
+**decision**. Re-ordering two compatible insertions requires none. Choosing which of two truths
+about a story survives requires one.
+
+> If the same file keeps colliding release after release, say so — a recurring conflict is a signal
+> about how the file is organised, not a fatality of git. Report the pattern; do not restructure the
+> backlog on your own initiative.
+
 ## Before coding — check your position
 
 On the 1st act of dev (code meant to be committed):

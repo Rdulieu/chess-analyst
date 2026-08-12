@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { importGames, getSettings, saveSettings } from "../../api";
+import { getSettings, saveSettings } from "../../api";
+import { runImport } from "./runImport";
 import { ImportSummary } from "./ImportSummary";
-import type { ImportResult, TimeControlCategory } from "../../types";
+import type { ImportResult, ImportStatus, MonthRef, TimeControlCategory } from "../../types";
 
 const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
 
@@ -10,24 +11,35 @@ const label = (c: TimeControlCategory) => c[0].toUpperCase() + c.slice(1);
 /** The current month as an <input type="month"> value (YYYY-MM). */
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 
-/** Parses an <input type="month"> value (YYYY-MM) into [year, month]. */
-function parseMonth(value: string): [number, number] {
+/** Parses an <input type="month"> value (YYYY-MM) into a range bound. */
+function parseMonth(value: string): MonthRef {
   const [year, month] = value.split("-").map(Number);
-  return [year, month];
+  return { year, month };
 }
 
+/** Beyond this many months, the Player is asked to confirm before it starts. */
+const CONFIRM_ABOVE_MONTHS = 24;
+
+/** How many months a range covers, both bounds included. */
+const monthSpan = (from: MonthRef, to: MonthRef) =>
+  (to.year - from.year) * 12 + (to.month - from.month) + 1;
+
 /**
- * The chess.com import form: username, month (defaults to the current month),
- * and the time control categories to import. Runs the Import and reports status;
- * `onImported` lets the parent refresh the Game list once it succeeds.
+ * The chess.com import form: username, the month **range** to cover (both
+ * bounds default to the current month, so the routine one-month import stays a
+ * single click — US-9), and the time control categories, which apply to the
+ * whole range. A range Import runs in the background, so the form reports
+ * determinate progress counted in months while it runs; `onImported` lets the
+ * parent refresh the Game list once it finishes.
  */
 export function ImportForm({ onImported }: { onImported: () => void | Promise<void> }) {
   const [username, setUsername] = useState("");
-  const [month, setMonth] = useState(thisMonth);
+  const [from, setFrom] = useState(thisMonth);
+  const [to, setTo] = useState(thisMonth);
   const [categories, setCategories] = useState<Set<TimeControlCategory>>(new Set(CATEGORIES));
   const [status, setStatus] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ImportStatus | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const [busy, setBusy] = useState(false);
 
   // Prefill from the remembered username (best-effort; a missing store is fine).
   useEffect(() => {
@@ -44,41 +56,57 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
       return next;
     });
 
-  const runImport = async (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const [year, monthNumber] = parseMonth(month);
-    setStatus("Importing…");
+    const range = { from: parseMonth(from), to: parseMonth(to) };
+
+    // The server deliberately caps nothing — rebuilding a whole history in one
+    // Import is a supported use. The risk worth catching is the typo (2004 for
+    // 2024), and it is caught here, where it is made.
+    const months = monthSpan(range.from, range.to);
+    if (months > CONFIRM_ABOVE_MONTHS && !confirm(`Cette plage couvre ${months} mois. Continuer ?`)) {
+      return;
+    }
+
+    setStatus(null);
     setResult(null);
-    setBusy(true);
     try {
-      const imported = await importGames({
-        username,
-        year,
-        month: monthNumber,
-        categories: CATEGORIES.filter((c) => categories.has(c)),
-      });
+      const final = await runImport(
+        {
+          username,
+          ...range,
+          categories: CATEGORIES.filter((c) => categories.has(c)),
+        },
+        setProgress,
+      );
       await onImported();
-      setStatus(imported.message ?? null);
-      setResult(imported);
+      setResult(final.result);
+      setStatus(final.result?.message ?? null);
       // Remember the username for next time (best-effort).
       saveSettings(username).catch(() => {});
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Import failed.");
     } finally {
-      setBusy(false);
+      setProgress(null);
     }
   };
 
+  const running = progress?.running ?? false;
+
   return (
     <>
-      <form aria-label="import" onSubmit={runImport}>
+      <form aria-label="import" onSubmit={submit}>
         <label>
           Username
           <input value={username} onChange={(e) => setUsername(e.target.value)} />
         </label>
         <label>
-          Month
-          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          Du
+          <input type="month" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label>
+          Au
+          <input type="month" value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
         <fieldset>
           <legend>Time control categories</legend>
@@ -89,10 +117,16 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
             </label>
           ))}
         </fieldset>
-        <button type="submit">Import</button>
+        <button type="submit" disabled={running}>
+          Import
+        </button>
       </form>
 
-      {busy && <progress aria-label="import progress" />}
+      {progress && (
+        <p role="status" aria-label="import progress">
+          {progress.done}/{progress.total} mois importés
+        </p>
+      )}
 
       {status && (
         <p role="status" aria-label="import status">
@@ -100,7 +134,7 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
         </p>
       )}
 
-      {!busy && result && <ImportSummary result={result} />}
+      {!running && result && <ImportSummary result={result} />}
     </>
   );
 }

@@ -2,12 +2,6 @@
 
 ## To do
 
-- **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
-  > Pas encore grillée. Aujourd'hui un import ne couvre qu'**un seul mois** (`ImportParams` côté
-  > client et serveur, `POST /api/import` : un seul appel à `fetchMonth`) — pas qu'une limite
-  > d'UI, la forme de la requête/réponse devrait changer (plage de mois ? sélection multiple ?
-  > un résumé consolidé ou par mois ?). Ce sont des questions à trancher au grilling.
-
 - **US-10**: Voir clairement qui joue Blancs/Noirs sur un échiquier, et ne pas attendre dans le vide sur "Positions dangereuses".
   > Pas encore grillée, deux préoccupations distinctes réunies ici :
   > - Aucun échiquier affiché dans l'app (Analyse, Explorateur, Positions dangereuses) ne montre
@@ -66,6 +60,33 @@
 
 ## In review
 
+- **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
+  > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
+  > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
+  > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
+  > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
+  > (confirmation UI au-delà de 24 mois). Un seul contrat d'import : le mono-mois devient une plage
+  > à bornes égales. `CONTEXT.md` : `Import` re-scopé, terme `Monthly import` ajouté.
+  > Nouvelle **ADR-0010** (revient sur une remarque de portée d'ADR-0008, annotée en conséquence).
+  > PRD : `.scratch/multi-month-import/PRD.md`. Découpée en 3 issues, implémentée sur
+  > `integration/US-9-multi-month-import` :
+  > - `01-range-import-background-job` ✅ — tracer bullet : plage + job + polling + progression en
+  >   mois + résumé consolidé.
+  > - `02-monthly-import-lines-and-fault-tolerance` ✅ — ligne par mois, un mois en échec n'interrompt
+  >   pas l'Import (bloquée par 01).
+  > - `03-range-input-guardrails` ✅ — plage inversée (400), bornage au mois courant, 404 synchrone
+  >   sur username inconnu, confirmation au-delà de 24 mois.
+  >
+  > Les 3 issues validées par leur Feature Path (fixture d'archive via `CHESSCOM_BASE_URL`), puis la
+  > **suite HP rejouée en entier contre la vraie API chess.com** : HP-01/02/03 vertes. HP-01 a été
+  > réécrit pour couvrir la plage (`2026-05 → 2026-06`, 82 parties) au lieu d'un mois unique, et
+  > asserte désormais des chiffres durs relevés sur le compte réel. Pas de 4e HP : la plage est
+  > absorbée dans le scénario d'import existant.
+  >
+  > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
+
+## Done
+
 - **US-7**: Voir mes erreurs pendant la revue d'une partie — annoter la qualité des coups (`?!`/`?`/`??`) et l'`Evaluation` sur la page **Analyse**, à partir des `Evaluation`s stockées par US-4.
   > **Différée depuis le grilling d'US-4** : surfaçage **par coup** du `Mistake` (distinct de l'agrégat `Danger position` de `/danger`). **Dépend d'US-4** (table `evaluations` ; aucun calcul moteur supplémentaire, réutilise les évals stockées). Inclut une **option d'activation/désactivation** de la visualisation, **activée par défaut**.
   > Grillée (pas de nouvelle ADR — conséquence directe d'ADR-0009 ; `CONTEXT.md` : terme `Evaluation`
@@ -88,8 +109,8 @@
   > session : FP vérifiées via le contrat API réel contre le serveur en direct + les tests
   > composant (jsdom), pas de confirmation visuelle navigateur (idem 01).
   >
-  > **En revue** — PR #12 `integration → develop`, ouverte le 2026-08-11 (le merge reste la
-  > décision humaine). Suite **HP jouée pour de vrai, UI-first** cette fois (Chrome système piloté
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #12, mergée le 2026-08-12 ;
+  > conflit `BACKLOG.md` avec l'ajout d'US-8/9/10 résolu avant merge). Suite **HP jouée pour de vrai, UI-first** cette fois (Chrome système piloté
   > en CDP, vraie API chess.com, vrai Stockfish WASM, DB repartie de zéro, `DudulSmash` 2026/06) :
   > HP-02 et HP-03 vertes, **HP-01 rouge à l'étape 5** — une Game non analysée n'affichait plus
   > aucun plateau, régression d'`03-analyze-from-analyse-page` **corrigée sur la branche**
@@ -98,13 +119,8 @@
   > d'analyse figée à `0/1`, bouton Import non désactivé pendant l'import, `/danger` sans garde
   > d'échantillon minimal). Cap de profondeur d'HP-02 non exerçable sur 54 parties réelles.
   >
-  > ⚠️ **PR #12 en conflit de merge** (`mergeable=CONFLICTING`) : `develop` a avancé sur
-  > **`BACKLOG.md`** (US-8/9/10 ajoutées par la PR #8), seul fichier en conflit. À résoudre en
-  > mergeant `develop` dans la branche d'intégration avant la revue.
-  >
   > HP budget à 3/3 : greffe d'US-7 sur l'étape 8 d'HP-01 proposée dans la PR plutôt qu'un 4e HP.
-
-## Done
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-4**: Identifier mes positions dangereuses par analyse moteur (Stockfish — Mistake et Danger position).
   > Grillée (**ADR-0008** : moteur dans le Node local derrière une interface `Engine` — WASM

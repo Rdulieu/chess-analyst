@@ -9,6 +9,16 @@ const result: ImportResult = {
   alreadyPresent: 1,
   byCategory: { bullet: 1, blitz: 2, rapid: 1, daily: 0 },
   results: { win: 2, draw: 1, loss: 1 },
+  months: [
+    { month: { year: 2024, month: 1 }, imported: 4, alreadyPresent: 1 },
+    { month: { year: 2024, month: 2 }, imported: 0, alreadyPresent: 0 },
+    {
+      month: { year: 2024, month: 3 },
+      imported: 0,
+      alreadyPresent: 0,
+      failure: "chess.com request failed (429)",
+    },
+  ],
 };
 
 describe("ImportSummary", () => {
@@ -39,5 +49,29 @@ describe("ImportSummary", () => {
     expect(screen.getByLabelText(/^2 wins$/i)).toBeTruthy();
     expect(screen.getByLabelText(/^1 draw$/i)).toBeTruthy();
     expect(screen.getByLabelText(/^1 loss$/i)).toBeTruthy();
+  });
+
+  it("lists one line per month of the range, in order, after the consolidated totals", () => {
+    render(<ImportSummary result={result} />);
+
+    const lines = screen.getAllByRole("listitem", { name: /2024-\d\d/ });
+    expect(lines.map((li) => li.textContent)).toEqual([
+      expect.stringContaining("2024-01"),
+      expect.stringContaining("2024-02"),
+      expect.stringContaining("2024-03"),
+    ]);
+    expect(lines[0].textContent).toMatch(/4/); // what January brought in
+  });
+
+  it("marks a month chess.com could not answer for, distinguishably from an inactive month", () => {
+    render(<ImportSummary result={result} />);
+
+    const [, inactive, failed] = screen.getAllByRole("listitem", { name: /2024-\d\d/ });
+
+    // The failure is carried by words, not by colour alone — the client has no
+    // stylesheet, so a tint could not be the only cue.
+    expect(failed.textContent).toMatch(/échec|erreur|failed/i);
+    expect(failed.textContent).toMatch(/429/);
+    expect(inactive.textContent).not.toMatch(/échec|erreur|failed/i);
   });
 });
