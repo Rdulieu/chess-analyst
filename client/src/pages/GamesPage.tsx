@@ -37,8 +37,10 @@ export function GamesPage() {
     });
 
   const analyze = async () => {
+    // The final progress is deliberately *not* discarded: the Player must be
+    // left with the figure the pass reached (US-8). Issue 02 turns it into an
+    // acknowledgeable summary.
     await runAnalysis([...selected], setStatus);
-    setStatus(null);
     setSelected(new Set());
     await refresh();
   };

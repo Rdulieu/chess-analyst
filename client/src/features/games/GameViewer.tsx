@@ -28,8 +28,8 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
   }, [game.id, game.analyzed]);
 
   const analyze = async () => {
+    // Keep the final progress on screen — see GamesPage (US-8).
     await runAnalysis([game.id], setStatus);
-    setStatus(null);
     await onAnalyzed?.();
   };
 
