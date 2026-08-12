@@ -39,7 +39,7 @@ describe("Board", () => {
     // After 1. e4 the pawn has moved from e2 to e4.
     expect(pieceAt(container, "e2")).toBeNull();
     expect(pieceAt(container, "e4")).toBe("wP");
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("e4");
+    expect(screen.getByLabelText("current move").textContent).toBe("e4");
   });
 
   it("reverts exactly one Move on Previous (not back to the start)", async () => {
@@ -51,7 +51,7 @@ describe("Board", () => {
     await user.click(next); // 1... e5
     await user.click(screen.getByRole("button", { name: /previous/i })); // back to 1. e4
 
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("e4");
+    expect(screen.getByLabelText("current move").textContent).toBe("e4");
     expect(pieceAt(container, "e4")).toBe("wP");
     expect(pieceAt(container, "e5")).toBeNull(); // black has not replied yet
   });
@@ -71,7 +71,7 @@ describe("Board", () => {
 
     expect(next.disabled).toBe(true);
     expect(prev.disabled).toBe(false);
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toMatch(/^Rd8/);
+    expect(screen.getByLabelText("current move").textContent).toMatch(/^Rd8/);
   });
 
   it("jumps directly to the Position after a selected Move, without stepping through", async () => {
@@ -81,7 +81,7 @@ describe("Board", () => {
     // From the start, jump straight to White's 12th Move (queenside castling).
     await user.click(screen.getByRole("button", { name: "O-O-O" }));
 
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("O-O-O");
+    expect(screen.getByLabelText("current move").textContent).toBe("O-O-O");
     expect(pieceAt(container, "c1")).toBe("wK");
     expect(pieceAt(container, "d1")).toBe("wR");
     expect(pieceAt(container, "e1")).toBeNull();
@@ -94,7 +94,7 @@ describe("Board", () => {
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("Rd8");
+    expect(screen.getByLabelText("current move").textContent).toBe("Rd8");
     expect(pieceAt(container, "d8")).toBe("bR");
   });
 
@@ -124,11 +124,11 @@ describe("Board", () => {
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
 
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toContain("+0.3");
+    expect(screen.getByLabelText("current move").textContent).toContain("+0.3");
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toContain("-4.0");
+    expect(screen.getByLabelText("current move").textContent).toContain("-4.0");
   });
 
   it("renders a winning-chances balance bar for the current Position, updating on navigation", async () => {
@@ -193,7 +193,7 @@ describe("Board", () => {
 
     await user.click(screen.getByRole("button", { name: "axb8=Q" }));
 
-    expect(screen.getByRole("status", { name: "current move" }).textContent).toBe("axb8=Q");
+    expect(screen.getByLabelText("current move").textContent).toBe("axb8=Q");
     expect(pieceAt(container, "b8")).toBe("wQ");
   });
 });

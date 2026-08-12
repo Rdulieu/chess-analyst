@@ -18,7 +18,11 @@ describe("AnalysisPassStatus — how the pass ended", () => {
   it("confirms a completed pass with both figures", () => {
     render(<AnalysisPassStatus status={pass()} />);
 
-    expect(screen.getByText(/2 parties · 12 positions évaluées/i)).toBeTruthy();
+    // Labelled as the *last pass*, so it cannot be taken for the history count
+    // sitting a few pixels above.
+    expect(screen.getByText(/dernière analyse/i).textContent).toMatch(
+      /2 parties, 12 positions évaluées/i,
+    );
   });
 
   it("says a pass was interrupted, showing what it did get through", () => {

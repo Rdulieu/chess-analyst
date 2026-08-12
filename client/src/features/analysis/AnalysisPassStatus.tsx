@@ -53,7 +53,11 @@ export function AnalysisPassStatus({
       ? `Échec de l'analyse après ${status.done}/${status.total} positions évaluées — ${status.error ?? "cause inconnue"}`
       : status.outcome === "interrupted"
         ? `Analyse interrompue à ${status.done}/${status.total} positions évaluées — relancez-la pour reprendre`
-        : `${games} · ${status.done} positions évaluées ✓`;
+        : // Labelled: this figure sits next to the history count ("Historique :
+          // N parties analysées sur M"), and unlabelled the two read as one
+          // correcting the other. The failed and interrupted wordings already
+          // name the pass, so only the completed one needed it.
+          `Dernière analyse : ${games}, ${status.done} positions évaluées ✓`;
 
   return (
     <>

@@ -44,6 +44,23 @@ describe("GameViewer", () => {
     expect(items[0].textContent).not.toContain("-4.0");
   });
 
+  it("keeps a single live region of ours: the pass progress, not the move readout", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("no fetch expected"); }));
+
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    // Stepping through moves answers the Player's own click and is already on
+    // screen; announcing it competes for speech with a pass that runs for
+    // minutes. It keeps its name and its text, it just stops being live.
+    // react-chessboard emits its own unlabelled live region for drag-and-drop —
+    // third-party, not ours to remove — so we assert on the ones we own.
+    const ours = [...container.querySelectorAll('[role="status"]')].filter((el) =>
+      el.hasAttribute("aria-label"),
+    );
+    expect(ours).toHaveLength(0); // no pass running here, and the move readout is no longer live
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+  });
+
   it("does not fetch annotations, and shows no toggle, for a not-yet-analyzed Game", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

@@ -61,7 +61,15 @@ export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnn
           Next
         </button>
       </div>
-      <p role="status" aria-label="current move">
+      {/*
+        Deliberately **not** a live region. Stepping through the moves is the
+        direct answer to the Player's own click and is already on screen, so
+        announcing it only competes for speech with the `Analysis pass` readout —
+        which reports something the Player cannot otherwise observe, over minutes
+        (US-8). It keeps its accessible name and its text: still queryable, still
+        readable, just no longer interrupting.
+      */}
+      <p aria-label="current move">
         {currentMove}
         {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
       </p>
