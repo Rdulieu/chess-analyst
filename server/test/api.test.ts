@@ -5,36 +5,26 @@ import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { recordMoveHabits } from "../src/move-habits/precompute";
-import { MORPHY_GAME } from "./fixtures";
-import type { ChessComClient, ChessComGame } from "../src/chesscom";
+import { MORPHY_GAME, chessComGame, fakeClient } from "./fixtures";
+import type { ChessComClient } from "../src/chesscom";
 
 /** 4-field FEN of the standard starting Position. */
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
-function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
-  return {
-    url: "https://www.chess.com/game/live/100",
-    pgn: "1. e4 e5",
-    time_class: "blitz",
-    rules: "chess",
-    end_time: 1704067200,
-    white: { username: "me", result: "win" },
-    black: { username: "opp", result: "resigned" },
-    ...over,
-  };
-}
-
-function fakeClient(gamesForMonth: ChessComGame[], exists = true): ChessComClient {
-  return {
-    playerExists: async () => exists,
-    fetchMonth: async () => gamesForMonth,
-  };
+/** Polls the Import status until the pass has finished, then returns its body. */
+async function importDone(app: Parameters<typeof request>[0]) {
+  for (let i = 0; i < 100; i++) {
+    const res = await request(app).get("/api/import/status");
+    if (!res.body.running) return res.body;
+    await new Promise((r) => setTimeout(r, 5));
+  }
+  throw new Error("Import never finished");
 }
 
 function appWithGame() {
   const { db } = openDb(":memory:");
   db.insert(games).values(MORPHY_GAME).run();
-  return createApp(db, fakeClient([]));
+  return createApp(db, fakeClient({}));
 }
 
 describe("games API", () => {
@@ -77,7 +67,7 @@ describe("games API", () => {
 
   it("GET /api/games returns an empty list on a fresh database (no fixture seeded)", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/games");
 
@@ -127,7 +117,7 @@ describe("games API", () => {
         { gameId: game.id, ply: 2, cp: 0, mate: null },
       ])
       .run();
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get(`/api/games/${game.id}/annotations`);
 
@@ -155,7 +145,7 @@ describe("analysis API", () => {
         })
         .run();
     }
-    return createApp(db, fakeClient([]), createFixtureEngine());
+    return createApp(db, fakeClient({}), createFixtureEngine());
   }
 
   /** Polls the status endpoint until the pass reports it is no longer running. */
@@ -231,7 +221,7 @@ describe("openings API", () => {
         openingGame({ eco: "C50", openingName: "Italian Game", result: "win" }),
       ])
       .run();
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/openings");
 
@@ -252,7 +242,7 @@ describe("openings API", () => {
 
   it("GET /api/openings returns { openings: [] } for an empty history", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/openings");
 
@@ -282,7 +272,7 @@ describe("danger API", () => {
         { gameId: 1, ply: 1, cp: 0 },
       ])
       .run();
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/danger");
 
@@ -297,7 +287,7 @@ describe("danger API", () => {
 
   it("GET /api/danger returns { dangers: [] } when no Game has been analyzed", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/danger");
 
@@ -307,42 +297,60 @@ describe("danger API", () => {
 });
 
 describe("import API", () => {
-  it("POST /api/import imports the month and the Games then show up in GET /api/games", async () => {
+  it("POST /api/import accepts a month range, runs it in the background, and the Games then show up in GET /api/games", async () => {
     const { db } = openDb(":memory:");
-    const client = fakeClient([
-      chessComGame({ url: "https://www.chess.com/game/live/1" }),
-      chessComGame({ url: "https://www.chess.com/game/live/2", time_class: "blitz" }),
-    ]);
+    const client = fakeClient({
+      "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/1" })],
+      "2024-03": [chessComGame({ url: "https://www.chess.com/game/live/2" })],
+    });
     const app = createApp(db, client);
 
     const res = await request(app)
       .post("/api/import")
-      .send({ username: "me", year: 2024, month: 1, categories: ["blitz"] });
+      .send({
+        username: "me",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 3 },
+        categories: ["blitz"],
+      });
 
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ imported: 2, alreadyPresent: 0 });
+    // 202: the range is under way, the summary is not there yet (ADR-0010).
+    expect(res.status).toBe(202);
+    expect(res.body).toMatchObject({ running: true, total: 3, done: 0, result: null });
+
+    const final = await importDone(app);
+    expect(final).toMatchObject({ running: false, total: 3, done: 3 });
+    expect(final.result).toMatchObject({ imported: 2, alreadyPresent: 0 });
 
     const list = await request(app).get("/api/games");
     expect(list.body).toHaveLength(2);
     expect(list.body[0]).toMatchObject({ playerColor: "white", result: "win" });
   });
 
-  it("POST /api/import returns an error and writes nothing for an unknown username", async () => {
+  it("POST /api/import returns an error and starts nothing for an unknown username", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([chessComGame()], false));
+    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }, false));
 
     const res = await request(app)
       .post("/api/import")
-      .send({ username: "ghost", year: 2024, month: 1, categories: ["blitz"] });
+      .send({
+        username: "ghost",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["blitz"],
+      });
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/username/i);
 
+    // No job was started, so nothing was imported and the status is idle.
+    const status = await request(app).get("/api/import/status");
+    expect(status.body.running).toBe(false);
     const list = await request(app).get("/api/games");
     expect(list.body).toEqual([]);
   });
 
-  it("returns a 502 (and stays responsive) when the chess.com request fails", async () => {
+  it("stays responsive when the chess.com request fails", async () => {
     const { db } = openDb(":memory:");
     const failing: ChessComClient = {
       playerExists: async () => true,
@@ -354,19 +362,45 @@ describe("import API", () => {
 
     const res = await request(app)
       .post("/api/import")
-      .send({ username: "me", year: 2024, month: 1, categories: ["blitz"] });
+      .send({
+        username: "me",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["blitz"],
+      });
 
-    expect(res.status).toBe(502);
-    expect(res.body.error).toMatch(/chess\.com|import/i);
+    expect(res.status).toBe(202);
+    const final = await importDone(app);
+    expect(final.running).toBe(false);
 
     // The relay must not have crashed: a later request still works.
     const list = await request(app).get("/api/games");
     expect(list.status).toBe(200);
   });
 
+  it("POST /api/import reports zero with a message covering the whole range", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient({}));
+
+    await request(app)
+      .post("/api/import")
+      .send({
+        username: "me",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 3 },
+        categories: ["blitz"],
+      });
+
+    const final = await importDone(app);
+    expect(final.result).toMatchObject({ imported: 0, alreadyPresent: 0 });
+    expect(final.result.message).toMatch(/no games found/i);
+  });
+});
+
+describe("settings API", () => {
   it("GET /api/settings then PUT then GET round-trips the Player's username", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const initial = await request(app).get("/api/settings");
     expect(initial.status).toBe(200);
@@ -377,19 +411,6 @@ describe("import API", () => {
 
     const after = await request(app).get("/api/settings");
     expect(after.body.username).toBe("magnus");
-  });
-
-  it("POST /api/import reports zero with a clear message for an empty month", async () => {
-    const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([]));
-
-    const res = await request(app)
-      .post("/api/import")
-      .send({ username: "me", year: 2024, month: 3, categories: ["blitz"] });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ imported: 0, alreadyPresent: 0 });
-    expect(res.body.message).toMatch(/no games found/i);
   });
 });
 
@@ -416,7 +437,7 @@ describe("move habits API", () => {
         .get();
       recordMoveHabits(db, g);
     }
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app)
       .get("/api/move-habits")
@@ -445,7 +466,7 @@ describe("stats API", () => {
     const { db } = openDb(":memory:");
     db.insert(games).values(game({ result: "win", timeControlCategory: "blitz", playerColor: "white" })).run();
     db.insert(games).values(game({ result: "loss", timeControlCategory: "bullet", playerColor: "black" })).run();
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/stats");
 
@@ -458,7 +479,7 @@ describe("stats API", () => {
 
   it("GET /api/stats returns zeros with a null rate on an empty history", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient([]));
+    const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/stats");
 

@@ -1,30 +1,37 @@
 import { Router } from "express";
-import type { Db } from "../db";
 import type { ChessComClient } from "../chesscom";
-import { importMonth, UnknownUsernameError } from "../import";
+import type { ImportJob } from "../import";
 
-/** Import route (mounted at /api/import): runs one month's Import via the relay. */
-export function createImportRouter(db: Db, chessCom: ChessComClient): Router {
+/**
+ * Import routes (mounted at /api/import). A range Import is long-running, so
+ * POST only *starts* it and answers 202 with the initial status; the client
+ * polls GET /status for progress counted in months and reads the consolidated
+ * summary once it stops running (ADR-0010).
+ */
+export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Router {
   const router = Router();
 
   router.post("/", async (req, res) => {
-    const { username, year, month, categories } = req.body ?? {};
+    const { username, from, to, categories } = req.body ?? {};
+
+    // Checked once, here, before anything starts: an unknown username must fail
+    // synchronously, and the answer cannot differ from one month to the next.
     try {
-      const result = await importMonth(db, chessCom, { username, year, month, categories });
-      res.json(result);
-    } catch (err) {
-      if (err instanceof UnknownUsernameError) {
-        res.status(404).json({ error: err.message });
+      if (!(await chessCom.playerExists(username))) {
+        res.status(404).json({ error: `Unknown chess.com username: ${username}` });
         return;
       }
-      // Any other failure is upstream (chess.com unreachable / rate-limited /
-      // 5xx). Respond with 502 rather than rethrowing: an async throw here is an
-      // unhandled rejection that would take the whole relay down.
+    } catch (err) {
       const message = err instanceof Error ? err.message : "Import failed";
       console.error("Import failed:", message);
       res.status(502).json({ error: `Import from chess.com failed: ${message}` });
+      return;
     }
+
+    res.status(202).json(job.start({ username, from, to, categories }));
   });
+
+  router.get("/status", (_req, res) => res.json(job.status()));
 
   return router;
 }

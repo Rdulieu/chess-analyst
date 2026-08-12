@@ -4,7 +4,7 @@ import {
   fetchGameAnnotations,
   fetchMoveHabits,
   fetchStats,
-  importGames,
+  startImport,
   getSettings,
   saveSettings,
 } from "../src/api";
@@ -14,34 +14,40 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("importGames", () => {
-  it("POSTs the import scope to /api/import and returns the result", async () => {
+describe("startImport", () => {
+  it("POSTs the Import's month range to /api/import and returns the initial status", async () => {
     const fetchMock = vi.fn<(url: string | URL, init?: RequestInit) => Promise<Response>>(
       async () =>
-        ({ ok: true, status: 200, json: async () => ({ imported: 3, alreadyPresent: 1 }) }) as Response,
+        ({
+          ok: true,
+          status: 202,
+          json: async () => ({ running: true, total: 3, done: 0, result: null }),
+        }) as Response,
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await importGames({
+    const params = {
       username: "me",
-      year: 2024,
-      month: 1,
-      categories: ["blitz", "rapid"],
-    });
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 3 },
+      categories: ["blitz", "rapid"] as const,
+    };
+    const status = await startImport({ ...params, categories: [...params.categories] });
 
-    expect(result).toEqual({ imported: 3, alreadyPresent: 1 });
+    // 202 means "under way", not "done" — the summary arrives through polling.
+    expect(status).toEqual({ running: true, total: 3, done: 0, result: null });
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/import");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({
       username: "me",
-      year: 2024,
-      month: 1,
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 3 },
       categories: ["blitz", "rapid"],
     });
   });
 
-  it("throws with the server error message when the import fails", async () => {
+  it("throws with the server error message when the Import cannot be started", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -55,7 +61,12 @@ describe("importGames", () => {
     );
 
     await expect(
-      importGames({ username: "ghost", year: 2024, month: 1, categories: ["blitz"] }),
+      startImport({
+        username: "ghost",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["blitz"],
+      }),
     ).rejects.toThrow(/ghost/);
   });
 });
