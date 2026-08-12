@@ -1,6 +1,6 @@
 # 02 — Ligne par mois et tolérance à l'échec d'un mois
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
@@ -63,3 +63,36 @@ Vérifier par l'UI d'abord. Archive de fixture via `CHESSCOM_BASE_URL`, avec un 
 ## Blocked by
 
 - `.scratch/multi-month-import/issues/01-range-import-background-job.md`
+
+## Comments
+
+**2026-08-12 — implémentée et fusionnée dans `integration/US-9-multi-month-import`.**
+
+9 cycles TDD, 209 tests verts (114 serveur, 95 client), build et lint propres.
+
+Décisions prises en cours de route :
+- `ImportResult` s'est **scindé** : `ImportFigures` (les chiffres, un mois ou une plage) et
+  `ImportResult extends ImportFigures` (+ `months`). `importMonth` rendait le même type que
+  `importRange`, ce qui devenait faux dès que la plage porte des lignes qu'un mois seul n'a pas ;
+  l'alternative aurait été de rendre `months` optionnel, c'est-à-dire de mentir sur la forme.
+- Le résumé devient **vivant** : `result` est renseigné dès le démarrage et affiné mois par mois,
+  `running` disant seul s'il est définitif. Cela referme un écart de l'issue 01 face au PRD
+  (« le résumé se remplit au fil de l'eau »). Les deux assertions `result: null` d'01 ont été
+  mises à jour.
+- `importRange` passe un **instantané détaché** à chaque mois : le job en garde une référence
+  dans son statut, et le muter sous ses pieds produirait des lectures incohérentes selon le
+  moment du polling.
+- Un mois en échec porte `échec : <raison>` **en toutes lettres** en plus du style inline — le
+  client n'a pas de feuille de style, la couleur seule ne peut pas être le repère.
+
+**Feature Path : verte, 5/5.** Archive de fixture à quatre mois (ordinaire / inactif / en échec
+HTTP 500 / après l'échec) avec un `/_recover` pour l'étape de rejeu.
+Premier passage : `2024-03 — échec : chess.com request failed (500)`, mais **2024-04 couvert quand
+même** — la passe ne s'interrompt plus ; totaux `3 imported`, le mois en échec non agrégé.
+Rejeu : seul mars est rattrapé (`3 importées`), les autres mois décomptés déjà présents, 6 parties
+au total. Distinction échec / inactivité lisible sans couleur. Aucune erreur console.
+
+Finding non bloquant reporté : la ligne d'échec expose le message amont brut
+(`chess.com request failed (500)`) — du jargon HTTP présenté au Player. Une formulation métier
+serait plus juste, mais l'issue demandait « la raison remontée de l'appel amont » : hors périmètre
+décidé, à arbitrer si ça gêne.
