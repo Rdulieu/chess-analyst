@@ -1,14 +1,42 @@
+import { inArray, count, desc, eq } from "drizzle-orm";
 import type { Db } from "../db";
 import type { Engine } from "../engine/types";
-import type { Game } from "../db/schema";
+import { analysisPasses, evaluations, type Game } from "../db/schema";
 import { getGame } from "../repository";
+import { gamePositions } from "../chess/positions";
 import { analyzeGame } from "./service";
 
-/** Determinate progress of the analysis pass (ADR-0009, US-4). */
+/**
+ * Determinate progress of the `Analysis pass` (ADR-0009, US-4), counted in
+ * **Positions evaluated** (US-8): a pass evaluates every Position of every Game
+ * it covers — the initial one included — so counting whole Games left a
+ * single-Game pass reading `0/1` for its entire multi-minute run.
+ */
 export interface AnalysisStatus {
   running: boolean;
+  /** Positions the pass set out to evaluate. */
   total: number;
+  /** Positions evaluated so far — derived from the stored Evaluations. */
   done: number;
+  /** Games the pass covers, for the Player-facing summary line. */
+  games: number;
+}
+
+/**
+ * Positions evaluated so far among `gameIds` — **derived**, never a stored
+ * counter (ADR-0010): the `evaluations` rows *are* the progress, so there is no
+ * second figure that can drift when the process dies between an insert and an
+ * increment.
+ */
+function evaluatedPositions(db: Db, gameIds: number[]): number {
+  if (gameIds.length === 0) return 0;
+  return (
+    db
+      .select({ n: count() })
+      .from(evaluations)
+      .where(inArray(evaluations.gameId, gameIds))
+      .get()?.n ?? 0
+  );
 }
 
 export interface AnalysisJob {
@@ -32,30 +60,54 @@ export interface AnalysisJob {
  * for determinate progress that advances to `done === total`, then `running:false`.
  */
 export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
-  let status: AnalysisStatus = { running: false, total: 0, done: 0 };
+  let running = false;
   let current: Promise<void> = Promise.resolve();
 
+  /** The pass this job reports on: the most recent row, or none yet. */
+  const lastPass = () =>
+    db.select().from(analysisPasses).orderBy(desc(analysisPasses.id)).limit(1).get();
+
+  const snapshot = (): AnalysisStatus => {
+    const pass = lastPass();
+    if (!pass) return { running: false, total: 0, done: 0, games: 0 };
+    return {
+      running,
+      total: pass.total,
+      done: evaluatedPositions(db, pass.gameIds),
+      games: pass.gameIds.length,
+    };
+  };
+
   return {
-    status: () => ({ ...status }),
+    status: snapshot,
 
     start(gameIds) {
-      if (status.running) return { ...status };
+      if (running) return snapshot();
 
       const pending = gameIds
         .map((id) => getGame(db, id))
         .filter((game): game is Game => game !== undefined && !game.analyzed);
 
-      if (pending.length === 0) {
-        status = { running: false, total: 0, done: 0 };
-        return { ...status };
-      }
+      // Nothing to analyze: no pass is opened at all — an empty pass is not a
+      // pass, and must not overwrite the one the Player last ran.
+      if (pending.length === 0) return snapshot();
 
-      status = { running: true, total: pending.length, done: 0 };
+      const pass = db
+        .insert(analysisPasses)
+        .values({
+          gameIds: pending.map((game) => game.id),
+          // Every Position of every pending Game — the initial Position
+          // included, which is what the engine actually evaluates.
+          total: pending.reduce((sum, game) => sum + gamePositions(game.pgn).length, 0),
+          startedAt: new Date().toISOString(),
+        })
+        .returning()
+        .get();
+      running = true;
       current = (async () => {
         try {
           for (const game of pending) {
             await analyzeGame(db, engine, game);
-            status = { ...status, done: status.done + 1 };
           }
         } catch (err) {
           // A backend failure (e.g. the WASM/native engine not being wired yet)
@@ -63,10 +115,14 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
           // route does for upstream failures.
           console.error("Analysis pass failed:", err instanceof Error ? err.message : err);
         } finally {
-          status = { ...status, running: false };
+          running = false;
+          db.update(analysisPasses)
+            .set({ endedAt: new Date().toISOString() })
+            .where(eq(analysisPasses.id, pass.id))
+            .run();
         }
       })();
-      return { ...status };
+      return snapshot();
     },
 
     idle: () => current,

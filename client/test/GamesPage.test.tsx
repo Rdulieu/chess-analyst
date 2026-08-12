@@ -57,6 +57,38 @@ describe("GamesPage — analysis pass", () => {
     expect(statusPolls).toBeGreaterThan(0);
   });
 
+  it("reads the progress in Positions evaluated, not in Games", async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url === "/api/games") return json([{ ...GAME }]);
+        if (url === "/api/analyze" && opts?.method === "POST") {
+          return json({ running: true, total: 4, done: 1, games: 1 }, 202);
+        }
+        if (url === "/api/analyze/status") {
+          await held; // hold the pass open so the running readout can be observed
+          return json({ running: false, total: 4, done: 4, games: 1 });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(await screen.findByLabelText(/sélectionner la partie vs opp/i));
+    await userEvent.click(screen.getByRole("button", { name: /analyser la sélection/i }));
+
+    expect(await screen.findByText(/1\/4 positions évaluées/i)).toBeTruthy();
+    release();
+  });
+
   it("disables 'Analyser la sélection' until at least one Game is selected", async () => {
     vi.stubGlobal(
       "fetch",

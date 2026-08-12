@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Board } from "../../components/Board";
 import { fetchGameAnnotations } from "../../api";
 import { runAnalysis } from "../analysis/runAnalysis";
+import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
 import type { AnalysisStatus, Game, MoveAnnotation } from "../../types";
 
 /**
@@ -49,11 +50,7 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
           <button type="button" onClick={analyze} disabled={status?.running ?? false}>
             Analyser cette partie
           </button>
-          {status && (
-            <p role="status" aria-label="progression de l'analyse">
-              {status.done}/{status.total} parties analysées
-            </p>
-          )}
+          <AnalysisPassStatus status={status} />
         </div>
       )}
       <Board pgn={game.pgn} annotations={showAnnotations ? (annotations ?? undefined) : undefined} />

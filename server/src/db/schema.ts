@@ -68,6 +68,26 @@ export type Evaluation = typeof evaluations.$inferSelect;
 export type NewEvaluation = typeof evaluations.$inferInsert;
 
 /**
+ * One row per `Analysis pass` (ADR-0010, US-8). Records what a pass **is** — the
+ * Games it covers (`game_ids`, a JSON array), how many Positions it set out to
+ * evaluate (`total`), and when it started and ended — so the Player's readout
+ * survives a page reload and a restart, instead of dying with the process.
+ *
+ * Deliberately carries **no progress column**: `done` is derived by counting the
+ * pass's `evaluations` rows. Those rows *are* the progress, and a second figure
+ * would drift the moment the process died between an insert and an increment.
+ */
+export const analysisPasses = sqliteTable("analysis_passes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  gameIds: text("game_ids", { mode: "json" }).notNull().$type<number[]>(),
+  total: integer("total").notNull(),
+  startedAt: text("started_at").notNull(),
+  endedAt: text("ended_at"),
+});
+
+export type AnalysisPass = typeof analysisPasses.$inferSelect;
+
+/**
  * Pre-aggregated `Move habit` counters (ADR-0005), keyed by the Position a Move
  * was played from (`fen`: the 4-field FEN — placement, active colour, castling,
  * en passant — so transpositions merge; see CONTEXT.md), the side the Player
