@@ -7,6 +7,6 @@ export {
   type MonthlyImport,
 } from "./service";
 export { importRange, type ImportRangeParams } from "./range";
-export { monthsInRange, type MonthRef } from "./months";
+export { monthsInRange, normalizeRange, type MonthRef } from "./months";
 export { createImportJob, type ImportJob, type ImportStatus } from "./job";
 export { UnknownUsernameError } from "./errors";

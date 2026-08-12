@@ -77,4 +77,53 @@ describe("ImportForm", () => {
 
     await screen.findByLabelText(/import summary/i);
   });
+
+  /** Types a range into the form, both bounds. */
+  async function chooseRange(from: string, to: string) {
+    await userEvent.type(await screen.findByLabelText(/username/i), "me");
+    for (const [label, value] of [[/^du$/i, from], [/^au$/i, to]] as const) {
+      await userEvent.clear(screen.getByLabelText(label));
+      await userEvent.type(screen.getByLabelText(label), value);
+    }
+  }
+
+  it("asks for confirmation before starting a range longer than 24 months", async () => {
+    const posted = stubRelay([{ running: false, total: 36, done: 36, result: emptyResult }], 36);
+    const confirm = vi.fn((message: string) => Boolean(message));
+    vi.stubGlobal("confirm", confirm);
+    render(<ImportForm onImported={() => {}} />);
+
+    await chooseRange("2021-01", "2023-12"); // 36 months
+    await userEvent.click(screen.getByRole("button", { name: /import/i }));
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm.mock.calls[0][0]).toMatch(/36/);
+    await waitFor(() => expect(posted).toHaveLength(1)); // confirmed → it runs
+  });
+
+  it("starts nothing and keeps the entry intact when the Player declines", async () => {
+    const posted = stubRelay([]);
+    vi.stubGlobal("confirm", vi.fn(() => false));
+    render(<ImportForm onImported={() => {}} />);
+
+    await chooseRange("2021-01", "2023-12");
+    await userEvent.click(screen.getByRole("button", { name: /import/i }));
+
+    expect(posted).toHaveLength(0);
+    expect((screen.getByLabelText(/^du$/i) as HTMLInputElement).value).toBe("2021-01");
+    expect((screen.getByLabelText(/^au$/i) as HTMLInputElement).value).toBe("2023-12");
+  });
+
+  it("does not ask for confirmation on a range of 24 months or fewer", async () => {
+    const posted = stubRelay([{ running: false, total: 24, done: 24, result: emptyResult }], 24);
+    const confirm = vi.fn((message: string) => Boolean(message));
+    vi.stubGlobal("confirm", confirm);
+    render(<ImportForm onImported={() => {}} />);
+
+    await chooseRange("2022-01", "2023-12"); // exactly 24 months
+    await userEvent.click(screen.getByRole("button", { name: /import/i }));
+
+    expect(confirm).not.toHaveBeenCalled();
+    await waitFor(() => expect(posted).toHaveLength(1));
+  });
 });
