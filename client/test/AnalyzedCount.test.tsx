@@ -28,6 +28,8 @@ describe("AnalyzedCount", () => {
       />,
     );
 
-    expect(screen.getByText(/3 parties · 2 analysées/i)).toBeTruthy();
+    // Labelled, so it cannot be read as the last pass's figure sitting just
+    // below it — the two used to share one shape.
+    expect(screen.getByText(/historique/i).textContent).toMatch(/2 parties analysées sur 3/i);
   });
 });

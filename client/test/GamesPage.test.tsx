@@ -55,7 +55,7 @@ describe("GamesPage — analysis pass", () => {
     // The list refreshes once the pass completes and the Game flips to analyzed,
     // and the global count follows along with it.
     expect(await screen.findByLabelText(/analysée/i)).toBeTruthy();
-    expect(await screen.findByText(/1 partie · 1 analysée/i)).toBeTruthy();
+    expect(await screen.findByText(/historique : 1 partie analysée sur 1/i)).toBeTruthy();
     expect(statusPolls).toBeGreaterThan(0);
   });
 
@@ -116,7 +116,7 @@ describe("GamesPage — analysis pass", () => {
     await userEvent.click(screen.getByRole("button", { name: /analyser la sélection/i }));
 
     // The Player must be left with the completed figure, not an empty page.
-    expect(await screen.findByText(/1 partie · 4 positions évaluées/i)).toBeTruthy();
+    expect(await screen.findByText(/dernière analyse : 1 partie, 4 positions évaluées/i)).toBeTruthy();
   });
 
   it("sums up the finished pass in Games and Positions", async () => {
@@ -146,7 +146,7 @@ describe("GamesPage — analysis pass", () => {
     await userEvent.click(await screen.findByLabelText(/sélectionner la partie vs opp/i));
     await userEvent.click(screen.getByRole("button", { name: /analyser la sélection/i }));
 
-    expect(await screen.findByText(/3 parties · 312 positions évaluées/i)).toBeTruthy();
+    expect(await screen.findByText(/dernière analyse : 3 parties, 312 positions évaluées/i)).toBeTruthy();
   });
 
   it("shows a finished, unacknowledged pass on arrival and lets the Player dismiss it", async () => {
@@ -173,7 +173,7 @@ describe("GamesPage — analysis pass", () => {
     );
 
     // Nobody started a pass in this page's lifetime: it is the persisted one.
-    const summary = await screen.findByText(/3 parties · 312 positions évaluées/i);
+    const summary = await screen.findByText(/dernière analyse : 3 parties, 312 positions évaluées/i);
     expect(summary).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: /fermer/i }));
@@ -263,7 +263,7 @@ describe("GamesPage — analysis pass", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/3 parties · 1 analysée/i)).toBeTruthy();
+    expect(await screen.findByText(/historique : 1 partie analysée sur 3/i)).toBeTruthy();
   });
 
   it("shows no count at all on an empty history", async () => {
