@@ -2,14 +2,6 @@
 
 ## To do
 
-- **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
-  > Pas encore grillée. Un indicateur de progression et une coche "analysée" existent déjà
-  > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
-  > confirmation — incertitude sur le fait que ça se soit bien passé. La coche "analysée" actuelle
-  > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
-  > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
-  > forme/visibilité.
-
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
   > Pas encore grillée. Aujourd'hui un import ne couvre qu'**un seul mois** (`ImportParams` côté
   > client et serveur, `POST /api/import` : un seul appel à `fetchMonth`) — pas qu'une limite
@@ -26,6 +18,28 @@
   >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
 
 ## Doing
+
+- **US-8**: Être rassuré que le pass d'analyse s'est bien terminé, sans avoir à deviner.
+  > Un indicateur de progression et une coche "analysée" existent déjà
+  > (`GamesPage`/`GameList`), mais à la fin d'un pass la progression disparaît sans aucun message de
+  > confirmation — incertitude sur le fait que ça se soit bien passé. La coche "analysée" actuelle
+  > est un texte gras (`✓ analysée`), pas nécessairement assez visible. Points à trancher au
+  > grilling : forme du message de fin (toast ? texte permanent ?), et si la coche doit changer de
+  > forme/visibilité.
+  > **Grillée** (**ADR-0010** : le pass est persisté, sa progression reste dérivée des
+  > `Evaluation`s stockées ; `CONTEXT.md` : nouveau terme **`Analysis pass`** — le glossaire n'en
+  > avait aucun pour le pass, introduit pourtant par US-4). Découpée en 4 issues, implémentée sur
+  > `integration/US-8-analysis-pass-completion` (worktree dédié). PRD :
+  > `.scratch/analysis-pass-completion/PRD.md`.
+  > - `01-positions-progress-on-a-persisted-pass` — table `analysis_passes`, `done` dérivé du
+  >   `COUNT` sur `evaluations`, progression en Positions, ligne de progression extraite en
+  >   composant unique
+  > - `02-completion-summary-and-acknowledgement` — résumé de fin persistant, acquitté par le
+  >   Player (`POST /api/analyze/acknowledge`)
+  > - `03-interrupted-and-failed-outcomes` — les trois issues du pass, réconciliation au boot,
+  >   erreur moteur enfin visible ; porte la greffe sur HP-01 (budget à 3/3)
+  > - `04-analysis-state-at-a-glance-in-the-game-list` — badge renforcé + compteur global
+  >   (indépendante, parallélisable avec la 01)
 
 ## In review
 
