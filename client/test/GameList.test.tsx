@@ -37,6 +37,22 @@ describe("GameList", () => {
     expect(within(items[1]).queryByLabelText(/analysée/i)).toBeNull();
   });
 
+  it("carries its own styling and a textual cue — the app ships no stylesheet, and colour alone is not a cue", () => {
+    render(
+      <GameList
+        games={[game({ id: 1, analyzed: true })]}
+        onSelect={noop}
+        selectedIds={new Set()}
+        onToggleSelect={noop}
+      />,
+    );
+
+    const badge = screen.getByLabelText(/analysée/i);
+    expect(badge.className).toBe(""); // no class: there is no stylesheet to hook into
+    expect(badge.getAttribute("style")).toBeTruthy();
+    expect(badge.textContent?.trim()).toMatch(/analysée/i); // legible without colour
+  });
+
   it("lets the Player select a Game via its checkbox", async () => {
     const onToggleSelect = vi.fn();
     render(

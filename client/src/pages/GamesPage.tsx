@@ -5,6 +5,7 @@ import { useAnalysisPass } from "../features/analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
 import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
+import { AnalyzedCount } from "../features/games/AnalyzedCount";
 import type { Game } from "../types";
 
 /**
@@ -52,6 +53,8 @@ export function GamesPage() {
 
       {games && games.length > 0 && (
         <>
+          <AnalyzedCount games={games} />
+
           <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
             Analyser la sélection
           </button>
