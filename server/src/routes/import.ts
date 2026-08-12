@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { ChessComClient } from "../chesscom";
-import type { ImportJob } from "../import";
+import { normalizeRange, type ImportJob } from "../import";
 
 /**
  * Import routes (mounted at /api/import). A range Import is long-running, so
@@ -13,6 +13,15 @@ export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Ro
 
   router.post("/", async (req, res) => {
     const { username, from, to, categories } = req.body ?? {};
+
+    // An inverted range is an incoherent entry, refused outright; a last month
+    // in the future is clamped silently. The range length is not capped — the
+    // UI is what asks for confirmation on a very long one (ADR-0010).
+    const range = normalizeRange(from, to, currentMonth());
+    if (range === null) {
+      res.status(400).json({ error: "The first month of the range is after the last." });
+      return;
+    }
 
     // Checked once, here, before anything starts: an unknown username must fail
     // synchronously, and the answer cannot differ from one month to the next.
@@ -28,10 +37,16 @@ export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Ro
       return;
     }
 
-    res.status(202).json(job.start({ username, from, to, categories }));
+    res.status(202).json(job.start({ username, ...range, categories }));
   });
 
   router.get("/status", (_req, res) => res.json(job.status()));
 
   return router;
+}
+
+/** The month the Player is in, as the range's upper bound. */
+function currentMonth() {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }

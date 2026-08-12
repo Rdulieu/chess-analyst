@@ -17,6 +17,13 @@ function parseMonth(value: string): MonthRef {
   return { year, month };
 }
 
+/** Beyond this many months, the Player is asked to confirm before it starts. */
+const CONFIRM_ABOVE_MONTHS = 24;
+
+/** How many months a range covers, both bounds included. */
+const monthSpan = (from: MonthRef, to: MonthRef) =>
+  (to.year - from.year) * 12 + (to.month - from.month) + 1;
+
 /**
  * The chess.com import form: username, the month **range** to cover (both
  * bounds default to the current month, so the routine one-month import stays a
@@ -51,14 +58,23 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    const range = { from: parseMonth(from), to: parseMonth(to) };
+
+    // The server deliberately caps nothing — rebuilding a whole history in one
+    // Import is a supported use. The risk worth catching is the typo (2004 for
+    // 2024), and it is caught here, where it is made.
+    const months = monthSpan(range.from, range.to);
+    if (months > CONFIRM_ABOVE_MONTHS && !confirm(`Cette plage couvre ${months} mois. Continuer ?`)) {
+      return;
+    }
+
     setStatus(null);
     setResult(null);
     try {
       const final = await runImport(
         {
           username,
-          from: parseMonth(from),
-          to: parseMonth(to),
+          ...range,
           categories: CATEGORIES.filter((c) => categories.has(c)),
         },
         setProgress,

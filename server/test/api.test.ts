@@ -360,6 +360,104 @@ describe("import API", () => {
     expect(list.body).toHaveLength(2);
   });
 
+  it("POST /api/import rejects an inverted range with 400 and starts nothing", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        username: "me",
+        from: { year: 2024, month: 6 },
+        to: { year: 2024, month: 3 },
+        categories: ["blitz"],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/range|plage|month/i);
+
+    const status = await request(app).get("/api/import/status");
+    expect(status.body.running).toBe(false);
+    expect((await request(app).get("/api/games")).body).toEqual([]);
+  });
+
+  it("POST /api/import covers no month at all when the range lies entirely in the future", async () => {
+    const { db } = openDb(":memory:");
+    let monthsFetched = 0;
+    const app = createApp(db, {
+      playerExists: async () => true,
+      fetchMonth: async () => {
+        monthsFetched++;
+        return [];
+      },
+    });
+    const nextYear = new Date().getFullYear() + 1;
+
+    await request(app)
+      .post("/api/import")
+      .send({
+        username: "me",
+        from: { year: nextYear, month: 1 },
+        to: { year: nextYear, month: 6 },
+        categories: ["blitz"],
+      });
+
+    const final = await importDone(app);
+    // No phantom months reported at zero — the range simply covers nothing.
+    expect(monthsFetched).toBe(0);
+    expect(final.result.months).toEqual([]);
+    expect(final.result.message).toMatch(/no games found/i);
+  });
+
+  it("POST /api/import checks the username once, before any month is fetched", async () => {
+    const { db } = openDb(":memory:");
+    let monthsFetched = 0;
+    let existsChecks = 0;
+    const client: ChessComClient = {
+      playerExists: async () => {
+        existsChecks++;
+        return false;
+      },
+      fetchMonth: async () => {
+        monthsFetched++;
+        return [];
+      },
+    };
+    const app = createApp(db, client);
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        username: "ghost",
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 12 },
+        categories: ["blitz"],
+      });
+
+    expect(res.status).toBe(404);
+    expect(existsChecks).toBe(1); // once for the range, not once per month
+    expect(monthsFetched).toBe(0);
+  });
+
+  it("POST /api/import imposes no cap on how long a range may be", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient({}));
+
+    // Rebuilding a whole history in one Import is a supported use (ADR-0010).
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        username: "me",
+        from: { year: 2010, month: 1 },
+        to: { year: 2025, month: 12 },
+        categories: ["blitz"],
+      });
+
+    expect(res.status).toBe(202);
+    expect(res.body.total).toBe(192);
+    await importDone(app);
+  });
+
   it("POST /api/import returns an error and starts nothing for an unknown username", async () => {
     const { db } = openDb(":memory:");
     const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }, false));
