@@ -19,6 +19,27 @@
   >   montre aucun état de chargement — écran vide pendant le calcul. À trancher : job + polling
   >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
 
+- **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
+  > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
+  > seul username chess.com (clé/valeur), et `games` n'a **aucune notion de propriétaire** — même
+  > chose pour les agrégats (`move_habits`, stats `/stats`, `/openings`, `/danger` et les
+  > `evaluations`), calculés sur *toutes* les lignes. Importer un second compte mélangerait donc
+  > silencieusement les historiques et fausserait tous les indicateurs. Le besoin : un **Profil**
+  > sélectionnable, sous lequel on retrouve son propre historique importé **et son état d'analyse**
+  > (parties déjà analysées conservées, pas à re-analyser en changeant de profil).
+  > Points à trancher au grilling :
+  > - Terminologie et périmètre : un `Profile` = un compte chess.com, ou un libellé libre pouvant
+  >   regrouper plusieurs comptes ? Rapport avec le terme `Player` de `CONTEXT.md`.
+  > - Une même `Game` peut-elle appartenir à deux profils (partie entre deux comptes suivis) — et
+  >   `player_color`/`result` sont **relatifs au joueur**, donc dépendants du profil.
+  > - Portée du scoping : import, liste des parties, `move_habits` (précalculés, cf. ADR-0005),
+  >   stats/openings/danger. Les `evaluations` sont-elles partageables (propriété de la position,
+  >   pas du joueur) ?
+  > - Sélection et persistance du profil courant (remplace la mémorisation du username), création /
+  >   suppression d'un profil, et ce qu'on fait des données existantes (règle de phase dev : le
+  >   ré-import est bon marché, un profil par défaut migré ou une DB repartie de zéro sont
+  >   acceptables).
+
 ## Doing
 
 ## In review
