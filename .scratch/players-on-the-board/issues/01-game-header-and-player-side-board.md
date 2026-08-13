@@ -1,4 +1,13 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-10a-players-on-the-board`.
+Green local check: build + lint + 272 tests (134 server, 138 client). Feature Path 5/5 green
+against the real chess.com API (`DudulSmash`, 2026-06, 54 Games — 27 as White, 27 as Black) and
+the real Stockfish WASM, no console error.
+One finding of its own was found **on screen** and fixed before merge: the header rendered as a
+`ul` directly under the navigation's `ul` and read as two extra menu entries. No test below the
+agentic tier could see it — they all assert text content, and the text was correct.
+The FP was also extended past its written steps: every Game is unanalyzed right after an import,
+so step 5 only ever exercised the not-analyzed branch. One Game was analyzed for real to reach
+the other branch — the header holds there too.
 
 ## Parent
 
