@@ -3,6 +3,7 @@ import { Board } from "../../components/Board";
 import { fetchGameAnnotations } from "../../api";
 import { useAnalysisPass } from "../analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
+import { GameHeader } from "./GameHeader";
 import type { Game, MoveAnnotation } from "../../types";
 
 /**
@@ -34,6 +35,7 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
 
   return (
     <div style={{ maxWidth: 480 }}>
+      <GameHeader game={game} />
       {game.analyzed ? (
         <label>
           <input
@@ -52,7 +54,12 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
           <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
         </div>
       )}
-      <Board pgn={game.pgn} annotations={showAnnotations ? (annotations ?? undefined) : undefined} />
+      {/* The Player reads their own Game the way they played it (CONTEXT.md → Board orientation). */}
+      <Board
+        pgn={game.pgn}
+        orientation={game.playerColor}
+        annotations={showAnnotations ? (annotations ?? undefined) : undefined}
+      />
     </div>
   );
 }

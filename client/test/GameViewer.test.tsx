@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GameViewer } from "../src/features/games/GameViewer";
 import { OPERA_GAME } from "./fixtures";
@@ -23,7 +23,9 @@ describe("GameViewer", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
 
-    const items = await screen.findAllByRole("listitem");
+    // Scoped to the move list: the game header contributes list items of its own.
+    const moves = await screen.findByRole("list", { name: "moves" });
+    const items = within(moves).getAllByRole("listitem");
     expect(items[0].textContent).toContain("??");
     expect(items[0].textContent).toContain("-4.0");
   });
@@ -39,7 +41,8 @@ describe("GameViewer", () => {
 
     await user.click(screen.getByRole("checkbox", { name: /afficher les annotations/i }));
 
-    const items = screen.getAllByRole("listitem");
+    // Scoped to the move list, or the assertion would pass vacuously on a header row.
+    const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
     expect(items[0].textContent).not.toContain("??");
     expect(items[0].textContent).not.toContain("-4.0");
   });
@@ -141,5 +144,94 @@ describe("GameViewer", () => {
     await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
 
     await waitFor(() => expect(onAnalyzed).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("GameViewer — game header", () => {
+  function squareOrder(container: HTMLElement): string[] {
+    return [...container.querySelectorAll("[data-square]")].map(
+      (el) => el.getAttribute("data-square")!,
+    );
+  }
+
+  it("names both players with their colour", () => {
+    render(<GameViewer game={OPERA_GAME} />);
+
+    const header = screen.getByRole("region", { name: /partie/i });
+    expect(header.textContent).toContain("Paul Morphy");
+    expect(header.textContent).toContain("Duke Karl / Count Isouard");
+    expect(header.textContent).toMatch(/blancs/i);
+    expect(header.textContent).toMatch(/noirs/i);
+  });
+
+  it("marks which of the two is the Player, in words and not by colour alone", () => {
+    render(<GameViewer game={{ ...OPERA_GAME, playerColor: "black" }} />);
+
+    const player = screen.getByRole("region", { name: /partie/i }).querySelector("[data-player]");
+    expect(player?.textContent).toContain("Duke Karl / Count Isouard");
+    expect(player?.textContent).toMatch(/vous/i);
+  });
+
+  it("states the result from the Player's side rather than as a symmetric score", () => {
+    const { rerender } = render(<GameViewer game={{ ...OPERA_GAME, result: "win" }} />);
+    expect(screen.getByRole("region", { name: /partie/i }).textContent).toMatch(/victoire/i);
+
+    rerender(<GameViewer game={{ ...OPERA_GAME, result: "loss" }} />);
+    expect(screen.getByRole("region", { name: /partie/i }).textContent).toMatch(/défaite/i);
+
+    rerender(<GameViewer game={{ ...OPERA_GAME, result: "draw" }} />);
+    expect(screen.getByRole("region", { name: /partie/i }).textContent).toMatch(/nulle/i);
+  });
+
+  it("shows the date, the time control category and the Opening", () => {
+    render(
+      <GameViewer
+        game={{
+          ...OPERA_GAME,
+          date: "2026-06-04",
+          timeControlCategory: "blitz",
+          eco: "B22",
+          openingName: "Sicilian Defense: Alapin Variation",
+        }}
+      />,
+    );
+
+    const header = screen.getByRole("region", { name: /partie/i }).textContent!;
+    expect(header).toContain("2026-06-04");
+    expect(header).toMatch(/blitz/i);
+    expect(header).toContain("B22");
+    expect(header).toContain("Sicilian Defense: Alapin Variation");
+  });
+
+  it("says an unclassified Game has no Opening rather than leaving it blank", () => {
+    render(<GameViewer game={{ ...OPERA_GAME, eco: null, openingName: null }} />);
+
+    expect(screen.getByRole("region", { name: /partie/i }).textContent).toMatch(/non classée/i);
+  });
+
+  it("orients the board to the side the Player played", () => {
+    const { container, rerender } = render(
+      <GameViewer game={{ ...OPERA_GAME, playerColor: "white" }} />,
+    );
+    expect(squareOrder(container)[0]).toBe("a8");
+
+    rerender(<GameViewer game={{ ...OPERA_GAME, playerColor: "black" }} />);
+    expect(squareOrder(container)[0]).toBe("h1");
+  });
+
+  it("shows the header for a Game that has not been analyzed yet", () => {
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    expect(screen.getByRole("region", { name: /partie/i }).textContent).toContain("Paul Morphy");
+  });
+
+  it("leaves the header untouched while stepping through the Moves", async () => {
+    const user = userEvent.setup();
+    render(<GameViewer game={OPERA_GAME} />);
+
+    const before = screen.getByRole("region", { name: /partie/i }).textContent;
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(screen.getByRole("region", { name: /partie/i }).textContent).toBe(before);
   });
 });

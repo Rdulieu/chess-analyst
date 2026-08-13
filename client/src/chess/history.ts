@@ -26,6 +26,35 @@ export function startingPosition(pgn: string): string {
   return parseGame(pgn).startFen;
 }
 
+/** The two players a PGN names, `null` for a side it leaves unnamed. */
+export interface GamePlayers {
+  white: string | null;
+  black: string | null;
+}
+
+/**
+ * The two players a Game's PGN names, from its `[White]` / `[Black]` tags.
+ *
+ * These tags are the **single source** for player identity on screen (US-10a):
+ * both names come from the same payload as the Game itself, so they cannot
+ * disagree with the board, and they need neither the stored username (which
+ * US-11 replaces) nor a network call. Lichess serves the same tags, so this
+ * survives US-12 as well.
+ *
+ * A missing tag — and PGN's `?` placeholder for an unknown player — yields
+ * `null` rather than something to display.
+ */
+export function gameHeaders(pgn: string): GamePlayers {
+  const chess = new Chess();
+  chess.loadPgn(pgn.trim());
+  const tags = chess.header();
+  const named = (tag: string) => {
+    const value = tags[tag]?.trim();
+    return value && value !== "?" ? value : null;
+  };
+  return { white: named("White"), black: named("Black") };
+}
+
 /**
  * Parses a Game's PGN into a navigable history. Each ply carries the Position
  * that results from it (cm-chess computes these with its rule engine, so
