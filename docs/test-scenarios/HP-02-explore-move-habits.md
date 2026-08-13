@@ -1,6 +1,6 @@
 ---
 id: HP-02
-covers: [Move habit, Position, Move, Import]
+covers: [Move habit, Opponent reply, Position, Move, Import, Board orientation]
 ---
 
 # HP-02 — Explore my move habits
@@ -20,6 +20,10 @@ surfacing the Player's own habits across their whole imported history.
 - Navigation: reaching the explorer as its own page from the app's navigation.
 - Whole-history aggregation: the explorer reflects all imported Games, with no per-run scope selector.
 - Depth cap: no further descent is offered past 20 full moves (40 Moves).
+- `Board orientation` (US-10a, graft — no dedicated HP; the 3-HP cap is already spent): the board
+  is presented from the **side being explored**, the existing side selector being the only control
+  that turns it, and it is **held constant down the whole line** — it must not flip when an
+  `Opponent reply` has the move. The **side to move** is stated in text at every level.
 
 ## Preconditions
 - App started locally, talking to the **real** chess.com API (no `CHESSCOM_BASE_URL` override).
@@ -30,23 +34,25 @@ surfacing the Player's own habits across their whole imported history.
 
 ## Journey
 1. Import `DudulSmash` for 2026/06 (Blitz + Bullet) → the import completes with a summary.
-2. Navigate to the Move habit explorer page and choose a side (e.g. White) → candidate Moves from the starting Position are shown.
+2. Navigate to the Move habit explorer page and choose a side (e.g. White) → candidate Moves from the starting Position are shown, the board is presented from that side, and the side to move is stated.
 3. Read the candidates → each shows a frequency, a win rate, and a per-time-control-category breakdown; the exact count behind each is visible.
 4. Observe the board → the candidate Moves are also drawn as arrows, with visibly varying opacity (frequency) and colour hue (win rate). (react-chessboard v5 supports per-arrow colour only, so frequency is encoded as opacity, not stroke thickness — see ADR-0006 context and `client/src/chess/arrows.ts`.)
 5. Descend one level by selecting a candidate **in the list** → the explorer shows the candidates played from the resulting Position, and the breadcrumb reflects the Move taken.
 6. Descend a further level **from the board** — click the candidate Move's destination square → the explorer descends exactly as the list would, and the breadcrumb reflects the second Move.
 7. Select an earlier entry in the breadcrumb → the explorer returns to that level.
-8. Switch the side selector to Black → the candidates from the starting Position update to the Black-side habits.
+8. Switch the side selector to Black → the candidates from the starting Position update to the Black-side habits, **and the board turns over** to be read from Black.
+9. Still exploring as Black, descend a level → the level where the opponent has the move is reached, the side-to-move readout says so, and **the board has not turned back**. Walk back up the breadcrumb → it has still not turned.
 
 ## Checks
 ### UI
 - Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games).
 - Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown; the win rate is consistent with standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; the per-cadence counts sum to the candidate's game count; no candidate is hidden for a small sample.
-- Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold.
+- Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold. On a Black-oriented board the arrows are mirrored with it — they still start and end on the squares the Moves name.
 - Step 5: selecting a list candidate replaces the shown candidates with those from the resulting Position; the breadcrumb gains that Move.
-- Step 6: descending from the board produces the **same** candidates and breadcrumb as the corresponding list entry would. Note the arrow overlay is `pointer-events: none`, so the arrows are drawn, not clicked: the click lands on the destination **square** underneath. Aim at the square, not at the arrow.
+- Step 6: descending from the board produces the **same** candidates and breadcrumb as the corresponding list entry would. Note the arrow overlay is `pointer-events: none`, so the arrows are drawn, not clicked: the click lands on the destination **square** underneath. Aim at the square, not at the arrow. On a Black-oriented board the squares keep their names but change place on screen — locate the target **by its square name**, never by where it sat on a White-oriented board.
 - Step 7: selecting an earlier breadcrumb entry returns to that level, discarding deeper navigation.
-- Step 8: switching side changes the starting-Position candidates to the other color's habits.
+- Step 8: switching side changes the starting-Position candidates to the other color's habits, **and turns the board over** — Black's back rank is now nearest the Player. No control was added to do it: the side selector is still the only one.
+- Step 9: the side-to-move readout **alternates** down the line while the orientation **does not move**, on the way down and on the way back up. Exploring as Black, the starting Position reads "Trait aux Blancs" — those candidates are `Opponent reply`s, not the Player's own habits — and the next level reads "Trait aux Noirs". Nothing on this page phrases the side to move as the Player's own.
 - Depth: once 40 Moves (20 full moves) deep, no further descent is offered.
 
 ### Backing store (optional)

@@ -1,6 +1,6 @@
 ---
 id: HP-01
-covers: [Import, Monthly import, Game, Move, Position, Evaluation, Danger position]
+covers: [Import, Monthly import, Game, Move, Position, Evaluation, Danger position, Board orientation]
 ---
 
 # HP-01 — Import and explore my chess.com history
@@ -24,6 +24,12 @@ from a single month to a range.
 - One `Monthly import` line per month of the range, in order, a month with no games included
   at zero.
 - Board navigation (Previous / Next / jump-to-Move) on an imported Game.
+- Game header (US-10a, graft — no dedicated HP; the 3-HP cap is already spent): an opened Game
+  names both players with their colour, marks which one is the Player, and states the result, the
+  date, the cadence and the `Opening`.
+- `Board orientation` (US-10a, graft): a Game is read from the side the Player played. **Both
+  colours must be opened** — a run that only ever opens a White Game never exercises the flip and
+  would pass just as happily on a broken orientation.
 - Incremental Import: replaying the same range adds no duplicate.
 - Engine analysis pass (US-4, graft — no dedicated HP; the 3-HP cap is already spent): analyzing
   one imported Game with the real engine marks it "analysée" and the resulting `Danger position`
@@ -46,6 +52,10 @@ from a single month to a range.
   | blitz / bullet | 24 / 4 | 48 / 6 | **72 / 10** |
   | W · D · L (Player-relative) | 18 · 0 · 10 | 27 · 0 · 27 | **45 · 0 · 37** |
 
+  The account plays **both colours** in this range (2026-06 alone splits 27 as White / 27 as
+  Black, read from the local store on 2026-08-13), so step 6b always has a Black-side Game to
+  open. Pick the two Games **by their side**, not by their position in the list.
+
   All standard chess — no variant is filtered out, so "fetched" and "in scope" coincide.
   Note both months happen to contain **no draws**; a `D` other than 0 means the account's
   history changed and the table needs re-checking, not that the app is wrong.
@@ -56,7 +66,8 @@ from a single month to a range.
 3. Read the consolidated summary → it reports the total games fetched over the range, a per-category breakdown, how many were newly imported vs already present, and a win/draw/loss tally.
 4. Read the per-month lines → one line per month of the range, in order, each saying what that month brought in.
 5. See the imported Games listed in the app.
-6. Open one imported Game (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → its Position renders on the board; stepping forward/backward and jumping to a Move updates the Position accordingly.
+6. Open one imported Game the Player played **as White** (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → a header names both players with their colour and marks which one is the Player, alongside the result, date, cadence and `Opening`; its Position renders on the board, White at the bottom; stepping forward/backward and jumping to a Move updates the Position accordingly.
+6b. Go back and open a Game the Player played **as Black** → the same header, now marking the Player on the Black side, and the board is read **Black at the bottom**.
 7. Start the same Import again (same range + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
 8. Reopen the app (reload) → the username is already prefilled from the remembered setting.
 9. (Drive-by, US-4 + US-8) Select **one** imported Game and start the analysis pass (real WASM
@@ -65,7 +76,8 @@ from a single month to a range.
    how many Games and Positions were covered, and the Game is marked "analysée". Dismiss the
    confirmation → it disappears, and does not come back after a reload. Open "Positions
    dangereuses" (`/danger`) → the view renders at least one Position (no error), shape only (real
-   game, no fixed figures expected).
+   game, no fixed figures expected), each diagram stating its **side to move** and presented from
+   that side.
 
 ## Checks
 ### UI
@@ -74,11 +86,15 @@ from a single month to a range.
 - Step 3: on a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
 - Step 4: exactly two lines, in range order — **`2026-05` at 28 imported** and **`2026-06` at 54 imported**, summing to the consolidated 82. Neither is marked in échec.
 - Step 5: the number of listed Games matches the imported count from the summary (82 on a clean run).
-- Step 6: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position.
+- Step 6: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom.
+- Step 6b: on a Black-side Game the board is **Black-at-bottom** — the Player's own back rank is nearest them — and the Player mark has moved to the Black line of the header. The pieces have not moved: the board is turned, not rearranged.
 - Step 7: the replay's summary shows **0 imported / 82 already present**, both month lines saying so (28 and 54 already present); the listed Game count is unchanged.
 - Step 8: after reload, the username field is pre-filled with `DudulSmash`.
 - Step 9: after the analysis pass completes, the selected Game shows the "analysée" badge; `/danger`
-  renders a list (not the empty-state invitation) with at least the starting Position present.
+  renders a list (not the empty-state invitation) with at least the starting Position present. Each
+  entry states its **side to move** in text and its diagram is presented from that side. No wording
+  on that page attributes a side to the Player: a `Danger position` merges reaches from Games played
+  as White and as Black, so "your side" is undefined there (CONTEXT.md → `Board orientation`).
 
 ### Backing store (optional)
 - The embedded SQLite database holds one row per imported Game with its chess.com URL, the Player's side, and the Player-relative result; the same URL never appears twice (dedup). The `settings` table holds the username.
