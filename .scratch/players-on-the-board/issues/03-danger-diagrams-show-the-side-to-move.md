@@ -1,4 +1,10 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-10a-players-on-the-board`.
+Green local check: build + lint + 284 tests (134 server, 150 client). Feature Path 5/5 green
+against the real app on the `seed:danger` fixture (119 entries — 60 White-to-move, 59
+Black-to-move), no console error. Entries were picked by characteristic (side to move,
+proportion), never by index. Each diagram orients independently from its own stored FEN,
+confirmed on a screenshot as well as asserted; no wording anywhere on the page attributes a side
+to the Player; the 50%+ highlight and its ⚠ marker are intact.
 
 ## Parent
 
