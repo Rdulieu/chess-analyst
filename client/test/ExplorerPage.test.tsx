@@ -155,3 +155,98 @@ describe("ExplorerPage — drill-down", () => {
     expect(within(breadcrumb).getByText("e4")).toBeTruthy();
   });
 });
+
+describe("ExplorerPage — board orientation", () => {
+  /** The squares as laid out: the first is the board's top-left corner. */
+  function squareOrder(container: HTMLElement): string[] {
+    return [...container.querySelectorAll("[data-square]")].map(
+      (el) => el.getAttribute("data-square")!,
+    );
+  }
+
+  const sideToMoveText = () => screen.getByLabelText(/trait/i).textContent ?? "";
+
+  it("shows White at the bottom while exploring as White", async () => {
+    stubHabits();
+    const { container } = render(<ExplorerPage />);
+    await screen.findByText("e4");
+
+    expect(squareOrder(container)[0]).toBe("a8");
+  });
+
+  it("flips the board when the side explored changes, with no control but the existing selector", async () => {
+    stubHabits();
+    const user = userEvent.setup();
+    const { container } = render(<ExplorerPage />);
+    await screen.findByText("e4");
+    const before = screen.getAllByRole("radio").length + screen.getAllByRole("button").length;
+
+    await user.click(screen.getByRole("radio", { name: /noirs/i }));
+    await screen.findByText("d4");
+
+    expect(squareOrder(container)[0]).toBe("h1");
+    expect(screen.getAllByRole("radio").length + screen.getAllByRole("button").length).toBe(before);
+  });
+
+  it("does not flip when drilling down to a level where the opponent has the move", async () => {
+    stubHabits();
+    const user = userEvent.setup();
+    const { container } = render(<ExplorerPage />);
+    await screen.findByText("e4");
+
+    await user.click(within(screen.getByRole("list", { name: /candidates/i })).getByRole("button"));
+
+    // Black has the move after 1. e4, but the Player is walking their White repertoire.
+    expect(sideToMoveText()).toMatch(/noirs/i);
+    expect(squareOrder(container)[0]).toBe("a8");
+  });
+
+  it("does not flip while exploring as Black either, at any level", async () => {
+    stubHabits();
+    const user = userEvent.setup();
+    const { container } = render(<ExplorerPage />);
+    await screen.findByText("e4");
+
+    await user.click(screen.getByRole("radio", { name: /noirs/i }));
+    await screen.findByText("d4");
+    await user.click(within(screen.getByRole("list", { name: /candidates/i })).getByRole("button"));
+
+    expect(squareOrder(container)[0]).toBe("h1");
+  });
+
+  it("keeps the orientation when walking back up the breadcrumb", async () => {
+    stubHabits();
+    const user = userEvent.setup();
+    const { container } = render(<ExplorerPage />);
+    await screen.findByText("e4");
+    await user.click(screen.getByRole("radio", { name: /noirs/i }));
+    await screen.findByText("d4");
+    await user.click(within(screen.getByRole("list", { name: /candidates/i })).getByRole("button"));
+
+    const breadcrumb = screen.getByRole("navigation", { name: /breadcrumb/i });
+    await user.click(within(breadcrumb).getByRole("button", { name: /départ/i }));
+
+    expect(squareOrder(container)[0]).toBe("h1");
+  });
+
+  it("states the side to move, and follows it down the line", async () => {
+    stubHabits();
+    const user = userEvent.setup();
+    render(<ExplorerPage />);
+    await screen.findByText("e4");
+
+    expect(sideToMoveText()).toMatch(/blancs/i);
+
+    await user.click(within(screen.getByRole("list", { name: /candidates/i })).getByRole("button"));
+    expect(sideToMoveText()).toMatch(/noirs/i);
+  });
+
+  it("never attributes a side to the Player through the side-to-move readout", async () => {
+    stubHabits();
+    render(<ExplorerPage />);
+    await screen.findByText("e4");
+
+    // The readout is about the Position, not about who the Player is.
+    expect(sideToMoveText()).not.toMatch(/vous|votre/i);
+  });
+});

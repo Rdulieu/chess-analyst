@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { fetchMoveHabits } from "../api";
-import { positionAfter, boardFen } from "../chess/positions";
+import { positionAfter, boardFen, sideToMove } from "../chess/positions";
 import { candidateArrows } from "../chess/arrows";
 import type { MoveHabitCandidate, Side } from "../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
+
+const SIDE_LABEL: Record<Side, string> = { white: "Blancs", black: "Noirs" };
 
 /**
  * Explorateur (`/explorer`): the `Move habit` explorer. For the chosen side the
@@ -71,11 +73,23 @@ export function ExplorerPage() {
         </label>
       </fieldset>
 
+      {/*
+        The side to move is a property of the Position, not of the Player: it
+        alternates down the line while the `Board orientation` stays put, and it
+        is what says whether the candidates below are the Player's own
+        `Move habit`s or the `Opponent reply`s (CONTEXT.md).
+      */}
+      <p aria-label="trait">Trait aux {SIDE_LABEL[sideToMove(position)]}</p>
+
       <div style={{ maxWidth: 480 }}>
         <Chessboard
           options={{
             id: "explorer-board",
             position,
+            // Held to the side being explored, all the way down: the Player
+            // walks their own repertoire and is not turned around every time
+            // the opponent has the move (CONTEXT.md → Board orientation).
+            boardOrientation: side,
             allowDragging: false,
             showAnimations: false,
             arrows: arrows.map(({ startSquare, endSquare, color }) => ({
