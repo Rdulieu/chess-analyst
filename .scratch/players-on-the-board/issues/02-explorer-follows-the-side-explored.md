@@ -1,4 +1,15 @@
-Status: ready-for-agent
+Status: done — auto-merged into `integration/US-10a-players-on-the-board`.
+Green local check: build + lint + 279 tests (134 server, 145 client). Feature Path 5/5 green
+against the real app with a real imported history (`DudulSmash`, 2026-06, 54 Games), no console
+error. The alternation was verified for real down a line: exploring as Black, the start Position
+reads "Trait aux Blancs" (those candidates are `Opponent reply`s), `e4` reads "Trait aux Noirs"
+(the Player's own `Move habit`s), `c5` reads "Trait aux Blancs" again — and the board stayed
+Black-at-bottom throughout, including on the way back up the breadcrumb.
+The candidate arrows mirror correctly on the flipped board (checked on a screenshot, not only
+asserted).
+Non-blocking finding raised: the side-to-move readout sits next to the board while the candidate
+list is far below it, so the inference "these are the opponent's moves" is weaker on screen than
+the issue assumed.
 
 ## Parent
 
