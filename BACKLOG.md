@@ -131,8 +131,11 @@
 
 ## Doing
 
+## In review
+
 - **US-10a**: Savoir dans quel sens lire un échiquier et qui joue quoi.
-  > Issue de la scission d'US-10 (voir US-10b pour l'autre moitié). **Grillée** — pas d'ADR : rien
+  > **En revue** — PR `integration/US-10a-players-on-the-board` → `develop`, suite HP rejouée en
+  > entier (3/3 vertes). Issue de la scission d'US-10 (voir US-10b pour l'autre moitié). **Grillée** — pas d'ADR : rien
   > n'est coûteux à défaire ici. `CONTEXT.md` : nouveau terme **`Board orientation`**.
   > Branche : `integration/US-10a-players-on-the-board`.
   >
@@ -173,8 +176,33 @@
   > comportement existant : **HP-01 et HP-02 s'appuient sur Blancs-en-bas**, à rejouer. Pas de
   > feuille de style dans le projet (US-13) : un bandeau chargé reste du texte brut, et tout repère
   > doit être doublé d'un marqueur non chromatique.
-
-## In review
+  >
+  > Découpée en 3 issues, toutes implémentées et auto-mergées sur l'intégration après Feature Path
+  > verte. PRD : `.scratch/players-on-the-board/PRD.md`. **Aucun changement serveur** sur toute l'US.
+  > - `01-game-header-and-player-side-board` ✅ (PR #25) — tracer bullet : primitives `gameHeaders`
+  >   (en-têtes PGN) et `sideToMove` (FEN 4 champs), orientation en propriété du plateau, bandeau de
+  >   partie. Finding trouvé **à l'écran** en FP et corrigé : le bandeau rendu en `ul` sous celui de
+  >   la navigation se lisait comme deux entrées de menu.
+  > - `02-explorer-follows-the-side-explored` ✅ (PR #26) — orientation tenue au côté exploré, sans
+  >   se retourner sur un `Opponent reply` ; trait affiché.
+  > - `03-danger-diagrams-show-the-side-to-move` ✅ (PR #27) — chaque diagramme orienté au trait
+  >   depuis sa propre FEN ; jamais formulé comme le côté du Player.
+  >
+  > **Suite HP adaptée** (PR #28) puis **rejouée en entier**, contre la vraie API chess.com et le
+  > vrai Stockfish WASM, base repartie de zéro avant chacune : **HP-01 9/9** (chiffres durs exacts —
+  > 82 parties, Bullet 10 / Blitz 72, 45·0·37, mois à 28 et 54 ; pass réel 78/78 ; 78 entrées sur
+  > `/danger`, aucune orientation en désaccord avec son trait), **HP-02** (orientation constante sur
+  > toute la descente, trait alternant, flèches mirroitées), **HP-03** (32 entrées, somme 54, seuil
+  > 50 % strict exercé sur 3 lignes). Aucune erreur console sur les trois.
+  >
+  > Le budget HP restant à 3/3, US-10a s'est greffée : HP-01 gagne une **étape 6b** (ouvrir une
+  > partie de l'autre couleur — sans elle le retournement n'est jamais exercé) et HP-02 une
+  > **étape 9** (le plateau ne se retourne *pas* en descendant).
+  >
+  > Findings non bloquants ouverts : la barre de winning chances ne suit pas l'orientation ; sur
+  > l'Explorateur le libellé du trait est loin de la liste des candidats ; `react-chessboard` injecte
+  > ses instructions de glisser-déposer dans chacun des 119 diagrammes de `/danger` (tierce partie) ;
+  > cette même page rend tous ses diagrammes d'un coup, ce qui **se combine avec US-10b**.
 
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
   > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
