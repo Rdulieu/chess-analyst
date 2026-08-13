@@ -2,14 +2,24 @@
 
 ## To do
 
-- **US-10**: Voir clairement qui joue Blancs/Noirs sur un échiquier, et ne pas attendre dans le vide sur "Positions dangereuses".
-  > Pas encore grillée, deux préoccupations distinctes réunies ici :
-  > - Aucun échiquier affiché dans l'app (Analyse, Explorateur, Positions dangereuses) ne montre
-  >   les noms des joueurs ni qui est Blancs/Noirs, alors que `Game.opponent`/`Game.playerColor`
-  >   existent déjà et sont récupérés par la page Analyse sans être affichés.
-  > - `GET /api/danger` est synchrone (pas de job en arrière-plan comme l'analyse), et la page ne
-  >   montre aucun état de chargement — écran vide pendant le calcul. À trancher : job + polling
-  >   (comme l'analyse) vs. simple indicateur de chargement si le calcul reste rapide en pratique.
+- **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
+  > Pas encore grillée. Issue de la scission d'US-10 (les deux préoccupations qui y étaient réunies
+  > n'ont rien en commun). `GET /api/danger` (`server/src/routes/danger.ts:13`) est synchrone — pas
+  > de job de fond comme l'`Analysis pass` — et `DangerPage.tsx:21,33` rend `null` tant que la
+  > réponse n'est pas là : **écran blanc** pendant le calcul. Le chemin d'erreur retombe sur la même
+  > branche que « rien d'analysé » (`:26`), donc un échec est indiscernable d'un état vide.
+  >
+  > **Commencer par mesurer** : le choix job+polling vs. simple indicateur est arbitraire sans
+  > chiffre. Coût relevé en lecture de code — un **N+1** (une requête `evaluations` par partie
+  > analysée, `danger/repository.ts:35`) et surtout un **rejeu cm-chess complet du PGN par partie et
+  > par requête** (`chess/positions.ts:9`), le tout sur le thread principal, sans cache ni
+  > mémoïsation (choix assumé d'ADR-0009 : agrégat dérivé à la volée). Chronométrer
+  > `getDangerPositions` contre une DB réellement importée + analysée avant de trancher.
+  >
+  > Points à trancher au grilling : job persisté + polling (aligné sur ADR-0011) vs. indicateur de
+  > chargement seul vs. mémoïsation invalidée au changement d'`analyzed` ; unité de progression
+  > (il n'y en a pas de naturelle, sinon les parties traitées) ; et séparer l'état d'erreur de
+  > l'état vide, qui est un correctif dû quelle que soit l'option retenue.
 
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
@@ -120,6 +130,49 @@
   >   sous-ensemble ? Le mode sombre et le responsive sont-ils dedans ou différés ?
 
 ## Doing
+
+- **US-10a**: Savoir dans quel sens lire un échiquier et qui joue quoi.
+  > Issue de la scission d'US-10 (voir US-10b pour l'autre moitié). **Grillée** — pas d'ADR : rien
+  > n'est coûteux à défaire ici. `CONTEXT.md` : nouveau terme **`Board orientation`**.
+  > Branche : `integration/US-10a-players-on-the-board`.
+  >
+  > Constat vérifié : les **trois** plateaux (`components/Board.tsx:77`, `pages/ExplorerPage.tsx:75`,
+  > `pages/DangerPage.tsx:44`) sont **Blancs-en-bas en dur** — aucun ne passe `boardOrientation`.
+  > `AnalysePage.tsx:32` charge la `Game` complète et `GameViewer.tsx:18` n'en retient que
+  > `pgn`/`analyzed`/`id` : `opponent` et `playerColor` sont récupérés puis jetés. `playerColor`
+  > n'est affiché **nulle part** dans l'app.
+  >
+  > Décisions :
+  > - Le besoin commun aux trois écrans est **l'orientation et le trait**, pas les noms : sur
+  >   l'Explorateur et sur Danger il n'y a pas d'adversaire nommable, l'agrégat porte sur N parties.
+  >   Les noms ne concernent que la page Analyse.
+  > - **Orientation imposée par le contexte, jamais pilotable** : Analyse = côté joué par le Player,
+  >   Explorateur = côté sélectionné (le radio existant `ExplorerPage.tsx:21` en devient la commande,
+  >   sans nouveau contrôle), maintenu constant dans la descente ; Danger = **trait de la FEN**.
+  > - Sur `/danger`, orienter « du point de vue du Player » est **indéfini** : `danger/repository.ts:38`
+  >   compte toutes les positions atteintes et la clé FEN-4 n'inclut pas le côté joué, donc une même
+  >   entrée agrège des parties jouées Blancs *et* Noirs. Seul le trait y est affiché — jamais
+  >   « votre côté ».
+  > - **Source des noms sur Analyse : les en-têtes PGN `[White]`/`[Black]`.** Une seule source, déjà
+  >   dans la `Game`, cohérente avec le plateau par construction ; aucune dépendance à `settings`
+  >   (que US-11 remplacera) ni appel réseau ; Lichess sert les mêmes en-têtes, donc robuste à US-12.
+  >   `parseGame` (`chess/history.ts:37`) jette les en-têtes aujourd'hui — cm-chess les expose.
+  >   `game.playerColor` sert uniquement à marquer lequel des deux est le Player.
+  > - **Bandeau de partie complet** sur Analyse : les deux joueurs (nom + couleur, avec un repère
+  >   **non chromatique** marquant le Player), le résultat, la date, la cadence et l'**ouverture**
+  >   (ECO + nom). `eco`/`openingName` sont déjà renvoyés par `GET /api/games/:id`
+  >   (`routes/games.ts:14` renvoie la ligne brute) mais absents de l'interface client
+  >   (`types/game.ts:54`) : à déclarer côté client seulement, pas de changement serveur. Une `Game`
+  >   non classée relève du bucket **Other**.
+  > - **Résultat affiché comme mention explicite côté Player** (« Victoire »/« Défaite »/« Nulle »
+  >   sur la ligne du Player), pas comme score symétrique : `result` est relatif au Player
+  >   (`import/mapping.ts:37`), et c'est déjà la convention de `GameList` et `/stats`.
+  >
+  > À surveiller à l'implémentation : `Board.tsx` est **partagé** avec l'Explorateur, qui n'a pas de
+  > `Game` — il ne doit pas se mettre à en supposer une. Retourner les plateaux change un
+  > comportement existant : **HP-01 et HP-02 s'appuient sur Blancs-en-bas**, à rejouer. Pas de
+  > feuille de style dans le projet (US-13) : un bandeau chargé reste du texte brut, et tout repère
+  > doit être doublé d'un marqueur non chromatique.
 
 ## In review
 
