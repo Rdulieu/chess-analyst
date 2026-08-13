@@ -36,7 +36,22 @@ const SEVERITY_TINT: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
  * flawed Move. Absent (the toggle off, or a not-yet-analyzed Game) renders
  * exactly as without US-7: no glyph, no Evaluation, no bar, no tint.
  */
-export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnnotation[] }) {
+export function Board({
+  pgn,
+  annotations,
+  orientation = "white",
+}: {
+  pgn: string;
+  annotations?: MoveAnnotation[];
+  /**
+   * The `Board orientation` — which side sits at the bottom (CONTEXT.md).
+   * Defaults to White so a caller with no side in mind gets the neutral
+   * reading. Deliberately an input and not a control: nothing lets the Player
+   * flip it, because each view has exactly one orientation that makes sense
+   * and it follows from the view.
+   */
+  orientation?: "white" | "black";
+}) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
   const [index, setIndex] = useState(0);
 
@@ -78,6 +93,7 @@ export function Board({ pgn, annotations }: { pgn: string; annotations?: MoveAnn
         options={{
           id: "game-board",
           position,
+          boardOrientation: orientation,
           allowDragging: false,
           showAnimations: false,
           squareStyles,

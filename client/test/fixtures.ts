@@ -29,5 +29,7 @@ export const OPERA_GAME: Game = {
   result: "win",
   date: "1858-11-02",
   timeControlCategory: "rapid",
+  eco: "C41",
+  openingName: "Philidor Defense",
   analyzed: false,
 };

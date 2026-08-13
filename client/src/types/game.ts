@@ -11,6 +11,13 @@ export interface Game {
   result: "win" | "loss" | "draw";
   date: string;
   timeControlCategory: TimeControlCategory;
+  /**
+   * The `Opening`'s ECO code and name, from the platform's own classification
+   * (ADR-0007), stored at Import. Both null for a Game it did not classify —
+   * the **Other** bucket (CONTEXT.md → Opening).
+   */
+  eco: string | null;
+  openingName: string | null;
   /** Whether this Game has been through the engine analysis pass (US-4). */
   analyzed: boolean;
 }

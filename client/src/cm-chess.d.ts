@@ -24,6 +24,8 @@ declare module "cm-chess" {
     history(): CmMove[];
     /** The initial position's FEN (SetUp header, or the standard start). */
     setUpFen(): string;
+    /** The PGN's tag pairs (`White`, `Black`, `Result`, …), keyed by tag name. */
+    header(): Record<string, string | undefined>;
     fen(move?: CmMove): string;
   }
 }
