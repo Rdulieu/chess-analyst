@@ -23,7 +23,8 @@ describe("GameViewer", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
 
-    // Scoped to the move list: the game header contributes list items of its own.
+    // Scoped to the move list rather than to the page, so a list item added elsewhere
+    // in the viewer cannot make this assertion drift.
     const moves = await screen.findByRole("list", { name: "moves" });
     const items = within(moves).getAllByRole("listitem");
     expect(items[0].textContent).toContain("??");
@@ -41,7 +42,8 @@ describe("GameViewer", () => {
 
     await user.click(screen.getByRole("checkbox", { name: /afficher les annotations/i }));
 
-    // Scoped to the move list, or the assertion would pass vacuously on a header row.
+    // Scoped to the move list: an unscoped negative assertion would pass vacuously
+    // on any other list item the viewer renders.
     const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
     expect(items[0].textContent).not.toContain("??");
     expect(items[0].textContent).not.toContain("-4.0");
