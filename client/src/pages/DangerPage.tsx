@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { fetchDangerPositions } from "../api";
+import { sideToMove } from "../chess/positions";
 import type { DangerEntry } from "../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
+
+const SIDE_LABEL = { white: "Blancs", black: "Noirs" } as const;
 
 /** A `Danger position` is highlighted at a 50%+ serious-error proportion (CONTEXT.md). */
 const isDangerous = (d: DangerEntry) => d.proportion >= 0.5;
@@ -45,11 +48,20 @@ export function DangerPage() {
                   options={{
                     id: `danger-board-${i}`,
                     position: boardFen(d.fen),
+                    // Oriented to the side that has the move, read from the
+                    // entry's own stored FEN. Orienting to "the Player's side"
+                    // is **undefined** here, not merely unimplemented: the
+                    // 4-field FEN identity carries no player side, so one entry
+                    // merges Games played as White and as Black
+                    // (CONTEXT.md → Board orientation).
+                    boardOrientation: sideToMove(d.fen),
                     allowDragging: false,
                     showAnimations: false,
                   }}
                 />
               </div>
+              {/* Spelled out, so the fact is not carried by the orientation alone. */}
+              <p aria-label="trait">Trait aux {SIDE_LABEL[sideToMove(d.fen)]}</p>
               <p>
                 {d.reached} fois atteinte · {percent(d.proportion)} d'erreur sérieuse
                 {isDangerous(d) && (

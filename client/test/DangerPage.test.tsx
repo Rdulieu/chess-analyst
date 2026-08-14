@@ -61,3 +61,67 @@ describe("DangerPage", () => {
     expect(within(items[1]).getByLabelText(/dangereuse/i)).toBeTruthy();
   });
 });
+
+describe("DangerPage — board orientation", () => {
+  const BLACK_TO_MOVE = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -";
+
+  /** The squares of one entry's diagram, in layout order — the first is its top-left corner. */
+  function squareOrder(item: HTMLElement): string[] {
+    return [...item.querySelectorAll("[data-square]")].map((el) => el.getAttribute("data-square")!);
+  }
+
+  async function entries(dangers: DangerEntry[]) {
+    stub(dangers);
+    render(<DangerPage />);
+    const list = await screen.findByRole("list", { name: /positions dangereuses/i });
+    return within(list).getAllByRole("listitem");
+  }
+
+  it("shows White at the bottom for a White-to-move Position", async () => {
+    const [item] = await entries([{ fen: START_FEN, reached: 5, seriousErrors: 1, proportion: 0.2 }]);
+
+    expect(squareOrder(item)[0]).toBe("a8");
+  });
+
+  it("shows Black at the bottom for a Black-to-move Position", async () => {
+    const [item] = await entries([
+      { fen: BLACK_TO_MOVE, reached: 4, seriousErrors: 1, proportion: 0.25 },
+    ]);
+
+    expect(squareOrder(item)[0]).toBe("h1");
+  });
+
+  it("orients each entry independently, from its own stored 4-field FEN", async () => {
+    const items = await entries([
+      { fen: START_FEN, reached: 5, seriousErrors: 1, proportion: 0.2 },
+      { fen: BLACK_TO_MOVE, reached: 4, seriousErrors: 1, proportion: 0.25 },
+    ]);
+
+    expect(squareOrder(items[0])[0]).toBe("a8");
+    expect(squareOrder(items[1])[0]).toBe("h1");
+  });
+
+  it("states the side to move in text on every entry", async () => {
+    const items = await entries([
+      { fen: START_FEN, reached: 5, seriousErrors: 1, proportion: 0.2 },
+      { fen: BLACK_TO_MOVE, reached: 4, seriousErrors: 1, proportion: 0.25 },
+    ]);
+
+    expect(within(items[0]).getByLabelText(/trait/i).textContent).toMatch(/blancs/i);
+    expect(within(items[1]).getByLabelText(/trait/i).textContent).toMatch(/noirs/i);
+  });
+
+  it("never attributes a side to the Player — a Danger position merges both", async () => {
+    const items = await entries([
+      { fen: START_FEN, reached: 5, seriousErrors: 1, proportion: 0.2 },
+      { fen: BLACK_TO_MOVE, reached: 4, seriousErrors: 1, proportion: 0.25 },
+    ]);
+
+    // The 4-field FEN identity does not carry the side the Player played, so
+    // one entry merges Games played as White and as Black: "your side" would
+    // be a lie here (CONTEXT.md → Board orientation).
+    for (const item of items) {
+      expect(item.textContent).not.toMatch(/vous|votre/i);
+    }
+  });
+});

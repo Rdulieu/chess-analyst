@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { FEN } from "cm-chess";
-import { startingPosition, parseGame } from "../src/chess/history";
+import { startingPosition, parseGame, gameHeaders } from "../src/chess/history";
 import { OPERA_PGN } from "./fixtures";
 
 describe("startingPosition", () => {
@@ -83,5 +83,28 @@ describe("parseGame — special moves resolve to the correct Position", () => {
     const ply = lastPly("1. a4 b5 2. axb5 a6 3. bxa6 c6 4. a7 c5 5. axb8=Q");
     expect(ply.san).toBe("axb8=Q");
     expect(pieceOn(ply.fen, "b8")).toBe("Q");
+  });
+});
+
+describe("gameHeaders", () => {
+  it("reads both players' names from the PGN's White/Black tags", () => {
+    expect(gameHeaders(OPERA_PGN)).toEqual({
+      white: "Paul Morphy",
+      black: "Duke Karl / Count Isouard",
+    });
+  });
+
+  it("returns null for a name the PGN does not carry, rather than inventing one", () => {
+    const pgn = ['[White "Alice"]', '[Result "1-0"]', "", "1. e4 e5 1-0"].join("\n");
+    expect(gameHeaders(pgn)).toEqual({ white: "Alice", black: null });
+  });
+
+  it("returns both names null for a PGN with no player tags at all", () => {
+    expect(gameHeaders("1. e4 e5 *")).toEqual({ white: null, black: null });
+  });
+
+  it("treats chess.com's placeholder for an unnamed side as no name", () => {
+    const pgn = ['[White "?"]', '[Black "Bob"]', "", "1. e4 e5 *"].join("\n");
+    expect(gameHeaders(pgn)).toEqual({ white: null, black: "Bob" });
   });
 });

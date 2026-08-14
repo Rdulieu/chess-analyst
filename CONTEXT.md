@@ -37,6 +37,24 @@ _Avoid_: Board state, State
 A single half-move played by one side within a game.
 _Avoid_: Ply, Turn
 
+**Board orientation**:
+Which side a Position is shown from — the side whose back rank is at the bottom of the board.
+It is **never a preference the Player sets**: each view has exactly one orientation that makes
+sense, and it follows from what that view is about.
+
+- Reviewing a **Game**: the side the Player played (`Game`'s player side), so the Player reads
+  their own games the way they played them.
+- Exploring **Move habit**s: the side the explorer was opened for, held constant down the whole
+  line — it does not flip when an `Opponent reply` has the move.
+- A **Danger position**: **undefined**, and deliberately so. A Danger position is not scoped by
+  the side the Player played, so the same Position merges reaches from Games played as White and
+  as Black; there is no "the Player's side" to orient to. Only the **side to move** is defined
+  there, and it is what is shown.
+
+Orientation is distinct from the **side to move**, which is a property of the Position itself and
+is always the same fact regardless of how the board is turned.
+_Avoid_: Flip, Point of view, Perspective
+
 **Evaluation**:
 The chess engine's numeric assessment of a position (centipawns, or mate-in-N). **Stored**
 relative to the side to move (standard UCI convention — positive favours whoever has the

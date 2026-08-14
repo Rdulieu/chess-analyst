@@ -14,6 +14,8 @@ function game(over: Partial<Game>): Game {
     result: "win",
     date: "2026-01-01",
     timeControlCategory: "blitz",
+  eco: null,
+  openingName: null,
     analyzed: false,
     ...over,
   };

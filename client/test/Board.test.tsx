@@ -197,3 +197,36 @@ describe("Board", () => {
     expect(pieceAt(container, "b8")).toBe("wQ");
   });
 });
+
+describe("Board orientation", () => {
+  /** The squares in the order they are laid out — first is the top-left corner of the board. */
+  function squareOrder(container: HTMLElement): string[] {
+    return [...container.querySelectorAll("[data-square]")].map(
+      (el) => el.getAttribute("data-square")!,
+    );
+  }
+
+  it("shows White at the bottom when given no orientation — the Explorer's board is untouched", () => {
+    const { container } = render(<Board pgn={OPERA_PGN} />);
+
+    const squares = squareOrder(container);
+    expect(squares[0]).toBe("a8");
+    expect(squares[squares.length - 1]).toBe("h1");
+  });
+
+  it("shows Black at the bottom when oriented to Black", () => {
+    const { container } = render(<Board pgn={OPERA_PGN} orientation="black" />);
+
+    const squares = squareOrder(container);
+    expect(squares[0]).toBe("h1");
+    expect(squares[squares.length - 1]).toBe("a8");
+  });
+
+  it("still puts the right piece on the right square once flipped", () => {
+    const { container } = render(<Board pgn={OPERA_PGN} orientation="black" />);
+
+    // Orientation turns the board, it does not move the pieces.
+    expect(pieceAt(container, "e1")).toBe("wK");
+    expect(pieceAt(container, "e8")).toBe("bK");
+  });
+});
