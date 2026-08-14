@@ -5,6 +5,7 @@ import { games, evaluations, analysisPasses, type NewGame } from "../src/db/sche
 import { analyzeGame } from "../src/analysis/service";
 import { createAnalysisJob } from "../src/analysis/job";
 import { createFixtureEngine } from "../src/engine/fixture";
+import { gamePositions } from "../src/chess/positions";
 import type { Engine } from "../src/engine/types";
 
 function tempDb() {
@@ -43,6 +44,18 @@ describe("analyzeGame", () => {
     expect(rows).toHaveLength(4);
     expect(rows.map((r) => r.ply).sort((a, b) => a - b)).toEqual([0, 1, 2, 3]);
     expect(rows.every((r) => typeof r.cp === "number")).toBe(true);
+  });
+
+  it("stores the FEN it queried the engine with, alongside each Evaluation", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+
+    await analyzeGame(db, createFixtureEngine(), game);
+
+    // The pass computes the FEN anyway to ask the engine; storing it is what
+    // spares every read path a full PGN replay (ADR-0012).
+    const rows = evalsOf(db, game.id).sort((a, b) => a.ply - b.ply);
+    expect(rows.map((r) => r.fen)).toEqual(gamePositions(game.pgn));
   });
 
   it("sets the analyzed flag once the pass is done", async () => {

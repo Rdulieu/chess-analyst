@@ -29,11 +29,18 @@ already completed on the first check. A backgrounded command re-invokes the agen
 wait for that. If a readout must be watched, poll the status endpoint and break on `running:false`,
 never on a fixed number of iterations.
 
-**Pick the shortest Game for the analysis pass.** HP-01 step 9 asserts that a pass completes, that
+**Pick the shortest Games for the analysis pass.** HP-01 step 9 asserts that a pass completes, that
 its confirmation is exact, and that `/danger` populates — never that it covered a long Game. Taking
-whichever Game happens to be first cost 78 Positions (~10 min at depth 16); selecting the Game with
-the fewest half-moves roughly halves that. Selection by characteristic is already the suite's rule —
-apply it here too.
+whichever Game happens to be first cost 78 Positions (~10 min at depth 16); selecting by fewest
+half-moves roughly halves that. Selection by characteristic is already the suite's rule — apply it
+here too.
+
+Since US-10b the step analyses **two** Games, not one: a `Danger position` must be *recurring*
+(reached ≥ 2), so a single Game leaves `/danger` empty. The rule is **the two shortest Games sharing
+the same first Move** — the Position after that Move is common to both by construction, so one
+entry is guaranteed. It costs **27 Positions (~3.5 min)** on the reference dataset, *less* than the
+single Game the step analysed before. Do **not** substitute "the two shortest Games overall": it
+selects the same pair here, but only because both answer 1.e4.
 
 **Snapshot the database instead of re-importing.** Each scenario must start from its own pristine
 state, but "pristine" does not require a second network round-trip when two scenarios want the

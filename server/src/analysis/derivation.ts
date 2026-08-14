@@ -1,5 +1,4 @@
 import type { Game } from "../db/schema";
-import { gamePositions } from "../chess/positions";
 import { winningChances, type CpOrMate } from "../danger/winning-chances";
 import { classifyMove, type MoveSeverity } from "../danger/move-quality";
 
@@ -23,19 +22,29 @@ export interface Ply {
   winChances: number;
 }
 
+/** One stored `Evaluation` row, as every read path sees it: the Position it is
+ *  of, and the engine's verdict on it. */
+export interface StoredEvaluation {
+  ply: number;
+  fen: string;
+  cp: number | null;
+  mate: number | null;
+}
+
 /** A Game's per-Position FENs, raw `Evaluation`s and win% (ply 0 = initial Position), shared by
  *  every feature deriving from US-4's stored `evaluations` (`Danger position`, US-7's per-Move
- *  annotations) — ADR-0009: no engine call, no stored aggregate, everything read at request time. */
-export function gamePlies(
-  game: Pick<Game, "pgn">,
-  evals: { ply: number; cp: number | null; mate: number | null }[],
-): Ply[] {
-  const fens = gamePositions(game.pgn);
-  const evalByPly = new Map(evals.map((e) => [e.ply, e]));
-  return fens.map((fen, ply) => {
-    const evaluation = evalByPly.get(ply)!;
-    return { fen, evaluation, winChances: winningChances(evaluation) };
-  });
+ *  annotations) — ADR-0009: no engine call, no stored aggregate, everything read at request time.
+ *
+ *  The FEN comes from the row itself (ADR-0012): replaying the Game's PGN here cost 2.4 s per
+ *  `/danger` request at 50 analyzed Games, for Positions the `Analysis pass` already held. */
+export function gamePlies(evals: StoredEvaluation[]): Ply[] {
+  return [...evals]
+    .sort((a, b) => a.ply - b.ply)
+    .map((evaluation) => ({
+      fen: evaluation.fen,
+      evaluation,
+      winChances: winningChances(evaluation),
+    }));
 }
 
 /**
@@ -84,10 +93,10 @@ function toWhiteRelative(evaluation: CpOrMate, mover: Game["playerColor"]): CpOr
  * directly onto this array with no off-by-one.
  */
 export function gameAnnotations(
-  game: Pick<Game, "pgn" | "playerColor">,
-  evals: { ply: number; cp: number | null; mate: number | null }[],
+  game: Pick<Game, "playerColor">,
+  evals: StoredEvaluation[],
 ): MoveAnnotation[] {
-  const plies = gamePlies(game, evals);
+  const plies = gamePlies(evals);
   const severities = moveSeverities(plies, game.playerColor);
 
   return plies.map((ply, i) => {

@@ -58,6 +58,13 @@ export const evaluations = sqliteTable(
       .notNull()
       .references(() => games.id),
     ply: integer("ply").notNull(),
+    // The Position this Evaluation is *of*, as the `Analysis pass` computed it
+    // to query the engine (ADR-0012). Required, so no insert path can omit it
+    // and no read path has a null to reason about. Denormalised against the
+    // Game's PGN, which is accepted: Import dedups by game URL and source PGNs
+    // are immutable. Rows predating the column carry the empty sentinel and are
+    // repaired at open (see `repairMissingFens`).
+    fen: text("fen").notNull(),
     cp: integer("cp"),
     mate: integer("mate"),
   },

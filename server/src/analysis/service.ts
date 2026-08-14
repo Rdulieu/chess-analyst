@@ -35,8 +35,11 @@ export async function analyzeGame(db: Db, engine: Engine, game: Game): Promise<v
 
   const fens = gamePositions(game.pgn);
   for (let ply = stored; ply < fens.length; ply++) {
-    const { cp, mate } = await engine.evaluate(fens[ply], ANALYSIS_DEPTH);
-    db.insert(evaluations).values({ gameId: game.id, ply, cp, mate }).run();
+    const fen = fens[ply];
+    const { cp, mate } = await engine.evaluate(fen, ANALYSIS_DEPTH);
+    // The FEN is stored with the Evaluation it belongs to: the pass holds it in
+    // hand anyway, and it is what spares every read path a PGN replay (ADR-0012).
+    db.insert(evaluations).values({ gameId: game.id, ply, fen, cp, mate }).run();
   }
 
   db.update(games).set({ analyzed: true }).where(eq(games.id, game.id)).run();

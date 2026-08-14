@@ -1,12 +1,18 @@
 import type { DangerEntry } from "../types";
 
+/** What `/api/danger` serves: the ranked aggregate, and how many Games it was
+ *  derived from — an empty list means nothing without that second figure. */
+export interface DangerView {
+  dangers: DangerEntry[];
+  analyzedGames: number;
+}
+
 /**
- * The `Danger position` entries (GET /api/danger), derived server-side on the
- * fly — already sorted by reach count descending.
+ * The `Danger position` view (GET /api/danger), derived server-side on the fly
+ * — the full list, already ranked by serious-error proportion.
  */
-export async function fetchDangerPositions(): Promise<DangerEntry[]> {
+export async function fetchDangerView(): Promise<DangerView> {
   const res = await fetch("/api/danger");
   if (!res.ok) throw new Error(`Failed to load danger positions (${res.status})`);
-  const body = (await res.json()) as { dangers: DangerEntry[] };
-  return body.dangers;
+  return (await res.json()) as DangerView;
 }
