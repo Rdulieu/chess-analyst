@@ -262,6 +262,43 @@ describe("Evaluation curve", () => {
     expect(cursorX(container)).toBe(2);
   });
 
+  it("marks the Player's own flawed Moves on the curve, by glyph and not by colour alone", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    // Over the drawing rather than inside it: the curve's box scales x and y by
+    // different factors, which smears a glyph drawn in SVG coordinates.
+    const glyphs = [...container.querySelectorAll("div[aria-hidden='true'] > span")].map(
+      (t) => t.textContent,
+    );
+
+    // ply 1 is the Player's blunder; ply 2 is the opponent's reply, never flagged.
+    expect(glyphs).toEqual(["??"]);
+  });
+
+  it("counts the Player's own errors in text, said to be theirs", () => {
+    render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    const tally = screen.getByLabelText(/vos erreurs/i);
+    expect(tally.textContent).toContain("??");
+    expect(tally.textContent).toMatch(/\b1\b/);
+  });
+
+  it("says so in text when the Player made no flawed Move, rather than showing nothing", () => {
+    const clean: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null },
+    ];
+    render(<Board pgn="1. e4" annotations={clean} />);
+
+    expect(screen.getByLabelText(/vos erreurs/i).textContent).toMatch(/aucune/i);
+  });
+
+  it("drops the markers and the count along with the curve when annotations are hidden", () => {
+    render(<Board pgn="1. e4 e5" />);
+
+    expect(screen.queryByLabelText(/vos erreurs/i)).toBeNull();
+  });
+
   it("stays out of the accessibility tree, adding no second image or live region", () => {
     const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
 
@@ -301,5 +338,28 @@ describe("Board orientation", () => {
     // Orientation turns the board, it does not move the pieces.
     expect(pieceAt(container, "e1")).toBe("wK");
     expect(pieceAt(container, "e8")).toBe("bK");
+  });
+});
+
+describe("the error tally's wording", () => {
+  function annotationsWith(severities: MoveAnnotation["severity"][]): MoveAnnotation[] {
+    return [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      ...severities.map((severity, i) => ({
+        ply: i + 1,
+        whiteEval: { cp: -100, mate: null },
+        whiteWinChances: 40,
+        severity,
+      })),
+    ];
+  }
+
+  it("agrees in number — one flaw is not counted in the plural", () => {
+    render(<Board pgn="1. e4 e5 2. Nf3" annotations={annotationsWith(["inaccuracy", null, "blunder"])} />);
+
+    const tally = screen.getByLabelText(/vos erreurs/i).textContent!;
+    expect(tally).toContain("1 imprécision ?!");
+    expect(tally).not.toContain("imprécisions");
+    expect(tally).toContain("1 grosse erreur ??");
   });
 });
