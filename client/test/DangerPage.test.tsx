@@ -62,6 +62,46 @@ describe("DangerPage", () => {
   });
 });
 
+describe("DangerPage — how many are shown", () => {
+  /** A distinct legal Position per index: the two kings plus one White pawn,
+   *  walked across the files and up the ranks. */
+  function pawnFen(i: number): string {
+    const file = i % 8;
+    const rank = 2 + Math.floor(i / 8); // ranks 2..6, 40 squares — enough here
+    const pawnRow = [file, "P", 7 - file].filter((p) => p !== 0).join("");
+    const rows = ["4k3", "8", "8", "8", "8", "8", "8", "4K3"];
+    rows[8 - rank] = pawnRow;
+    return `${rows.join("/")} w - -`;
+  }
+
+  /** `n` distinct served entries, most dangerous first (the server's own order). */
+  function ranked(n: number): DangerEntry[] {
+    return Array.from({ length: n }, (_, i) => ({
+      fen: pawnFen(i),
+      reached: 2,
+      seriousErrors: 1,
+      proportion: 0.5,
+    }));
+  }
+
+  it("renders every Position when they fit under the display cap", async () => {
+    stub(ranked(30));
+    render(<DangerPage />);
+
+    const list = await screen.findByRole("list", { name: /positions dangereuses/i });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(30);
+  });
+
+  it("renders at most 30 diagrams and states the real total beyond that", async () => {
+    stub(ranked(42));
+    render(<DangerPage />);
+
+    const list = await screen.findByRole("list", { name: /positions dangereuses/i });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(30);
+    expect(screen.getByText(/42/)).toBeTruthy();
+  });
+});
+
 describe("DangerPage — board orientation", () => {
   const BLACK_TO_MOVE = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -";
 

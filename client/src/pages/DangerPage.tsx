@@ -14,6 +14,11 @@ const isDangerous = (d: DangerEntry) => d.proportion >= 0.5;
 /** A 4-field `Danger position` FEN, padded to a full FEN for board rendering (halfmove/fullmove are irrelevant to the diagram). */
 const boardFen = (fen: string) => `${fen} 0 1`;
 
+/** How many diagrams the page draws. The endpoint serves the full ranked list;
+ *  rendering a board per entry is what costs, so the cap is a display decision
+ *  and can be retuned without touching the contract or the term's definition. */
+const SHOWN_AT_MOST = 30;
+
 /**
  * Positions dangereuses (`/danger`): every recurring Position the Player has
  * reached across their analyzed Games, with its reach count and serious-error
@@ -36,8 +41,15 @@ export function DangerPage() {
       {!dangers ? null : dangers.length === 0 ? (
         <p>Analysez vos parties pour découvrir vos positions dangereuses.</p>
       ) : (
+        <>
+        {dangers.length > SHOWN_AT_MOST && (
+          <p>
+            {dangers.length} positions dangereuses — les {SHOWN_AT_MOST} plus dangereuses sont
+            affichées.
+          </p>
+        )}
         <ul aria-label="positions dangereuses">
-          {dangers.map((d, i) => (
+          {dangers.slice(0, SHOWN_AT_MOST).map((d, i) => (
             <li
               key={d.fen}
               data-serious={isDangerous(d) ? "true" : undefined}
@@ -74,6 +86,7 @@ export function DangerPage() {
             </li>
           ))}
         </ul>
+        </>
       )}
     </section>
   );
