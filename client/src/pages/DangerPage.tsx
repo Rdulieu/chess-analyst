@@ -30,16 +30,16 @@ const SHOWN_AT_MOST = 30;
  */
 export function DangerPage() {
   const [view, setView] = useState<DangerView | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let current = true;
     setView(null);
-    setFailed(false);
+    setFailure(null);
     fetchDangerView()
       .then((loaded) => current && setView(loaded))
-      .catch(() => current && setFailed(true));
+      .catch((cause: Error) => current && setFailure(cause.message));
     return () => {
       current = false;
     };
@@ -47,7 +47,7 @@ export function DangerPage() {
 
   // The four outcomes, named once and mutually exclusive by construction —
   // rather than left to the order of a chain of ternaries.
-  const state = failed
+  const state = failure
     ? "error"
     : !view
       ? "computing"
@@ -63,7 +63,9 @@ export function DangerPage() {
 
       {state === "error" && (
         <div role="alert">
-          <p>Erreur : impossible de calculer vos positions dangereuses.</p>
+          {/* The cause is carried through, so a server that is down does not
+              read like a server that is broken. */}
+          <p>Erreur : impossible de calculer vos positions dangereuses ({failure}).</p>
           <button type="button" onClick={() => setAttempt((n) => n + 1)}>
             Réessayer
           </button>

@@ -61,6 +61,9 @@ describe("DangerPage — the four states", () => {
     // Player back to what they just did.
     expect(screen.queryByText(/analysez vos parties/i)).toBeNull();
     expect(screen.getByRole("button", { name: /réessayer/i })).toBeTruthy();
+    // Names *what* failed, not just the operation: a server down (502) and a
+    // server bug (500) must not read identically, to the Player or to support.
+    expect(error.textContent).toMatch(/500/);
   });
 
   it("renders the Positions when the retry succeeds, without a reload", async () => {
