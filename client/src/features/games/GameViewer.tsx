@@ -34,7 +34,9 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
   };
 
   return (
-    <div style={{ maxWidth: 480 }}>
+    // Wider than the board alone since US-14: the `Evaluation curve` sits beside
+    // it and needs width to be a *time* axis at all.
+    <div style={{ maxWidth: 820 }}>
       <GameHeader game={game} />
       {game.analyzed ? (
         <label>
