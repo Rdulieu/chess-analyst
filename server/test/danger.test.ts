@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
 import { games, evaluations, type NewGame } from "../src/db/schema";
 import { getDangerPositions } from "../src/danger/repository";
+import { gamePositions } from "../src/chess/positions";
 
 function tempDb() {
   return openDb(":memory:").db;
@@ -26,14 +27,22 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
     .get();
 }
 
+/** Stores one Evaluation the way the `Analysis pass` does — FEN included,
+ *  read back from the Game's own PGN (ADR-0012). */
 function seedEvaluation(
   db: ReturnType<typeof tempDb>,
-  gameId: number,
+  game: { id: number; pgn: string },
   ply: number,
   evaluation: { cp?: number | null; mate?: number | null },
 ) {
   db.insert(evaluations)
-    .values({ gameId, ply, cp: evaluation.cp ?? null, mate: evaluation.mate ?? null })
+    .values({
+      gameId: game.id,
+      ply,
+      fen: gamePositions(game.pgn)[ply],
+      cp: evaluation.cp ?? null,
+      mate: evaluation.mate ?? null,
+    })
     .run();
 }
 
@@ -46,8 +55,8 @@ describe("getDangerPositions", () => {
     const db = tempDb();
     for (let n = 0; n < 2; n++) {
       const game = seedGame(db, { pgn: "1. e4" });
-      seedEvaluation(db, game.id, 0, { cp: 0 });
-      seedEvaluation(db, game.id, 1, { cp: 0 });
+      seedEvaluation(db, game, 0, { cp: 0 });
+      seedEvaluation(db, game, 1, { cp: 0 });
     }
 
     const dangers = getDangerPositions(db);
@@ -63,8 +72,8 @@ describe("getDangerPositions", () => {
     const g1 = seedGame(db, { pgn: "1. d4 Nf6 2. c4 e6 3. Nc3", playerColor: "black" });
     const g2 = seedGame(db, { pgn: "1. c4 e6 2. d4 Nf6 3. Nc3", playerColor: "black" });
     for (const ply of [0, 1, 2, 3, 4, 5]) {
-      seedEvaluation(db, g1.id, ply, { cp: 0 });
-      seedEvaluation(db, g2.id, ply, { cp: 0 });
+      seedEvaluation(db, g1, ply, { cp: 0 });
+      seedEvaluation(db, g2, ply, { cp: 0 });
     }
 
     const dangers = getDangerPositions(db);
@@ -89,13 +98,13 @@ describe("getDangerPositions", () => {
     const within = seedGame(db, { pgn: RUY_LOPEZ, playerColor: "white" });
     for (const ply of ALL_PLIES) {
       // Black-relative at ply 11: White is now losing badly.
-      seedEvaluation(db, within.id, ply, { cp: ply === 11 ? 1000 : 0 });
+      seedEvaluation(db, within, ply, { cp: ply === 11 ? 1000 : 0 });
     }
 
     // Same blunder, two half-moves later (ply 12→13) — one Move past the window.
     const outside = seedGame(db, { pgn: RUY_LOPEZ, playerColor: "white" });
     for (const ply of ALL_PLIES) {
-      seedEvaluation(db, outside.id, ply, { cp: ply === 13 ? 1000 : 0 });
+      seedEvaluation(db, outside, ply, { cp: ply === 13 ? 1000 : 0 });
     }
 
     const dangers = getDangerPositions(db);
@@ -111,8 +120,8 @@ describe("getDangerPositions", () => {
     const g1 = seedGame(db, { pgn: "1. e4 e5" });
     const g2 = seedGame(db, { pgn: "1. e4 d5" });
     for (const ply of [0, 1, 2]) {
-      seedEvaluation(db, g1.id, ply, { cp: 0 });
-      seedEvaluation(db, g2.id, ply, { cp: 0 });
+      seedEvaluation(db, g1, ply, { cp: 0 });
+      seedEvaluation(db, g2, ply, { cp: 0 });
     }
 
     const dangers = getDangerPositions(db);
@@ -124,7 +133,7 @@ describe("getDangerPositions", () => {
     const db = tempDb();
     for (let n = 0; n < 2; n++) {
       const game = seedGame(db, { pgn: "1. e4 e5" });
-      for (const ply of [0, 1, 2]) seedEvaluation(db, game.id, ply, { cp: 0 });
+      for (const ply of [0, 1, 2]) seedEvaluation(db, game, ply, { cp: 0 });
     }
 
     const dangers = getDangerPositions(db);
@@ -140,11 +149,11 @@ describe("getDangerPositions", () => {
     // The 1. d4 Position is reached more often, the 1. e4 one is more dangerous.
     for (let n = 0; n < 3; n++) {
       const quiet = seedGame(db, { pgn: "1. d4 d5", playerColor: "white" });
-      for (const ply of [0, 1, 2]) seedEvaluation(db, quiet.id, ply, { cp: 0 });
+      for (const ply of [0, 1, 2]) seedEvaluation(db, quiet, ply, { cp: 0 });
     }
     for (let n = 0; n < 2; n++) {
       const sharp = seedGame(db, { pgn: "1. e4 e5", playerColor: "black" });
-      for (const ply of [0, 1, 2]) seedEvaluation(db, sharp.id, ply, { cp: ply === 2 ? 1000 : 0 });
+      for (const ply of [0, 1, 2]) seedEvaluation(db, sharp, ply, { cp: ply === 2 ? 1000 : 0 });
     }
 
     const dangers = getDangerPositions(db);
@@ -161,11 +170,11 @@ describe("getDangerPositions", () => {
     // only 1. e4 survives the floor. Give 1. d4 three Games to outrank it.
     for (let n = 0; n < 2; n++) {
       const g = seedGame(db, { pgn: "1. e4 e5" });
-      for (const ply of [0, 1, 2]) seedEvaluation(db, g.id, ply, { cp: 0 });
+      for (const ply of [0, 1, 2]) seedEvaluation(db, g, ply, { cp: 0 });
     }
     for (let n = 0; n < 3; n++) {
       const g = seedGame(db, { pgn: "1. d4 d5" });
-      for (const ply of [0, 1, 2]) seedEvaluation(db, g.id, ply, { cp: 0 });
+      for (const ply of [0, 1, 2]) seedEvaluation(db, g, ply, { cp: 0 });
     }
 
     const dangers = getDangerPositions(db);

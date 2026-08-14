@@ -47,7 +47,7 @@ export function getDangerPositions(db: Db): DangerEntry[] {
 
   for (const game of analyzedGames) {
     const evals = db.select().from(evaluations).where(eq(evaluations.gameId, game.id)).all();
-    const plies = gamePlies(game, evals);
+    const plies = gamePlies(evals);
     const severities = moveSeverities(plies, game.playerColor);
 
     // From ply 1: the initial Position is reached by every Game by construction,

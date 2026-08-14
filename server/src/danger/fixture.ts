@@ -1,5 +1,6 @@
 import type { Db } from "../db";
 import { games, evaluations, type NewGame } from "../db/schema";
+import { gamePositions } from "../chess/positions";
 
 /**
  * Deterministic `Danger position` fixture (ADR-0009): Games with **pre-stored
@@ -19,8 +20,11 @@ import { games, evaluations, type NewGame } from "../db/schema";
 export function seedDangerFixture(db: Db): void {
   for (const { game, evals } of DANGER_FIXTURE_GAMES) {
     const { id } = db.insert(games).values(game).returning({ id: games.id }).get();
+    // The fixture stands in for an `Analysis pass`, so it stores what a pass
+    // stores — the FEN included (ADR-0012).
+    const fens = gamePositions(game.pgn);
     db.insert(evaluations)
-      .values(evals.map(([ply, cp]) => ({ gameId: id, ply, cp })))
+      .values(evals.map(([ply, cp]) => ({ gameId: id, ply, fen: fens[ply], cp })))
       .run();
   }
 }
