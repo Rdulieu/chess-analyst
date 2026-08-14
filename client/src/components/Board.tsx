@@ -3,20 +3,10 @@ import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
+import { EvaluationGraph } from "./EvaluationGraph";
+import { ErrorTallyReadout } from "./ErrorTallyReadout";
+import { SEVERITY_GLYPH, SEVERITY_TINT } from "../chess/severity";
 import type { MoveAnnotation } from "../types";
-
-const SEVERITY_GLYPH: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
-  inaccuracy: "?!",
-  mistake: "?",
-  blunder: "??",
-};
-
-/** Distinct per-severity board tint — supplementary to the move list's glyph, never the only signal. */
-const SEVERITY_TINT: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
-  inaccuracy: "#fff3b0",
-  mistake: "#ffcc80",
-  blunder: "#ff8a80",
-};
 
 /**
  * Interactive board for a Game: renders a Position, steps through the Game's
@@ -89,16 +79,35 @@ export function Board({
         {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
       </p>
       {currentAnnotation && <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />}
-      <Chessboard
-        options={{
-          id: "game-board",
-          position,
-          boardOrientation: orientation,
-          allowDragging: false,
-          showAnimations: false,
-          squareStyles,
-        }}
-      />
+      {/*
+        The board keeps a fixed width so it does not resize when the curve comes
+        and goes (hiding the annotations must not move the position the Player is
+        reading — US-14).
+      */}
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ flex: "0 0 360px", maxWidth: 360 }}>
+          <Chessboard
+            options={{
+              id: "game-board",
+              position,
+              boardOrientation: orientation,
+              allowDragging: false,
+              showAnimations: false,
+              squareStyles,
+            }}
+          />
+        </div>
+        {annotations && (
+          // Landscape, and deliberately so: squeezed into a narrow column the
+          // curve stops being a time axis and reads as a vertical drip.
+          <div style={{ flex: "1 1 260px", minWidth: 220 }}>
+            <div style={{ height: 220 }}>
+              <EvaluationGraph annotations={annotations} currentPly={index} />
+            </div>
+            <ErrorTallyReadout annotations={annotations} />
+          </div>
+        )}
+      </div>
       <ol aria-label="moves">
         {plies.map((ply, i) => {
           const annotation = annotations?.[i + 1];

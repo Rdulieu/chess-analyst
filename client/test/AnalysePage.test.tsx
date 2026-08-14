@@ -53,6 +53,9 @@ describe("AnalysePage", () => {
 
     // The board's move list (with the annotation flag) appears with no reload or user action beyond the click.
     // A generous timeout: the pass genuinely waits out runAnalysis' real polling interval.
-    expect(await screen.findByText("??", undefined, { timeout: 3000 })).toBeTruthy();
+    // Asked for by its accessible name rather than by the glyph's text: since
+    // US-14 the same glyph is also drawn on the `Evaluation curve`, and the move
+    // list is the accessible source of the two.
+    expect(await screen.findByLabelText("blunder", undefined, { timeout: 3000 })).toBeTruthy();
   });
 });

@@ -1,6 +1,6 @@
 ---
 id: HP-01
-covers: [Import, Monthly import, Game, Move, Position, Evaluation, Danger position, Board orientation]
+covers: [Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation]
 ---
 
 # HP-01 — Import and explore my chess.com history
@@ -92,6 +92,15 @@ from a single month to a range.
    > reference dataset (2026-08-14): of the 6 first-Move groups holding at least two Games, **none**
    > fails to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4.
    >
+   Then reopen one of the two Games just analysed → beside its board, an `Evaluation curve`
+   runs from the starting Position on the left to the last Move on the right; stepping through
+   the Moves moves a mark along it, and the Player's own flawed Moves are marked on it by the
+   same glyph the move list uses, with a count of them in words.
+
+   > **Why here and not as a scenario of its own**: the curve needs a Game with real
+   > `Evaluation`s, which this step has just produced — it costs one navigation and no engine
+   > time. (US-14, grafted; the HP budget stays at 3.)
+
    > Do not substitute "the two shortest Games **overall**": it is the same pair here, but only
    > because both happen to answer 1.e4 — it would go green for the wrong reason elsewhere.
 

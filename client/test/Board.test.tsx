@@ -198,6 +198,116 @@ describe("Board", () => {
   });
 });
 
+describe("Evaluation curve", () => {
+  /**
+   * The curve is `aria-hidden` on purpose (US-14: every figure it carries is
+   * already text in this component), so it is reached through the container —
+   * the same way the square tints above are. No role or label is added for the
+   * benefit of tests.
+   */
+  function curve(container: HTMLElement): SVGElement | null {
+    return container.querySelector<SVGElement>("svg[aria-hidden='true']");
+  }
+
+  /** The current-Move mark: the full-height vertical line, as opposed to the equality line. */
+  function cursorX(container: HTMLElement): number | null {
+    const lines = [...container.querySelectorAll<SVGLineElement>("svg[aria-hidden='true'] line")];
+    const cursor = lines.find(
+      (l) => l.getAttribute("x1") === l.getAttribute("x2") && l.getAttribute("y2") === "100",
+    );
+    return cursor ? Number(cursor.getAttribute("x1")) : null;
+  }
+
+  const three: MoveAnnotation[] = [
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
+    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+  ];
+
+  it("draws the Game's curve beside the board once the Game has Evaluations", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    expect(curve(container)).toBeTruthy();
+  });
+
+  it("draws no curve for a Game with no Evaluations, or with the annotations hidden", () => {
+    const { container } = render(<Board pgn="1. e4 e5" />);
+
+    expect(curve(container)).toBeNull();
+  });
+
+  it("marks the current Move, starting at the leftmost point and following navigation", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    expect(cursorX(container)).toBe(0); // the starting Position, leftmost
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    const afterFirst = cursorX(container)!;
+    expect(afterFirst).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(cursorX(container)!).toBeGreaterThan(afterFirst);
+
+    await user.click(screen.getByRole("button", { name: /previous/i }));
+    expect(cursorX(container)).toBe(afterFirst);
+  });
+
+  it("marks the Move jumped to directly, not just the one stepped to", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    await user.click(screen.getByRole("button", { name: "e5" }));
+
+    expect(cursorX(container)).toBe(2);
+  });
+
+  it("marks the Player's own flawed Moves on the curve, by glyph and not by colour alone", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    // Over the drawing rather than inside it: the curve's box scales x and y by
+    // different factors, which smears a glyph drawn in SVG coordinates.
+    const glyphs = [...container.querySelectorAll("div[aria-hidden='true'] > span")].map(
+      (t) => t.textContent,
+    );
+
+    // ply 1 is the Player's blunder; ply 2 is the opponent's reply, never flagged.
+    expect(glyphs).toEqual(["??"]);
+  });
+
+  it("counts the Player's own errors in text, said to be theirs", () => {
+    render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    const tally = screen.getByLabelText(/vos erreurs/i);
+    expect(tally.textContent).toContain("??");
+    expect(tally.textContent).toMatch(/\b1\b/);
+  });
+
+  it("says so in text when the Player made no flawed Move, rather than showing nothing", () => {
+    const clean: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null },
+    ];
+    render(<Board pgn="1. e4" annotations={clean} />);
+
+    expect(screen.getByLabelText(/vos erreurs/i).textContent).toMatch(/aucune/i);
+  });
+
+  it("drops the markers and the count along with the curve when annotations are hidden", () => {
+    render(<Board pgn="1. e4 e5" />);
+
+    expect(screen.queryByLabelText(/vos erreurs/i)).toBeNull();
+  });
+
+  it("stays out of the accessibility tree, adding no second image or live region", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    expect(curve(container)!.getAttribute("aria-hidden")).toBe("true");
+    // The advantage bar remains the only image in this component.
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+  });
+});
+
 describe("Board orientation", () => {
   /** The squares in the order they are laid out — first is the top-left corner of the board. */
   function squareOrder(container: HTMLElement): string[] {
@@ -228,5 +338,28 @@ describe("Board orientation", () => {
     // Orientation turns the board, it does not move the pieces.
     expect(pieceAt(container, "e1")).toBe("wK");
     expect(pieceAt(container, "e8")).toBe("bK");
+  });
+});
+
+describe("the error tally's wording", () => {
+  function annotationsWith(severities: MoveAnnotation["severity"][]): MoveAnnotation[] {
+    return [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      ...severities.map((severity, i) => ({
+        ply: i + 1,
+        whiteEval: { cp: -100, mate: null },
+        whiteWinChances: 40,
+        severity,
+      })),
+    ];
+  }
+
+  it("agrees in number — one flaw is not counted in the plural", () => {
+    render(<Board pgn="1. e4 e5 2. Nf3" annotations={annotationsWith(["inaccuracy", null, "blunder"])} />);
+
+    const tally = screen.getByLabelText(/vos erreurs/i).textContent!;
+    expect(tally).toContain("1 imprécision ?!");
+    expect(tally).not.toContain("imprécisions");
+    expect(tally).toContain("1 grosse erreur ??");
   });
 });

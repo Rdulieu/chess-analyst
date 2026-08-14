@@ -59,10 +59,21 @@ _Avoid_: Flip, Point of view, Perspective
 The chess engine's numeric assessment of a position (centipawns, or mate-in-N). **Stored**
 relative to the side to move (standard UCI convention — positive favours whoever has the
 move), which is what `winningChances`/`Mistake` severity are derived from. Anywhere an
-Evaluation is **shown to the Player** (a numeric value, an advantage bar), it is converted to
-**White-relative** (chess.com/Lichess convention — positive always favours White) so the sign
-doesn't flip with every half-move.
+Evaluation is **shown to the Player** (a numeric value, an advantage bar, the shape of an
+`Evaluation curve`), it is converted to **White-relative** (chess.com/Lichess convention —
+positive always favours White) so the sign doesn't flip with every half-move.
 _Avoid_: Score (ambiguous with the game's result)
+
+**Evaluation curve**:
+How a single Game's `Evaluation`s read **as a whole**, across the Game's Moves in order (the
+starting Position leftmost). Each side's share of the picture is its **winning chances** — the
+same bounded quantity the advantage bar shows, and the one `Inaccuracy`/`Mistake`/`Blunder` are
+defined on — never raw centipawns, which have no bound to draw against and would say something
+other than the bar beside them. Carries the Player's own flawed Moves where they happened, and
+nothing of the opponent's (see `Inaccuracy`/`Mistake`/`Blunder`). It states no fact that a Game's
+`Evaluation`s and Moves don't already state — it adds a shape — so the figures themselves stay
+readable Move by Move elsewhere. Only a Game that has been through an `Analysis pass` has one.
+_Avoid_: Advantage graph, Accuracy curve (accuracy is not something we compute)
 
 **Inaccuracy** / **Mistake** / **Blunder**:
 The three severities of a flawed Move, defined **as Lichess defines them** — by how much the Move
