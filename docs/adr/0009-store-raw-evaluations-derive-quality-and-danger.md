@@ -48,3 +48,8 @@ the stored per-ply Evaluations at read time.
   stored Evaluations with **no new engine work**.
 - Engine execution itself (where/how it runs) is covered by **ADR-0008**; this ADR is only about
   **what is stored and how quality/danger are derived**.
+- **Annotated by ADR-0012** (US-10b): the `evaluations` row also carries the ply's **FEN**, written
+  by the pass that already computed it. That does not weaken "derive on the fly" — severities and
+  Danger positions are still derived at read time, and a FEN bakes in none of the thresholds this
+  ADR was protecting. It removes a full cm-chess PGN replay per Game per request (measured: 2419 ms
+  of a 2.5 s `/danger` response at 50 Games).

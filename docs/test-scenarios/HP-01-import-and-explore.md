@@ -70,14 +70,28 @@ from a single month to a range.
 6b. Go back and open a Game the Player played **as Black** → the same header, now marking the Player on the Black side, and the board is read **Black at the bottom**.
 7. Start the same Import again (same range + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
 8. Reopen the app (reload) → the username is already prefilled from the remembered setting.
-9. (Drive-by, US-4 + US-8) Select **one** imported Game and start the analysis pass (real WASM
+9. (Drive-by, US-4 + US-8 + US-10b) Select the **two shortest Games sharing the same first Move**
+   and start the analysis pass on them (real WASM
    Stockfish, depth 16 — allow it real time to finish) → while it runs, a count of **Positions
    evaluated** advances (it does not sit at zero); when it ends, an explicit confirmation states
-   how many Games and Positions were covered, and the Game is marked "analysée". Dismiss the
+   how many Games and Positions were covered, and both Games are marked "analysée". Dismiss the
    confirmation → it disappears, and does not come back after a reload. Open "Positions
-   dangereuses" (`/danger`) → the view renders at least one Position (no error), shape only (real
-   game, no fixed figures expected), each diagram stating its **side to move** and presented from
-   that side.
+   dangereuses" (`/danger`) → while it computes, a **text readout announces the computation**
+   (never a blank page); it then renders **at least one** `Danger position`, **reached at least
+   twice**, and the **initial Position is not among them**. Shape only otherwise (real games, no
+   fixed figures expected), each diagram stating its **side to move** and presented from that side.
+
+   > **Why two Games, and why "same first Move"**: a `Danger position` is *recurring* (reached ≥ 2,
+   > initial Position excluded — CONTEXT.md), so a single Game populates `/danger` with nothing at
+   > all. Two Games opening with the same Move share the Position that follows it **by
+   > construction** — one guaranteed entry, whatever the account or the range. It is also the
+   > **cheapest** rule available: the two shortest such Games cost **27 Positions (~3.5 min)**,
+   > less than the single shortest Game the step used to analyse (~40). Verified on this suite's
+   > reference dataset (2026-08-14): of the 6 first-Move groups holding at least two Games, **none**
+   > fails to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4.
+   >
+   > Do not substitute "the two shortest Games **overall**": it is the same pair here, but only
+   > because both happen to answer 1.e4 — it would go green for the wrong reason elsewhere.
 
 ## Checks
 ### UI
