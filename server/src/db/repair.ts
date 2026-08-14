@@ -50,6 +50,14 @@ export function repairMissingFens(db: Db): number {
         .run();
       repaired += changes;
     }
+
+    // Anything still empty is a row the replay has no Position for — a ply past
+    // the Game's last one. It describes no Position, so it is dropped rather
+    // than left behind: otherwise the repair would find it again, and re-replay
+    // this Game's PGN, on every single launch.
+    db.delete(evaluations)
+      .where(and(eq(evaluations.gameId, gameId), eq(evaluations.fen, "")))
+      .run();
   }
 
   return repaired;

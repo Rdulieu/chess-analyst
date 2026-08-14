@@ -75,6 +75,25 @@ describe("openDb — Evaluations that predate the stored FEN", () => {
     second.sqlite.close();
   });
 
+  it("drops a row whose ply the Game's PGN has no Position for, rather than leaving it unrepairable", () => {
+    const file = tempFile();
+    openDb(file).sqlite.close();
+    const id = seedPreFenGame(file, "1. e4 e5");
+    // One row beyond the PGN's last Position: the replay yields no FEN for it,
+    // so it describes no Position and would otherwise keep the repair alive on
+    // every single launch.
+    const raw = new Database(file);
+    raw.prepare(`INSERT INTO evaluations (game_id, ply, fen, cp) VALUES (?, 9, '', 0)`).run(id);
+    raw.close();
+
+    openDb(file).sqlite.close();
+    const second = openDb(file);
+
+    expect(second.repairedEvaluations).toBe(0);
+    expect(second.db.select().from(evaluations).where(eq(evaluations.fen, "")).all()).toEqual([]);
+    second.sqlite.close();
+  });
+
   it("drops the Evaluations of a Game whose PGN cannot be replayed, and un-analyzes it", () => {
     const file = tempFile();
     openDb(file).sqlite.close();
