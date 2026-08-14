@@ -3,6 +3,7 @@ import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
+import { EvaluationGraph } from "./EvaluationGraph";
 import type { MoveAnnotation } from "../types";
 
 const SEVERITY_GLYPH: Record<NonNullable<MoveAnnotation["severity"]>, string> = {
@@ -89,16 +90,30 @@ export function Board({
         {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
       </p>
       {currentAnnotation && <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />}
-      <Chessboard
-        options={{
-          id: "game-board",
-          position,
-          boardOrientation: orientation,
-          allowDragging: false,
-          showAnimations: false,
-          squareStyles,
-        }}
-      />
+      {/*
+        The board keeps a fixed width so it does not resize when the curve comes
+        and goes (hiding the annotations must not move the position the Player is
+        reading — US-14).
+      */}
+      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+        <div style={{ flex: "0 0 360px", maxWidth: 360 }}>
+          <Chessboard
+            options={{
+              id: "game-board",
+              position,
+              boardOrientation: orientation,
+              allowDragging: false,
+              showAnimations: false,
+              squareStyles,
+            }}
+          />
+        </div>
+        {annotations && (
+          <div style={{ flex: "0 0 110px" }}>
+            <EvaluationGraph annotations={annotations} currentPly={index} />
+          </div>
+        )}
+      </div>
       <ol aria-label="moves">
         {plies.map((ply, i) => {
           const annotation = annotations?.[i + 1];
