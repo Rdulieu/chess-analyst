@@ -110,6 +110,103 @@
   > - Périmètre : tous les écrans (`/`, `/stats`, `/openings`, `/danger`, explorateur, analyse) ou un
   >   sous-ensemble ? Le mode sombre et le responsive sont-ils dedans ou différés ?
 
+- **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
+  > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
+  > aucun schéma, aucun endpoint, aucune donnée persistée) et le seul vrai arbitrage découle
+  > d'ADR-0009. `CONTEXT.md` : nouveau terme **`Evaluation curve`**. Branche :
+  > `integration/US-14-evaluation-graph`.
+  >
+  > Le besoin : sur la page **Analyse**, un graphique **à côté** du plateau, début
+  > de partie **à gauche**, où **la zone d'un joueur grandit à mesure qu'il prend l'avantage**, et où
+  > le **coup en cours est mis en avant**. Une illustration de référence a été fournie (aire
+  > blanc/noir sur un axe vertical borné, curseur vertical sur le coup courant, pastilles de qualité
+  > de coup posées sur la courbe).
+  >
+  > Cadré par le demandeur, hors débat au grilling :
+  > - Le graphique **n'est pas cliquable** (lecture seule ; la navigation reste la liste des coups).
+  > - Il porte **exactement la même information** que la barre d'évaluation et que la valeur affichée
+  >   à côté de chaque coup (`+0.3`) — même grandeur, même repère Blancs, aucune divergence possible
+  >   entre les trois vues.
+  > - Il inclut **le nombre et la nature des erreurs**, telles qu'elles sont déjà en base.
+  > - **Aucune nouvelle valeur calculée** : cette US est de l'affichage, rien d'autre.
+  >
+  > État vérifié : **la donnée est déjà là, aucun changement serveur attendu**.
+  > `GET /api/games/:id/annotations` renvoie déjà, pour **chaque demi-coup**, `whiteEval` **et**
+  > `whiteWinChances` (0–100, repère Blancs) plus la `severity` du coup
+  > (`server/src/analysis/derivation.ts:9`), dérivés à la volée des `evaluations` d'US-4 (ADR-0009).
+  > `GameViewer.tsx:20` les charge déjà et `Board.tsx:91` en consomme **un seul point à la fois** via
+  > `WinningChancesBar` : le graphique est cette même barre étendue au temps. C'est donc une US
+  > **purement client**.
+  >
+  > **Le piège du cadrage, désamorcé** : « la même information que la barre **et** que la valeur à
+  > côté des coups » désignait deux **rendus distincts de la même `Evaluation`** — la barre est pilotée
+  > par `whiteWinChances` (0–100, saturé), la valeur `+0.3` par `whiteEval` (centipions, non borné,
+  > mats compris). Une aire ne peut pas être géométriquement les deux.
+  >
+  > Décisions du grilling :
+  > - **L'aire porte les winning chances**, pas les centipions. La proportion blanc/noir du graphique
+  >   est donc exactement celle de la barre à l'instant courant : les deux vues sont la même chose,
+  >   l'une dans le temps, l'autre à l'instant. Bornée par construction, mat = aire pleine, et c'est
+  >   l'échelle sur laquelle les sévérités sont définies (`CONTEXT.md`) — une chute visible correspond
+  >   donc à l'erreur marquée. Écrêter des centipions à ±N aurait été une règle de présentation
+  >   **nouvelle** (et un graphique qui ne dit plus la même chose que la barre juste au-dessus).
+  >   Le `+0.3` reste en libellé, inchangé.
+  > - **Le graphique vit dans `Board`**, conditionné à la présence d'`annotations` — le précédent
+  >   exact de `WinningChancesBar` (`Board.tsx:91`). Aucun état remonté : le demi-coup courant est
+  >   `index` (`Board.tsx:56`) et, le graphique n'étant pas cliquable, le flux est **à sens unique**.
+  >   Il reste **son propre composant** (`EvaluationGraph`), jamais inliné. Le jour où il deviendrait
+  >   une commande, remonter `index` dans `GameViewer` sera un refactoring local.
+  > - **Impact vérifié : `Board` n'a qu'un seul appelant**, `GameViewer.tsx:58`. L'Explorateur
+  >   (`ExplorerPage.tsx:85`) et `/danger` (`DangerPage.tsx:118`) utilisent directement le
+  >   `Chessboard` de `react-chessboard` — ils ne voient pas passer ce changement (la vigilance
+  >   « `Board` est partagé » d'US-10a portait sur le *terme* `Board orientation`, pas sur le
+  >   composant). Restent trois impacts locaux à la page Analyse : la mise en page de `Board` (une
+  >   rangée plateau | graphique, sans feuille de style — US-13), `client/test/Board.test.tsx`, et la
+  >   suite HP (HP-01 étape 8, HP-02 passent par Analyse).
+  > - **Un seul décompte d'erreurs, celui du Player** (`3 ?!`, `1 ?`, `2 ??`), agrégé côté client
+  >   depuis `annotations` — agrégat d'affichage, pas une valeur nouvelle, cohérent avec ADR-0009.
+  >   Pas les deux colonnes W/B de l'illustration : `gameAnnotations`
+  >   (`server/src/analysis/derivation.ts:99`) laisse `severity` à **`null` sur tous les coups de
+  >   l'adversaire**, et `CONTEXT.md` le pose comme une décision de domaine, pas comme un manque.
+  >   **Conséquence assumée** : la courbe montre les deux joueurs (l'évaluation est un fait de la
+  >   position), les marqueurs seulement le Player — donc le libellé dit « **vos** erreurs », sinon
+  >   une chute sans pastille sur un coup adverse se lira comme un bug.
+  > - **Les erreurs sont à la fois marquées sur la courbe et décomptées** : le décompte dit
+  >   « combien », la courbe dit « quand », et c'est le « quand » qui justifie un axe temporel. Le
+  >   marqueur porte le **glyphe** (`?!`/`?`/`??`, `SEVERITY_GLYPH` `Board.tsx:8`), pas une pastille de
+  >   couleur : vocabulaire déjà à l'écran, sévérité distinguée par la **forme**. La teinte
+  >   (`SEVERITY_TINT` `Board.tsx:15`) peut renforcer, jamais porter seule.
+  > - **Le graphique est `aria-hidden`, et c'est une description exacte, pas un renoncement** : toute
+  >   donnée qu'il porte est déjà en texte dans le même composant — la liste des coups donne `san` +
+  >   glyphe + `Evaluation` **par demi-coup** (`Board.tsx:102-121`), le readout donne le coup courant
+  >   et son `+0.3` (`:87`), la barre donne la balance de l'instant (`:91`). Un `aria-label` résumant
+  >   80 demi-coups serait du bruit, et l'*interpréter* serait de la valeur nouvelle. Le décompte
+  >   d'erreurs, lui, est du **vrai texte**. Bénéfice de bord : pas de second `role="img"` chiffré, donc
+  >   pas de collision avec `getByRole("img", { name: /55/ })` (`Board.test.tsx:142,146`) — et pas de
+  >   troisième région annoncée sur une page qui en a déjà une de trop (celle de `react-chessboard`,
+  >   tierce, finding ouvert depuis US-8). **Latitude accordée** : si des tests unitaires de `Board`
+  >   entrent malgré tout en conflit, en profiter pour renommer / assainir le composant.
+  > - **Repère du coup courant doublement porté** : curseur vertical sur le graphique (visuel) et
+  >   l'`aria-current` déjà présent sur le coup dans la liste (`Board.tsx:109`) — le repère non
+  >   chromatique existe donc déjà.
+  > - **Géométrie** : un point par **`Move` (demi-coup)**, espacement uniforme (pas le temps de
+  >   réflexion, qu'on n'a pas) ; bord gauche = **ply 0, la Position initiale** à 50/50, ce qui est
+  >   déjà l'état d'ouverture du plateau (`Board.tsx:56`) — noter que `/danger` **exclut** la Position
+  >   initiale, mais c'est une règle d'agrégat, une partie unique a un point de départ qui a un sens ;
+  >   **un seul repère, la médiane 50 %**, sans graduation ni grille (la lecture précise se fait sur le
+  >   `+0.3` et la liste des coups).
+  > - **États sans rien à montrer, aucun nouveau message ni contrôle** : partie non analysée →
+  >   `{ analyzed: false, plies: [] }` (`server/src/annotations/repository.ts:20`), le graphique
+  >   n'apparaît pas et `GameViewer.tsx:47-52` parle déjà (« pas encore analysée » + bouton
+  >   Analyser) ; case « Afficher les annotations » décochée → `annotations` à `undefined`
+  >   (`GameViewer.tsx:61`), le graphique disparaît avec la barre, les glyphes et les valeurs. À
+  >   surveiller à l'implémentation : décocher ne doit pas faire sauter la mise en page (plateau seul
+  >   dans une rangée prévue pour deux).
+  >
+  > Reste à cadrer au découpage : le **critère d'acceptation** d'une Feature Path agentique sur un
+  > graphique (points présents, sens de l'axe, curseur qui suit la navigation, marqueurs aux bons
+  > demi-coups) — pas son esthétique.
+
 ## Doing
 
 ## In review
