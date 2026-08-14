@@ -110,6 +110,8 @@
   > - Périmètre : tous les écrans (`/`, `/stats`, `/openings`, `/danger`, explorateur, analyse) ou un
   >   sous-ensemble ? Le mode sombre et le responsive sont-ils dedans ou différés ?
 
+## Doing
+
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
   > aucun schéma, aucun endpoint, aucune donnée persistée) et le seul vrai arbitrage découle
@@ -203,11 +205,24 @@
   >   surveiller à l'implémentation : décocher ne doit pas faire sauter la mise en page (plateau seul
   >   dans une rangée prévue pour deux).
   >
-  > Reste à cadrer au découpage : le **critère d'acceptation** d'une Feature Path agentique sur un
-  > graphique (points présents, sens de l'axe, curseur qui suit la navigation, marqueurs aux bons
-  > demi-coups) — pas son esthétique.
-
-## Doing
+  > Le **critère d'acceptation** d'une Feature Path agentique sur un graphique est tranché dans le
+  > PRD : présence, sens de l'axe, synchronisation du curseur, position des marqueurs, cohérence du
+  > décompte — jamais l'esthétique.
+  >
+  > **En cours.** PRD : `.scratch/evaluation-curve/PRD.md`. Découpée en **2 issues**, sur
+  > `integration/US-14-evaluation-graph` :
+  > - `01-evaluation-curve-beside-the-board` — tracer bullet : dérivation pure de la forme,
+  >   composant dédié, rendu à côté du plateau conditionné aux annotations, curseur du coup courant,
+  >   `aria-hidden`
+  > - `02-your-errors-marked-and-counted` — marqueurs par glyphe posés au bon demi-coup + décompte en
+  >   texte, libellé comme **vos** erreurs, Player uniquement (bloquée par 01)
+  >
+  > Seams : la logique dans une **fonction pure** (prior art `candidateArrows`), le test composant du
+  > plateau gardé mince, **FP sur base seedée** (`seed:danger` insère des parties déjà analysées avec
+  > leurs `evaluations` — ni réseau ni moteur). **Budget HP inchangé** : greffe gratuite sur l'étape 9
+  > d'HP-01, qui analyse déjà deux parties pour de vrai. Le demandeur se contente de **cette seule
+  > étape 9** pour la PR `integration → develop` (HP-02 et HP-03 ne passent pas par Analyse) — à
+  > reconfirmer au moment de la PR.
 
 ## In review
 
