@@ -2,38 +2,6 @@
 
 ## To do
 
-- **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
-  > Pas encore grillée. Issue de la scission d'US-10 (les deux préoccupations qui y étaient réunies
-  > n'ont rien en commun). `GET /api/danger` (`server/src/routes/danger.ts:13`) est synchrone — pas
-  > de job de fond comme l'`Analysis pass` — et `DangerPage.tsx:21,33` rend `null` tant que la
-  > réponse n'est pas là : **écran blanc** pendant le calcul. Le chemin d'erreur retombe sur la même
-  > branche que « rien d'analysé » (`:26`), donc un échec est indiscernable d'un état vide.
-  >
-  > **Commencer par mesurer** : le choix job+polling vs. simple indicateur est arbitraire sans
-  > chiffre. Coût relevé en lecture de code — un **N+1** (une requête `evaluations` par partie
-  > analysée, `danger/repository.ts:35`) et surtout un **rejeu cm-chess complet du PGN par partie et
-  > par requête** (`chess/positions.ts:9`), le tout sur le thread principal, sans cache ni
-  > mémoïsation (choix assumé d'ADR-0009 : agrégat dérivé à la volée). Chronométrer
-  > `getDangerPositions` contre une DB réellement importée + analysée avant de trancher.
-  >
-  > **Grillée** (2026-08-14). La mesure a déplacé le problème : le N+1 soupçonné coûte **41 ms**,
-  > mais le **rejeu cm-chess du PGN** en coûte **2419** sur 2,5 s — et ce n'est pas tout côté
-  > serveur, l'agrégat renvoyait **3736 entrées dont 66 récurrentes** (400 Ko, autant de plateaux).
-  > Décisions : job + polling **rejeté** (masque un coût au lieu de le supprimer, aucune unité de
-  > progression naturelle) au profit du stockage de la **FEN par demi-coup** — **ADR-0012**, qui
-  > ramène `/danger` de ~2,5 s à ~0,1 s (et de ~31 s à ~1,3 s sur une année) ; `CONTEXT.md` :
-  > `Danger position` = atteinte **au moins deux fois**, Position initiale **exclue**, classement
-  > **par proportion d'erreur sérieuse**. HP-01 pas 9 réécrit (deux parties les plus courtes de
-  > même premier coup — une entrée garantie par construction, ~3,5 min, moins qu'avant).
-  > PRD : `.scratch/danger-page-waiting/PRD.md`. Découpée en 3 issues, sur
-  > `integration/US-10b-danger-page-waiting` :
-  > - `01-recurring-positions-most-dangerous-first` — plancher de récurrence, exclusion ply-0, tri
-  >   par proportion, cap d'affichage à 30
-  > - `02-four-states-never-a-mute-screen` — calcul annoncé, échec distinct de l'état vide, et
-  >   l'état « rien de récurrent » (bloquée par 01)
-  > - `03-store-the-per-ply-fen` — colonne `fen` requise, écrite par la passe, contrôle d'intégrité
-  >   et réparation à l'ouverture (bloquée par 02, ADR-0012)
-
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
   > seul username chess.com (clé/valeur), et `games` n'a **aucune notion de propriétaire** — même
@@ -145,6 +113,44 @@
 ## Doing
 
 ## In review
+
+- **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
+  > **En revue** — PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
+  > entier (3/3 vertes), les 3 issues livrées et auto-mergées (PR #31, #32, #33). Issue de la
+  > scission d'US-10 (les deux préoccupations qui y étaient réunies n'ont rien en commun). `GET /api/danger` (`server/src/routes/danger.ts:13`) est synchrone — pas
+  > de job de fond comme l'`Analysis pass` — et `DangerPage.tsx:21,33` rend `null` tant que la
+  > réponse n'est pas là : **écran blanc** pendant le calcul. Le chemin d'erreur retombe sur la même
+  > branche que « rien d'analysé » (`:26`), donc un échec est indiscernable d'un état vide.
+  >
+  > **Commencer par mesurer** : le choix job+polling vs. simple indicateur est arbitraire sans
+  > chiffre. Coût relevé en lecture de code — un **N+1** (une requête `evaluations` par partie
+  > analysée, `danger/repository.ts:35`) et surtout un **rejeu cm-chess complet du PGN par partie et
+  > par requête** (`chess/positions.ts:9`), le tout sur le thread principal, sans cache ni
+  > mémoïsation (choix assumé d'ADR-0009 : agrégat dérivé à la volée). Chronométrer
+  > `getDangerPositions` contre une DB réellement importée + analysée avant de trancher.
+  >
+  > **Grillée** (2026-08-14). La mesure a déplacé le problème : le N+1 soupçonné coûte **41 ms**,
+  > mais le **rejeu cm-chess du PGN** en coûte **2419** sur 2,5 s — et ce n'est pas tout côté
+  > serveur, l'agrégat renvoyait **3736 entrées dont 66 récurrentes** (400 Ko, autant de plateaux).
+  > Décisions : job + polling **rejeté** (masque un coût au lieu de le supprimer, aucune unité de
+  > progression naturelle) au profit du stockage de la **FEN par demi-coup** — **ADR-0012**, qui
+  > ramène `/danger` de ~2,5 s à ~0,1 s (et de ~31 s à ~1,3 s sur une année) ; `CONTEXT.md` :
+  > `Danger position` = atteinte **au moins deux fois**, Position initiale **exclue**, classement
+  > **par proportion d'erreur sérieuse**. HP-01 pas 9 réécrit (deux parties les plus courtes de
+  > même premier coup — une entrée garantie par construction, ~3,5 min, moins qu'avant).
+  > PRD : `.scratch/danger-page-waiting/PRD.md`. Découpée en 3 issues, sur
+  > `integration/US-10b-danger-page-waiting` :
+  > - `01-recurring-positions-most-dangerous-first` — plancher de récurrence, exclusion ply-0, tri
+  >   par proportion, cap d'affichage à 30
+  > - `02-four-states-never-a-mute-screen` — calcul annoncé, échec distinct de l'état vide, et
+  >   l'état « rien de récurrent » (bloquée par 01)
+  > - `03-store-the-per-ply-fen` — colonne `fen` requise, écrite par la passe, contrôle d'intégrité
+  >   et réparation à l'ouverture (bloquée par 02, ADR-0012)
+  >
+  > **Livrée.** `/danger` mesuré sur l'historique réel (78 parties, 6278 positions) : **3111 ms →
+  > 55 ms**, et l'agrégat passe de 3736 entrées à 109. La page ne rend plus jamais d'écran muet :
+  > quatre états distincts, dont l'échec serveur qui ne renvoie plus le joueur analyser ce qu'il
+  > vient d'analyser.
 
 - **US-10a**: Savoir dans quel sens lire un échiquier et qui joue quoi.
   > **En revue** — PR `integration/US-10a-players-on-the-board` → `develop`, suite HP rejouée en

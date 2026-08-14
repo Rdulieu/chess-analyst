@@ -85,8 +85,10 @@ from a single month to a range.
    > initial Position excluded — CONTEXT.md), so a single Game populates `/danger` with nothing at
    > all. Two Games opening with the same Move share the Position that follows it **by
    > construction** — one guaranteed entry, whatever the account or the range. It is also the
-   > **cheapest** rule available: the two shortest such Games cost **27 Positions (~3.5 min)**,
-   > less than the single shortest Game the step used to analyse (~40). Verified on this suite's
+   > **cheapest** rule available: the two shortest such Games cost **~29 Positions**, less than the
+   > single shortest Game the step used to analyse (~40). Measured at **~14 s** on the 2026-08-14
+   > run — the estimate here read ~3.5 min, some 15x pessimistic, from before the native engine
+   > backend. Verified on this suite's
    > reference dataset (2026-08-14): of the 6 first-Move groups holding at least two Games, **none**
    > fails to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4.
    >
