@@ -1,14 +1,38 @@
 import { describe, it, expect } from "vitest";
-import { gameAnnotations } from "../src/analysis/derivation";
+import { gameAnnotations, gamePlies } from "../src/analysis/derivation";
+import { gamePositions } from "../src/chess/positions";
+
+/** Stamps each stored `Evaluation` with the FEN of the Position it is of — what
+ *  the `Analysis pass` writes (ADR-0012). Irrelevant to the annotations
+ *  themselves, but a stored row always carries one. */
+function stored<T extends { ply: number }>(pgn: string, evals: T[]) {
+  const fens = gamePositions(pgn);
+  return evals.map((e) => ({ ...e, fen: fens[e.ply] }));
+}
+
+describe("gamePlies", () => {
+  it("reads the FEN stored with each Evaluation instead of replaying the PGN", () => {
+    // Deliberately not the FENs of any real Game: if the derivation replayed a
+    // PGN it would produce something else entirely (ADR-0012).
+    const evals = [
+      { ply: 1, fen: "second", cp: 10, mate: null },
+      { ply: 0, fen: "first", cp: 25, mate: null },
+    ];
+
+    const plies = gamePlies(evals);
+
+    expect(plies.map((p) => p.fen)).toEqual(["first", "second"]);
+  });
+});
 
 describe("gameAnnotations", () => {
   it("ply 0 (starting Position, White to move) keeps the stored Evaluation as-is", () => {
     const game = { pgn: "1. e4 e5", playerColor: "white" as const };
-    const evals = [
+    const evals = stored(game.pgn, [
       { ply: 0, cp: 25, mate: null },
       { ply: 1, cp: -10, mate: null },
       { ply: 2, cp: 5, mate: null },
-    ];
+    ]);
 
     const annotations = gameAnnotations(game, evals);
 
@@ -19,10 +43,10 @@ describe("gameAnnotations", () => {
     const game = { pgn: "1. e4", playerColor: "white" as const };
     // A DB-select row carries more than {cp, mate} (e.g. gameId, ply) — the
     // White-to-move branch must not return it as-is.
-    const evals = [
+    const evals = stored(game.pgn, [
       { ply: 0, cp: 25, mate: null, gameId: 1 },
       { ply: 1, cp: 0, mate: null, gameId: 1 },
-    ];
+    ]);
 
     const annotations = gameAnnotations(game, evals);
 
@@ -31,11 +55,11 @@ describe("gameAnnotations", () => {
 
   it("ply 1 (Black to move, after White's Move) flips the stored Evaluation to stay White-relative", () => {
     const game = { pgn: "1. e4 e5", playerColor: "white" as const };
-    const evals = [
+    const evals = stored(game.pgn, [
       { ply: 0, cp: 25, mate: null },
       { ply: 1, cp: -10, mate: null }, // side-to-move (Black) relative: Black is 10cp worse off.
       { ply: 2, cp: 5, mate: null },
-    ];
+    ]);
 
     const annotations = gameAnnotations(game, evals);
 
@@ -45,11 +69,11 @@ describe("gameAnnotations", () => {
 
   it("flags the Player's own Move with its severity (winning-chances drop, as /danger already classifies it)", () => {
     const game = { pgn: "1. e4 e5", playerColor: "white" as const };
-    const evals = [
+    const evals = stored(game.pgn, [
       { ply: 0, cp: 0, mate: null }, // White to move, 50% win chances.
       { ply: 1, cp: null, mate: 3 }, // Black to move, forced mate: White's Move just blundered into it.
       { ply: 2, cp: 0, mate: null },
-    ];
+    ]);
 
     const annotations = gameAnnotations(game, evals);
 
@@ -58,12 +82,12 @@ describe("gameAnnotations", () => {
 
   it("never flags the opponent's Move, even when it drops winning chances just as badly", () => {
     const game = { pgn: "1. e4 e5 2. Nf3", playerColor: "white" as const };
-    const evals = [
+    const evals = stored(game.pgn, [
       { ply: 0, cp: 0, mate: null }, // White to move.
       { ply: 1, cp: 0, mate: null }, // Black to move.
       { ply: 2, cp: null, mate: 3 }, // White to move: Black's Move just blundered into a mate.
       { ply: 3, cp: 0, mate: null },
-    ];
+    ]);
 
     const annotations = gameAnnotations(game, evals);
 
@@ -72,11 +96,11 @@ describe("gameAnnotations", () => {
 
   it("flips a forced mate to White-relative exactly like it flips cp", () => {
     const game = { pgn: "1. e4 e5", playerColor: "white" as const };
-    const evals = [
+    const evals = stored(game.pgn, [
       { ply: 0, cp: 0, mate: null },
       { ply: 1, cp: null, mate: 3 }, // Black to move: Black has a forced mate in 3 (bad for White).
       { ply: 2, cp: 0, mate: null },
-    ];
+    ]);
 
     const annotations = gameAnnotations(game, evals);
 

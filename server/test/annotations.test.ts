@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
+import { gamePositions } from "../src/chess/positions";
 import { games, evaluations, type NewGame } from "../src/db/schema";
 import { getGameAnnotations } from "../src/annotations/repository";
 
@@ -25,14 +26,22 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
     .get();
 }
 
+/** Stores one Evaluation the way the `Analysis pass` does — FEN included,
+ *  read back from the Game's own PGN (ADR-0012). */
 function seedEvaluation(
   db: ReturnType<typeof tempDb>,
-  gameId: number,
+  game: { id: number; pgn: string },
   ply: number,
   evaluation: { cp?: number | null; mate?: number | null },
 ) {
   db.insert(evaluations)
-    .values({ gameId, ply, cp: evaluation.cp ?? null, mate: evaluation.mate ?? null })
+    .values({
+      gameId: game.id,
+      ply,
+      fen: gamePositions(game.pgn)[ply],
+      cp: evaluation.cp ?? null,
+      mate: evaluation.mate ?? null,
+    })
     .run();
 }
 
@@ -53,9 +62,9 @@ describe("getGameAnnotations", () => {
   it("returns the per-ply annotations for an analyzed Game", () => {
     const db = tempDb();
     const game = seedGame(db, { pgn: "1. e4 e5", playerColor: "white" });
-    seedEvaluation(db, game.id, 0, { cp: 0 });
-    seedEvaluation(db, game.id, 1, { cp: 0 });
-    seedEvaluation(db, game.id, 2, { cp: 0 });
+    seedEvaluation(db, game, 0, { cp: 0 });
+    seedEvaluation(db, game, 1, { cp: 0 });
+    seedEvaluation(db, game, 2, { cp: 0 });
 
     const result = getGameAnnotations(db, game.id);
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { openDb } from "../src/db";
+import { gamePositions } from "../src/chess/positions";
 import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
@@ -112,11 +113,9 @@ describe("games API", () => {
       .returning()
       .get();
     db.insert(evaluations)
-      .values([
-        { gameId: game.id, ply: 0, cp: 0, mate: null },
-        { gameId: game.id, ply: 1, cp: 0, mate: null },
-        { gameId: game.id, ply: 2, cp: 0, mate: null },
-      ])
+      .values(
+        gamePositions(game.pgn).map((fen, ply) => ({ gameId: game.id, ply, fen, cp: 0, mate: null })),
+      )
       .run();
     const app = createApp(db, fakeClient({}));
 
@@ -334,10 +333,9 @@ describe("danger API", () => {
       .run();
     db.insert(evaluations)
       .values(
-        [1, 2].flatMap((gameId) => [
-          { gameId, ply: 0, cp: 0 },
-          { gameId, ply: 1, cp: 0 },
-        ]),
+        [1, 2].flatMap((gameId) =>
+          gamePositions("1. e4").map((fen, ply) => ({ gameId, ply, fen, cp: 0 })),
+        ),
       )
       .run();
     const app = createApp(db, fakeClient({}));
@@ -367,10 +365,7 @@ describe("danger API", () => {
       )
       .run();
     db.insert(evaluations)
-      .values([
-        { gameId: 1, ply: 0, cp: 0 },
-        { gameId: 1, ply: 1, cp: 0 },
-      ])
+      .values(gamePositions("1. e4").map((fen, ply) => ({ gameId: 1, ply, fen, cp: 0 })))
       .run();
     const app = createApp(db, fakeClient({}));
 
