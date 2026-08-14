@@ -29,6 +29,16 @@ function fourFieldFen(fen: string): string {
  * already separates whose turn it was — not scoped by side or cadence);
  * transpositions merge across every analyzed Game via the 4-field FEN.
  */
+/**
+ * How many Games have been through the `Analysis pass`. Served alongside the
+ * aggregate so an empty list can be *read*: no analyzed Game at all, or
+ * analyzed Games that simply never revisit the same Position — two different
+ * things to tell the Player, indistinguishable from `dangers` alone.
+ */
+export function countAnalyzedGames(db: Db): number {
+  return db.select().from(games).where(eq(games.analyzed, true)).all().length;
+}
+
 export function getDangerPositions(db: Db): DangerEntry[] {
   const analyzedGames = db.select().from(games).where(eq(games.analyzed, true)).all();
 
