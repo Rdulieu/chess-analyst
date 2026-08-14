@@ -350,14 +350,45 @@ describe("danger API", () => {
     ]);
   });
 
-  it("GET /api/danger returns { dangers: [] } when no Game has been analyzed", async () => {
+  it("GET /api/danger states how many Games are analyzed, so an empty list can be read", async () => {
+    const { db } = openDb(":memory:");
+    db.insert(games)
+      .values(
+        [1, 2].map((n) => ({
+          gameUrl: `https://www.chess.com/game/live/${n}`,
+          pgn: "1. e4",
+          opponent: "opp",
+          playerColor: "white" as const,
+          result: "win" as const,
+          date: "2026-01-01",
+          timeControlCategory: "blitz" as const,
+          analyzed: n === 1,
+        })),
+      )
+      .run();
+    db.insert(evaluations)
+      .values([
+        { gameId: 1, ply: 0, cp: 0 },
+        { gameId: 1, ply: 1, cp: 0 },
+      ])
+      .run();
+    const app = createApp(db, fakeClient({}));
+
+    const res = await request(app).get("/api/danger");
+
+    // One analyzed Game reaches no Position twice, so the list is empty while
+    // an analysis has taken place — a different state from "nothing analyzed".
+    expect(res.body).toEqual({ dangers: [], analyzedGames: 1 });
+  });
+
+  it("GET /api/danger returns no entry and no analyzed Game for an empty history", async () => {
     const { db } = openDb(":memory:");
     const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/danger");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ dangers: [] });
+    expect(res.body).toEqual({ dangers: [], analyzedGames: 0 });
   });
 });
 

@@ -1,12 +1,15 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { DangerPage } from "../src/pages/DangerPage";
 import type { DangerEntry } from "../src/types";
 
-function stub(dangers: DangerEntry[]) {
+function stub(dangers: DangerEntry[], analyzedGames = dangers.length) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ dangers }) }) as Response),
+    vi.fn(
+      async () =>
+        ({ ok: true, status: 200, json: async () => ({ dangers, analyzedGames }) }) as Response,
+    ),
   );
 }
 
@@ -19,6 +22,81 @@ const ENTRIES: DangerEntry[] = [
   { fen: START_FEN, reached: 5, seriousErrors: 1, proportion: 0.2 },
   { fen: AFTER_E4_E5, reached: 3, seriousErrors: 2, proportion: 2 / 3 },
 ];
+
+describe("DangerPage — the four states", () => {
+  it("announces the computation in a live region while the response is in flight", async () => {
+    let release!: (value: unknown) => void;
+    const pending = new Promise((resolve) => (release = resolve));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        await pending;
+        return { ok: true, status: 200, json: async () => ({ dangers: [], analyzedGames: 0 }) } as Response;
+      }),
+    );
+
+    render(<DangerPage />);
+
+    // Never blank and silent: a text readout, announced rather than only drawn.
+    const status = screen.getByRole("status");
+    expect(status.textContent).toMatch(/calcul|recherche/i);
+    expect(screen.queryByText(/analysez vos parties/i)).toBeNull();
+
+    release(null);
+    expect(await screen.findByText(/analysez vos parties/i)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("names a failed request and offers to retry, never to analyse", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
+    );
+
+    render(<DangerPage />);
+
+    const error = await screen.findByRole("alert");
+    expect(error.textContent).toMatch(/erreur|échec|impossible/i);
+    // The failure is not "you have analyzed nothing" — saying so would send the
+    // Player back to what they just did.
+    expect(screen.queryByText(/analysez vos parties/i)).toBeNull();
+    expect(screen.getByRole("button", { name: /réessayer/i })).toBeTruthy();
+    // Names *what* failed, not just the operation: a server down (502) and a
+    // server bug (500) must not read identically, to the Player or to support.
+    expect(error.textContent).toMatch(/500/);
+  });
+
+  it("renders the Positions when the retry succeeds, without a reload", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ dangers: ENTRIES, analyzedGames: 4 }),
+      } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DangerPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /réessayer/i }));
+
+    const list = await screen.findByRole("list", { name: /positions dangereuses/i });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("tells a Player with analyzed Games but no recurring Position what is missing", async () => {
+    stub([], 1);
+
+    render(<DangerPage />);
+
+    const message = await screen.findByText(/repassent pas|ne reviennent pas|même position/i);
+    expect(message).toBeTruthy();
+    // Not "analysez vos parties" — they just did.
+    expect(screen.queryByText(/analysez vos parties/i)).toBeNull();
+    expect(message.textContent).toMatch(/analysez d'autres|davantage|plus de parties/i);
+  });
+});
 
 describe("DangerPage", () => {
   it("shows only an invitation when no Game has been analyzed", async () => {

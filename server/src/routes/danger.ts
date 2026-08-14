@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Db } from "../db";
-import { getDangerPositions } from "../danger/repository";
+import { countAnalyzedGames, getDangerPositions } from "../danger/repository";
 
 /**
  * Read route for the `Danger position` view (mounted at /api/danger). Derived
@@ -11,7 +11,7 @@ export function createDangerRouter(db: Db): Router {
   const router = Router();
 
   router.get("/", (_req, res) => {
-    res.json({ dangers: getDangerPositions(db) });
+    res.json({ dangers: getDangerPositions(db), analyzedGames: countAnalyzedGames(db) });
   });
 
   return router;
