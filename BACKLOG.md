@@ -16,10 +16,23 @@
   > mémoïsation (choix assumé d'ADR-0009 : agrégat dérivé à la volée). Chronométrer
   > `getDangerPositions` contre une DB réellement importée + analysée avant de trancher.
   >
-  > Points à trancher au grilling : job persisté + polling (aligné sur ADR-0011) vs. indicateur de
-  > chargement seul vs. mémoïsation invalidée au changement d'`analyzed` ; unité de progression
-  > (il n'y en a pas de naturelle, sinon les parties traitées) ; et séparer l'état d'erreur de
-  > l'état vide, qui est un correctif dû quelle que soit l'option retenue.
+  > **Grillée** (2026-08-14). La mesure a déplacé le problème : le N+1 soupçonné coûte **41 ms**,
+  > mais le **rejeu cm-chess du PGN** en coûte **2419** sur 2,5 s — et ce n'est pas tout côté
+  > serveur, l'agrégat renvoyait **3736 entrées dont 66 récurrentes** (400 Ko, autant de plateaux).
+  > Décisions : job + polling **rejeté** (masque un coût au lieu de le supprimer, aucune unité de
+  > progression naturelle) au profit du stockage de la **FEN par demi-coup** — **ADR-0012**, qui
+  > ramène `/danger` de ~2,5 s à ~0,1 s (et de ~31 s à ~1,3 s sur une année) ; `CONTEXT.md` :
+  > `Danger position` = atteinte **au moins deux fois**, Position initiale **exclue**, classement
+  > **par proportion d'erreur sérieuse**. HP-01 pas 9 réécrit (deux parties les plus courtes de
+  > même premier coup — une entrée garantie par construction, ~3,5 min, moins qu'avant).
+  > PRD : `.scratch/danger-page-waiting/PRD.md`. Découpée en 3 issues, sur
+  > `integration/US-10b-danger-page-waiting` :
+  > - `01-recurring-positions-most-dangerous-first` — plancher de récurrence, exclusion ply-0, tri
+  >   par proportion, cap d'affichage à 30
+  > - `02-four-states-never-a-mute-screen` — calcul annoncé, échec distinct de l'état vide, et
+  >   l'état « rien de récurrent » (bloquée par 01)
+  > - `03-store-the-per-ply-fen` — colonne `fen` requise, écrite par la passe, contrôle d'intégrité
+  >   et réparation à l'ouverture (bloquée par 02, ADR-0012)
 
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
