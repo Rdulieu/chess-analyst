@@ -112,6 +112,8 @@
 
 ## Doing
 
+## In review
+
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
   > aucun schéma, aucun endpoint, aucune donnée persistée) et le seul vrai arbitrage découle
@@ -209,13 +211,22 @@
   > PRD : présence, sens de l'axe, synchronisation du curseur, position des marqueurs, cohérence du
   > décompte — jamais l'esthétique.
   >
-  > **En cours.** PRD : `.scratch/evaluation-curve/PRD.md`. Découpée en **2 issues**, sur
+  > **En revue** — PR `integration/US-14-evaluation-graph` → `develop`, **étape 9 d'HP-01 rejouée**
+  > (greffe incluse) contre le vrai chess.com et le vrai Stockfish, base repartie de zéro.
+  > PRD : `.scratch/evaluation-curve/PRD.md`. Découpée en **2 issues**, sur
   > `integration/US-14-evaluation-graph` :
-  > - `01-evaluation-curve-beside-the-board` — tracer bullet : dérivation pure de la forme,
-  >   composant dédié, rendu à côté du plateau conditionné aux annotations, curseur du coup courant,
-  >   `aria-hidden`
-  > - `02-your-errors-marked-and-counted` — marqueurs par glyphe posés au bon demi-coup + décompte en
-  >   texte, libellé comme **vos** erreurs, Player uniquement (bloquée par 01)
+  > - `01-evaluation-curve-beside-the-board` ✅ — tracer bullet, auto-mergée après FP verte (6/6)
+  > - `02-your-errors-marked-and-counted` ✅ — marqueurs par glyphe posés au bon demi-coup + décompte
+  >   en texte, libellé comme **vos** erreurs, Player uniquement ; auto-mergée après FP verte (5/5)
+  >
+  > **Livrée.** Trois défauts trouvés **à l'écran** et invisibles aux étages inférieurs : le
+  > graphique n'avait que 110 px pour toute une partie (axe du temps écrasé, courbe lue de haut en
+  > bas), les glyphes des marqueurs étaient **étirés** par l'échelle non uniforme du SVG (sortis du
+  > repère déformé, posés au-dessus), et le décompte ne s'accordait pas en nombre. La collision de
+  > tests annoncée au grilling a eu lieu (`AnalysePage` demandait `??` par son texte, que la courbe
+  > rend ambigu) : le test interroge désormais la liste des coups par son nom accessible, sa source
+  > accessible. `SEVERITY_GLYPH`/`TINT` extraits en module partagé (une seule source pour la liste
+  > des coups, la teinte de case et les marqueurs).
   >
   > Seams : la logique dans une **fonction pure** (prior art `candidateArrows`), le test composant du
   > plateau gardé mince, **FP sur base seedée** (`seed:danger` insère des parties déjà analysées avec
@@ -224,7 +235,6 @@
   > étape 9** pour la PR `integration → develop` (HP-02 et HP-03 ne passent pas par Analyse) — à
   > reconfirmer au moment de la PR.
 
-## In review
 
 - **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
   > **En revue** — PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
