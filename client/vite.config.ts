@@ -12,8 +12,11 @@ export default defineConfig({
     strictPort: true,
     // The frontend fetches Games from the local API server (ADR-0002); Vite
     // proxies /api so the browser only ever talks to one origin in dev.
+    // `API_TARGET` (with `--port`) lets a second instance run beside the default
+    // one on its own throwaway database — an agentic Feature Path must not end up
+    // talking to whatever server already holds :3001.
     proxy: {
-      "/api": "http://localhost:3001",
+      "/api": process.env.API_TARGET ?? "http://localhost:3001",
     },
   },
   test: {

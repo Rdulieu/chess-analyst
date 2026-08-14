@@ -95,7 +95,7 @@ export function Board({
         and goes (hiding the annotations must not move the position the Player is
         reading — US-14).
       */}
-      <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
         <div style={{ flex: "0 0 360px", maxWidth: 360 }}>
           <Chessboard
             options={{
@@ -109,7 +109,9 @@ export function Board({
           />
         </div>
         {annotations && (
-          <div style={{ flex: "0 0 110px" }}>
+          // Landscape, and deliberately so: squeezed into a narrow column the
+          // curve stops being a time axis and reads as a vertical drip.
+          <div style={{ flex: "1 1 260px", minWidth: 220, height: 220 }}>
             <EvaluationGraph annotations={annotations} currentPly={index} />
           </div>
         )}
