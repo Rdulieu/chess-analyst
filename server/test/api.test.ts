@@ -10,6 +10,7 @@ import type { ChessComClient } from "../src/chesscom";
 
 /** 4-field FEN of the standard starting Position. */
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
+const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3";
 
 /** Polls the Import status until the pass has finished, then returns its body. */
 async function importDone(app: Parameters<typeof request>[0]) {
@@ -315,37 +316,38 @@ describe("openings API", () => {
 });
 
 describe("danger API", () => {
-  it("GET /api/danger returns Danger position entries sorted by reach count descending", async () => {
+  it("GET /api/danger returns the recurring Danger position entries", async () => {
     const { db } = openDb(":memory:");
     db.insert(games)
-      .values({
-        gameUrl: "https://www.chess.com/game/live/1",
-        pgn: "1. e4",
-        opponent: "opp",
-        playerColor: "white",
-        result: "win",
-        date: "2026-01-01",
-        timeControlCategory: "blitz",
-        analyzed: true,
-      })
+      .values(
+        [1, 2].map((n) => ({
+          gameUrl: `https://www.chess.com/game/live/${n}`,
+          pgn: "1. e4",
+          opponent: "opp",
+          playerColor: "white" as const,
+          result: "win" as const,
+          date: "2026-01-01",
+          timeControlCategory: "blitz" as const,
+          analyzed: true,
+        })),
+      )
       .run();
     db.insert(evaluations)
-      .values([
-        { gameId: 1, ply: 0, cp: 0 },
-        { gameId: 1, ply: 1, cp: 0 },
-      ])
+      .values(
+        [1, 2].flatMap((gameId) => [
+          { gameId, ply: 0, cp: 0 },
+          { gameId, ply: 1, cp: 0 },
+        ]),
+      )
       .run();
     const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/danger");
 
     expect(res.status).toBe(200);
-    expect(res.body.dangers).toContainEqual({
-      fen: START,
-      reached: 1,
-      seriousErrors: 0,
-      proportion: 0,
-    });
+    expect(res.body.dangers).toEqual([
+      { fen: AFTER_E4, reached: 2, seriousErrors: 0, proportion: 0 },
+    ]);
   });
 
   it("GET /api/danger returns { dangers: [] } when no Game has been analyzed", async () => {
