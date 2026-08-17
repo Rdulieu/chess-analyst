@@ -1,6 +1,6 @@
 # 01 — A Profile exists: create, list, select, delete
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-11-profiles` (build + tests + FP green, 2026-08-18)
 
 > **Implemented on the business-story integration branch `integration/US-11-profiles`.** Branch
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
@@ -37,45 +37,45 @@ adds the notion, later slices attach data to it.
 
 ## Acceptance criteria
 
-- [ ] A `profiles` table holds id, platform, username (canonical casing) and a creation timestamp,
+- [x] A `profiles` table holds id, platform, username (canonical casing) and a creation timestamp,
       unique on `(platform, username)`.
-- [ ] Creating a Profile calls chess.com's public player endpoint and stores the canonical username
+- [x] Creating a Profile calls chess.com's public player endpoint and stores the canonical username
       it returns.
-- [ ] Creating a Profile whose username differs only by casing from an existing one **selects the
+- [x] Creating a Profile whose username differs only by casing from an existing one **selects the
       existing Profile** — no duplicate row.
-- [ ] Creating a Profile for a username chess.com does not know is refused, with a message naming
+- [x] Creating a Profile for a username chess.com does not know is refused, with a message naming
       the problem.
-- [ ] Creating a Profile is refused when chess.com is unreachable — no unvalidated Profile is ever
+- [x] Creating a Profile is refused when chess.com is unreachable — no unvalidated Profile is ever
       persisted.
-- [ ] `/profiles` lists every Profile with its platform and username.
-- [ ] One Profile can be marked current from `/profiles`, and the selection survives a reload.
-- [ ] Deleting a Profile asks for confirmation naming it, then removes it.
-- [ ] Deleting the current Profile leaves nothing selected.
-- [ ] The server holds no "current profile" state — the selection is client-side only.
-- [ ] Server tests at the HTTP seam (`server/test/api.test.ts`) cover creation, canonicalisation,
+- [x] `/profiles` lists every Profile with its platform and username.
+- [x] One Profile can be marked current from `/profiles`, and the selection survives a reload.
+- [x] Deleting a Profile asks for confirmation naming it, then removes it.
+- [x] Deleting the current Profile leaves nothing selected.
+- [x] The server holds no "current profile" state — the selection is client-side only.
+- [x] Server tests at the HTTP seam (`server/test/api.test.ts`) cover creation, canonicalisation,
       duplicate-by-casing, unknown username, unreachable platform, and deletion.
-- [ ] Client tests at the page seam cover the list, the creation error surfacing, and the
+- [x] Client tests at the page seam cover the list, the creation error surfacing, and the
       persistence of the selection.
 
 **Post-US-13 constraints** (the app now has a stylesheet — ADR-0013):
 
-- [ ] The profiles page follows the **page skeleton** every screen was restructured to in US-13-01,
+- [x] The profiles page follows the **page skeleton** every screen was restructured to in US-13-01,
       and uses the existing surfaces (`card`, lists, tables) rather than inventing its own.
-- [ ] It passes the **token-consistency audit**: every `var(--…)` it consumes is declared in **both**
+- [x] It passes the **token-consistency audit**: every `var(--…)` it consumes is declared in **both**
       themes, and the component holds no hex colour.
-- [ ] It is correct in the **light and dark** themes, the dark one following the system preference
+- [x] It is correct in the **light and dark** themes, the dark one following the system preference
       with no control.
-- [ ] The navigation gains its entry, marked current the way the others are — **by weight and a
+- [x] The navigation gains its entry, marked current the way the others are — **by weight and a
       border, never by colour alone**.
-- [ ] **Centred, and framed on a large screen.** The column is centred and reads as a bounded
+- [x] **Centred, and framed on a large screen.** The column is centred and reads as a bounded
       surface with visible borders (the `card` surface), not as text floating in empty space.
       Requester's call, 2026-08-18.
-- [ ] **The rows are compact enough that the list needs no scrolling for a realistic number of
+- [x] **The rows are compact enough that the list needs no scrolling for a realistic number of
       Profiles** — up to ten, at the reference window **1536x742** (US-13-09's).
       *This is deliberately weaker than the profile page's promise:* the list grows with the number
       of Profiles, so "never scrolls" is not a promise any layout can keep. Compactness is what can
       be promised; beyond that the list scrolls, and that is correct behaviour, not a defect.
-- [ ] Any height budget uses an **absolute `rem` ceiling**, never viewport units — see US-13-09:
+- [x] Any height budget uses an **absolute `rem` ceiling**, never viewport units — see US-13-09:
       `100dvh` is the window, not what the eye gets.
 
 ### Feature Path (FP)

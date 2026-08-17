@@ -64,6 +64,13 @@
       "when": 1786703921574,
       "tag": "0008_skinny_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787005313304,
+      "tag": "0009_sloppy_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

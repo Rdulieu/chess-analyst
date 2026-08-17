@@ -1,3 +1,4 @@
+export { fetchProfiles, createProfile, deleteProfile } from "./profiles";
 export { fetchGames, fetchGame, fetchGameAnnotations } from "./games";
 export { fetchMoveHabits } from "./move-habits";
 export { fetchStats } from "./stats";

@@ -33,3 +33,48 @@ ul[aria-label="games"] li {
     text-decoration: underline;
   }
 }
+
+// The `Profile` list. Four constant columns — the account, its platform, the
+// state and the actions — so ten entries are swept down a column rather than
+// read one by one, and a compact row so ten of them fit without scrolling.
+//
+// The tracks belong to the LIST and the rows take them through `subgrid`. Sized
+// per row instead, the current row drifted a few pixels away from the others:
+// its state cell reads "Profil actuel" where the rest read "Sélectionner", and
+// its bolder text is wider — which is exactly the drift a constant column is
+// there to prevent. `display: contents` on the row would align them too, and
+// would take the row's box with it: no hairline, no current marker.
+ul[aria-label="profils"] {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+}
+
+ul[aria-label="profils"] li {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+  border-block-end: 1px solid var(--border);
+  // Reserved on every row, transparent until current, so the marker appearing
+  // shifts nothing — the same device the navigation uses for the current tab.
+  // A HAIRLINE and not the nav's 2px: inside a list, no rule may be heavier than
+  // one (the standing rule the lists-and-tables suite holds), and here the
+  // border is the third cue rather than the first — the row already says "Profil
+  // actuel" in words and carries the weight.
+  border-inline-start: 1px solid transparent;
+  padding-inline-start: var(--space-2);
+
+  [data-part="platform"] {
+    color: var(--ink-muted);
+    font-size: var(--text-s);
+  }
+}
+
+// WEIGHT AND A BORDER, never colour alone: the rule US-13 set for the current
+// screen, applied to the current Profile.
+ul[aria-label="profils"] li[data-current="true"] {
+  font-weight: 700;
+  border-inline-start: 1px solid var(--accent);
+}

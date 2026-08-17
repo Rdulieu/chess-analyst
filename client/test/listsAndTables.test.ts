@@ -145,3 +145,46 @@ describe("the Stats table's row groups", () => {
     );
   });
 });
+
+/**
+ * The `Profile` list (US-11-01). Same rules as the Game list — constant columns,
+ * a hairline between rows — plus the one this screen adds: the current Profile
+ * is marked by WEIGHT AND A BORDER, never by colour alone, exactly as the
+ * navigation marks the current screen.
+ */
+describe("the Profile list, and which Profile is current", () => {
+  const row = declarationsFor(css, 'ul[aria-label="profils"] li');
+
+  it("puts the account, the platform, the state and the actions in constant columns", () => {
+    // The columns are the LIST's, not each row's, and the rows take them through
+    // `subgrid`. Seen on screen with ten Profiles: sized per row, the current
+    // row's columns drifted a few pixels away from the others' — its state cell
+    // reads "Profil actuel" where the rest read "Sélectionner", and its bolder
+    // text is wider. One set of tracks for the whole list is what actually makes
+    // a column scannable; the row keeps its own box, so its hairline and its
+    // current marker still paint (which `display: contents` would have lost).
+    const list = declarationsFor(css, 'ul[aria-label="profils"]');
+    expect(list.get("display")).toBe("grid");
+    expect(list.get("grid-template-columns")).toBe("1fr auto auto auto");
+    expect(row.get("display")).toBe("grid");
+    expect(row.get("grid-template-columns")).toBe("subgrid");
+    expect(row.get("grid-column")?.replace(/\s/g, "")).toBe("1/-1");
+    expect(row.get("align-items")).toBe("center");
+    expect(row.get("border-block-end")).toBe("1px solid var(--border)");
+  });
+
+  it("keeps a row compact enough that ten Profiles need no scrolling", () => {
+    // The promise the issue makes and the only one a list CAN keep: rows small
+    // enough that a realistic number of them fits, not "never scrolls".
+    expect(row.get("padding-block")).toBe("var(--space-1)");
+    expect(row.get("gap")).toBe("var(--space-3)");
+  });
+
+  it("marks the current Profile by weight and a border, not by colour alone", () => {
+    const current = declarationsFor(css, 'ul[aria-label="profils"] li[data-current="true"]');
+    expect(current.get("font-weight")).toBe("700");
+    // A hairline, because no rule inside a list may be heavier — and it is the
+    // third cue here, after the words "Profil actuel" and the weight.
+    expect(current.get("border-inline-start")).toBe("1px solid var(--accent)");
+  });
+});

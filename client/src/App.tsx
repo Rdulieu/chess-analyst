@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { Nav } from "./components/Nav";
 import { GamesPage } from "./pages/GamesPage";
+import { ProfilesPage } from "./pages/ProfilesPage";
 import { AnalysePage } from "./pages/AnalysePage";
 import { ExplorerPage } from "./pages/ExplorerPage";
 import { OpeningsPage } from "./pages/OpeningsPage";
@@ -33,6 +34,7 @@ export function App() {
             <Route path="/openings" element={<OpeningsPage />} />
             <Route path="/danger" element={<DangerPage />} />
             <Route path="/stats" element={<StatsPage />} />
+            <Route path="/profiles" element={<ProfilesPage />} />
           </Routes>
         </div>
       </main>
