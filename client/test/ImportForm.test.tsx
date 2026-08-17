@@ -43,6 +43,28 @@ function stubRelay(polls: unknown[], total = polls.length) {
 }
 
 describe("ImportForm", () => {
+  it("labels each field beside its own control, and marks one action as the primary one", async () => {
+    stubRelay([]);
+    render(<ImportForm onImported={() => {}} />);
+
+    // Each text field is a labelled control of its own, not a control buried in
+    // the label's text — which is what lets the label sit above the field.
+    for (const name of [/username/i, /^du$/i, /^au$/i]) {
+      const field = await screen.findByLabelText(name);
+      const label = document.querySelector(`label[for="${field.id}"]`);
+      expect(field.id).toBeTruthy();
+      expect(label).toBeTruthy();
+      expect(label!.contains(field)).toBe(false);
+      expect(label!.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+
+    // The action that starts the Import is the form's primary one, and says so
+    // structurally rather than by looking different.
+    const submit = screen.getByRole("button", { name: /import/i });
+    expect(submit.getAttribute("type")).toBe("submit");
+    expect(submit.dataset.action).toBe("primary");
+  });
+
   it("offers a first and a last month, both defaulting to the current month", async () => {
     stubRelay([]);
     render(<ImportForm onImported={() => {}} />);

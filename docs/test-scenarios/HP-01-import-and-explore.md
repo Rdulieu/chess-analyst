@@ -1,6 +1,6 @@
 ---
 id: HP-01
-covers: [Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation]
+covers: [Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation, Theme]
 ---
 
 # HP-01 — Import and explore my chess.com history
@@ -34,6 +34,9 @@ from a single month to a range.
 - Engine analysis pass (US-4, graft — no dedicated HP; the 3-HP cap is already spent): analyzing
   one imported Game with the real engine marks it "analysée" and the resulting `Danger position`
   view (`/danger`) renders without error.
+- The stylesheet and the dark theme (US-13): the final step walks all six screens in both themes.
+  This scenario is the one whose state reaches every screen with content, so it is the strongest of
+  the three theme passes.
 
 ## Preconditions
 - App started locally with its single command, talking to the **real** chess.com
@@ -61,11 +64,11 @@ from a single month to a range.
   history changed and the table needs re-checking, not that the app is wrong.
 
 ## Journey
-1. Open the app with an empty history → the Player is invited to import; the import form is shown.
+1. Open the app with an empty history → the screen names itself ("Mes parties"), the Player is invited to import, and the import form is shown with each field labelled above it.
 2. Enter the chess.com username (`DudulSmash`), set the range (from 2026-05 to 2026-06) and at least the Blitz and Bullet categories, and start the Import → a progress readout counted in months runs, then a summary appears.
 3. Read the consolidated summary → it reports the total games fetched over the range, a per-category breakdown, how many were newly imported vs already present, and a win/draw/loss tally.
 4. Read the per-month lines → one line per month of the range, in order, each saying what that month brought in.
-5. See the imported Games listed in the app.
+5. See the imported Games listed in the app → the list reads as rows, each row holding its selection control, its description and its analysed state in the same three places.
 6. Open one imported Game the Player played **as White** (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → a header names both players with their colour and marks which one is the Player, alongside the result, date, cadence and `Opening`; its Position renders on the board, White at the bottom; stepping forward/backward and jumping to a Move updates the Position accordingly.
 6b. Go back and open a Game the Player played **as Black** → the same header, now marking the Player on the Black side, and the board is read **Black at the bottom**.
 7. Start the same Import again (same range + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
@@ -79,7 +82,8 @@ from a single month to a range.
    dangereuses" (`/danger`) → while it computes, a **text readout announces the computation**
    (never a blank page); it then renders **at least one** `Danger position`, **reached at least
    twice**, and the **initial Position is not among them**. Shape only otherwise (real games, no
-   fixed figures expected), each diagram stating its **side to move** and presented from that side.
+   fixed figures expected), each entry being a **card** in a grid that reflows with the window,
+   stating its **side to move** and presenting its diagram from that side.
 
    > **Why two Games, and why "same first Move"**: a `Danger position` is *recurring* (reached ≥ 2,
    > initial Position excluded — CONTEXT.md), so a single Game populates `/danger` with nothing at
@@ -92,7 +96,10 @@ from a single month to a range.
    > reference dataset (2026-08-14): of the 6 first-Move groups holding at least two Games, **none**
    > fails to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4.
    >
-   Then reopen one of the two Games just analysed → beside its board, an `Evaluation curve`
+   Then reopen **whichever of the two Games carries at least one flawed Move of the Player's** (the
+   move list and the error tally say which; if neither does, record the curve's error marking as *not
+   exercised* rather than red — the step selects the two shortest Games, and a short Game often holds
+   no mistake at all) → beside its board, in the annotations pane, an `Evaluation curve`
    runs from the starting Position on the left to the last Move on the right; stepping through
    the Moves moves a mark along it, and the Player's own flawed Moves are marked on it by the
    same glyph the move list uses, with a count of them in words.
@@ -103,23 +110,46 @@ from a single month to a range.
 
    > Do not substitute "the two shortest Games **overall**": it is the same pair here, but only
    > because both happen to answer 1.e4 — it would go green for the wrong reason elsewhere.
+10. **Theme pass (US-13)** — walk the navigation across **all six screens** (Mes parties,
+    Explorateur, Ouvertures, Positions dangereuses, Stats, and Analyse by opening a Game), first in
+    the light theme, then again with the system's **dark preference emulated** → every screen is
+    painted in the theme the system asks for, and everything the Player must be able to read stays
+    readable in both. **No further Import and no further analysis**: the pass reuses exactly the
+    state steps 1–9 built, which is why it is the last step and not a scenario of its own.
+
+    > The rules asserted here, the six screens, the audit tooling and the known-open findings are
+    > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-02 and HP-03, and
+    > three copies of an assertion list would drift. This scenario's state is the richest of the
+    > three (real Games, two analysed, `/danger` populated), so this is where the pass sees the most.
 
 ## Checks
 ### UI
-- Step 1: an invitation to import and the form (username, a first and a last month, category checkboxes, Import button) are visible; with a clean state no Games are listed. Both month fields default to the current month.
+- Step 1: an invitation to import and the form (username, a first and a last month, category checkboxes, Import button) are visible; with a clean state no Games are listed. Both month fields default to the current month. The screen carries its own heading ("Mes parties") and each of the three text fields is labelled above it (US-13's skeleton); the Import button is the form's primary action, visibly distinguished from the secondary controls.
 - Step 2: the progress readout is visible during the run, is **determinate** (n/N, counted in months, N = 2 for this range), advances to N/N, and is gone once the Import completes.
 - Step 3: on a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
 - Step 4: exactly two lines, in range order — **`2026-05` at 28 imported** and **`2026-06` at 54 imported**, summing to the consolidated 82. Neither is marked in échec.
-- Step 5: the number of listed Games matches the imported count from the summary (82 on a clean run).
-- Step 6: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom.
+- Step 5: the number of listed Games matches the imported count from the summary (82 on a clean run). It is still a **list**, not a table, and each entry reads as a row of three parts — the selection checkbox, the description, the analysed state — with every badge landing on the same left edge across rows so the column can be scanned.
+- Step 6: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The **second pane beside the board is the annotations pane, and it only exists once the Game is analysed** — on the unanalysed Game this step opens, the board row holds the board alone and the move list runs below it. The row proper is asserted at step 9.
 - Step 6b: on a Black-side Game the board is **Black-at-bottom** — the Player's own back rank is nearest them — and the Player mark has moved to the Black line of the header. The pieces have not moved: the board is turned, not rearranged.
 - Step 7: the replay's summary shows **0 imported / 82 already present**, both month lines saying so (28 and 54 already present); the listed Game count is unchanged.
 - Step 8: after reload, the username field is pre-filled with `DudulSmash`.
-- Step 9: after the analysis pass completes, the selected Game shows the "analysée" badge; `/danger`
-  renders a list (not the empty-state invitation) with at least the starting Position present. Each
+- Step 9: after the analysis pass completes, each selected Game shows the "analysée" badge — a
+  bordered pill carrying **both** a checkmark and the word, so the tint is never the only signal;
+  `/danger` renders a grid of cards (not the empty-state invitation) with at least one recurring
+  `Danger position` on it, and the initial Position is **not** among them. Each
   entry states its **side to move** in text and its diagram is presented from that side. No wording
   on that page attributes a side to the Player: a `Danger position` merges reaches from Games played
   as White and as Black, so "your side" is undefined there (CONTEXT.md → `Board orientation`).
+- Step 10: on each of the six screens, in **both** themes — every colour resolves, text contrast
+  holds at 4.5:1 (3:1 for large text) against the ground actually painted behind it, nothing scrolls
+  sideways, every meaning-bearing tint still carries its non-chromatic cue, and `--white-share`,
+  `--black-share` and the board's square tokens are **identical** between the two themes. The
+  complete rule list, the audit tooling and the known-open exceptions are in
+  [`theme-pass.md`](./theme-pass.md). The Game list, `/danger` and `/analyse` are all populated at
+  this point, so the pass sees real tinted rows, real cards and a real `Evaluation curve` — the ⚠
+  markers and the severity glyphs `?!` `?` `??` must be present and readable at night too. Nothing
+  is imported and nothing is analysed by this step; a contrast failure outside the known-open list is
+  **blocking**.
 
 ### Backing store (optional)
 - The embedded SQLite database holds one row per imported Game with its chess.com URL, the Player's side, and the Player-relative result; the same URL never appears twice (dedup). The `settings` table holds the username.
@@ -137,6 +167,11 @@ from a single month to a range.
   outright, before any month is fetched.
 - Use an **immutable past month** as the anchor (2026-06) so counts are stable; the current
   month keeps changing as the Player plays.
+- **Watch the progress readout from before the click.** On the 2026-08-17 run the real two-month
+  import completed in **under two seconds**, so a driver that starts polling *after* submitting sees
+  the summary and never the readout — and step 2 asserts the readout. Install the observer first.
+  There is no analysis status endpoint to poll (`/api/import/status` exists, its analysis counterpart
+  does not): watch the DOM readout, which is what is under test anyway.
 - The Import is one fetch **per month**, run sequentially — expect the progress readout to sit on
   each month in turn rather than to advance smoothly.
 - The figures in the Preconditions table were read from the live chess.com API on 2026-08-12 and

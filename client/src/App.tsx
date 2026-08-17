@@ -15,19 +15,26 @@ import { StatsPage } from "./pages/StatsPage";
 export function App() {
   return (
     <>
+      {/* The header spans the window; its contents sit in the same column as the
+          content below, so the chrome lines up with the page rather than running
+          edge to edge. Same wrapper on both sides — one alignment, one place. */}
       <header>
-        <h1>chess-analyst</h1>
-        <Nav />
+        <div data-column>
+          <h1>chess-analyst</h1>
+          <Nav />
+        </div>
       </header>
       <main>
-        <Routes>
-          <Route path="/" element={<GamesPage />} />
-          <Route path="/analyse/:gameId" element={<AnalysePage />} />
-          <Route path="/explorer" element={<ExplorerPage />} />
-          <Route path="/openings" element={<OpeningsPage />} />
-          <Route path="/danger" element={<DangerPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-        </Routes>
+        <div data-column>
+          <Routes>
+            <Route path="/" element={<GamesPage />} />
+            <Route path="/analyse/:gameId" element={<AnalysePage />} />
+            <Route path="/explorer" element={<ExplorerPage />} />
+            <Route path="/openings" element={<OpeningsPage />} />
+            <Route path="/danger" element={<DangerPage />} />
+            <Route path="/stats" element={<StatsPage />} />
+          </Routes>
+        </div>
       </main>
     </>
   );

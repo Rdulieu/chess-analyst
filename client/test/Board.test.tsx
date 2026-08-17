@@ -167,6 +167,29 @@ describe("Board", () => {
     expect(squareBackground(container, "e4")).not.toBeTruthy(); // no longer the current Position
   });
 
+  it("takes the square's tint from the CONSTANT family, and the move list's from the chrome's", async () => {
+    // jsdom never loads the stylesheet, so the honest assertion is the token
+    // NAME: it verifies the wiring, which is what can break, rather than a hue
+    // that was judged once on the pilot (ADR-0013).
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+    ];
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4" annotations={annotations} />);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    // The square: a piece is painted on it, and the piece's ink is constant.
+    expect(squareBackground(container, "e4")).toBe("var(--square-blunder)");
+
+    // The move list's glyph: chrome, so it follows the theme — styled from the
+    // sheet on the severity the element names, with its own ink token.
+    const glyph = container.querySelector('ol[aria-label="moves"] [data-severity]');
+    expect(glyph?.getAttribute("data-severity")).toBe("blunder");
+    expect(glyph?.textContent).toBe("??");
+  });
+
   it("tints no square when the current Position follows a clean Move, an opponent's Move, or is the start", async () => {
     const annotations: MoveAnnotation[] = [
       { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
@@ -230,6 +253,50 @@ describe("Evaluation curve", () => {
     expect(curve(container)).toBeTruthy();
   });
 
+  it("holds the board and everything read beside it as two named panes of one row", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    const row = container.querySelector('[data-row="board"]')!;
+    const board = row.querySelector('[data-pane="board"]')!;
+    const side = row.querySelector('[data-pane="side"]')!;
+
+    expect(board).toBeTruthy();
+    expect(side).toBeTruthy();
+    // The curve and the move list are read BESIDE the board, not stacked under
+    // it: on a wide screen the move list used to start below the fold, behind the
+    // whole height of the diagram.
+    expect(side.contains(curve(container)!)).toBe(true);
+    expect(side.contains(screen.getByRole("list", { name: "moves" }))).toBe(true);
+  });
+
+  it("keeps the winning-chances bar inside the board's pane, so it is the board's own gauge", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    const boardPane = container.querySelector('[data-pane="board"]')!;
+    const bar = container.querySelector('[data-bar="winning-chances"]')!;
+
+    expect(boardPane.contains(bar)).toBe(true);
+    // Under the board and not over it: the bar comes and goes with the
+    // annotations, and nothing above the board may move when it does.
+    const diagram = boardPane.querySelector("[data-square]")!;
+    expect(diagram.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps both panes when the annotations go away — only the annotations do", () => {
+    const { container } = render(<Board pgn="1. e4 e5" />);
+
+    const row = container.querySelector('[data-row="board"]')!;
+    const side = row.querySelector('[data-pane="side"]')!;
+
+    expect(row.querySelector('[data-pane="board"]')).toBeTruthy();
+    // The side pane survives, because the move list is not an annotation: it is
+    // there for every Game, analysed or not.
+    expect(side).toBeTruthy();
+    expect(side.contains(screen.getByRole("list", { name: "moves" }))).toBe(true);
+    expect(curve(container)).toBeNull();
+    expect(container.querySelector('[data-bar="winning-chances"]')).toBeNull();
+  });
+
   it("draws no curve for a Game with no Evaluations, or with the annotations hidden", () => {
     const { container } = render(<Board pgn="1. e4 e5" />);
 
@@ -273,6 +340,24 @@ describe("Evaluation curve", () => {
 
     // ply 1 is the Player's blunder; ply 2 is the opponent's reply, never flagged.
     expect(glyphs).toEqual(["??"]);
+  });
+
+  it("gives each marker its severity's own tint-and-ink pair", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    // The curve's two grounds — White's share and Black's — moved out of this
+    // component and into the stylesheet with US-13's dense-screens slice, since a
+    // ground is a declaration a selector can hold. They are asserted where they
+    // now live: `denseScreens.test.ts`, on the compiled sheet. What stays inline,
+    // and stays asserted here, is what the DATA computes.
+
+    // A marker carries the chrome tint AND its own ink — the pair, never the
+    // tint alone, so its legibility does not depend on the inherited `--ink`
+    // nor on the constant ground it happens to sit over.
+    const marker = container.querySelector<HTMLElement>("div[aria-hidden='true'] > span")!;
+    expect(marker.textContent).toBe("??");
+    expect(marker.style.background).toBe("var(--tint-blunder)");
+    expect(marker.style.color).toBe("var(--tint-blunder-ink)");
   });
 
   it("counts the Player's own errors in text, said to be theirs", () => {

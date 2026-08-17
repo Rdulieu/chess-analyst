@@ -123,6 +123,31 @@ describe("DangerPage", () => {
     expect(items[1].textContent).toMatch(/67/); // 2/3 rounded
   });
 
+  it("asks for the wide column: a wall of diagrams is not reading-column material", async () => {
+    stub(ENTRIES);
+    render(<DangerPage />);
+
+    const region = await screen.findByRole("region", { name: /positions dangereuses/i });
+    expect(region.dataset.width).toBe("wide");
+  });
+
+  it("presents each entry as one self-contained card inside the list", async () => {
+    stub(ENTRIES);
+    render(<DangerPage />);
+
+    const list = await screen.findByRole("list", { name: /positions dangereuses/i });
+    const items = within(list).getAllByRole("listitem");
+
+    for (const item of items) {
+      // One card per entry, and everything the entry says lives inside it:
+      // the diagram, the side to move and the figures.
+      const card = within(item).getByRole("article");
+      expect(within(card).getByLabelText(/trait/i)).toBeTruthy();
+      expect(card.querySelectorAll("[data-piece]").length).toBeGreaterThan(0);
+      expect(card.textContent).toMatch(/fois atteinte/i);
+    }
+  });
+
   it("visibly highlights entries with a serious-error proportion of 50% or more, and only those", async () => {
     stub(ENTRIES); // 20% then 67%
     render(<DangerPage />);
@@ -131,11 +156,13 @@ describe("DangerPage", () => {
     const items = within(list).getAllByRole("listitem");
 
     expect(items[0].getAttribute("data-serious")).toBeNull();
-    expect(items[0].style.backgroundColor).toBe("");
     expect(within(items[0]).queryByLabelText(/dangereuse/i)).toBeNull();
 
+    // The `data-serious` hook the stylesheet tints from, plus the marker that
+    // does not depend on colour. The tint itself is measured in the running app,
+    // in both themes: jsdom never loads the sheet.
     expect(items[1].getAttribute("data-serious")).toBe("true");
-    expect(items[1].style.backgroundColor).not.toBe("");
+    expect(items[1].getAttribute("style")).toBeNull();
     expect(within(items[1]).getByLabelText(/dangereuse/i)).toBeTruthy();
   });
 });

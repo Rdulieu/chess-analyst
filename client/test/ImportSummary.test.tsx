@@ -68,10 +68,14 @@ describe("ImportSummary", () => {
 
     const [, inactive, failed] = screen.getAllByRole("listitem", { name: /2024-\d\d/ });
 
-    // The failure is carried by words, not by colour alone — the client has no
-    // stylesheet, so a tint could not be the only cue.
+    // The failure is carried by words, and only reinforced by a tint the sheet
+    // applies on the line's own `data-failed` hook.
     expect(failed.textContent).toMatch(/échec|erreur|failed/i);
     expect(failed.textContent).toMatch(/429/);
     expect(inactive.textContent).not.toMatch(/échec|erreur|failed/i);
+
+    expect(failed.getAttribute("data-failed")).toBe("true");
+    expect(failed.getAttribute("style")).toBeNull();
+    expect(inactive.getAttribute("data-failed")).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 ---
 id: HP-02
-covers: [Move habit, Opponent reply, Position, Move, Import, Board orientation]
+covers: [Move habit, Opponent reply, Position, Move, Import, Board orientation, Theme]
 ---
 
 # HP-02 — Explore my move habits
@@ -24,6 +24,9 @@ surfacing the Player's own habits across their whole imported history.
   is presented from the **side being explored**, the existing side selector being the only control
   that turns it, and it is **held constant down the whole line** — it must not flip when an
   `Opponent reply` has the move. The **side to move** is stated in text at every level.
+- The stylesheet and the dark theme (US-13): the final step walks all six screens in both themes.
+  This scenario's state has an imported history but no analysed Game, so it is the pass that sees
+  `/danger` in its empty state — deliberately, since the empty state is a rendered screen too.
 
 ## Preconditions
 - App started locally, talking to the **real** chess.com API (no `CHESSCOM_BASE_URL` override).
@@ -40,12 +43,24 @@ surfacing the Player's own habits across their whole imported history.
 5. Descend one level by selecting a candidate **in the list** → the explorer shows the candidates played from the resulting Position, and the breadcrumb reflects the Move taken.
 6. Descend a further level **from the board** — click the candidate Move's destination square → the explorer descends exactly as the list would, and the breadcrumb reflects the second Move.
 7. Select an earlier entry in the breadcrumb → the explorer returns to that level.
-8. Switch the side selector to Black → the candidates from the starting Position update to the Black-side habits, **and the board turns over** to be read from Black.
+8. Return to `Départ` in the breadcrumb, then switch the side selector to Black — **the side switch does not reset the path**, and the other side's habits down a line reached as White are typically empty, so the assertion below is only meaningful from the starting Position → the candidates from the starting Position update to the Black-side habits, **and the board turns over** to be read from Black.
 9. Still exploring as Black, descend a level → the level where the opponent has the move is reached, the side-to-move readout says so, and **the board has not turned back**. Walk back up the breadcrumb → it has still not turned.
+10. **Theme pass (US-13)** — walk the navigation across **all six screens** (Mes parties,
+    Explorateur, Ouvertures, Positions dangereuses, Stats, and Analyse by opening a Game), first in
+    the light theme, then again with the system's **dark preference emulated** → every screen is
+    painted in the theme the system asks for, and everything the Player must be able to read stays
+    readable in both. **No further Import and no further analysis**: the pass reuses the state step 1
+    built.
+
+    > The rules asserted here, the six screens, the audit tooling and the known-open findings are
+    > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-01 and HP-03. This
+    > scenario is the one that audits the explorer *after* it has been driven, arrows on the board
+    > included: an arrow's hue and opacity are computed per data point and belong to no token, so
+    > they must be seen to be unchanged at night.
 
 ## Checks
 ### UI
-- Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games).
+- Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games). Since US-13 the board and the candidates sit side by side while there is room for both and **fold into one column** when there is not — in either case nothing is clipped and the page does not scroll sideways.
 - Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown; the win rate is consistent with standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; the per-cadence counts sum to the candidate's game count; no candidate is hidden for a small sample.
 - Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold. On a Black-oriented board the arrows are mirrored with it — they still start and end on the squares the Moves name.
 - Step 5: selecting a list candidate replaces the shown candidates with those from the resulting Position; the breadcrumb gains that Move.
@@ -54,6 +69,16 @@ surfacing the Player's own habits across their whole imported history.
 - Step 8: switching side changes the starting-Position candidates to the other color's habits, **and turns the board over** — Black's back rank is now nearest the Player. No control was added to do it: the side selector is still the only one.
 - Step 9: the side-to-move readout **alternates** down the line while the orientation **does not move**, on the way down and on the way back up. Exploring as Black, the starting Position reads "Trait aux Blancs" — those candidates are `Opponent reply`s, not the Player's own habits — and the next level reads "Trait aux Noirs". Nothing on this page phrases the side to move as the Player's own.
 - Depth: once 40 Moves (20 full moves) deep, no further descent is offered.
+- Step 10: on each of the six screens, in **both** themes — every colour resolves, text contrast
+  holds at 4.5:1 (3:1 for large text) against the ground actually painted behind it, nothing scrolls
+  sideways, every meaning-bearing tint still carries its non-chromatic cue, and `--white-share`,
+  `--black-share` and the board's square tokens are **identical** between the two themes. Full rule
+  list, tooling and known-open exceptions: [`theme-pass.md`](./theme-pass.md). On the explorer
+  specifically, the **arrows keep their hue and opacity between themes** — they encode win rate and
+  frequency, not a theme role — and the board's squares and pieces look the same in both. `/danger`
+  is expected **empty** here (this scenario analyses nothing) and that empty state is audited like
+  any other screen. Nothing is imported and nothing is analysed by this step; a contrast failure
+  outside the known-open list is **blocking**.
 
 ### Backing store (optional)
 - The Move habit aggregate holds one entry per (Position FEN, side, Move) with counters whose

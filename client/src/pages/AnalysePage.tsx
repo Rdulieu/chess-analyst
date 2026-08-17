@@ -28,8 +28,14 @@ export function AnalysePage() {
   if (!game) return <p>Loading game…</p>;
 
   return (
-    <ErrorBoundary key={game.id}>
-      <GameViewer game={game} onAnalyzed={refresh} />
-    </ErrorBoundary>
+    // Like every screen: one section, an accessible name and an `h2`. `wide`
+    // because the board and its `Evaluation curve` are the densest thing the app
+    // draws and would be cramped inside the reading column.
+    <section aria-labelledby="analyse-heading" data-width="wide">
+      <h2 id="analyse-heading">Analyse</h2>
+      <ErrorBoundary key={game.id}>
+        <GameViewer game={game} onAnalyzed={refresh} />
+      </ErrorBoundary>
+    </section>
   );
 }

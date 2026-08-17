@@ -52,6 +52,19 @@ describe("App — routing & navigation", () => {
     );
   });
 
+  it("aligns the chrome on the same column as the content", async () => {
+    const { container } = renderApp(["/"]);
+
+    // The title and the navigation share one alignment wrapper inside the
+    // header, so the chrome can line up with the content column instead of
+    // running edge to edge.
+    const bar = container.querySelector('header [data-column]')!;
+    expect(bar).toBeTruthy();
+    expect(bar.querySelector("h1")).toBeTruthy();
+    expect(bar.querySelector("nav")).toBeTruthy();
+    expect(container.querySelector('main [data-column]')).toBeTruthy();
+  });
+
   it("shows the navigation and lands on Mes parties (import form + game list)", async () => {
     renderApp(["/"]);
 

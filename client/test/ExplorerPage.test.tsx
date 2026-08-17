@@ -43,6 +43,17 @@ function stubHabits() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ExplorerPage", () => {
+  it("asks for the wide column: a diagram beside its candidates needs the room", async () => {
+    stubHabits();
+    render(<ExplorerPage />);
+
+    // Split inside the 72ch reading column, the diagram was down to 317px on a
+    // wide screen — the screen is one of the three dense ones and reads its board
+    // beside its candidates, so it takes the wide variant like the other two.
+    const region = await screen.findByRole("region", { name: /explorateur/i });
+    expect(region.dataset.width).toBe("wide");
+  });
+
   it("shows the White candidates from the starting Position with frequency, win rate and per-cadence breakdown", async () => {
     stubHabits();
     render(<ExplorerPage />);

@@ -82,37 +82,163 @@
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
 
-- **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
-  > Pas encore grillée. État vérifié : **il n'existe aucun CSS dans le projet** — zéro fichier
-  > `.css`, aucun `<link>` dans `client/index.html`, aucune bibliothèque de style. L'app s'affiche
-  > donc avec les styles par défaut du navigateur. Cinq composants portent des `style={{…}}` inline
-  > (`GameViewer`, `GameList`, `DangerPage`, `ExplorerPage`, `WinningChancesBar`), non par choix
-  > esthétique mais **parce qu'il n'y avait pas de feuille de style où mettre un sélecteur** : ce
-  > sont des surlignages **porteurs de sens** (teinte de win rate, sévérité d'un `Mistake`, barre de
-  > winning chances), chacun doublé d'un **repère non chromatique** pour rester accessible.
-  >
-  > **Pas de maquette, et c'est la contrainte structurante** de cette US, pas un manque à combler en
-  > douce : le grilling doit produire la référence visuelle avant tout code, sinon chaque écran sera
-  > stylé au jugé et l'ensemble ne tiendra pas. Points à trancher :
-  > - Ce qui fait office de référence : un jeu de **tokens** (palette, échelle typographique,
-  >   espacements, rayons) écrit et validé au grilling ? Un écran pilote stylé d'abord, puis décliné ?
-  >   Une capture avant/après par écran pour arbitrer ?
-  > - Approche technique : CSS vanilla + variables custom, modules CSS, ou une bibliothèque
-  >   (utilitaire ou composants) ? Dans un projet volontairement mince (Vite + React, pas de
-  >   dépendance de style à ce jour), en ajouter une est une décision à motiver — ADR probable.
-  > - **Ne pas régresser les surlignages sémantiques.** Migrer l'inline vers des classes est
-  >   souhaitable, mais la teinte reste une info métier et le repère non chromatique doit survivre.
-  >   Le finding a11y d'US-3 (surlignage invisible faute de CSS) est le précédent à ne pas rejouer à
-  >   l'envers.
-  > - Critère d'acceptation d'une US esthétique : sur quoi juge-t-on « présentable » ? Une Feature
-  >   Path agentique constate qu'un style est **appliqué** et qu'un contraste est suffisant, elle ne
-  >   juge pas le goût. À définir explicitement, sinon l'US n'a pas de fin.
-  > - Périmètre : tous les écrans (`/`, `/stats`, `/openings`, `/danger`, explorateur, analyse) ou un
-  >   sous-ensemble ? Le mode sombre et le responsive sont-ils dedans ou différés ?
-
 ## Doing
 
+
 ## In review
+
+- **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
+  > **Grillée** (2026-08-17) — **ADR-0013**. `CONTEXT.md` **inchangé, et c'est un constat** : une
+  > feuille de style n'introduit aucun concept de domaine, et « token » / « rôle de thème » sont du
+  > vocabulaire d'implémentation, dont la place est dans l'ADR. Branche :
+  > `integration/US-13-stylesheet`.
+  >
+  > État vérifié : **aucun CSS dans le projet** — zéro `.css`, aucun `<link>` dans
+  > `client/index.html`, aucune dépendance de style. Le backlog annonçait cinq composants stylés
+  > inline ; il y en a **neuf**, et surtout les inline sont de **deux natures** que rien ne
+  > distinguait : des **teintes porteuses de sens** (`SEVERITY_TINT` `chess/severity.ts:17`, la ligne
+  > faible `#fbe0e0` sur `OpeningsPage.tsx:58` et `DangerPage.tsx:115`, la pastille « ✓ analysée »
+  > `GameList.tsx:41`, l'échec d'import `ImportSummary.tsx:22`, le gras du Player
+  > `GameHeader.tsx:36`, la palette d'`EvaluationGraph.tsx:7-11`, l'`hsla` d'`arrows.ts:25`) et de la
+  > **mise en page pure** (`maxWidth: 480/240/820`, `flex`, `height: 220` dans `Board.tsx:87-104`).
+  > Seule la première famille a un enjeu d'accessibilité.
+  >
+  > **Pas de maquette : la référence est produite ici, en trois pièces** — les tokens (écrits), le
+  > squelette de page (écrit, ci-dessous), et la capture de l'écran pilote validée par le demandeur.
+  >
+  > Décisions du grilling :
+  > - **SCSS comme langage d'écriture, custom properties comme forme des tokens** (ADR-0013). SCSS
+  >   demandé par le demandeur et retenu : `sass` est une devDependency de build, elle n'importe
+  >   aucun design system et ne laisse rien dans le bundle — contrairement à Tailwind (qui remettrait
+  >   les décisions visuelles dans les `className`, soit ce que l'US défait) ou à une bibliothèque de
+  >   composants (qui imposerait de réécrire le markup et de risquer les noms accessibles verrouillés
+  >   par les tests d'US-1 à US-14). Les `$variables` sont réservées au compile-time (breakpoints dans
+  >   `@media`, maps itérées, arguments de mixin).
+  > - **Les tokens ne peuvent pas être des `$variables`, et l'argument est local** : plusieurs
+  >   couleurs sont consommées **depuis TypeScript**, pas depuis un sélecteur — `SEVERITY_TINT`
+  >   alimente la prop `squareStyles` de `react-chessboard` (`Board.tsx:56`), API tierce qui prend un
+  >   objet de style et qu'aucune classe n'atteint. Une `$variable` a disparu à l'exécution : il
+  >   faudrait redéclarer les hex en TS, donc rétablir la duplication que l'US supprime et défaire
+  >   l'extraction d'US-14 qui avait fait de `SEVERITY_GLYPH`/`TINT` une source unique.
+  >   `var(--tint-blunder)` traverse la frontière. Prix payé : plus d'erreur de compilation sur un nom
+  >   de token.
+  > - **Mode sombre dedans**, en **préférence système seule** (`@media (prefers-color-scheme: dark)`)
+  >   — aucun contrôle, aucun état, aucune persistance, aucun changement serveur. Un `[data-theme]`
+  >   se greffera plus tard sans toucher une règle.
+  > - **Trois familles de couleur, et c'est une règle, pas une convention** : les *rôles de thème*
+  >   s'inversent ; les *teintes sémantiques* gardent leur sens, reçoivent une valeur par thème **et
+  >   emportent leur propre encre** (leur contraste ne dépend jamais de l'héritage) ; les *couleurs de
+  >   joueur et de plateau* (parts Blancs/Noirs de `WinningChancesBar` et d'`EvaluationGraph`, cases
+  >   du plateau) **ne réagissent jamais au thème** — la part des Blancs est claire parce que ce sont
+  >   les Blancs. Elles gagnent une bordure pour rester détachables d'un fond sombre.
+  >   `react-chessboard@5.10.0` expose `lightSquareStyle`/`darkSquareStyle`/`boardStyle` : on a la
+  >   prise, aucun des trois plateaux ne s'en sert aujourd'hui.
+  > - **Responsive : fluide, sans breakpoint conçu.** Largeurs en `ch`/`rem`, grilles qui se replient
+  >   d'elles-mêmes. C'est une manière d'écrire, pas un travail de plus — et c'est le seul choix qui
+  >   ne grave pas des px à défaire.
+  > - **Markup libre** (choix du demandeur, contre ma recommandation d'un périmètre borné aux
+  >   accroches). Coût assumé et énoncé : `StatsPage`, `DangerPage`, `ExplorerPage`, `GameList`,
+  >   `Board`, `AnalysePage` sont directement exposés et cessent de servir de filet pendant le
+  >   travail ; **la suite HP pilote la vraie UI** et devra être adaptée puis rejouée, exactement
+  >   comme en US-10a (PR #28) — budget à prévoir, pas à découvrir à la PR.
+  > - **Séquencement : markup d'abord, en tranche séparée**, sans une ligne de style. Les tests sont
+  >   adaptés là et nulle part ailleurs, donc un test rouge dans les tranches suivantes désigne
+  >   forcément le style. Contrepartie assumée : cette tranche n'est pas démontrable à l'œil, sa FP
+  >   porte sur la structure.
+  > - **Le squelette est fixé ici**, sinon la tranche markup restructure à l'aveugle au service d'une
+  >   grille qui n'existe pas : châssis `header` (`h1` + `nav` en barre, onglet courant marqué sur
+  >   `[aria-current="page"]` que `NavLink` pose déjà — repère non chromatique gratuit) ; colonne de
+  >   lecture bornée à `72ch` avec une **variante large** pour `/danger` et `/analyse` ; **une page =
+  >   une `section aria-labelledby` + un `h2`** ; données tabulaires en `<table>` (`th scope`, nombres
+  >   à droite, `tabular-nums` en token global) ; ce qui est une liste reste une liste (`GameList` en
+  >   `display: grid`, `/danger` en grille de cartes `auto-fit`) ; Analyse garde la rangée d'US-14
+  >   avec des bases fluides ; séparation par l'espacement, jamais par des filets.
+  > - **`/stats` devient un seul tableau** (amendement du demandeur) : Total, cadences et côtés en
+  >   groupes de lignes. Conséquence à porter dans la tranche markup — les `h3` « Par cadence » /
+  >   « Par côté » disparaissent comme titres et les `aria-label` des `ul` migrent vers des `th` de
+  >   groupe, or `StatsPage.test.tsx` interroge exactement ces libellés.
+  > - **Grille d'acceptation d'une US esthétique** : l'agent **mesure et bloque** sur ce qui est
+  >   objectif — feuille effectivement appliquée (aucun token non résolu), contraste calculé sur les
+  >   paires réellement rendues ≥ 4.5:1 **dans les deux thèmes**, aucun débordement horizontal en
+  >   fenêtre étroite, repère non chromatique toujours présent, couleurs de joueur inchangées entre
+  >   thèmes. Le **goût se juge une seule fois**, par le demandeur, sur l'écran pilote ; les écrans
+  >   suivants ne sont plus jugés qu'à leur conformité au squelette et aux tokens. Le contraste est
+  >   **bloquant** : le finding a11y d'US-3 (surlignage invisible) est le précédent à ne pas rejouer.
+  > - **Budget HP** : pas de 4ᵉ HP, et la suite couvre déjà les invariants sensibles — HP-03 étape 4
+  >   asserte le surlignage sémantique, HP-02 étape 4 l'opacité et la teinte des flèches, HP-01
+  >   étape 9 la courbe et ses marqueurs. Le demandeur retient une **passe thème sur les trois HP**
+  >   (plutôt que la greffe bornée sur HP-03 que je recommandais) : chaque HP gagne une **étape
+  >   finale** qui repasse sous préférence sombre les écrans **déjà atteints**, sans réimporter ni
+  >   réanalyser — le surcoût est du rendu, pas du parcours.
+  > - **Exigence du demandeur : la suite HP doit être revue pour visiter tous les écrans.** Une passe
+  >   thème qui ne voit pas un écran ne prouve rien sur cet écran, et aujourd'hui `/stats` n'est
+  >   visité par aucun HP, `/danger` seulement en drive-by. Forme retenue : l'étape finale de passe
+  >   thème **parcourt la navigation** et traverse les six écrans dans les deux thèmes, en réutilisant
+  >   l'état déjà construit — les journeys elles-mêmes restent des parcours de valeur et ne se
+  >   transforment pas en balayage de couverture. À confirmer au PRD.
+  >
+  > **Pilote validé avant toute tranche** (prototype jetable, `/` et `/analyse` dans les deux thèmes,
+  > conservé comme référence visuelle dans `.scratch/stylesheet/pilot-reference.html`). Produit
+  > **maintenant** plutôt qu'en tranche 2 sur remarque du demandeur : le goût est la seule décision
+  > qu'on ne peut pas déléguer, et elle ne devait pas se retrouver derrière une tranche déjà mergée.
+  > Deux pilotes plutôt qu'un, parce qu'une palette qui tient sur une liste peut s'effondrer sur la
+  > page Analyse. Il a payé son coût — **trois enseignements que rien d'autre n'aurait donnés avant
+  > la fin** :
+  > - **La règle des trois familles avait une faille** : une sévérité posée **sur une case** relève de
+  >   la famille constante, pas de la famille sémantique, parce que la pièce qu'elle porte garde son
+  >   encre dans les deux thèmes. La case surlignée tombait à **1.49:1** en sombre. D'où
+  >   `--square-inaccuracy/mistake/blunder`, constantes, distinctes des `--tint-*` du châssis. La
+  >   frontière n'est pas le sens de la couleur mais **ce qui est peint par-dessus**.
+  > - **Le plateau relève du 3:1 des graphiques non textuels**, pas du 4.5:1 du texte — en production
+  >   ce sont les SVG de `react-chessboard`.
+  > - **Et il se juge sur `max(remplissage, contour)` contre la case**, pas sur le remplissage seul :
+  >   une pièce blanche sur case claire mesure 1.24:1 en remplissage et 14.65:1 en contour, et c'est
+  >   le contour qui porte la lisibilité. Jugé au remplissage, le critère rejetterait un plateau
+  >   parfaitement lisible. Pire cas mesuré sur le pilote validé, toutes combinaisons confondues :
+  >   **4.81:1**. Texte : **0 faute** sur 63 nœuds par thème, aucun débordement horizontal.
+  >
+  > Tokens figés et référence visuelle : dans **ADR-0013**.
+  >
+  > PRD : `.scratch/stylesheet/PRD.md`. **Découpée en 6 issues**, toutes `ready-for-agent`, sur
+  > `integration/US-13-stylesheet` :
+  > - `01-restructure-markup-to-the-skeleton` — tous les écrans au squelette, **zéro style**, les
+  >   tests adaptés ici et nulle part ailleurs ; FP structurelle, pas esthétique
+  > - `02-tokens-and-the-app-chrome` — le pilote rendu réel : SCSS câblé, tokens, châssis, bloc
+  >   `prefers-color-scheme: dark`, et le test de cohérence des tokens (bloquée par 01)
+  > - `03-semantic-tints-move-to-tokens` — la tranche à risque : une source par teinte, famille
+  >   constante du plateau, repères non chromatiques intacts (bloquée par 02)
+  > - `04-lists-and-tables` — Mes parties, `/stats`, `/openings` : rangées constantes, chiffres
+  >   alignés (bloquée par 02)
+  > - `05-dense-screens` — `/danger` en grille de cartes, explorateur, rangée d'Analyse fluide ;
+  >   après elle, **plus aucun style inline de mise en page** (bloquée par 02)
+  > - `06-revise-the-hp-suite` — adapter les 3 HP au markup, puis l'étape finale qui parcourt les six
+  >   écrans dans les deux thèmes ; ferme l'angle mort `/stats` (bloquée par 03, 04, 05)
+  >
+  > Seams confirmés : **agentique en apex** (styles calculés via CDP — le seul endroit où une feuille
+  > de style est observable ; le script de mesure du pilote est réutilisable comme outillage de FP),
+  > **composants en jsdom** pour la structure et le nom du token seulement (jsdom ne charge pas la
+  > feuille), un **seam nouveau** de cohérence des tokens au niveau du repo, et le build. Aucun test
+  > serveur : l'US ne touche pas le serveur. Régression visuelle par captures **rejetée** (dépendance,
+  > binaires versionnés, flake notoire, aucune CI pour la porter).
+  >
+  > Vigilances relevées : **aucun HP ne visite `/stats`**, or c'est l'écran dont le markup change le
+  > plus — sa vérification repose entièrement sur sa FP. Les tests composants tournent en **jsdom**,
+  > qui ne charge pas la feuille : les assertions de couleur littérale devront porter sur le nom du
+  > token (plus honnête, elles vérifient le câblage). Décocher les annotations ne doit pas faire
+  > s'effondrer la rangée d'Analyse (vigilance déjà ouverte en US-14).
+  >
+  > Trouvailles hors périmètre strict, à traiter en drive-by ou à laisser : **`GamesPage` est la
+  > seule page sans `<section>` ni `<h2>`** (le squelette la réaligne) et porte **la seule chaîne
+  > restée en anglais** de l'app (« No games yet — import your chess.com history to get started. ») ;
+  > `client/package.json` déclare `vite ^8.1.5` alors que le `node_modules` installé est en 5.4.21.
+  >
+  > **Livrée** (2026-08-17) — les **six slices** mergées dans `integration/US-13-stylesheet`
+  > (PR #37 → #43). Suite **HP 3/3 verte** sur l'app réelle, avec la passe thème sur les six écrans
+  > dans les deux thèmes (36 audits, aucun échec). PR `integration → develop` ouverte : le merge est
+  > une décision humaine. Deux points laissés au relecteur, écrits sur les issues : la **largeur de
+  > l'explorateur** (son diagramme tombe à 317 px sur écran large ; un attribut suffit, mais le goût
+  > avait été figé sur un pilote qui ne montrait pas cet écran) et la cellule `Win rate` **vide**
+  > plutôt qu'un tiret sur une cadence sans partie (du contenu, hors périmètre).
 
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
@@ -234,7 +360,6 @@
   > d'HP-01, qui analyse déjà deux parties pour de vrai. Le demandeur se contente de **cette seule
   > étape 9** pour la PR `integration → develop` (HP-02 et HP-03 ne passent pas par Analyse) — à
   > reconfirmer au moment de la PR.
-
 
 - **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
   > **En revue** — PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
