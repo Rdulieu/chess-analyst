@@ -94,4 +94,4 @@ Verify: UI first. Probe the database only to confirm no duplicate row survived s
 
 ## Blocked by
 
-None — can start immediately (subject to the US-13 sequencing note above).
+None — can start immediately. US-13 is merged and this branch is rebased on it.
