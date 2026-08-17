@@ -89,3 +89,54 @@ come from stored `Evaluation`s; a seeded database is enough — no engine run is
 ## Blocked by
 
 - `02-tokens-and-the-app-chrome`
+
+## Feature Path run — green, no blocking finding
+
+Run against the running app (seeded database, 166 Games / 20 analysed), computed styles only,
+`prefers-color-scheme` emulated for the dark pass. Games 145 and 161 were used, 161 being the only
+seeded Game carrying all three severities. All 26 tokens resolve to their frozen ADR-0013 values in
+both themes; 35 `var(--…)` references on the rendered pages, none unresolved, no empty computed
+colour. No console error or warning across the walk.
+
+| step | light | dark |
+|---|---|---|
+| 1 — move-list glyphs | ✅ 9.65 / 8.25 / 6.02:1 | ✅ 8.52 / 8.26 / 7.91:1 |
+| 2 — square + piece on it | ✅ 15.80 / 11.31 / 7.96:1 on `max(fill, stroke)` | ✅ **identical values** |
+| 3 — curve markers + tally | ✅ same ratios as the move list, counts agree | ✅ 8.52 / 8.26 / 7.91:1 |
+| 4 — /openings | ✅ 9.50:1, 23/23 rows carry ⚠, 0/38 false positives | ✅ 9.58:1 |
+| 5 — /danger | ✅ 9.50:1, 4 entries with their ⚠ | ✅ 9.58:1 |
+| 6 — /games badge | ✅ 8.48:1, pill border 9.54:1, 20/20 badges | ✅ 9.06:1 |
+| 7 — dark walk | — | ✅ player colours byte-identical between themes |
+
+Step 2 is the one the ADR predicted: measured on fill alone the three highlighted squares would
+have read 1.33 / 1.86 / 2.64:1 and the criterion would have rejected a perfectly legible board.
+Measured on `max(fill, stroke)`, worst case 7.96:1. And the values are identical in both themes,
+which is what the constant family was for.
+
+### Findings, all non-blocking
+
+- **The import-failure tint has no seeded instance reachable from the UI**, so that one journey is
+  untested rather than passing: no import was run. What was observed instead: the rule resolves to
+  `--tint-fail` / `--tint-fail-ink` at 7.95:1 light and 9.15:1 dark, and the failure is stated in
+  words independently of the tint. The wiring and the contrast hold; "a real failed month renders
+  like this" is unverified.
+- **The evaluation curve's equality line and cursor keep a hard-coded hex, and both sit just under
+  the 3:1 non-text threshold** against the ground they are drawn on: 2.92:1 for the equality line
+  against White's share, 2.93:1 for the cursor against Black's. Unchanged US-14 values, out of this
+  slice's migration list, no regression — but the exclusion is argued on the same grounds that
+  produced `--square-*`, and those *were* tokenised. Worth settling rather than leaving as two
+  constants with a comment.
+- **`--square-light` / `--square-dark` are declared and consumed nowhere.** The board's base squares
+  are still `react-chessboard`'s own `#f0d9b5` / `#b58863`, so two frozen tokens are dead and the
+  board's base palette is not the one the ADR pins down. No slice currently claims them.
+- **`/analyse` overflows horizontally at a 380px viewport** (608 against 365), from the US-14 layout
+  inline styles (`flex: 0 0 360px` beside `flex: 1 1 260px`, no wrap). Absent from this slice's diff.
+  Folding that row into one column is already an acceptance criterion of
+  `05-dense-screens` — flagged here so it is not met there as a surprise.
+
+### Note for the next slices
+
+**Do not assemble a token name with SCSS interpolation.** The consistency audit reads the stylesheet
+as source, so `--tint-#{$severity}` is a name it cannot see — and that audit is the only thing
+standing in for the compile error custom properties cost us. Found here by the audit itself, which
+reported `--tint-` as undeclared. The three severity rules are written out for that reason.
