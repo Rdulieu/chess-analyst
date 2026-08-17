@@ -85,6 +85,14 @@
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  // Not a token: the one declaration that tells the BROWSER the app has two
+  // themes. A `prefers-color-scheme` block restyles what this sheet paints and
+  // says nothing about what the browser paints for itself — which is why the
+  // checkboxes stayed bright white squares at night, and why the scrollbars and
+  // the caret did too. It belongs beside the themes rather than in a rule,
+  // because it is the same statement they are.
+  color-scheme: light dark;
 }
 
 // The dark theme is a REDEFINITION OF TOKENS and nothing else: not one rule is

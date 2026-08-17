@@ -204,3 +204,29 @@ describe("the layout inline styles, gone from the components", () => {
     },
   );
 });
+
+/**
+ * The one item that belongs to no slice and to every screen: the checkboxes. They
+ * are on the Game rows, on the cadence fieldset and on the annotations toggle, and
+ * at night they were bright white squares — because a `prefers-color-scheme` media
+ * query restyles what the SHEET paints and says nothing about what the browser
+ * paints for itself. Reported by slice 04's Feature Path, fixed here.
+ */
+describe("the form controls the browser draws itself", () => {
+  it("tells the browser the app has both themes, so its own widgets follow", () => {
+    // `color-scheme` is the declaration — not `accent-color`. The white square was
+    // an UNCHECKED box: a native widget rendered in the light scheme because the
+    // page never said it had a dark one. This also darkens the scrollbars and the
+    // caret for free, which no rule of ours could reach.
+    // Read off the `:root` block textually rather than through `declarationsFor`,
+    // which cannot see it: Sass emits `@charset` ahead of the first rule, so the
+    // helper reads that rule as an at-rule and skips it.
+    const root = css.slice(css.indexOf(":root"), css.indexOf("}"));
+    expect(root).toContain("color-scheme: light dark");
+  });
+
+  it("draws a checked box in the app's accent rather than the browser's blue", () => {
+    const box = declarationsFor(css, 'input[type="checkbox"]');
+    expect(box.get("accent-color")).toBe("var(--accent)");
+  });
+});

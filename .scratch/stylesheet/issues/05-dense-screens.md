@@ -137,6 +137,17 @@ Three, each one line, all inside "hooks and SCSS only" rather than moving anythi
   `denseScreens.test.ts` where the compiled sheet is read. The marker's tint-and-ink pair, which stays
   inline because the data places it, stays asserted in `Board.test.tsx`.
 
+## Grafted on from slice 04's Feature Path
+
+**The checkboxes were bright white squares in the dark theme** (the Game rows, the cadence fieldset,
+the annotations toggle) — assigned here because no slice owned them and every screen carries one. The
+cause was not the missing `accent-color` it looked like: a `prefers-color-scheme` block restyles what
+the *sheet* paints and says nothing about what the *browser* paints for itself, and the white square
+was an **unchecked** native widget rendered in the light scheme. `:root` now declares
+`color-scheme: light dark` — which fixes the scrollbars and the caret in the same stroke, neither of
+which any rule of ours could reach — and `accent-color: var(--accent)` gives a *checked* box the app's
+accent instead of the browser's blue.
+
 ## Findings
 
 - **[fixed during the slice, blocking while it lasted] `/explorer` scrolled the page sideways at 480
