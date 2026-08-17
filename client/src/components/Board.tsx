@@ -80,12 +80,14 @@ export function Board({
       </p>
       {currentAnnotation && <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />}
       {/*
-        The board keeps a fixed width so it does not resize when the curve comes
-        and goes (hiding the annotations must not move the position the Player is
-        reading — US-14).
+        Two named panes rather than two anonymous divs: the row is the thing the
+        stylesheet will size and reflow, and the board must not resize when the
+        curve comes and goes (hiding the annotations must not move the position
+        the Player is reading — US-14). The pixel values below are the pre-
+        stylesheet stand-in and nothing depends on their being fixed.
       */}
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <div style={{ flex: "0 0 360px", maxWidth: 360 }}>
+      <div data-row="board" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div data-pane="board" style={{ flex: "0 0 360px", maxWidth: 360 }}>
           <Chessboard
             options={{
               id: "game-board",
@@ -100,7 +102,7 @@ export function Board({
         {annotations && (
           // Landscape, and deliberately so: squeezed into a narrow column the
           // curve stops being a time axis and reads as a vertical drip.
-          <div style={{ flex: "1 1 260px", minWidth: 220 }}>
+          <div data-pane="annotations" style={{ flex: "1 1 260px", minWidth: 220 }}>
             <div style={{ height: 220 }}>
               <EvaluationGraph annotations={annotations} currentPly={index} />
             </div>

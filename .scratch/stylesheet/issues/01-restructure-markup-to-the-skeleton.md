@@ -94,6 +94,17 @@ Structural, not aesthetic — there is nothing to look at yet, and that is expec
 
 Verify: UI first. No backing-store probe is needed — this slice touches no data.
 
+## Findings from the Feature Path (green, none blocking)
+
+- **The Analyse DOM does not match this issue's prose.** Only the `Evaluation curve` and the error
+  tally sit in `data-pane="annotations"`. The winning-chances bar is a sibling *above*
+  `data-row="board"` and the move list a sibling *below* it, full width — exactly as US-14 left it,
+  so no regression, but the layout slices must not assume the bar and the move list are already in
+  the annotations column. Moving them is a layout decision and belongs to slice 05, not here.
+- **Form fields without `id` or `name`** (the game-list checkboxes, the cadence checkboxes, the
+  annotations toggle) — a pre-existing DevTools issue, not a console error. This slice reduced it by
+  giving the three import fields real ids.
+
 ## Blocked by
 
 None - can start immediately.
