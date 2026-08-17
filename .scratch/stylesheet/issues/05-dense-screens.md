@@ -201,3 +201,35 @@ accent instead of the browser's blue.
 ## Blocked by
 
 - `02-tokens-and-the-app-chrome`
+
+## Certified after the requester's pass (2026-08-17, at `729883d`)
+
+The Analyse row was re-verified in ONE pass against a frozen tree (`_dense.scss` hashed identically
+before and after the run), 24 configurations: two Games × two themes × {1440, 1024, 768, 390}×900 and
+{1536, 1440}×690.
+
+- **The diagram's bottom edge is inside the viewport, 24/24**, annotations on and off. At 690px tall it
+  is 450×450 with 42.5px to spare — a `15rem` budget against 197.5px actually stacked above the row, so
+  the margin is measured and not luck. **Identical for an unanalysed Game**, which is the point of
+  routing the not-yet-analysed block through the same `controls` slot: the taller of the two control
+  stacks still leaves the diagram whole.
+- **The board's `ΔX`, `ΔY` and `ΔW` on toggling the annotations are 0.00 without exception**, and the
+  mechanism behind the old 9px growth is dead rather than masked: `clientWidth` no longer changes when
+  the annotations go (760 → 760, where it used to go 753 → 768), so there is no reclaimed scrollbar
+  width for the board to take a share of.
+- Bar exactly the board's width and left edge (`Δ 0.00`, 12/12), 4px under the diagram. No clipping in
+  any configuration, no page overflow, no unresolved custom property, console clean 24/24, invariant
+  tokens byte-identical between themes, and no new contrast failure.
+
+### Two notes, deliberately not findings
+
+- **The curve's aspect floor moved rather than disappeared: 1.29 → 1.58.** The 1.29 reading needed a
+  bounded row and cannot recur, but the narrow end is not protected by the row being unbounded either —
+  768×900 gives 1.58 and 1024×900 gives 2.17, because there the pane is narrow from the *window* being
+  narrow. Live range 1.58–5.77, all landscape, so the PRD's test passes everywhere. Written down
+  because it tells whoever narrows that pane next where the time axis starts to suffer, which a
+  pass/fail line would have hidden.
+- **The `controls` slot has no name in the markup.** It is a React prop whose children render straight
+  into the side pane, so the agentic tier can only verify the arrangement by position, not by selector.
+  Deliberately left alone at certification time — adding markup would have invalidated the frozen run —
+  and worth a `data-part` for whoever next touches that screen.
