@@ -3,6 +3,7 @@ import { Chessboard } from "react-chessboard";
 import { fetchMoveHabits } from "../api";
 import { positionAfter, boardFen, sideToMove } from "../chess/positions";
 import { candidateArrows } from "../chess/arrows";
+import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { MoveHabitCandidate, Side } from "../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
@@ -81,9 +82,13 @@ export function ExplorerPage() {
       */}
       <p aria-label="trait">Trait aux {SIDE_LABEL[sideToMove(position)]}</p>
 
-      <div style={{ maxWidth: 480 }}>
+      {/* The board's own box. The stylesheet floats it so the breadcrumb and the
+          candidate list sit beside the position they annotate, and under it when
+          there is no room — no element moved, so the reading order holds. */}
+      <div>
         <Chessboard
           options={{
+            ...BOARD_SQUARES,
             id: "explorer-board",
             position,
             // Held to the side being explored, all the way down: the Player

@@ -32,6 +32,12 @@ const CONSTANT_FAMILY = [
   "--square-inaccuracy",
   "--square-mistake",
   "--square-blunder",
+  // The board's coordinate ink, and the curve's two marks: both are read ON a
+  // drawing whose colours do not move with the theme, which is what puts them
+  // in this family rather than among the theme roles (US-13, ADR-0013).
+  "--square-notation",
+  "--curve-equality",
+  "--curve-cursor",
 ];
 
 const SCALES = [

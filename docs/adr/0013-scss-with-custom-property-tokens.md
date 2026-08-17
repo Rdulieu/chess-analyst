@@ -97,7 +97,30 @@ port (its board is CSS, its curve a frozen SVG).
 
 Constant in both themes: `--white-share` `#ececec`, `--black-share` `#2f2f2f`, `--square-light`
 `#e9e2cf`, `--square-dark` `#9a8467`, `--square-inaccuracy` `#f2e08a`, `--square-mistake` `#edb463`,
-`--square-blunder` `#e8837a`.
+`--square-blunder` `#e8837a`, `--square-notation` `#241d13`, `--curve-equality` `#7e7e7e`,
+`--curve-cursor` `#d45a25`.
+
+The last three joined the family in the dense-screens slice, and none of them is a new idea — each
+is the *same* rule applied where it had been skipped:
+
+- `--square-light` / `--square-dark` were declared here from the start and consumed by nobody: the
+  three boards still rendered `react-chessboard`'s own `#F0D9B5` / `#B58863`. They are consumed now
+  (`chess/boardTheme.ts` → the `lightSquareStyle` / `darkSquareStyle` props), because a declared
+  token nobody reads is a lie about the palette.
+- `--square-notation` is **one** ink for both squares, where `react-chessboard` labels each square
+  in the other square's colour — 2.29:1 with its defaults, 2.77:1 with ours, and a coordinate is
+  *text* drawn on a board. One constant dark ink measures 12.89:1 on the light square and 4.66:1 on
+  the dark one, so the labels clear the text threshold on either.
+- `--curve-equality` / `--curve-cursor` are the `Evaluation curve`'s two marks, held to the **3:1
+  non-text** rule against *both* player grounds at once — which is a luminance window of about
+  0.19–0.23 and no eyeballed value lands in it: US-14's `#8a8a8a` and `#c05621` measured 2.92:1 and
+  2.93:1 against the ground each happened to sit over. They are constant for the same reason the
+  board's severity tints are: the dividing line is what is painted over them, and a ground that is
+  light at one end of the picture and dark at the other admits no theme role.
+
+None of the three reaches its mark as an SVG or HTML **attribute**: a custom property resolves in a
+declaration and nowhere else, so `stroke="var(--curve-cursor)"` paints nothing. The curve's marks are
+named in the markup (`data-mark`) and coloured in the sheet.
 
 Scales: space `.25 / .5 / 1 / 1.5 / 2.5rem`; text `.8125 / 1 / 1.125 / 1.5rem`; radius `6px` and a
 pill; reading column `72ch`, with a wide variant for `/danger` and `/analyse`; `system-ui` for prose
