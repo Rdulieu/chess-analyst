@@ -84,10 +84,12 @@ describe("GameList", () => {
 
     const badge = screen.getByLabelText(/analysée/i);
     // The checkmark and the word are what carry the meaning; the tint only ever
-    // reinforces them. Where the tint comes from (an inline style today, a token
-    // once the stylesheet lands) is not this test's business.
+    // reinforces them.
     expect(badge.textContent?.trim()).toMatch(/✓/);
     expect(badge.textContent?.trim()).toMatch(/analysée/i);
+    // And the pill's tint, ink and border now come from the stylesheet, so no
+    // colour is left hard-coded on the element.
+    expect(badge.getAttribute("style")).toBeNull();
   });
 
   it("lets the Player select a Game via its checkbox", async () => {

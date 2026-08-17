@@ -13,10 +13,24 @@ export function WinningChancesBar({ whiteWinChances }: { whiteWinChances: number
     <div
       role="img"
       aria-label={`Blancs ${white}% — Noirs ${black}%`}
-      style={{ display: "flex", height: 8, width: "100%" }}
+      style={{
+        display: "flex",
+        height: 8,
+        width: "100%",
+        // The border is what keeps White's light share detachable from a dark
+        // ground: the shares themselves refuse to follow the theme, so the
+        // frame has to do that work instead (ADR-0013).
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius)",
+        overflow: "hidden",
+      }}
     >
-      <div style={{ width: `${white}%`, backgroundColor: "#eee" }} />
-      <div style={{ width: `${black}%`, backgroundColor: "#333" }} />
+      {/* The widths are data and the colours are tokens, both inline because
+          each share's size is computed per Position. `--white-share` and
+          `--black-share` are declared once, outside the dark block: a colour
+          that says "White" does not say "background". */}
+      <div style={{ width: `${white}%`, backgroundColor: "var(--white-share)" }} />
+      <div style={{ width: `${black}%`, backgroundColor: "var(--black-share)" }} />
     </div>
   );
 }

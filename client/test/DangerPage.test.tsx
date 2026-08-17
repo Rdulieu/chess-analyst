@@ -156,11 +156,13 @@ describe("DangerPage", () => {
     const items = within(list).getAllByRole("listitem");
 
     expect(items[0].getAttribute("data-serious")).toBeNull();
-    expect(items[0].style.backgroundColor).toBe("");
     expect(within(items[0]).queryByLabelText(/dangereuse/i)).toBeNull();
 
+    // The `data-serious` hook the stylesheet tints from, plus the marker that
+    // does not depend on colour. The tint itself is measured in the running app,
+    // in both themes: jsdom never loads the sheet.
     expect(items[1].getAttribute("data-serious")).toBe("true");
-    expect(items[1].style.backgroundColor).not.toBe("");
+    expect(items[1].getAttribute("style")).toBeNull();
     expect(within(items[1]).getByLabelText(/dangereuse/i)).toBeTruthy();
   });
 });

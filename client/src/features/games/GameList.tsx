@@ -3,9 +3,9 @@ import type { Game } from "../../types";
 /**
  * The retained Games. Each row carries a selection checkbox (to pick Games for
  * the analysis pass) and a button that opens the Game's Analyse page; an
- * "analysée" badge marks a Game once it has been analyzed (US-4). The badge uses
- * an inline style plus a textual/checkmark cue — the app ships no stylesheet and
- * highlights must not rely on colour alone.
+ * "analysée" badge marks a Game once it has been analyzed (US-4). The badge is a
+ * pill styled from the sheet (`--tint-ok` and its own ink) plus a
+ * textual/checkmark cue — a highlight must not rely on colour alone.
  */
 export function GameList({
   games,
@@ -40,26 +40,11 @@ export function GameList({
           </span>
           <span data-part="state">
             {g.analyzed && (
-              <span
-                aria-label="analysée"
-                // A bordered pill rather than bold text: in a 54-row list the bold
-                // was easy to miss. Inline — the app ships no stylesheet — and the
-                // checkmark + word carry the meaning, so the tint is never the
-                // only cue.
-                style={{
-                  marginLeft: "0.5rem",
-                  padding: "0.05rem 0.4rem",
-                  border: "1px solid #2e7d32",
-                  borderRadius: "0.75rem",
-                  backgroundColor: "#e8f5e9",
-                  color: "#1b5e20",
-                  fontWeight: "bold",
-                  fontSize: "0.85em",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                ✓ analysée
-              </span>
+              // A bordered pill rather than bold text: in a 54-row list the bold
+              // was easy to miss. The pill's tint, ink and border come from the
+              // stylesheet; the checkmark and the word carry the meaning, so the
+              // tint is never the only cue.
+              <span aria-label="analysée">✓ analysée</span>
             )}
           </span>
         </li>

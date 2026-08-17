@@ -167,6 +167,29 @@ describe("Board", () => {
     expect(squareBackground(container, "e4")).not.toBeTruthy(); // no longer the current Position
   });
 
+  it("takes the square's tint from the CONSTANT family, and the move list's from the chrome's", async () => {
+    // jsdom never loads the stylesheet, so the honest assertion is the token
+    // NAME: it verifies the wiring, which is what can break, rather than a hue
+    // that was judged once on the pilot (ADR-0013).
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+    ];
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4" annotations={annotations} />);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    // The square: a piece is painted on it, and the piece's ink is constant.
+    expect(squareBackground(container, "e4")).toBe("var(--square-blunder)");
+
+    // The move list's glyph: chrome, so it follows the theme — styled from the
+    // sheet on the severity the element names, with its own ink token.
+    const glyph = container.querySelector('ol[aria-label="moves"] [data-severity]');
+    expect(glyph?.getAttribute("data-severity")).toBe("blunder");
+    expect(glyph?.textContent).toBe("??");
+  });
+
   it("tints no square when the current Position follows a clean Move, an opponent's Move, or is the start", async () => {
     const annotations: MoveAnnotation[] = [
       { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
@@ -295,6 +318,24 @@ describe("Evaluation curve", () => {
 
     // ply 1 is the Player's blunder; ply 2 is the opponent's reply, never flagged.
     expect(glyphs).toEqual(["??"]);
+  });
+
+  it("gives each share of the curve its player's own token, and each marker its severity's pair", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    // White's ground and Black's: the same two tokens the winning-chances bar
+    // uses, and neither is redefined by the dark theme.
+    const svg = curve(container)!;
+    expect(svg.style.background).toBe("var(--black-share)");
+    expect(svg.querySelector("polygon")!.style.fill).toBe("var(--white-share)");
+
+    // A marker carries the chrome tint AND its own ink — the pair, never the
+    // tint alone, so its legibility does not depend on the inherited `--ink`
+    // nor on the constant ground it happens to sit over.
+    const marker = container.querySelector<HTMLElement>("div[aria-hidden='true'] > span")!;
+    expect(marker.textContent).toBe("??");
+    expect(marker.style.background).toBe("var(--tint-blunder)");
+    expect(marker.style.color).toBe("var(--tint-blunder-ink)");
   });
 
   it("counts the Player's own errors in text, said to be theirs", () => {

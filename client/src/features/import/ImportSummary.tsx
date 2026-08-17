@@ -10,17 +10,14 @@ const yyyymm = ({ year, month }: MonthlyImport["month"]) =>
 /**
  * One month of the range. The month's own contribution is shown, and a month
  * chess.com could not answer for says so **in words** as well as in style: the
- * client has no stylesheet, so a tint can never be the only cue (and a failed
- * month must stay distinguishable from a month the Player was inactive in,
- * which reads as a plain zero).
+ * tint (`--tint-fail`, applied by the stylesheet on `data-failed`) can never be
+ * the only cue, because a failed month must stay distinguishable from a month
+ * the Player was inactive in, which reads as a plain zero.
  */
 function MonthLine({ line }: { line: MonthlyImport }) {
   const failed = line.failure !== undefined;
   return (
-    <li
-      aria-label={yyyymm(line.month)}
-      style={failed ? { fontWeight: "bold", color: "#b3261e" } : undefined}
-    >
+    <li aria-label={yyyymm(line.month)} data-failed={failed ? "true" : undefined}>
       {yyyymm(line.month)} —{" "}
       {failed
         ? `échec : ${line.failure}`

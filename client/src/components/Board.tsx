@@ -5,7 +5,7 @@ import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
 import { EvaluationGraph } from "./EvaluationGraph";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
-import { SEVERITY_GLYPH, SEVERITY_TINT } from "../chess/severity";
+import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
 import type { MoveAnnotation } from "../types";
 
 /**
@@ -53,7 +53,12 @@ export function Board({
   const currentAnnotation = annotations?.[index];
   const squareStyles =
     index > 0 && currentAnnotation?.severity
-      ? { [plies[index - 1].to]: { backgroundColor: SEVERITY_TINT[currentAnnotation.severity] } }
+      ? // The CONSTANT variant, not the chrome's: `react-chessboard` paints the
+        // piece on top of this square and the piece keeps its ink in both themes
+        // (ADR-0013 — the theme-varying tint measured 1.49:1 in dark). This prop
+        // is also the reason the tokens are custom properties: a third-party API
+        // taking a style object cannot be reached by a class.
+        { [plies[index - 1].to]: { backgroundColor: SEVERITY_SQUARE_TINT[currentAnnotation.severity] } }
       : undefined;
 
   return (
@@ -123,7 +128,13 @@ export function Board({
                 {ply.san}
               </button>
               {annotation?.severity && (
-                <span aria-label={annotation.severity}>{SEVERITY_GLYPH[annotation.severity]}</span>
+                // The glyph is the signal; `data-severity` only lets the sheet
+                // reinforce it with the severity's own tint and ink. Naming the
+                // severity on the element keeps the stylesheet off the accessible
+                // name, which is a label, not a hook.
+                <span data-severity={annotation.severity} aria-label={annotation.severity}>
+                  {SEVERITY_GLYPH[annotation.severity]}
+                </span>
               )}
               {annotation && <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>}
             </li>

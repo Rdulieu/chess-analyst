@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   clientSources,
   compileStylesheet,
+  componentSources,
   consumedTokens,
   declaredTokens,
+  stripComments,
   undeclaredTokens,
 } from "./support/tokenAudit";
 
@@ -31,6 +33,21 @@ describe("the token-consistency audit", () => {
     expect([...consumedTokens(['const TINT = { blunder: "var(--tint-blunder)" };'])]).toEqual([
       "--tint-blunder",
     ]);
+  });
+
+  it("finds no colour left hard-coded in a component", () => {
+    // The other half of the same guarantee: the audit above proves the tokens
+    // that ARE consumed resolve, this proves none was left behind as a hex.
+    // Only the components may hold a colour, and only for the two cases the ADR
+    // exempts — the arrows, one hsla per data point, and the curve's equality
+    // line and cursor, drawn over the two constant player grounds.
+    const EXEMPT = /^(chess\/arrows|components\/EvaluationGraph)\.tsx?$/;
+    const offenders = componentSources()
+      .filter(({ path }) => !EXEMPT.test(path))
+      .filter(({ source }) => /#[0-9a-fA-F]{3,8}\b|\b(rgba?|hsla?)\(/.test(stripComments(source)))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
   });
 
   it("finds no undeclared token anywhere in the client", () => {
