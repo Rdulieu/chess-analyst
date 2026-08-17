@@ -115,11 +115,15 @@ not recur. Worst contrast anywhere: 2.63:1, on a *disabled* control (known-open,
 - **[non-blocking] A failed `/api/games` fetch renders the empty-state invitation**, indistinguishable
   from "no games": the screen said "No games yet — import your chess.com history to get started."
   while the database held 82 Games. Found incidentally when the relay returned 502. A Player hitting a
-  hiccup is told their history is empty. Not a US-13 concern — an error-state concern, and the first
-  screen deserves a real one.
+  hiccup is told their history is empty. Not a US-13 concern, and the sharpest finding of the three
+  runs, so it is **filed on the technical backlog** rather than left here to die with this story:
+  `.scratch/games-load-failure/issues/01-a-failed-load-looks-like-an-empty-history.md`
+  (`needs-triage`).
 - **[non-blocking] The side selector does not reset the explorer path.** Switching Blancs → Noirs two
   moves deep keeps the line, whose other-side habits are typically empty. HP-02 step 8 now says to
-  return to `Départ` first; whether the app should reset instead is a product question.
+  return to `Départ` first. **This is a product question and no agent should settle it**: recorded as
+  one, with the three candidate answers, in
+  `.scratch/move-habit-explorer/issues/04-does-switching-side-keep-the-path.md` (`needs-triage`).
 - **[non-blocking] Two known-open findings are in fact fixed**, and were struck from
   `theme-pass.md` rather than carried: the board's coordinate labels (~2.3:1 → **12.89:1** light
   square / **4.66:1** dark, because the board *does* consume `--square-notation` and the square
@@ -163,6 +167,47 @@ out of the run: `--square-notation` (constant-family per `boardTheme.ts`, in no 
 invariance was asserted by nobody), a `worst` ratio and `textsMeasured` (so "nothing failed" and
 "nothing was measured" stop looking identical — the sweeps measured 25 to 306 texts per screen), and
 `failing` naming the offending elements per cue rule.
+
+### The re-run: HP-01's twelve audits on a dedicated browser
+
+The first run's HP-01 audits were taken on the shared MCP browser, guarded (a `location.port` throw
+plus re-asserted `innerWidth` / `matchMedia`, with the three tripped measurements re-taken). The
+guards held, but "measured on a browser another agent could steal, with guards" is a footnote a human
+reviewer has to evaluate at the `integration → develop` gate, so the twelve audits were **re-run on a
+dedicated Chrome** (own `--user-data-dir`, own debugging port, raw CDP over Node's built-in
+`WebSocket`, no shared driver). No import and no engine: the run restored HP-01's end state by copying
+its SQLite file (82 Games, 2 analysed, `/danger` holding its one recurring Position) and walked the
+navigation.
+
+**12/12 pass, and every figure matches the guarded run.** No unresolved colour, no undeclared constant
+token, no page or box overflow at 1280 px or at 400 px, cue rules green wherever they had a subject.
+
+| Screen | worst light | worst dark | texts measured | cue rules exercised |
+|---|---|---|---|---|
+| Mes parties | 2.63 (disabled "Analyser la sélection") | 3.51 (same) | 102 | badge 2/0, tab 1/0 |
+| Explorateur | 4.66 (board coordinate) | 4.66 | 36 | tab 1/0 |
+| Ouvertures | 5.75 | 6.81 | 306 | weak-opening ⚠ 17/0, tab 1/0 |
+| Positions dangereuses | 4.66 (board coordinate) | 4.66 | 25 | tab 1/0 |
+| Stats | 5.75 | 6.81 | 39 | tab 1/0 |
+| Analyse (an **analysed** Game) | 2.63 (disabled "Previous") | 3.51 (same) | 75 | severity glyph 1/0 |
+
+The only contrast failures anywhere are the disabled controls, matched by the audit's known-open list.
+The eight theme-invariant tokens are byte-identical between themes on every screen, with no per-screen
+drift (`--white-share #ececec`, `--black-share #2f2f2f`, `--square-light #e9e2cf`,
+`--square-dark #9a8467`, `--square-notation #241d13`, the three `--square-<severity>`); grounds and inks
+swap as they should (`#ffffff`/`#14171a` → `#16181a`/`#e6e8ea`). Console across the whole walk: three
+Vite dev messages and React's DevTools suggestion — **no error, no warning**.
+
+**Nothing differs from the guarded run**, which is the answer to the question that prompted the
+re-run. Two notes on the re-run's own method, both mine and not the app's:
+
+- The first attempt opened the **first** Game rather than an analysed one, so its Analyse audit saw no
+  annotations pane and exercised no severity cue. Corrected by selecting **by characteristic** — the
+  row carrying the "analysée" badge — which is the suite's own rule and the reason the figures above
+  are comparable to the guarded run's.
+- A comma selector (`'… button, … a, … [data-part="description"]'`) returns the **first match in
+  document order**, which is the wrapping span, and clicking a span does nothing. Worth knowing for
+  any driver aimed at the Game list: click the row's `button`.
 
 ### Deviations
 
