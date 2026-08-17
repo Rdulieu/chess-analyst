@@ -165,7 +165,7 @@ section[aria-labelledby="explorer-heading"] {
 // this file, nothing outside the sheet reads it, and a custom property would owe
 // the token audit a declaration in both themes for a length that has nothing to do
 // with either theme.
-$board-fits: calc(100vh - 18rem);
+$board-fits: calc(100vh - 15rem);
 
 [data-row="board"] {
   display: flex;

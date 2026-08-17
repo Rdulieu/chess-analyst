@@ -128,7 +128,7 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     // the requester's call after seeing a bounded row leave two thirds of the page
     // empty. The board still grows towards three fifths; the budget is simply
     // whichever comes first.
-    expect(boardPane.get("max-inline-size")).toBe("min(100%, calc(100vh - 18rem))");
+    expect(boardPane.get("max-inline-size")).toBe("min(100%, calc(100vh - 15rem))");
     expect(row.get("max-inline-size")).toBeUndefined();
     expect(boardPane.get("flex-grow")).toBe("3");
     expect(side.get("flex-grow")).toBe("2");

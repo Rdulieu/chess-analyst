@@ -46,27 +46,17 @@ export function GameViewer({
     // component's.
     <div>
       <GameHeader game={game} />
-      {!game.analyzed && (
-        <div>
-          <p>Cette partie n'a pas encore été analysée.</p>
-          <button type="button" onClick={analyze} disabled={running}>
-            Analyser cette partie
-          </button>
-          <AnalysisPassStatus
-            status={status}
-            nothingToDo={nothingToDo}
-            onAcknowledge={acknowledge}
-          />
-        </div>
-      )}
       {/* The Player reads their own Game the way they played it (CONTEXT.md → Board orientation). */}
       <Board
         pgn={game.pgn}
         orientation={game.playerColor}
         annotations={showAnnotations ? (annotations ?? undefined) : undefined}
-        // Handed to the board as a control rather than stacked above it: the
-        // toggle belongs with the readout it governs, and every line above the
-        // diagram is height the diagram does not get.
+        // Handed to the board as controls rather than stacked above it: they
+        // belong with the readout they govern, and every line above the diagram is
+        // height the diagram does not get — which is why BOTH states go through
+        // this slot. The not-yet-analysed block is the taller of the two, and
+        // leaving it above the board was enough on its own to push the diagram's
+        // bottom edge off the screen.
         controls={
           game.analyzed ? (
             <label>
@@ -77,7 +67,19 @@ export function GameViewer({
               />{" "}
               Afficher les annotations
             </label>
-          ) : undefined
+          ) : (
+            <div>
+              <p>Cette partie n'a pas encore été analysée.</p>
+              <button type="button" onClick={analyze} disabled={running}>
+                Analyser cette partie
+              </button>
+              <AnalysisPassStatus
+                status={status}
+                nothingToDo={nothingToDo}
+                onAcknowledge={acknowledge}
+              />
+            </div>
+          )
         }
       />
     </div>

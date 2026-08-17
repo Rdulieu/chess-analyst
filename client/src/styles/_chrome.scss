@@ -4,10 +4,13 @@
 // restructuring slice; this file only styles them.
 // =============================================================================
 
+// The chrome is a band, not a room: it is padded on the small step, so the height
+// it costs is the height its own two lines need and no more. Every rem here is a rem
+// the board on the Analyse screen does not get.
 header {
   background: var(--ground-sunk);
   border-block-end: 1px solid var(--border);
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
 }
 
 // One alignment, declared once: the header's contents and the page's contents
@@ -18,10 +21,12 @@ header {
   margin-inline: auto;
 }
 
+// The title and the navigation share one line and one baseline. The row gap is the
+// small step, and it only ever applies on a window narrow enough to wrap them.
 header > [data-column] {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3) var(--space-4);
+  gap: var(--space-2) var(--space-4);
   align-items: baseline;
 }
 
