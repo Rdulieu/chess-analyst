@@ -8,6 +8,18 @@ export async function fetchProfiles(): Promise<Profile[]> {
 }
 
 /**
+ * One `Profile` with its counters — what its own page is about. A refusal
+ * carries the server's words: an id naming no Profile is an error to show, not
+ * an empty page to render.
+ */
+export async function fetchProfile(id: number): Promise<Profile> {
+  const res = await fetch(`/api/profiles/${id}`);
+  const body = (await res.json().catch(() => ({}))) as Profile & { error?: string };
+  if (!res.ok) throw new Error(body.error ?? `Failed to load profile ${id} (${res.status})`);
+  return body;
+}
+
+/**
  * Creates a `Profile` for this chess.com account — or, when the account already
  * has one, answers that Profile rather than a second one. The server validates
  * the account against chess.com, so a refusal carries the reason **in the

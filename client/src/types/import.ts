@@ -7,9 +7,13 @@ export interface MonthRef {
   month: number;
 }
 
-/** The scope of one Import: a contiguous month range and the wanted categories. */
+/**
+ * The scope of one Import: the `Profile` it runs for — an Import is an
+ * operation ON a Profile (ADR-0014) — a contiguous month range, and the wanted
+ * categories. No username: the account is the Profile's own.
+ */
 export interface ImportParams {
-  username: string;
+  profileId: number;
   from: MonthRef;
   to: MonthRef;
   categories: TimeControlCategory[];

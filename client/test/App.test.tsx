@@ -34,6 +34,16 @@ const STATS_SUMMARY = {
   bySide: { white: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, black: ZERO },
 };
 
+/** The `Profile` the routed app's Games belong to (US-11). */
+const PROFILE = {
+  id: 7,
+  platform: "chesscom" as const,
+  username: "DudulSmash",
+  createdAt: "2026-08-18T00:00:00.000Z",
+  games: 1,
+  analyzed: 0,
+};
+
 describe("App — routing & navigation", () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -47,7 +57,8 @@ describe("App — routing & navigation", () => {
         if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
         if (u === "/api/openings") return jsonResponse({ openings: [] });
         if (u === "/api/danger") return jsonResponse({ dangers: [] });
-        if (u === "/api/profiles") return jsonResponse([]);
+        if (u === "/api/profiles") return jsonResponse([PROFILE]);
+        if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse(PROFILE);
         return jsonResponse({}, false, 404);
       }),
     );
@@ -75,9 +86,10 @@ describe("App — routing & navigation", () => {
     expect(screen.getByRole("link", { name: /mes parties/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /stats/i })).toBeTruthy();
 
-    // The landing page shows the import form and the game list.
-    expect(await screen.findByRole("form", { name: /import/i })).toBeTruthy();
+    // The landing page shows the game list — and only it: the import form is
+    // an operation on a Profile and lives on that Profile's own page (US-11).
     expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+    expect(screen.queryByRole("form", { name: /import/i })).toBeNull();
   });
 
   it("navigates to a Game's Analyse page when it is selected, with the board steppable", async () => {
@@ -92,6 +104,16 @@ describe("App — routing & navigation", () => {
     // Previous/Next work exactly as before: Next advances one Move.
     await user.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByLabelText("current move").textContent).toBe("e4");
+  });
+
+  it("reaches a Profile's own page from the Profils list, and imports from there", async () => {
+    const user = userEvent.setup();
+    renderApp(["/profiles"]);
+
+    await user.click(await screen.findByRole("link", { name: /DudulSmash/i }));
+
+    expect(await screen.findByRole("heading", { level: 2, name: /DudulSmash/i })).toBeTruthy();
+    expect(screen.getByRole("form", { name: /import/i })).toBeTruthy();
   });
 
   it("navigates to the Profils page from the nav", async () => {
@@ -164,33 +186,44 @@ describe("App — routing & navigation", () => {
 });
 
 describe("App — import UI", () => {
+  /** The routed app on the Profile's page — where the Import now lives. */
+  const renderProfilePage = () => renderApp([`/profiles/${PROFILE.id}`]);
+
   describe("with an empty history", () => {
     beforeEach(() => {
       vi.stubGlobal(
         "fetch",
         vi.fn(async (url: string | URL): Promise<Response> => {
-          if (url.toString() === "/api/games") return jsonResponse([]);
+          const u = url.toString();
+          if (u === "/api/games") return jsonResponse([]);
+          if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse({ ...PROFILE, games: 0 });
           return jsonResponse({}, false, 404);
         }),
       );
     });
 
-    it("invites the Player to import and shows the import form", async () => {
-      renderApp();
+    it("shows the Profile's import form — a range and the categories, no username", async () => {
+      renderProfilePage();
 
-      await screen.findByText(/import your chess\.com history/i);
-      expect(screen.getByLabelText(/username/i)).toBeTruthy();
-      expect(screen.getByLabelText(/^du$/i)).toBeTruthy();
+      expect(await screen.findByLabelText(/^du$/i)).toBeTruthy();
       expect(screen.getByLabelText(/^au$/i)).toBeTruthy();
       expect(screen.getByRole("button", { name: /^import$/i })).toBeTruthy();
+      // The account is the Profile's own: nothing to type, nothing to mistype.
+      expect(screen.queryByLabelText(/username/i)).toBeNull();
       // A checkbox per time control category.
       for (const cat of ["bullet", "blitz", "rapid", "daily"]) {
         expect(screen.getByRole("checkbox", { name: new RegExp(cat, "i") })).toBeTruthy();
       }
     });
 
+    it("still invites the Player to import from an empty Mes parties", async () => {
+      renderApp(["/"]);
+
+      await screen.findByText(/import your chess\.com history/i);
+    });
+
     it("defaults both ends of the range to the current month", async () => {
-      renderApp();
+      renderProfilePage();
 
       const from = (await screen.findByLabelText(/^du$/i)) as HTMLInputElement;
       const to = screen.getByLabelText(/^au$/i) as HTMLInputElement;
@@ -199,12 +232,14 @@ describe("App — import UI", () => {
     });
   });
 
-  it("imports the chosen scope and then shows the imported Games", async () => {
+  it("imports the chosen scope under the Profile whose page it was run from", async () => {
     let imported = false;
     const fetchMock = vi.fn<(url: string | URL, init?: RequestInit) => Promise<Response>>(
       async (url) => {
         const u = url.toString();
         if (u === "/api/games") return jsonResponse(imported ? [OPERA_GAME] : []);
+        if (u === `/api/profiles/${PROFILE.id}`)
+          return jsonResponse({ ...PROFILE, games: imported ? 1 : 0 });
         if (u === "/api/import") {
           imported = true;
           return jsonResponse({ running: true, total: 2, done: 0, result: null }, true, 202);
@@ -233,10 +268,9 @@ describe("App — import UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    renderApp();
-    await screen.findByText(/import your chess\.com history/i);
+    renderProfilePage();
+    await screen.findByLabelText(/^du$/i);
 
-    await user.type(screen.getByLabelText(/username/i), "me");
     fireEvent.change(screen.getByLabelText(/^du$/i), { target: { value: "2024-02" } });
     fireEvent.change(screen.getByLabelText(/^au$/i), { target: { value: "2024-03" } });
     await user.click(screen.getByRole("button", { name: /^import$/i }));
@@ -244,16 +278,17 @@ describe("App — import UI", () => {
     await waitFor(() => {
       const call = fetchMock.mock.calls.find((c) => c[0] === "/api/import");
       expect(call).toBeTruthy();
+      // The Profile is named by the request — the page it ran from IS the scope.
       expect(JSON.parse((call![1] as RequestInit).body as string)).toEqual({
-        username: "me",
+        profileId: PROFILE.id,
         from: { year: 2024, month: 2 },
         to: { year: 2024, month: 3 },
         categories: ["bullet", "blitz", "rapid", "daily"],
       });
     });
-    expect(await screen.findByText(/Duke Karl/)).toBeTruthy();
-    // The post-import summary is shown.
+    // The post-import summary is shown, and the Profile's counter caught up.
     expect(await screen.findByLabelText(/import summary/i)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/1 partie importée/i)).toBeTruthy());
   });
 
   it("shows how many months are done while an Import is in flight, then the summary", async () => {
@@ -262,6 +297,7 @@ describe("App — import UI", () => {
     const fetchMock = vi.fn((url: string | URL): Promise<Response> => {
       const u = url.toString();
       if (u === "/api/games") return Promise.resolve(jsonResponse([]));
+      if (u === `/api/profiles/${PROFILE.id}`) return Promise.resolve(jsonResponse(PROFILE));
       if (u === "/api/import")
         return Promise.resolve(jsonResponse({ running: true, total: 3, done: 1, result: null }, true, 202));
       if (u === "/api/import/status") return statusInFlight;
@@ -270,9 +306,8 @@ describe("App — import UI", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
 
-    renderApp();
-    await screen.findByText(/import your chess\.com history/i);
-    await user.type(screen.getByLabelText(/username/i), "me");
+    renderProfilePage();
+    await screen.findByLabelText(/^du$/i);
     await user.click(screen.getByRole("button", { name: /^import$/i }));
 
     // While the Import runs, progress is determinate and counted in months.
@@ -299,62 +334,25 @@ describe("App — import UI", () => {
     expect(screen.queryByLabelText(/import progress/i)).toBeNull();
   });
 
-  it("prefills the username from stored settings and saves it on import", async () => {
-    const puts: unknown[] = [];
-    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit): Promise<Response> => {
-      const u = url.toString();
-      if (u === "/api/settings" && init?.method === "PUT") {
-        const body = JSON.parse(init.body as string);
-        puts.push(body);
-        return jsonResponse(body);
-      }
-      if (u === "/api/settings") return jsonResponse({ username: "storeduser" });
-      if (u === "/api/games") return jsonResponse([]);
-      if (u === "/api/import")
-        return jsonResponse({
-          totalFetched: 0,
-          imported: 0,
-          alreadyPresent: 0,
-          byCategory: { bullet: 0, blitz: 0, rapid: 0, daily: 0 },
-          results: { win: 0, draw: 0, loss: 0 },
-          message: "No games found.",
-        });
-      return jsonResponse({}, false, 404);
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
-
-    renderApp();
-
-    // Username is prefilled from the stored settings.
-    await waitFor(() =>
-      expect((screen.getByLabelText(/username/i) as HTMLInputElement).value).toBe("storeduser"),
-    );
-
-    // Importing persists the username.
-    await user.click(screen.getByRole("button", { name: /^import$/i }));
-    await waitFor(() => expect(puts).toContainEqual({ username: "storeduser" }));
-  });
-
   it("surfaces an import error without crashing", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string | URL): Promise<Response> => {
         const u = url.toString();
         if (u === "/api/games") return jsonResponse([]);
+        if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse(PROFILE);
         if (u === "/api/import")
-          return jsonResponse({ error: "Unknown chess.com username: ghost" }, false, 404);
+          return jsonResponse({ error: "Profil introuvable : 7" }, false, 404);
         return jsonResponse({}, false, 404);
       }),
     );
     const user = userEvent.setup();
 
-    renderApp();
-    await screen.findByText(/import your chess\.com history/i);
-    await user.type(screen.getByLabelText(/username/i), "ghost");
+    renderProfilePage();
+    await screen.findByLabelText(/^du$/i);
     await user.click(screen.getByRole("button", { name: /^import$/i }));
 
-    expect(await screen.findByText(/unknown chess\.com username/i)).toBeTruthy();
+    expect(await screen.findByText(/profil introuvable/i)).toBeTruthy();
     // The form is still there — no crash.
     expect(screen.getByRole("button", { name: /^import$/i })).toBeTruthy();
   });

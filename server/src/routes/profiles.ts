@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Db } from "../db";
 import type { ChessComClient } from "../chesscom";
-import { deleteProfile, listProfiles, resolveProfile } from "../profiles/repository";
+import { deleteProfile, getProfile, listProfiles, resolveProfile } from "../profiles/repository";
 
 /**
  * The `Profile`s (mounted at /api/profiles): list, create, delete. Creation goes
@@ -14,6 +14,17 @@ export function createProfilesRouter(db: Db, chessCom: ChessComClient): Router {
 
   router.get("/", (_req, res) => {
     res.json(listProfiles(db));
+  });
+
+  // One Profile's own page reads this: its identity and the size of the history
+  // it owns. An unknown id is refused, not answered with an empty Profile.
+  router.get("/:id", (req, res) => {
+    const profile = getProfile(db, Number(req.params.id));
+    if (profile === undefined) {
+      res.status(404).json({ error: "Profil introuvable." });
+      return;
+    }
+    res.json(profile);
   });
 
   router.post("/", async (req, res) => {

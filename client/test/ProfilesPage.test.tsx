@@ -57,6 +57,10 @@ describe("ProfilesPage — the Profiles it knows", () => {
     expect(rows[0].textContent).toContain("DudulSmash");
     expect(rows[0].textContent).toMatch(/chess\.com/i);
     expect(rows[1].textContent).toContain("Hikaru");
+    // Each row leads to that Profile's own page — where its Import lives.
+    expect(within(rows[0]).getByRole("link", { name: /DudulSmash/i }).getAttribute("href")).toBe(
+      "/profiles/1",
+    );
     expect(screen.queryByText(/aucun profil/i)).toBeNull();
   });
 

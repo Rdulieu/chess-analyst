@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { createProfile, deleteProfile, fetchProfiles } from "../api";
 import type { Profile } from "../types";
 import { clearCurrentProfileId, loadCurrentProfileId, saveCurrentProfileId } from "../features/profiles/currentProfile";
@@ -78,7 +79,11 @@ export function ProfilesPage() {
               // the row itself: the current Profile is never told by colour
               // alone (US-13).
               <li key={profile.id} data-current={isCurrent ? "true" : undefined}>
-                <span data-part="identity">{profile.username}</span>
+                {/* The identity leads to the Profile's own page, where its
+                    Import and its counters live. */}
+                <span data-part="identity">
+                  <Link to={`/profiles/${profile.id}`}>{profile.username}</Link>
+                </span>
                 <span data-part="platform">chess.com</span>
                 {/* The size of the history, in words rather than bare figures:
                     which Profile is worth opening is the question this row
