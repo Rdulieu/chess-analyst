@@ -11,6 +11,28 @@
 // at every width, including the ones nobody measured.
 // =============================================================================
 
+// How wide a diagram may be — which for a square board is also how TALL it may be,
+// and being visible in full is a promise about its height. Each screen's budget is
+// the window less what THAT screen stacks above its board, and the two differ by
+// measurement, not by taste: 180px above the Analyse row (app header, heading, the
+// Game's three-line header) against 205px on the explorer (app header, heading, the
+// side selector, the side-to-move caption). One shared number would have to serve the
+// taller of the two and would cost the other 25px of diagram for nothing.
+//
+// `$` variables and not custom properties, deliberately: every consumer is in this
+// file, nothing outside the sheet reads them, and a custom property would owe the
+// token audit a declaration in both themes for a length that has nothing to do with
+// either theme.
+//
+// The `34rem` term is not redundant with the viewport one. `100dvh` is the WINDOW, and
+// on a window that extends past the visible screen area — a maximized window behind a
+// taskbar, which is how the requester's own screen is set up — the window is taller
+// than what the eye gets, so viewport units alone still put the bottom rank somewhere
+// nobody can see. The ceiling is what makes the promise keepable whatever the window
+// claims to be, and it is the one number to raise if a bigger board is wanted.
+$board-fits: min(calc(100dvh - 13rem), 34rem);
+$board-fits-explorer: min(calc(100dvh - 15rem), 34rem);
+
 // -----------------------------------------------------------------------------
 // Danger positions: thirty diagrams the Player compares SIDE BY SIDE, which is
 // the whole reason the screen asks for the wide column.
@@ -75,19 +97,39 @@ ul[aria-label="positions dangereuses"] {
 // -----------------------------------------------------------------------------
 section[aria-labelledby="explorer-heading"] {
   display: grid;
-  // The screen takes the wide column but not all of it. `wide` is 100rem, and at
-  // that width `auto-fit` fitted a THIRD track — one holding nothing but the
-  // breadcrumb, with the candidates squeezed into two lines each — and the diagram
-  // grew to 916px, which pushed the candidate list off the bottom of the screen.
-  // Bounding the screen fixes both at once: two 24rem tracks fit in 64rem and
-  // three cannot, so the count is capped by the room rather than by a trick, and
-  // the diagram lands at a size a diagram wants to be.
-  max-inline-size: 64rem;
+  // The screen takes the wide column but not all of it: at the full 100rem `auto-fit`
+  // fitted a THIRD track, holding nothing but the breadcrumb, with the candidates
+  // squeezed onto two lines each. Bounding the screen caps the count by the room
+  // rather than by a trick.
+  //
+  // 76rem with a 30rem track floor, raised together on purpose: the floor is what
+  // caps the count, so raising the width alone would have bought the third track
+  // back (three 24rem tracks fit in 76rem; three 30rem tracks do not). The pair
+  // gives two ~34rem columns instead of two 31rem ones.
+  max-inline-size: 76rem;
   // `auto-fit` still does the folding, and still with no width written down: two
-  // columns while a 24rem track fits twice, one when it does not (~816px).
-  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
-  gap: var(--space-3) var(--space-4);
+  // columns while a 30rem track fits twice, one when it does not (~1000px).
+  grid-template-columns: repeat(auto-fit, minmax(min(30rem, 100%), 1fr));
+  // Rows on the small step: the selector, the caption and the diagram are one
+  // reading, not four blocks, and every rem between them is a rem the diagram does
+  // not get.
+  gap: var(--space-2) var(--space-4);
   align-items: start;
+
+  // The side selector is a two-radio row, not a panel: it keeps its border, because
+  // a fieldset without one stops reading as a group, and loses the padding that
+  // made it a box.
+  > fieldset {
+    padding: 0 var(--space-3) var(--space-2);
+  }
+
+  // The diagram, held to this screen's own height budget: a board is square, so its
+  // width is its height, and a board whose bottom rank is off the screen is not a
+  // board you can read. Two rem more than Analyse's, because this screen stacks two
+  // rem more above it.
+  > div {
+    max-inline-size: min(100%, #{$board-fits-explorer});
+  }
 
   // The heading, the side selector and the side-to-move line belong to the whole
   // screen, not to one of its columns.
@@ -109,13 +151,14 @@ section[aria-labelledby="explorer-heading"] {
     gap: var(--space-2);
   }
 
+  // The gutter is this screen's only rhythm: the page's owl-selector margins are
+  // switched off for it in `_base`, where they are declared, rather than fought here.
+
   // The side to move reads as the diagram's own caption rather than as a line of
   // prose that happens to precede it.
   > p[aria-label="trait"] {
     color: var(--ink-muted);
     font-size: var(--text-s);
-    // The caption belongs to the diagram under it, not to the selector above it.
-    margin-block-end: calc(-1 * var(--space-2));
   }
 
   // The breadcrumb: one line of steps, wrapping on its own.
@@ -155,17 +198,14 @@ section[aria-labelledby="explorer-heading"] {
 // diagram, inside the board's pane: what disappears is below what the Player is
 // reading, so nothing above it can move. The document order holds the constraint
 // and the rule is gone, rather than kept as a second mechanism for the same thing.
-// How wide the diagram may be, which for a square board is also how TALL it may
-// be: the window, less everything the Analyse screen still puts above the row (the
-// app header, the screen's heading, the Game's header and the annotations toggle).
-// The step controls and the readout used to be in that list and now read beside the
-// board, which is what bought the diagram its height back.
-//
-// A `$` variable and not a custom property, deliberately: both consumers are in
-// this file, nothing outside the sheet reads it, and a custom property would owe
-// the token audit a declaration in both themes for a length that has nothing to do
-// with either theme.
-$board-fits: calc(100vh - 15rem);
+
+// The Game's header: three lines that name the players, the Player's own side and
+// the Game's result, date, cadence and `Opening`. They are ONE block of facts read
+// at a glance, so they sit on a tighter leading than running prose — three lines at
+// the page's 1.5 spent 72px above the diagram for 48px of text.
+section[aria-label="partie"] {
+  line-height: 1.3;
+}
 
 [data-row="board"] {
   display: flex;

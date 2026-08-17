@@ -80,7 +80,17 @@ a {
 // Blocks are separated by spacing, never by a rule. One owl selector on the
 // screen's own children gives every page the same rhythm for free.
 main > [data-column] > section > * + * {
-  margin-block-start: var(--space-4);
+  margin-block-start: var(--space-3);
+}
+
+// …except on a screen that lays its own children out, where the gutter IS the
+// rhythm and this margin lands on top of it. The explorer was paying both — 16px of
+// margin plus an 8px row gap between every block — and that was where most of the
+// height above its diagram was going. The selector carries the full chain on purpose:
+// the same ancestors plus one attribute, so it outranks the rule above it rather than
+// depending on source order.
+main > [data-column] > section[aria-labelledby="explorer-heading"] > * + * {
+  margin-block-start: 0;
 }
 
 // A heading and what it names are ONE block, so the gap after a title is the
