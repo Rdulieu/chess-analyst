@@ -67,6 +67,16 @@ adds the notion, later slices attach data to it.
       with no control.
 - [ ] The navigation gains its entry, marked current the way the others are — **by weight and a
       border, never by colour alone**.
+- [ ] **Centred, and framed on a large screen.** The column is centred and reads as a bounded
+      surface with visible borders (the `card` surface), not as text floating in empty space.
+      Requester's call, 2026-08-18.
+- [ ] **The rows are compact enough that the list needs no scrolling for a realistic number of
+      Profiles** — up to ten, at the reference window **1536x742** (US-13-09's).
+      *This is deliberately weaker than the profile page's promise:* the list grows with the number
+      of Profiles, so "never scrolls" is not a promise any layout can keep. Compactness is what can
+      be promised; beyond that the list scrolls, and that is correct behaviour, not a defect.
+- [ ] Any height budget uses an **absolute `rem` ceiling**, never viewport units — see US-13-09:
+      `100dvh` is the window, not what the eye gets.
 
 ### Feature Path (FP)
 

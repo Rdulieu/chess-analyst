@@ -69,6 +69,18 @@ elsewhere you read *the* current Profile's data.
       reversing it is theirs too.
 - [ ] The import summary keeps the `card` surface it already uses — it moves screen, it does not
       change shape.
+- [ ] **Centred, and framed on a large screen.** The column is centred, and its content reads as a
+      bounded surface with visible borders (the `card` surface) rather than as text floating in
+      empty space. Requester's call, 2026-08-18.
+- [ ] **The whole page is readable without scrolling** at the reference window **1536x742** — the
+      one US-13-09 measured on. Identity, counters, import form, analysis state and deletion all
+      visible at once.
+- [ ] Any height budget this needs is expressed with an **absolute `rem` ceiling**, not in viewport
+      units. US-13-09 paid for this lesson: `100dvh` is the *window*, and a maximized window behind
+      a taskbar is taller than what the eye gets, so a viewport-unit budget puts the bottom of the
+      page where nobody can see it.
+- [ ] The no-scroll promise is **measured**, not assumed — the same way US-13-09 reported its
+      numbers.
 
 ### Feature Path (FP)
 
