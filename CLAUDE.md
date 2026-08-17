@@ -2,17 +2,22 @@
 
 ## Dev phase (current)
 
-We are in a development phase (pre-prod, throwaway local data — cf. ADR-0002). While this holds,
-two standing rules:
+We are still pre-prod and local-only (ADR-0002), but the local data is **no longer throwaway**:
+the database holds analyzed Games whose `Evaluation`s only engine time can rebuild (ADR-0015).
+Two standing rules, one kept and one withdrawn:
 
-- **Reworking the DB schema is fair game.** Don't shy away from a design decision because it
-  changes the SQLite schema. There is no production data and no migration burden to protect;
-  pick the cleanest model, not the one that avoids touching the schema.
-- **Re-importing Games is not a problem.** Import dedups by game URL and is fast; wiping the
-  local DB and re-importing (or backfilling a new column via re-import) is an acceptable,
-  automatable step, never a blocker. No retro-backfill machinery is owed to pre-existing rows.
+- **Reworking the DB schema is fair game.** Unchanged. Don't shy away from a design decision
+  because it changes the SQLite schema; pick the cleanest model, not the one that avoids
+  touching the schema.
+- **But every schema change owes a migration.** ~~Wiping the local DB and re-importing is an
+  acceptable step~~ — **withdrawn** (ADR-0015). Import rebuilds Games cheaply; **nothing rebuilds
+  Evaluations**. A schema change ships with its migration script, in the same slice: non-
+  destructive, re-runnable, failing loudly rather than leaving rows half-assigned (nullable
+  column -> backfill -> `NOT NULL`, the tightening acting as the assertion). Re-importing Games
+  is still fine to *add* or *refresh* Games; it is the **wipe** that is retired. "Wipe and
+  re-import" is data loss and must be named as such.
 
-Revisit these rules once there is a pre-prod / real data to protect.
+Revisit these rules once there is a pre-prod.
 
 ## Agentic tests (concept)
 
