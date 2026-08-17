@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
@@ -31,9 +31,19 @@ export function Board({
   pgn,
   annotations,
   orientation = "white",
+  controls,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
+  /**
+   * A caller's own control over what the board shows — the annotations toggle
+   * today. Taken as a slot rather than left above the board, because everything
+   * stacked above the diagram is height the diagram does not get, and the board
+   * has to be visible in full. The caller owns the state; this component only
+   * decides where it is read, which is beside the board with the rest of the
+   * readout.
+   */
+  controls?: ReactNode;
   /**
    * The `Board orientation` — which side sits at the bottom (CONTEXT.md).
    * Defaults to White so a caller with no side in mind gets the neutral
@@ -68,26 +78,6 @@ export function Board({
 
   return (
     <div>
-      <div>
-        <button type="button" onClick={() => setIndex((i) => i - 1)} disabled={atStart}>
-          Previous
-        </button>
-        <button type="button" onClick={() => setIndex((i) => i + 1)} disabled={atEnd}>
-          Next
-        </button>
-      </div>
-      {/*
-        Deliberately **not** a live region. Stepping through the moves is the
-        direct answer to the Player's own click and is already on screen, so
-        announcing it only competes for speech with the `Analysis pass` readout —
-        which reports something the Player cannot otherwise observe, over minutes
-        (US-8). It keeps its accessible name and its text: still queryable, still
-        readable, just no longer interrupting.
-      */}
-      <p aria-label="current move">
-        {currentMove}
-        {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
-      </p>
       {/*
         Two named panes rather than two anonymous divs: the row is the thing the
         stylesheet sizes and reflows, and the board must not resize when the curve
@@ -127,6 +117,33 @@ export function Board({
           )}
         </div>
         <div data-pane="side">
+          {/*
+            The step controls and the current-Move readout are read BESIDE the
+            board, which is where the PRD's arrangement puts the readout. They used
+            to stack above the row, and the stack was what left the diagram no
+            height to be visible in full.
+          */}
+          {controls}
+          <div data-part="stepper">
+            <button type="button" onClick={() => setIndex((i) => i - 1)} disabled={atStart}>
+              Previous
+            </button>
+            <button type="button" onClick={() => setIndex((i) => i + 1)} disabled={atEnd}>
+              Next
+            </button>
+          </div>
+          {/*
+            Deliberately **not** a live region. Stepping through the moves is the
+            direct answer to the Player's own click and is already on screen, so
+            announcing it only competes for speech with the `Analysis pass` readout —
+            which reports something the Player cannot otherwise observe, over minutes
+            (US-8). It keeps its accessible name and its text: still queryable, still
+            readable, just no longer interrupting.
+          */}
+          <p aria-label="current move">
+            {currentMove}
+            {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
+          </p>
           {annotations && (
             <>
               {/* Landscape, and deliberately so: squeezed into a narrow column the

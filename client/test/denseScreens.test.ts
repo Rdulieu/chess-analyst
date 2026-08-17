@@ -120,31 +120,27 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     expect(row.get("align-items")).toBe("flex-start");
   });
 
-  it("gives the board three fifths of the row and the side pane two", () => {
-    // 3 against 2, on bases that are themselves 3:2 (24rem / 16rem): every part
-    // of the calculation is in the same proportion, so the split is 60/40 at any
-    // width the row does not fold at — not 60/40 of the free space alone.
-    // Requested after seeing the screen: the curve had 76% of the row and the
-    // diagram 24%.
+  it("keeps the whole diagram on screen, and gives the curve everything it leaves", () => {
+    // A position you have to scroll to read is not a position you can read, so the
+    // diagram is bounded by what the window has left under everything still stacked
+    // above the row — and a board being square, that one value is its width AND its
+    // height. The curve then takes the rest: the row itself is NOT bounded, which is
+    // the requester's call after seeing a bounded row leave two thirds of the page
+    // empty. The board still grows towards three fifths; the budget is simply
+    // whichever comes first.
+    expect(boardPane.get("max-inline-size")).toBe("min(100%, calc(100vh - 18rem))");
+    expect(row.get("max-inline-size")).toBeUndefined();
     expect(boardPane.get("flex-grow")).toBe("3");
-    expect(boardPane.get("flex-basis")).toBe("21rem");
     expect(side.get("flex-grow")).toBe("2");
-    expect(side.get("flex-basis")).toBe("14rem");
     expect(side.get("min-inline-size")).toBe("0");
   });
 
-  it("keeps the whole diagram on screen, by bounding the row and not just the board", () => {
-    // A position you have to scroll to read is not a position you can read. The
-    // board is square, so its width IS its height: bound it by what the window has
-    // left under everything the screen puts above the row. And bound the ROW by the
-    // same budget divided by the board's share — bounding only the board would let
-    // the curve swallow the width the board gave up, which is the complaint this
-    // change started from.
-    // Sass flattens the outer `calc()` away; `min()` is itself a math context, so
-    // the division stands and the browser resolves it to `-35rem + 166.667vh`.
-    const budget = "calc(100vh - 21rem)";
-    expect(boardPane.get("max-inline-size")).toBe(`min(100%, ${budget})`);
-    expect(row.get("max-inline-size")).toBe(`min(100%, ${budget} / 0.6)`);
+  it("reads the step controls and the readout beside the board, as the PRD's arrangement has it", () => {
+    // They used to stack ABOVE the row, and that stack was what left the diagram no
+    // height to be shown in full.
+    const stepper = declarationsFor(css, '[data-part="stepper"]');
+    expect(stepper.get("display")).toBe("flex");
+    expect(stepper.get("gap")).toBe("var(--space-2)");
   });
 
   it("stacks the board and its own gauge, a hair apart", () => {

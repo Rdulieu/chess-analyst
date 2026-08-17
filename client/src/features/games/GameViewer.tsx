@@ -16,7 +16,13 @@ import type { Game, MoveAnnotation } from "../../types";
  * refresh the Game once the pass completes, so the annotations appear with no
  * manual reload.
  */
-export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () => void | Promise<void> }) {
+export function GameViewer({
+  game,
+  onAnalyzed,
+}: {
+  game: Game;
+  onAnalyzed?: () => void | Promise<void>;
+}) {
   const [annotations, setAnnotations] = useState<MoveAnnotation[] | null>(null);
   const [showAnnotations, setShowAnnotations] = useState(true);
   const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass();
@@ -40,22 +46,17 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
     // component's.
     <div>
       <GameHeader game={game} />
-      {game.analyzed ? (
-        <label>
-          <input
-            type="checkbox"
-            checked={showAnnotations}
-            onChange={() => setShowAnnotations((v) => !v)}
-          />
-          {" "}Afficher les annotations
-        </label>
-      ) : (
+      {!game.analyzed && (
         <div>
           <p>Cette partie n'a pas encore été analysée.</p>
           <button type="button" onClick={analyze} disabled={running}>
             Analyser cette partie
           </button>
-          <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
+          <AnalysisPassStatus
+            status={status}
+            nothingToDo={nothingToDo}
+            onAcknowledge={acknowledge}
+          />
         </div>
       )}
       {/* The Player reads their own Game the way they played it (CONTEXT.md → Board orientation). */}
@@ -63,6 +64,21 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
         pgn={game.pgn}
         orientation={game.playerColor}
         annotations={showAnnotations ? (annotations ?? undefined) : undefined}
+        // Handed to the board as a control rather than stacked above it: the
+        // toggle belongs with the readout it governs, and every line above the
+        // diagram is height the diagram does not get.
+        controls={
+          game.analyzed ? (
+            <label>
+              <input
+                type="checkbox"
+                checked={showAnnotations}
+                onChange={() => setShowAnnotations((v) => !v)}
+              />{" "}
+              Afficher les annotations
+            </label>
+          ) : undefined
+        }
       />
     </div>
   );

@@ -74,6 +74,15 @@ main > [data-column] > section > * + * {
   margin-block-start: var(--space-4);
 }
 
+// A heading and what it names are ONE block, so the gap after a title is the
+// small step and not the block step. Without this the h2 floats as far from its
+// own content as two unrelated blocks are from each other, which reads as an
+// empty band under every screen's title.
+main > [data-column] > section > h2 + *,
+main > [data-column] > section h3 + * {
+  margin-block-start: var(--space-2);
+}
+
 // Nothing is allowed to push the page sideways: media stay inside their box and
 // what is genuinely wider than the viewport scrolls in its own container (the
 // tables themselves are styled in the lists-and-tables slice).
