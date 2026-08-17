@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Db } from "../db";
 import type { ChessComClient } from "../chesscom";
-import { createProfile, deleteProfile, findProfile, listProfiles } from "../profiles/repository";
+import { deleteProfile, listProfiles, resolveProfile } from "../profiles/repository";
 
 /**
  * The `Profile`s (mounted at /api/profiles): list, create, delete. Creation goes
@@ -43,12 +43,8 @@ export function createProfilesRouter(db: Db, chessCom: ChessComClient): Router {
     }
     // Creating an account that is already a Profile SELECTS it: two spellings of
     // one account are one Profile, and the caller gets the one it meant.
-    const existing = findProfile(db, "chesscom", player.username);
-    if (existing) {
-      res.status(200).json(existing);
-      return;
-    }
-    res.status(201).json(createProfile(db, "chesscom", player.username));
+    const { profile, created } = resolveProfile(db, "chesscom", player.username);
+    res.status(created ? 201 : 200).json(profile);
   });
 
   router.delete("/:id", (req, res) => {

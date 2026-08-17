@@ -34,8 +34,8 @@ ul[aria-label="games"] li {
   }
 }
 
-// The `Profile` list. Four constant columns — the account, its platform, the
-// state and the actions — so ten entries are swept down a column rather than
+// The `Profile` list. Five constant columns — the account, its platform, the
+// size of its history, the state and the actions — so ten entries are swept down a column rather than
 // read one by one, and a compact row so ten of them fit without scrolling.
 //
 // The tracks belong to the LIST and the rows take them through `subgrid`. Sized
@@ -46,7 +46,7 @@ ul[aria-label="games"] li {
 // would take the row's box with it: no hairline, no current marker.
 ul[aria-label="profils"] {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto;
 }
 
 ul[aria-label="profils"] li {
@@ -66,7 +66,10 @@ ul[aria-label="profils"] li {
   border-inline-start: 1px solid transparent;
   padding-inline-start: var(--space-2);
 
-  [data-part="platform"] {
+  [data-part="platform"],
+  // The counters read as secondary to the account they describe — same
+  // treatment as the platform, for the same reason.
+  [data-part="counts"] {
     color: var(--ink-muted);
     font-size: var(--text-s);
   }

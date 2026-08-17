@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "./db";
 import { games, settings, type Game } from "./db/schema";
 
@@ -28,6 +28,12 @@ export function getGame(db: Db, id: number): Game | undefined {
 }
 
 /** Whether a Game with this chess.com URL is already retained (Import dedup). */
-export function gameExistsByUrl(db: Db, gameUrl: string): boolean {
-  return db.select({ id: games.id }).from(games).where(eq(games.gameUrl, gameUrl)).get() !== undefined;
+export function gameExistsByUrl(db: Db, profileId: number, gameUrl: string): boolean {
+  return (
+    db
+      .select({ id: games.id })
+      .from(games)
+      .where(and(eq(games.profileId, profileId), eq(games.gameUrl, gameUrl)))
+      .get() !== undefined
+  );
 }

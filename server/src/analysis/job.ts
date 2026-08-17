@@ -124,9 +124,19 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
       // pass, and must not overwrite the one the Player last ran.
       if (pending.length === 0) return { ...snapshot(), started: false };
 
+      // A pass is reported under the `Profile` it ran for (ADR-0014), and it
+      // reads its owner off the Games themselves rather than being told: engine
+      // time is spent on one Player's history, so Games from two Profiles in
+      // one call is a caller's mistake, not a pass to open.
+      const owners = new Set(pending.map((game) => game.profileId));
+      if (owners.size > 1) {
+        throw new Error("An Analysis pass covers one Profile's Games, not several.");
+      }
+
       const pass = db
         .insert(analysisPasses)
         .values({
+          profileId: pending[0].profileId,
           gameIds: pending.map((game) => game.id),
           // Every Position of every pending Game — the initial Position
           // included, which is what the engine actually evaluates.

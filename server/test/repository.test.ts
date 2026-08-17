@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
 import { games } from "../src/db/schema";
 import { listGames, getGame } from "../src/repository";
+import { seedProfile } from "./fixtures";
 
 function tempDb() {
   return openDb(":memory:");
@@ -12,6 +13,7 @@ describe("game repository", () => {
     const { db } = tempDb();
     db.insert(games)
       .values({
+        profileId: seedProfile(db),
         gameUrl: "https://www.chess.com/game/live/1",
         pgn: "1. e4 e5",
         opponent: "Alice",
@@ -42,6 +44,7 @@ describe("game repository", () => {
     const inserted = db
       .insert(games)
       .values({
+        profileId: seedProfile(db),
         gameUrl: "https://www.chess.com/game/live/2",
         pgn: "1. d4 d5",
         opponent: "Bob",
@@ -57,9 +60,10 @@ describe("game repository", () => {
     expect(getGame(db, 9999)).toBeUndefined();
   });
 
-  it("rejects a second Game with the same chess.com URL (unique dedup key)", () => {
+  it("rejects a second Game with the same chess.com URL under the same Profile", () => {
     const { db } = tempDb();
     const value = {
+      profileId: seedProfile(db),
       gameUrl: "https://www.chess.com/game/live/3",
       pgn: "1. c4",
       opponent: "Carol",

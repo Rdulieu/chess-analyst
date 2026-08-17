@@ -6,7 +6,7 @@ import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { recordMoveHabits } from "../src/move-habits/precompute";
-import { MORPHY_GAME, chessComGame, fakeClient, type PlayerAnswer } from "./fixtures";
+import { chessComGame, fakeClient, morphyGame, seedProfile, type PlayerAnswer } from "./fixtures";
 import type { ChessComClient } from "../src/chesscom";
 
 /** 4-field FEN of the standard starting Position. */
@@ -25,7 +25,7 @@ async function importDone(app: Parameters<typeof request>[0]) {
 
 function appWithGame() {
   const { db } = openDb(":memory:");
-  db.insert(games).values(MORPHY_GAME).run();
+  db.insert(games).values(morphyGame(seedProfile(db))).run();
   return createApp(db, fakeClient({}));
 }
 
@@ -101,6 +101,7 @@ describe("games API", () => {
     const game = db
       .insert(games)
       .values({
+        profileId: seedProfile(db),
         gameUrl: "https://www.chess.com/game/live/annot-1",
         pgn: "1. e4 e5",
         opponent: "opp",
@@ -137,6 +138,7 @@ describe("analysis API", () => {
     for (const pgn of pgns) {
       db.insert(games)
         .values({
+          profileId: seedProfile(db),
           gameUrl: `https://www.chess.com/game/live/${seq++}`,
           pgn,
           opponent: "o",
@@ -259,9 +261,10 @@ describe("analysis API", () => {
 });
 
 describe("openings API", () => {
-  function openingGame(over: Partial<import("../src/db/schema").NewGame> = {}) {
+  function openingGame(profileId: number, over: Partial<import("../src/db/schema").NewGame> = {}) {
     return {
       gameUrl: `https://www.chess.com/game/live/${seqUrl++}`,
+      profileId,
       pgn: "1. e4 e5",
       opponent: "opp",
       playerColor: "white" as const,
@@ -277,11 +280,12 @@ describe("openings API", () => {
 
   it("GET /api/openings returns weak-opening entries (by opening, side, cadence) sorted by games desc", async () => {
     const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
     db.insert(games)
       .values([
-        openingGame({ result: "win" }),
-        openingGame({ result: "loss" }),
-        openingGame({ eco: "C50", openingName: "Italian Game", result: "win" }),
+        openingGame(owner, { result: "win" }),
+        openingGame(owner, { result: "loss" }),
+        openingGame(owner, { eco: "C50", openingName: "Italian Game", result: "win" }),
       ])
       .run();
     const app = createApp(db, fakeClient({}));
@@ -317,9 +321,11 @@ describe("openings API", () => {
 describe("danger API", () => {
   it("GET /api/danger returns the recurring Danger position entries", async () => {
     const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
     db.insert(games)
       .values(
         [1, 2].map((n) => ({
+          profileId: owner,
           gameUrl: `https://www.chess.com/game/live/${n}`,
           pgn: "1. e4",
           opponent: "opp",
@@ -350,9 +356,11 @@ describe("danger API", () => {
 
   it("GET /api/danger states how many Games are analyzed, so an empty list can be read", async () => {
     const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
     db.insert(games)
       .values(
         [1, 2].map((n) => ({
+          profileId: owner,
           gameUrl: `https://www.chess.com/game/live/${n}`,
           pgn: "1. e4",
           opponent: "opp",
@@ -647,6 +655,7 @@ describe("move habits API", () => {
       const g = db
         .insert(games)
         .values({
+          profileId: seedProfile(db),
           gameUrl,
           pgn: "1. e4 e5",
           opponent: "o",
@@ -673,7 +682,10 @@ describe("move habits API", () => {
 });
 
 describe("stats API", () => {
-  const game = (over: Record<string, unknown>) => ({
+  // Every Game needs an owner; these tests only need *a* Player, seeded as the
+  // database's first (and only) Profile.
+  const game = (profileId: number, over: Record<string, unknown>) => ({
+    profileId,
     gameUrl: `https://chess.com/g/${Math.random()}`,
     pgn: "1. e4 e5",
     opponent: "o",
@@ -686,8 +698,9 @@ describe("stats API", () => {
 
   it("GET /api/stats returns the history-wide summary (total, per cadence, per side)", async () => {
     const { db } = openDb(":memory:");
-    db.insert(games).values(game({ result: "win", timeControlCategory: "blitz", playerColor: "white" })).run();
-    db.insert(games).values(game({ result: "loss", timeControlCategory: "bullet", playerColor: "black" })).run();
+    const owner = seedProfile(db);
+    db.insert(games).values(game(owner, { result: "win", timeControlCategory: "blitz", playerColor: "white" })).run();
+    db.insert(games).values(game(owner, { result: "loss", timeControlCategory: "bullet", playerColor: "black" })).run();
     const app = createApp(db, fakeClient({}));
 
     const res = await request(app).get("/api/stats");
@@ -781,6 +794,26 @@ describe("profiles API", () => {
         ["chesscom", "DudulSmash"],
         ["chesscom", "Hikaru"],
       ]);
+  });
+
+  it("GET /api/profiles counts each Profile's own Games — imported and analyzed", async () => {
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db, "DudulSmash");
+    const theirs = seedProfile(db, "Hikaru");
+    db.insert(games)
+      .values([
+        { ...morphyGame(mine), gameUrl: "https://chess.com/g/1", analyzed: true },
+        { ...morphyGame(mine), gameUrl: "https://chess.com/g/2" },
+        { ...morphyGame(theirs), gameUrl: "https://chess.com/g/3" },
+      ])
+      .run();
+
+    const res = await request(createApp(db, fakeClient({}))).get("/api/profiles");
+
+    expect(res.body).toMatchObject([
+      { username: "DudulSmash", games: 2, analyzed: 1 },
+      { username: "Hikaru", games: 1, analyzed: 0 },
+    ]);
   });
 
   it("DELETE /api/profiles/:id removes it, and answers 404 for one that never existed", async () => {

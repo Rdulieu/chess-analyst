@@ -80,6 +80,13 @@ export function ProfilesPage() {
               <li key={profile.id} data-current={isCurrent ? "true" : undefined}>
                 <span data-part="identity">{profile.username}</span>
                 <span data-part="platform">chess.com</span>
+                {/* The size of the history, in words rather than bare figures:
+                    which Profile is worth opening is the question this row
+                    answers. */}
+                <span data-part="counts">
+                  {profile.games} {profile.games === 1 ? "partie" : "parties"} · {profile.analyzed}{" "}
+                  {profile.analyzed === 1 ? "analysée" : "analysées"}
+                </span>
                 <span data-part="state">
                   {isCurrent ? (
                     <span aria-label="profil actuel">Profil actuel</span>

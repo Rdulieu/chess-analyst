@@ -1,6 +1,8 @@
 import { Router } from "express";
+import type { Db } from "../db";
 import type { ChessComClient } from "../chesscom";
 import { normalizeRange, type ImportJob } from "../import";
+import { resolveProfile } from "../profiles/repository";
 
 /**
  * Import routes (mounted at /api/import). A range Import is long-running, so
@@ -8,7 +10,7 @@ import { normalizeRange, type ImportJob } from "../import";
  * polls GET /status for progress counted in months and reads the consolidated
  * summary once it stops running (ADR-0010).
  */
-export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Router {
+export function createImportRouter(db: Db, job: ImportJob, chessCom: ChessComClient): Router {
   const router = Router();
 
   router.post("/", async (req, res) => {
@@ -25,8 +27,10 @@ export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Ro
 
     // Checked once, here, before anything starts: an unknown username must fail
     // synchronously, and the answer cannot differ from one month to the next.
+    let player;
     try {
-      if ((await chessCom.fetchPlayer(username)) === null) {
+      player = await chessCom.fetchPlayer(username);
+      if (player === null) {
         res.status(404).json({ error: `Unknown chess.com username: ${username}` });
         return;
       }
@@ -37,7 +41,13 @@ export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Ro
       return;
     }
 
-    res.status(202).json(job.start({ username, ...range, categories }));
+    // Every Game needs an owner, and the check above just had chess.com vouch
+    // for this account under its canonical spelling — which is exactly what a
+    // `Profile` is. So the Import runs under that Profile, creating it the
+    // first time this account is imported. Slice 03 moves the form onto the
+    // Profile's own page and the account stops being typed in at all.
+    const { profile } = resolveProfile(db, "chesscom", player.username);
+    res.status(202).json(job.start({ profileId: profile.id, username: player.username, ...range, categories }));
   });
 
   router.get("/status", (_req, res) => res.json(job.status()));

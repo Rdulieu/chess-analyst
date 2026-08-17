@@ -3,6 +3,7 @@ import { openDb } from "../src/db";
 import { games, evaluations, type NewGame } from "../src/db/schema";
 import { getDangerPositions } from "../src/danger/repository";
 import { gamePositions } from "../src/chess/positions";
+import { seedProfile } from "./fixtures";
 
 function tempDb() {
   return openDb(":memory:").db;
@@ -14,6 +15,7 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
   return db
     .insert(games)
     .values({
+      profileId: seedProfile(db),
       gameUrl: `https://chess.com/g/${urlSeq++}`,
       opponent: "opp",
       playerColor: "white",

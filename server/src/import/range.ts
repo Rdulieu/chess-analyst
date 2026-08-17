@@ -5,6 +5,8 @@ import { monthsInRange, type MonthRef } from "./months";
 
 /** The scope of one Import: a contiguous month range and the wanted categories. */
 export interface ImportRangeParams {
+  /** The `Profile` the imported Games belong to (ADR-0014). */
+  profileId: number;
   username: string;
   from: MonthRef;
   to: MonthRef;
@@ -43,6 +45,7 @@ export async function importRange(
     let one;
     try {
       one = await importMonth(db, client, {
+        profileId: params.profileId,
         username: params.username,
         year: month.year,
         month: month.month,

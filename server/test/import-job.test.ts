@@ -2,21 +2,28 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { openDb } from "../src/db";
 import { listGames } from "../src/repository";
 import { createImportJob } from "../src/import";
-import { chessComGame, fakeClient } from "./fixtures";
+import { chessComGame, fakeClient, seedProfile } from "./fixtures";
 import type { ImportRangeParams } from "../src/import";
+
+/** A fresh database with the one `Profile` these tests import under. */
+function testDb() {
+  const { db } = openDb(":memory:");
+  return { db, profileId: seedProfile(db) };
+}
 
 afterEach(() => vi.restoreAllMocks());
 
-const range: ImportRangeParams = {
+const rangeFor = (profileId: number): ImportRangeParams => ({
+  profileId,
   username: "me",
   from: { year: 2024, month: 1 },
   to: { year: 2024, month: 3 },
   categories: ["blitz"],
-};
+});
 
 describe("createImportJob", () => {
   it("fills the summary as it goes: a month's line is there before the pass ends", async () => {
-    const { db } = openDb(":memory:");
+    const { db, profileId } = testDb();
     let release!: () => void;
     const secondMonth = new Promise<void>((r) => (release = r));
     const client = fakeClient({ "2024-01": [chessComGame()], "2024-02": [chessComGame()] });
@@ -29,7 +36,7 @@ describe("createImportJob", () => {
     };
     const job = createImportJob(db, slow);
 
-    job.start({ ...range, to: { year: 2024, month: 2 } });
+    job.start({ ...rangeFor(profileId), to: { year: 2024, month: 2 } });
     // Wait for January to land while February is still held.
     while (job.status().done < 1) await new Promise((r) => setTimeout(r, 5));
 
@@ -43,11 +50,11 @@ describe("createImportJob", () => {
     expect(job.status().result?.months).toHaveLength(2);
   });
 
-  it("reports the range's months as the total and returns before the pass has run", async () => {
-    const { db } = openDb(":memory:");
+  it("reports the rangeFor(profileId)'s months as the total and returns before the pass has run", async () => {
+    const { db, profileId } = testDb();
     const job = createImportJob(db, fakeClient({ "2024-01": [chessComGame()] }));
 
-    const started = job.start(range);
+    const started = job.start(rangeFor(profileId));
 
     // The summary starts empty and fills in month by month, rather than
     // appearing all at once at the end.
@@ -58,13 +65,13 @@ describe("createImportJob", () => {
   });
 
   it("advances to done === total and carries the consolidated summary once finished", async () => {
-    const { db } = openDb(":memory:");
+    const { db, profileId } = testDb();
     const job = createImportJob(
       db,
       fakeClient({ "2024-01": [chessComGame()], "2024-03": [chessComGame()] }),
     );
 
-    job.start(range);
+    job.start(rangeFor(profileId));
     await job.idle();
 
     const status = job.status();
@@ -76,19 +83,19 @@ describe("createImportJob", () => {
   });
 
   it("ignores a start while an Import is already running and keeps the running status", async () => {
-    const { db } = openDb(":memory:");
+    const { db, profileId } = testDb();
     const job = createImportJob(db, fakeClient({ "2024-01": [chessComGame()] }));
 
-    const first = job.start(range);
-    const second = job.start({ ...range, to: { year: 2024, month: 12 } });
+    const first = job.start(rangeFor(profileId));
+    const second = job.start({ ...rangeFor(profileId), to: { year: 2024, month: 12 } });
 
     expect(second).toEqual(first);
     await job.idle();
-    expect(job.status().total).toBe(3); // the second range never took effect
+    expect(job.status().total).toBe(3); // the second rangeFor(profileId) never took effect
   });
 
   it("ends the pass cleanly when the fetch fails unexpectedly, without taking the relay down", async () => {
-    const { db } = openDb(":memory:");
+    const { db, profileId } = testDb();
     vi.spyOn(console, "error").mockImplementation(() => {});
     const client = fakeClient({});
     client.fetchMonth = async () => {
@@ -96,7 +103,7 @@ describe("createImportJob", () => {
     };
     const job = createImportJob(db, client);
 
-    job.start(range);
+    job.start(rangeFor(profileId));
     await expect(job.idle()).resolves.toBeUndefined();
 
     expect(job.status().running).toBe(false);
