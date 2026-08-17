@@ -67,21 +67,25 @@ ul[aria-label="positions dangereuses"] {
 // worse bug: a share cannot fold, so a phone got a 191px diagram beside a 133px
 // strip of four-line rows, for ever, at every width.
 //
-// `auto-fit` folds, and folds on its own: two columns while an 18rem column fits
-// twice inside the reading column, one column when it does not, and no viewport
-// width written down anywhere. The board is
-// the only item placed at all — it spans the rows its neighbours occupy — so
-// nothing is reordered and the reading order a screen reader follows is still the
-// document's, in both configurations.
+// `auto-fit` folds, and folds on its own: two columns while a 24rem column fits
+// twice inside the bounded screen, one column when it does not, and no viewport
+// width written down anywhere. Nothing is placed and nothing spans — the breadcrumb
+// and the candidates are one pane — so nothing is reordered and the reading order a
+// screen reader follows is still the document's, in both configurations.
 // -----------------------------------------------------------------------------
 section[aria-labelledby="explorer-heading"] {
   display: grid;
-  // 18rem and not 20rem, measured rather than guessed: the explorer reads inside
-  // the 72ch column (~659px), and two 20rem tracks plus the gap want 664 — so a
-  // 20rem minimum silently gave the screen ONE column at every width and put the
-  // candidates back under the diagram, which is the arrangement this slice exists
-  // to undo. Two 18rem tracks fit in 600.
-  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  // The screen takes the wide column but not all of it. `wide` is 100rem, and at
+  // that width `auto-fit` fitted a THIRD track — one holding nothing but the
+  // breadcrumb, with the candidates squeezed into two lines each — and the diagram
+  // grew to 916px, which pushed the candidate list off the bottom of the screen.
+  // Bounding the screen fixes both at once: two 24rem tracks fit in 64rem and
+  // three cannot, so the count is capped by the room rather than by a trick, and
+  // the diagram lands at a size a diagram wants to be.
+  max-inline-size: 64rem;
+  // `auto-fit` still does the folding, and still with no width written down: two
+  // columns while a 24rem track fits twice, one when it does not (~816px).
+  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
   gap: var(--space-3) var(--space-4);
   align-items: start;
 
@@ -93,11 +97,16 @@ section[aria-labelledby="explorer-heading"] {
     grid-column: 1 / -1;
   }
 
-  // The board, spanning what sits beside it: the breadcrumb and the candidate
-  // list then take the next column instead of stacking under the diagram. Folded
-  // to one column the span costs nothing — there is no column to sit beside.
-  > div {
-    grid-row: span 2;
+  // Two items in the row now — the diagram, and the pane holding the breadcrumb
+  // and the candidates — so nothing is placed and nothing spans. The span this
+  // replaces made the board cover its neighbours' two rows, and a spanning item
+  // forces the sum of the rows it covers to fit it: the board's height was split
+  // between the breadcrumb's row and the candidates', opening a 250px hole between
+  // them. Wrapping the two into one pane removes the second row entirely.
+  > [data-pane="candidates"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
   }
 
   // The side to move reads as the diagram's own caption rather than as a line of
@@ -131,51 +140,89 @@ section[aria-labelledby="explorer-heading"] {
 // arrangement US-14 established, on fluid bases instead of the 360 / 260 / 220 px
 // stand-ins the component carried while there was nowhere to put a selector.
 //
-// Two constraints carry over from US-14 and they are both one declaration here:
-// the board must not resize when the curve comes and goes, and unchecking the
-// annotations must not collapse the row. `flex-grow: 0` on the board pane is what
-// enforces the first — the board is sized by its own basis and never by what
-// happens to be next to it — and the second follows: with nothing growing into the
-// gap, removing the annotations leaves the board exactly where it was.
+// Two constraints carry over from US-14: the board must not resize when the curve
+// comes and goes, and unchecking the annotations must not collapse the row. Both are
+// held by the STRUCTURE rather than by a declaration, which is why the rules here are
+// free to change the sizes. The side pane always exists — it holds the move list,
+// which is not an annotation — so the row keeps its two items and its shape; and the
+// board is capped by the window's height budget, which no neighbour can influence.
+// What disappears with the annotations is the curve, the tally and the bar, and all
+// three sit BELOW or BESIDE what the Player is reading, never above it.
 // -----------------------------------------------------------------------------
-// Unchecking the annotations takes the winning-chances bar away too, and the bar
-// sits ABOVE the row — so the board used to rise by exactly the bar's height, 8px
-// of vertical jump under the eyes of someone reading a position. The bar's slot is
-// reserved instead, on the row and by `:has()`, i.e. without a wrapper element and
-// without rendering an empty bar: when the row's own container holds no bar, the
-// row carries the space the bar would have taken. Its height is written once, below.
-:not(:has(> [data-bar="winning-chances"])) > [data-row="board"] {
-  margin-block-start: var(--bar-height);
-}
+// The bar used to sit ABOVE the row and go away with the annotations, so the board
+// rose by exactly its height — 8px of jump under the eyes of someone reading a
+// position — and a `:has()` rule reserved the slot. The bar now sits UNDER the
+// diagram, inside the board's pane: what disappears is below what the Player is
+// reading, so nothing above it can move. The document order holds the constraint
+// and the rule is gone, rather than kept as a second mechanism for the same thing.
+// How wide the diagram may be, which for a square board is also how TALL it may
+// be: the window, less everything the Analyse screen still puts above the row (the
+// app header, the screen's heading, the Game's header and the annotations toggle).
+// The step controls and the readout used to be in that list and now read beside the
+// board, which is what bought the diagram its height back.
+//
+// A `$` variable and not a custom property, deliberately: both consumers are in
+// this file, nothing outside the sheet reads it, and a custom property would owe
+// the token audit a declaration in both themes for a length that has nothing to do
+// with either theme.
+$board-fits: calc(100vh - 15rem);
 
 [data-row="board"] {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
   align-items: flex-start;
+  // The row takes the whole width. It was bounded for one revision so that a fully
+  // visible board could not hand its width to the curve — but that left two thirds
+  // of the page empty, and the requester's call is the other way round: the board is
+  // as big as the window can show IN FULL, and the curve takes everything the board
+  // leaves.
 }
 
+// The diagram is sized by what the window can show IN FULL, and the curve takes
+// what is left. That replaces a 60/40 share of the row, which was the answer to the
+// curve having taken 76% of it: a share cannot also promise the board fits on
+// screen, and between the two the requester's call is the board.
+//
+// So the board grows towards three fifths and stops at the height budget, whichever
+// comes first, and the side pane grows into everything remaining.
 [data-pane="board"] {
-  flex-grow: 0;
+  flex-grow: 3;
   flex-shrink: 1;
-  flex-basis: 22.5rem;
-  // The one thing that keeps a narrow window from scrolling sideways: the basis
-  // is a wish, this is the limit.
-  max-inline-size: 100%;
+  flex-basis: 21rem;
+  // Two limits, and the second is the one that keeps the diagram on screen: never
+  // wider than the row, and never taller than the window has left for it. A board is
+  // square, so this one value is both.
+  max-inline-size: min(100%, #{$board-fits});
+  // The board and its own gauge, a hair apart: the bar belongs to the diagram
+  // above it, and `--space-1` is the smallest step the scale has.
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-[data-pane="annotations"] {
-  flex-grow: 1;
+// Everything read beside the board: the curve, the error tally and the move list.
+// The move list moved in here because on a wide screen it used to start below the
+// fold, behind the whole height of the diagram — the Player could not reach the
+// end of their own Game without scrolling past everything else.
+[data-pane="side"] {
+  flex-grow: 2;
   flex-shrink: 1;
   // Below this the pane wraps under the board rather than thinning: squeezed into
   // a narrow column the curve stops being a time axis and reads as a vertical
   // drip (US-14).
-  flex-basis: 20rem;
+  flex-basis: 14rem;
   // A flex item refuses to go below its content's intrinsic width unless told it
   // may; the curve's svg would hold the row open at a narrow viewport.
   min-inline-size: 0;
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+}
+
+// The step controls, on one line at the top of the pane beside the board.
+[data-part="stepper"] {
+  display: flex;
   gap: var(--space-2);
 }
 

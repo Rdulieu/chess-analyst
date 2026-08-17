@@ -49,7 +49,9 @@ export function ExplorerPage() {
   };
 
   return (
-    <section aria-labelledby="explorer-heading">
+    // `wide`: the board reads beside its candidates, and split inside the 72ch
+    // reading column the diagram was down to 317px on a wide screen.
+    <section aria-labelledby="explorer-heading" data-width="wide">
       <h2 id="explorer-heading">Explorateur</h2>
 
       <fieldset>
@@ -107,39 +109,49 @@ export function ExplorerPage() {
         />
       </div>
 
-      <nav aria-label="breadcrumb">
-        <ol>
-          <li>
-            <button type="button" onClick={() => setPath([])}>
-              Départ
-            </button>
-          </li>
-          {path.map((san, i) => (
-            <li key={i}>
-              <button type="button" onClick={() => setPath(path.slice(0, i + 1))}>
-                {san}
+      {/*
+        The breadcrumb and the candidates are ONE pane beside the diagram, and they
+        are wrapped as one because the alternative does not work: two separate grid
+        items in the same column, next to a board spanning both their rows, force
+        the board's height to be split between those rows — which opened a 250px
+        hole between the breadcrumb and the first candidate. One item, one column,
+        no distribution to fight.
+      */}
+      <div data-pane="candidates">
+        <nav aria-label="breadcrumb">
+          <ol>
+            <li>
+              <button type="button" onClick={() => setPath([])}>
+                Départ
               </button>
             </li>
-          ))}
-        </ol>
-      </nav>
+            {path.map((san, i) => (
+              <li key={i}>
+                <button type="button" onClick={() => setPath(path.slice(0, i + 1))}>
+                  {san}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
 
-      {candidates.length === 0 ? (
-        <p>Aucun coup enregistré plus loin dans cette ligne.</p>
-      ) : (
-        <ul aria-label="candidates">
-          {candidates.map((c) => (
-            <li key={c.san}>
-              <button type="button" onClick={() => descend(c.san)}>
-                {c.san}
-              </button>{" "}
-              — {c.count} {c.count > 1 ? "parties" : "partie"} · {percent(c.winRate)} · bullet{" "}
-              {c.byCategory.bullet}, blitz{" "}
-              {c.byCategory.blitz}, rapid {c.byCategory.rapid}, daily {c.byCategory.daily}
-            </li>
-          ))}
-        </ul>
-      )}
+        {candidates.length === 0 ? (
+          <p>Aucun coup enregistré plus loin dans cette ligne.</p>
+        ) : (
+          <ul aria-label="candidates">
+            {candidates.map((c) => (
+              <li key={c.san}>
+                <button type="button" onClick={() => descend(c.san)}>
+                  {c.san}
+                </button>{" "}
+                — {c.count} {c.count > 1 ? "parties" : "partie"} · {percent(c.winRate)} · bullet{" "}
+                {c.byCategory.bullet}, blitz {c.byCategory.blitz}, rapid {c.byCategory.rapid}, daily{" "}
+                {c.byCategory.daily}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

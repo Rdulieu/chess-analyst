@@ -40,6 +40,16 @@ function stub(openings: WeakOpeningEntry[]) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("OpeningsPage", () => {
+  it("asks for the wide column: six columns of figures do not fit the reading column", async () => {
+    stub(ENTRIES);
+    render(<OpeningsPage />);
+
+    // With `Opening` names past sixty characters, the reading column left no room
+    // for the five figure columns and they scrolled out of sight.
+    const region = await screen.findByRole("region", { name: /ouvertures/i });
+    expect(region.dataset.width).toBe("wide");
+  });
+
   it("wraps its table in its own scroll container, so a wide table never scrolls the page", async () => {
     stub(ENTRIES);
     render(<OpeningsPage />);

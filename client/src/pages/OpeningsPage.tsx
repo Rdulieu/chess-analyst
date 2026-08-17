@@ -33,7 +33,10 @@ export function OpeningsPage() {
   }, []);
 
   return (
-    <section aria-labelledby="openings-heading">
+    // `wide`: six columns, one of which holds an `Opening` name past sixty
+    // characters. Inside the reading column the five figure columns were pushed
+    // out of sight.
+    <section aria-labelledby="openings-heading" data-width="wide">
       <h2 id="openings-heading">Ouvertures</h2>
 
       {!openings ? null : openings.length === 0 ? (
