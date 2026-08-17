@@ -43,7 +43,7 @@ surfacing the Player's own habits across their whole imported history.
 5. Descend one level by selecting a candidate **in the list** → the explorer shows the candidates played from the resulting Position, and the breadcrumb reflects the Move taken.
 6. Descend a further level **from the board** — click the candidate Move's destination square → the explorer descends exactly as the list would, and the breadcrumb reflects the second Move.
 7. Select an earlier entry in the breadcrumb → the explorer returns to that level.
-8. Switch the side selector to Black → the candidates from the starting Position update to the Black-side habits, **and the board turns over** to be read from Black.
+8. Return to `Départ` in the breadcrumb, then switch the side selector to Black — **the side switch does not reset the path**, and the other side's habits down a line reached as White are typically empty, so the assertion below is only meaningful from the starting Position → the candidates from the starting Position update to the Black-side habits, **and the board turns over** to be read from Black.
 9. Still exploring as Black, descend a level → the level where the opponent has the move is reached, the side-to-move readout says so, and **the board has not turned back**. Walk back up the breadcrumb → it has still not turned.
 10. **Theme pass (US-13)** — walk the navigation across **all six screens** (Mes parties,
     Explorateur, Ouvertures, Positions dangereuses, Stats, and Analyse by opening a Game), first in

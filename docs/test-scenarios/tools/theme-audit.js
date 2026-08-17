@@ -28,6 +28,11 @@ function themeAudit() {
     "--square-inaccuracy",
     "--square-mistake",
     "--square-blunder",
+    /* The board's coordinate ink belongs to the same constant family (a
+       chessboard is a chessboard in both themes — see client/src/chess/
+       boardTheme.ts) and was missing from this list, so its invariance was
+       asserted by nobody. */
+    "--square-notation",
   ];
 
   /* Findings already recorded as open on US-13's slices and on earlier stories.
@@ -36,14 +41,13 @@ function themeAudit() {
      breakage at every run. Anything not matched here is a real finding. */
   const KNOWN = [
     {
-      what: "react-chessboard's rank/file coordinate labels (~2.3:1, both themes, third-party default)",
-      match: (el) => el.closest("[data-pane='board'], [aria-label='positions dangereuses'], .board, [data-board]") !== null
-        && /^[a-h1-8]$/.test((el.textContent || "").trim()),
-    },
-    {
-      what: "a disabled control's label (WCAG exempts inactive controls; the cursor carries the state)",
+      what: "a disabled control's label — 2.63:1 light, 3.51:1 dark (WCAG exempts inactive controls; the `not-allowed` cursor carries the state)",
       match: (el) => el.closest(":disabled") !== null || el.disabled === true,
     },
+    /* The board's coordinate labels used to belong here at ~2.3:1. They now
+       measure 12.89:1 on the light square and 4.66:1 on the dark one, because the
+       board consumes `--square-notation`. The entry is gone rather than kept as a
+       never-matching matcher: a regression there must go red. */
   ];
 
   const parse = (c) => {
@@ -116,8 +120,11 @@ function themeAudit() {
     (t) => getComputedStyle(document.documentElement).getPropertyValue(t).trim() === ""
   );
 
-  /* 2. Text contrast against the ground actually rendered. */
+  /* 2. Text contrast against the ground actually rendered. `worst` records the
+     lowest ratio measured on the screen even when nothing fails, because "no
+     failure" and "nothing was measured" look identical in a report otherwise. */
   const contrast = [];
+  let worst = null;
   for (const el of all) {
     const text = ownText(el);
     if (!text || !visible(el)) continue;
@@ -130,6 +137,14 @@ function themeAudit() {
     const large = px >= 24 || (px >= 18.66 && bold);
     const required = large ? 3 : 4.5;
     const measured = ratio(over({ ...fg, a: fg.a * Number(s.opacity || 1) }, ground), ground);
+    if (!worst || measured < worst.measured) {
+      worst = {
+        measured: Number(measured.toFixed(2)),
+        required,
+        text: text.slice(0, 40),
+        tag: el.tagName.toLowerCase(),
+      };
+    }
     if (measured + 0.005 < required) {
       const known = KNOWN.find((k) => {
         try {
@@ -203,6 +218,13 @@ function themeAudit() {
       cue: r.cue,
       subjects: r.subjects.length,
       failures: r.subjects.filter((el) => !r.holds(el)).length,
+      /* Name the offending elements: a bare count gives the runner nothing to
+         act on. Rules with no subject on this screen are dropped above — read
+         `cues` as "what this state exercised", never as "all cues verified". */
+      failing: r.subjects
+        .filter((el) => !r.holds(el))
+        .slice(0, 5)
+        .map((el) => (el.textContent || el.tagName).trim().slice(0, 60)),
     }));
 
   /* 5. Theme-invariant tokens, for the caller to compare across the two themes. */
@@ -227,6 +249,8 @@ function themeAudit() {
     unresolved,
     declaredEmpty,
     contrast,
+    worst,
+    textsMeasured: all.filter((el) => ownText(el) && visible(el)).length,
     overflow,
     cues,
     constants,

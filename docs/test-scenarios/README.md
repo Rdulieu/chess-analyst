@@ -61,8 +61,9 @@ here too.
 Since US-10b the step analyses **two** Games, not one: a `Danger position` must be *recurring*
 (reached ≥ 2), so a single Game leaves `/danger` empty. The rule is **the two shortest Games sharing
 the same first Move** — the Position after that Move is common to both by construction, so one
-entry is guaranteed. It costs **27 Positions (~3.5 min)** on the reference dataset, *less* than the
-single Game the step analysed before. Do **not** substitute "the two shortest Games overall": it
+entry is guaranteed. It costs **29 Positions** on the reference dataset, *less* than the single Game
+the step analysed before — **~25 s** on the 2026-08-17 run (the "~3.5 min" this paragraph used to
+quote predates the native engine backend). Do **not** substitute "the two shortest Games overall": it
 selects the same pair here, but only because both answer 1.e4.
 
 **Snapshot the database instead of re-importing.** Each scenario must start from its own pristine
@@ -77,6 +78,14 @@ trigger no Import and no analysis, and it must not restart the app. Twelve navig
 is the whole budget. Inject `tools/theme-audit.js` once per document and call `themeAudit()` per
 screen rather than re-implementing the measurements per scenario; switch the theme with the driver's
 media emulation, never by reloading with a different setting.
+
+**Pin the app you are driving, and own your browser.** Measured on the 2026-08-17 run, where two
+scenarios ran in parallel: a shared browser had its selected page stolen mid-run repeatedly, and two
+actions landed on the *other* agent's app — one of them nearly filling a stranger's import form. Run
+each scenario on its own ports and its own `DB_FILE`, guard every injected script with a
+`location.port` check, re-assert the viewport and the emulated colour scheme before trusting a
+measurement, and drive a browser instance of your own. Likewise, never `pkill` by a pattern that
+matches another agent's server — kill your own process by pid.
 
 **Wait on conditions, not on clocks.** Fixed sleeps sprinkled through a driver add up to tens of
 seconds per run and are simultaneously too slow and too flaky. Wait for the element or the state.

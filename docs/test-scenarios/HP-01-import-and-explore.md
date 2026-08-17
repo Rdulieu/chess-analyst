@@ -96,7 +96,10 @@ from a single month to a range.
    > reference dataset (2026-08-14): of the 6 first-Move groups holding at least two Games, **none**
    > fails to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4.
    >
-   Then reopen one of the two Games just analysed → beside its board, an `Evaluation curve`
+   Then reopen **whichever of the two Games carries at least one flawed Move of the Player's** (the
+   move list and the error tally say which; if neither does, record the curve's error marking as *not
+   exercised* rather than red — the step selects the two shortest Games, and a short Game often holds
+   no mistake at all) → beside its board, in the annotations pane, an `Evaluation curve`
    runs from the starting Position on the left to the last Move on the right; stepping through
    the Moves moves a mark along it, and the Player's own flawed Moves are marked on it by the
    same glyph the move list uses, with a count of them in words.
@@ -126,7 +129,7 @@ from a single month to a range.
 - Step 3: on a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
 - Step 4: exactly two lines, in range order — **`2026-05` at 28 imported** and **`2026-06` at 54 imported**, summing to the consolidated 82. Neither is marked in échec.
 - Step 5: the number of listed Games matches the imported count from the summary (82 on a clean run). It is still a **list**, not a table, and each entry reads as a row of three parts — the selection checkbox, the description, the analysed state — with every badge landing on the same left edge across rows so the column can be scanned.
-- Step 6: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen is laid out as a row — the board on the left, the readout beside it — on a column wider than the app's reading column, and the board is bounded rather than sitting in the page's top-left corner (US-13).
+- Step 6: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The **second pane beside the board is the annotations pane, and it only exists once the Game is analysed** — on the unanalysed Game this step opens, the board row holds the board alone and the move list runs below it. The row proper is asserted at step 9.
 - Step 6b: on a Black-side Game the board is **Black-at-bottom** — the Player's own back rank is nearest them — and the Player mark has moved to the Black line of the header. The pieces have not moved: the board is turned, not rearranged.
 - Step 7: the replay's summary shows **0 imported / 82 already present**, both month lines saying so (28 and 54 already present); the listed Game count is unchanged.
 - Step 8: after reload, the username field is pre-filled with `DudulSmash`.
@@ -164,6 +167,11 @@ from a single month to a range.
   outright, before any month is fetched.
 - Use an **immutable past month** as the anchor (2026-06) so counts are stable; the current
   month keeps changing as the Player plays.
+- **Watch the progress readout from before the click.** On the 2026-08-17 run the real two-month
+  import completed in **under two seconds**, so a driver that starts polling *after* submitting sees
+  the summary and never the readout — and step 2 asserts the readout. Install the observer first.
+  There is no analysis status endpoint to poll (`/api/import/status` exists, its analysis counterpart
+  does not): watch the DOM readout, which is what is under test anyway.
 - The Import is one fetch **per month**, run sequentially — expect the progress readout to sit on
   each month in turn rather than to advance smoothly.
 - The figures in the Preconditions table were read from the live chess.com API on 2026-08-12 and

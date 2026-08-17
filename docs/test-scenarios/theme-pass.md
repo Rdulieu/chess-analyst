@@ -65,6 +65,12 @@ scenario's state* rather than importing one.
    and not a background.
 6. **No console error** across the walk.
 
+**A cue rule with no subject on the screen proves nothing.** The audit drops rules that find nothing,
+so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's and
+HP-03's states only the weak-opening ⚠ and the current tab have subjects at all, and HP-01 is the
+scenario that carries the danger cards, the severity glyphs and the "analysée" badge. Read the three
+passes together, and read `subjects` before reading `failures`.
+
 Assertions 1 to 5 are measured, not eyeballed: `tools/theme-audit.js` implements them as one
 browser-side function returning a report per screen. Inject it and call `themeAudit()` on each
 screen in each theme; compare the `constants` block between the two themes for assertion 5. The
@@ -80,13 +86,19 @@ CSS, and the point of a stylesheet is not to replay that finding in reverse.
 Recorded here so that a replay does not present the same known facts as new breakage, and so that
 the list stays short and visible rather than becoming an ignore-file:
 
-- **`react-chessboard`'s rank/file coordinate labels**, ~2.3:1 in both themes — a third-party
-  default, open since US-13's slice 02; the board's own `--square-*` tokens are declared and not yet
-  consumed.
-- **A disabled control's label**, composited to ~3.5:1. WCAG exempts inactive controls and the
-  `not-allowed` cursor carries the state.
-- **The evaluation curve's equality line and cursor**, 2.92:1 and 2.93:1 against the shares they are
-  drawn on. Non-text graphics, held to 3:1, missing it by a hair; unchanged US-14 values.
+- **A disabled control's label**, composited to **2.63:1 in light and 3.51:1 in dark**. WCAG exempts
+  inactive controls and the `not-allowed` cursor carries the state. (Recorded as "~3.5:1" before the
+  2026-08-17 run measured both themes; the light figure is the worse of the two.)
+
+Two entries were **struck** by that run, having been fixed rather than tolerated — recorded here so
+nobody re-adds them as exceptions:
+
+- The board's rank/file **coordinate labels**, listed at ~2.3:1 since slice 02, now measure
+  **12.89:1** on the light square and **4.66:1** on the dark one: the board consumes
+  `--square-notation` and `--square-light` / `--square-dark`, which slice 03 reported as declared and
+  unconsumed. A regression there must now go red.
+- The **evaluation curve's equality line and cursor**, listed at 2.92:1 / 2.93:1, now measure 3.30 to
+  3.44 against the shares they are drawn on — **above** the 3:1 graphics threshold.
 - **The board's pieces are third-party SVG** and are non-text content: they are held to the 3:1
   graphics rule on **`max(fill, stroke)`** against their square, never on fill alone — a white piece
   on a light square measures 1.24:1 on fill and 14.65:1 on stroke, and the stroke is what carries
