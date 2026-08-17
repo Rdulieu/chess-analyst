@@ -84,6 +84,9 @@
 
 ## Doing
 
+
+## In review
+
 - **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
   > **Grillée** (2026-08-17) — **ADR-0013**. `CONTEXT.md` **inchangé, et c'est un constat** : une
   > feuille de style n'introduit aucun concept de domaine, et « token » / « rôle de thème » sont du
@@ -228,8 +231,14 @@
   > seule page sans `<section>` ni `<h2>`** (le squelette la réaligne) et porte **la seule chaîne
   > restée en anglais** de l'app (« No games yet — import your chess.com history to get started. ») ;
   > `client/package.json` déclare `vite ^8.1.5` alors que le `node_modules` installé est en 5.4.21.
-
-## In review
+  >
+  > **Livrée** (2026-08-17) — les **six slices** mergées dans `integration/US-13-stylesheet`
+  > (PR #37 → #43). Suite **HP 3/3 verte** sur l'app réelle, avec la passe thème sur les six écrans
+  > dans les deux thèmes (36 audits, aucun échec). PR `integration → develop` ouverte : le merge est
+  > une décision humaine. Deux points laissés au relecteur, écrits sur les issues : la **largeur de
+  > l'explorateur** (son diagramme tombe à 317 px sur écran large ; un attribut suffit, mais le goût
+  > avait été figé sur un pilote qui ne montrait pas cet écran) et la cellule `Win rate` **vide**
+  > plutôt qu'un tiret sur une cadence sans partie (du contenu, hors périmètre).
 
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
