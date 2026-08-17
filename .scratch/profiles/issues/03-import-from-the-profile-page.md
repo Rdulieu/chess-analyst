@@ -62,9 +62,11 @@ elsewhere you read *the* current Profile's data.
 
 - [ ] The Profile page follows the page skeleton and passes the token-consistency audit, in both
       themes — same bar as slice 01.
-- [ ] **A width decision is owed to the human before writing it.** US-13 bounds reading at 72ch and
-      reserves the `wide` variant for the dense screens, and it recorded that widening a screen is a
-      taste call, not a CSS one. The Profile page carries a form and counters: ask, do not assume.
+- [ ] The Profile page is **narrow** — the default 72ch reading column, **not** `data-width="wide"`.
+      Decided by the requester on 2026-08-18: it carries a form and a few counters, nothing dense,
+      so it has no claim on the wide variant US-13 reserves for the dense screens. Do not widen it
+      because the import summary looks roomy — that is the taste call the requester made, and
+      reversing it is theirs too.
 - [ ] The import summary keeps the `card` surface it already uses — it moves screen, it does not
       change shape.
 
