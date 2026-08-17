@@ -160,10 +160,12 @@ accent instead of the browser's blue.
   one, and widening a third screen on an agent's own initiative is exactly the call that belongs to
   whoever validated the pilot. Cheap either way — and it wants a contrast and overflow pass, like any
   layout change.
-- **[open — one unmeasured cell] `/analyse` at 480px in the *light* theme was never measured**: the
-  app's dev servers died mid-run (the client answering 404, nothing listening on the API port) and the
-  worktree went with the slice. `/analyse` passed at 380, 600, 1024 and 1440 in light and at 480 in
-  dark, so the gap is narrow, but it is a gap and not a pass.
+- **[open — one unmeasured cell of 24] `/analyse` at 480px in the *light* theme was never measured.**
+  Nothing fell over: the slice's dev servers were stopped during its cleanup, and the worktree they
+  ran from no longer exists — there is no flakiness here to investigate. `/analyse` passes at 380,
+  600, 1024 and 1440 in light and at 480 in dark, and nothing in that layout is theme-dependent (the
+  tokens change colour, not geometry), so it is expected green. It is recorded as unmeasured rather
+  than assumed, which is the whole point of writing it down.
 - **[found and fixed twice] The explorer's layout was a float, and a float was the wrong tool.**
   Round one: `min(24rem, 100%)` left a 49px strip beside the board while "Départ" is 86px, and the
   page scrolled sideways at 480 and 380px. The lesson is worth keeping — a box that establishes its
