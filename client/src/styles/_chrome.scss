@@ -34,7 +34,7 @@ header > [data-column] {
 // already separates itself from the content with its ground and its hairline, so a
 // block-sized gap on top of that read as an empty band between the two.
 main {
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
 }
 
 // The two dense screens are allowed more width than the reading column: the

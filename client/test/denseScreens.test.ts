@@ -71,8 +71,11 @@ describe("the explorer, with its candidates beside the board", () => {
     // off the bottom. Two 24rem tracks fit in 64rem and three do not, so the count
     // is capped by the room and not by a trick, and the diagram lands at a size a
     // diagram wants to be.
-    expect(screen.get("max-inline-size")).toBe("64rem");
-    expect(screen.get("grid-template-columns")).toContain("min(24rem, 100%)");
+    // The width and the track floor are raised TOGETHER: the floor is what caps the
+    // count, so raising the width alone buys the third track straight back (three
+    // 24rem tracks fit in 76rem; three 30rem tracks do not).
+    expect(screen.get("max-inline-size")).toBe("76rem");
+    expect(screen.get("grid-template-columns")).toContain("min(30rem, 100%)");
   });
 
   it("carves no pixel into the screen's own measurements", () => {
@@ -128,7 +131,20 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     // the requester's call after seeing a bounded row leave two thirds of the page
     // empty. The board still grows towards three fifths; the budget is simply
     // whichever comes first.
-    expect(boardPane.get("max-inline-size")).toBe("min(100%, calc(100vh - 15rem))");
+    // Two terms, and the second is not redundant: on a window that extends past the
+    // visible screen area — a maximized window behind a taskbar — the window is
+    // TALLER than what the eye gets, so viewport units alone still put the bottom of
+    // the diagram where nobody can see it. The `34rem` ceiling is what makes the
+    // promise keepable whatever the window claims to be. Both boards share it.
+    // Each screen's budget is the window less what THAT screen stacks above its
+    // board: 180px on Analyse against 205px on the explorer, measured. One shared
+    // number would have to serve the taller and cost the other 25px of diagram.
+    expect(boardPane.get("max-inline-size")).toBe("min(100%, min(100dvh - 13rem, 34rem))");
+    expect(
+      declarationsFor(css, 'section[aria-labelledby="explorer-heading"] > div').get(
+        "max-inline-size",
+      ),
+    ).toBe("min(100%, min(100dvh - 15rem, 34rem))");
     expect(row.get("max-inline-size")).toBeUndefined();
     expect(boardPane.get("flex-grow")).toBe("3");
     expect(side.get("flex-grow")).toBe("2");
