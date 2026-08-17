@@ -72,7 +72,16 @@ section[aria-labelledby="explorer-heading"] {
 
   > div {
     float: inline-start;
-    inline-size: min(24rem, 100%);
+    // A PROPORTION and not `min(24rem, 100%)`, and the Feature Path is what
+    // taught the difference: a box that establishes its own formatting context —
+    // which both the breadcrumb (a flex container) and the candidate list below
+    // do — is laid beside a float in whatever room the float leaves, and it
+    // overflows rather than wrapping when that room is narrower than its content.
+    // At 380px the strip left beside a 24rem board was 49px and "Départ" is 86px,
+    // so the page scrolled sideways. Capped at 55% the board keeps its 24rem on
+    // any real screen and always leaves the strip beside it at least 45% of the
+    // column — no breakpoint, and nothing to push off the right edge.
+    inline-size: min(24rem, 55%);
     margin-inline-end: var(--space-4);
     margin-block-end: var(--space-3);
   }
@@ -90,6 +99,13 @@ section[aria-labelledby="explorer-heading"] {
     flex-wrap: wrap;
     gap: var(--space-1) var(--space-2);
     align-items: baseline;
+  }
+
+  // The list as a whole sits beside the float, rather than each row spanning the
+  // column with its content pushed aside: without this the rows' hairlines run
+  // on under the diagram, which draws six lines across the board for no reason.
+  ul[aria-label="candidates"] {
+    display: flow-root;
   }
 
   // A candidate is a row: its Move, then its figures. The rows are what the

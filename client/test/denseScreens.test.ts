@@ -60,8 +60,13 @@ describe("the explorer, with its candidates beside the board", () => {
     // moved in the document — so the reading order the screen reader follows is
     // exactly the one it followed before.
     expect(board.get("float")).toBe("inline-start");
+    // A proportion, not `min(24rem, 100%)`: a box beside a float gets whatever
+    // room the float leaves and OVERFLOWS rather than wrapping when that room is
+    // narrower than its content (the breadcrumb, at 380px, pushed the page
+    // sideways). Capped at a share of the column, the strip beside the board is
+    // never too narrow to hold what flows into it — and still no breakpoint.
     expect(board.get("inline-size")).toContain("min(");
-    expect(board.get("inline-size")).toContain("100%");
+    expect(board.get("inline-size")).toMatch(/\d+%\)/);
   });
 
   it("measures the board in relative units only", () => {
