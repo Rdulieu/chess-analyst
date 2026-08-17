@@ -38,24 +38,24 @@ empty database, and the result is recorded for the `integration → develop` PR.
 
 ## Acceptance criteria
 
-- [ ] The three HP scenario documents are updated to the restructured markup, with their journeys,
+- [x] The three HP scenario documents are updated to the restructured markup, with their journeys,
       their assertions and their hard figures unchanged in substance.
-- [ ] Each HP ends with a step walking all six screens in the light theme and then under an emulated
+- [x] Each HP ends with a step walking all six screens in the light theme and then under an emulated
       dark preference.
-- [ ] That final step reuses the state the journey built: it triggers no further import and no further
+- [x] That final step reuses the state the journey built: it triggers no further import and no further
       analysis.
-- [ ] The theme step asserts, on each screen: no unresolved token, text contrast at least 4.5:1 (3:1
+- [x] The theme step asserts, on each screen: no unresolved token, text contrast at least 4.5:1 (3:1
       for large text), no horizontal overflow, non-chromatic cues present where a tint carries meaning,
       and player colours identical between the two themes.
-- [ ] Every screen is visited by at least one HP, the Stats screen included.
-- [ ] The suite still contains exactly three Happy Paths.
-- [ ] The existing style-sensitive assertions (weak-opening highlight, arrow opacity and hue, the
+- [x] Every screen is visited by at least one HP, the Stats screen included.
+- [x] The suite still contains exactly three Happy Paths.
+- [x] The existing style-sensitive assertions (weak-opening highlight, arrow opacity and hue, the
       curve and its markers) are preserved.
-- [ ] The suite is replayed in full against the real chess.com API and the real engine from an empty
+- [x] The suite is replayed in full against the real chess.com API and the real engine from an empty
       database, and passes 3/3 with no console error.
-- [ ] The run's result — pass/fail per scenario, plus any finding — is written up ready to paste into
+- [x] The run's result — pass/fail per scenario, plus any finding — is written up ready to paste into
       the `integration → develop` PR.
-- [ ] Build and the full test suite are green.
+- [x] Build and the full test suite are green.
 
 ### Feature Path (FP)
 
@@ -75,6 +75,99 @@ For this slice the Feature Path is the suite's own execution.
 
 Verify: UI first, against the running app; this is the apex tier, so there is no lower seam to fall
 back on.
+
+## The run — 2026-08-17, HP 3/3 green, no blocking finding
+
+Two subagents in parallel, each on its own ports and its own `DB_FILE`: HP-01 (real chess.com import
+from an empty database, real WASM Stockfish at depth 16), HP-02 + HP-03 (one real import, snapshotted
+and restored by file copy so the second scenario still started on untouched data). Build green,
+144 server + 362 client tests green.
+
+**HP-01 ✅ 10/10.** Every hard figure exactly as the scenario asserts, no drift: 82 fetched / 82
+imported / 0 present, Blitz 72 · Bullet 10, 45 W · 0 D · 37 L, month lines 28 + 54. Determinate
+readout `0/2 → 1/2 → 2/2`; White-side and Black-side Games both opened, board turned and not
+rearranged; replay 0 imported / 82 present with no duplicate; username remembered. Analysis pass on
+the two shortest Games sharing a first Move (ids 56 and 44, both 1.e4 — the pair the docs predict),
+29 Positions, counter advancing, confirmation exact, dismissal persistent across a reload; `/danger`
+announced its computation then rendered one recurring `Danger position` ("2 fois atteinte"), initial
+Position excluded; `Evaluation curve` with its `??` marker and "1 grosse erreur".
+
+**HP-02 ✅ 10/10.** 54 imported (6 bullet + 48 blitz); candidates' cadence parts sum in every
+candidate at every level; White 27 + Black 27 = the import total; 3 candidates ↔ 3 arrows with
+endpoints on the named squares, alpha 1.0 / 0.89 / 0.46 and hue 46 vs 87 across the 50 % threshold;
+board and list descents identical, breadcrumb correct, orientation held down and back up while the
+side-to-move readout alternated; depth cap at exactly 40 half-moves.
+
+**HP-03 ✅ 6/6.** 32 rows, zero violations on all four shape rules, counts non-increasing, entries
+summing to 54; 14 highlighted rows = exactly those under 50 %, and the three rows at exactly 50 % are
+not highlighted (strict threshold), each carrying ⚠.
+
+**The theme pass: 36 audits (3 scenarios × 6 screens × 2 themes), all green.** No unresolved colour,
+no undeclared constant token, no page or box horizontal overflow at 1019 px or at 400/420 px, no
+console message of any kind across the three runs. The seven theme-invariant tokens plus
+`--square-notation` byte-identical between themes on every screen (`--white-share #ececec`,
+`--black-share #2f2f2f`, squares `#e9e2cf` / `#9a8467`); the explorer's arrow `hsla` strings identical
+too. HP-03's weak rows measure **9.5:1 light and 9.58:1 dark** — the 1.02:1 defect slice 02 found does
+not recur. Worst contrast anywhere: 2.63:1, on a *disabled* control (known-open, WCAG-exempt).
+
+### Findings, none blocking
+
+- **[non-blocking] A failed `/api/games` fetch renders the empty-state invitation**, indistinguishable
+  from "no games": the screen said "No games yet — import your chess.com history to get started."
+  while the database held 82 Games. Found incidentally when the relay returned 502. A Player hitting a
+  hiccup is told their history is empty. Not a US-13 concern — an error-state concern, and the first
+  screen deserves a real one.
+- **[non-blocking] The side selector does not reset the explorer path.** Switching Blancs → Noirs two
+  moves deep keeps the line, whose other-side habits are typically empty. HP-02 step 8 now says to
+  return to `Départ` first; whether the app should reset instead is a product question.
+- **[non-blocking] Two known-open findings are in fact fixed**, and were struck from
+  `theme-pass.md` rather than carried: the board's coordinate labels (~2.3:1 → **12.89:1** light
+  square / **4.66:1** dark, because the board *does* consume `--square-notation` and the square
+  tokens, contrary to slice 03's note) and the curve's equality line and cursor (2.92 / 2.93 → **3.30
+  to 3.44**, above the 3:1 graphics threshold). A regression on either must now go red.
+- **[non-blocking] The disabled-control figure was wrong in the light theme**: recorded "~3.5:1",
+  measured 3.51:1 dark but **2.63:1 light**. Corrected in `theme-pass.md`. Still WCAG-exempt.
+- **[non-blocking] Four of the six cue rules are vacuous in HP-02's and HP-03's states** (danger
+  cards, severity glyphs, failed month, "analysée" badge have no subject there). A green pass on those
+  two is not "all cues verified" — HP-01 carries the rest. Now stated in `theme-pass.md`, and the
+  audit reports `subjects` alongside `failures` so the distinction is visible.
+- **[non-blocking] The import-failure tint still has no reachable instance** (slice 03's finding,
+  unchanged): no month failed in three real imports, so `[data-failed]` was never rendered.
+- **[non-blocking, driver] The shared browser is a hazard when scenarios run in parallel.** A selected
+  page was stolen mid-run twice and two actions landed on the *other* agent's app; one subagent also
+  `pkill`ed every chess-analyst backend on the machine, not just its own. Both are now rules in
+  `README.md` (own ports, own `DB_FILE`, guard scripts on `location.port`, kill by pid).
+- **[non-blocking, driver] MCP `fill` silently no-ops on `<input type=month>`** (reports success, value
+  unchanged) — keyboard entry works. And `/analyse` is reached by a click handler with no `href`, so a
+  driver scanning for links finds nothing.
+
+### What the run sent back into the documents
+
+The scenarios were adapted *before* the run, from the merged diffs; the run then corrected four
+things the diffs could not show, all folded in:
+
+1. **HP-01 step 6 asserted a layout that cannot exist there.** The annotations pane beside the board
+   only appears once a Game is analysed, and step 6 opens an unanalysed one. The row is asserted at
+   step 9 instead.
+2. **HP-01 step 9's curve assertion was not guaranteed by its own selection rule.** The two *shortest*
+   Games often hold no Player mistake — game 56 reads "aucune sur cette partie". The step now says to
+   reopen whichever of the two carries a flawed Move, and to record the marking as *not exercised* if
+   neither does.
+3. **The progress readout must be observed from before the click.** The real two-month import now
+   completes in under two seconds, so a poller started after submit sees only the summary. Recorded,
+   along with the fact that there is no analysis status endpoint to poll — watch the readout.
+4. **Stale economy figure**: the analysis pass is 29 Positions in ~25 s, not "~3.5 min".
+
+`theme-audit.js` needed no correctness fix — it ran on all 36 audits first time. Three additions came
+out of the run: `--square-notation` (constant-family per `boardTheme.ts`, in no list, so its
+invariance was asserted by nobody), a `worst` ratio and `textsMeasured` (so "nothing failed" and
+"nothing was measured" stop looking identical — the sweeps measured 25 to 306 texts per screen), and
+`failing` naming the offending elements per cue rule.
+
+### Deviations
+
+None. No line of `client/src` or `server/src` was touched: this slice is scenario documents plus one
+piece of test tooling.
 
 ## Blocked by
 
