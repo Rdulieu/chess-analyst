@@ -75,6 +75,11 @@
   --text-l: 1.125rem;
   --text-xl: 1.5rem;
 
+  // The winning-chances bar's height, a token for one reason: the Analyse row
+  // reserves exactly this much when the bar is not there, so the board cannot
+  // jump when the annotations are toggled. Two places, one value.
+  --bar-height: 0.5rem;
+
   --radius: 6px;
   --radius-pill: 999px;
 

@@ -150,24 +150,31 @@ accent instead of the browser's blue.
 
 ## Findings
 
-- **[fixed during the slice, blocking while it lasted] `/explorer` scrolled the page sideways at 480
-  and 380px.** The first `min(24rem, 100%)` float left a 49px strip beside the board and the
-  breadcrumb's "Départ" button is 86px. The lesson is worth keeping: a box that establishes its own
-  formatting context — a flex container, a `flow-root` — is laid *beside* a float in whatever room the
-  float leaves and **overflows** rather than wrapping when that room is too narrow. Line boxes wrap;
-  formatting contexts do not. Fixed by capping the float at a share of the column (`min(24rem, 55%)`),
-  which keeps 24rem on any real screen and always leaves the strip 45% — no breakpoint.
-- [non-blocking] The board shifts **8px vertically** when the annotations are unchecked: the
-  winning-chances bar sits *above* the row and disappears with them. Width, x-position and the row's
-  box are untouched and re-checking restores the position exactly, so the US-14 constraint holds as
-  written — but if "the board does not move" is meant literally, the bar's slot needs reserving.
-  Pre-existing US-14 structure, not introduced here.
-- [non-blocking] The curve's markers still carry six *static* declarations inline
-  (`position`, `transform`, `padding`, `border-radius`, `line-height`, `white-space`) beside the
-  `left`/`top` the data computes. Moving them would mean putting `data-severity` on the marker and
-  reusing _semantics' rules — a change to what slice 03 deliberately decided, and to the test that
-  pins it. Left as is, deliberately; the guard in `denseScreens.test.ts` sanctions exactly one inline
-  style block there and would catch a second.
+- **[found and fixed twice] The explorer's layout was a float, and a float was the wrong tool.**
+  Round one: `min(24rem, 100%)` left a 49px strip beside the board while "Départ" is 86px, and the
+  page scrolled sideways at 480 and 380px. The lesson is worth keeping — a box that establishes its
+  own formatting context (a flex container, a `flow-root`) is laid *beside* a float in whatever room
+  the float leaves and **overflows** rather than wrapping when that room is too narrow. Line boxes
+  wrap; formatting contexts do not. Round two: capping the float at `min(24rem, 55%)` stopped the
+  overflow and bought a worse bug, because a *share* can never fold — at 380px the Player got a
+  191px diagram beside a 133px strip of four-line rows, at every width, for ever, and the `24rem`
+  term could never win, which is dead code that reads as a considered choice. Replaced by an
+  `auto-fit` grid: two columns while a 20rem column fits twice, one when it does not, no width
+  written down, and the board placed by `grid-row: span 2` so that not one element moves in the
+  document.
+- **[fixed] The board shifted 8px vertically when the annotations were unchecked** — the
+  winning-chances bar sits *above* the row and went away with them. "Unchecking the annotations must
+  not visibly disturb the row" makes 8px under the Player's eyes a real disturbance, so the bar's
+  slot is reserved: `:not(:has(> [data-bar="winning-chances"])) > [data-row="board"]` carries
+  `--bar-height`, the same token the bar is sized with. No wrapper element, no empty bar rendered.
+- **[fixed] The curve's markers held six static declarations inline.** The split, recorded as the
+  brief asks: `left`, `top`, `background` and `color` stay inline because the DATA computes them (the
+  ply and the share the mark sits at, and which of the three severities it means, read as a pair from
+  `chess/severity.ts` as slice 03 established). `position`, `transform`, `font`, `border`,
+  `border-radius`, `padding-inline` and `white-space` are the marker's *shape*, and shape is the
+  sheet's: `[data-part="curve"] span`. The border is `currentColor`, so it follows the ink set inline
+  without naming a colour twice. `SEVERITY_TINT` / `SEVERITY_TINT_INK` therefore stay alive and stay
+  the single source the move list and the curve share.
 - [non-blocking] `/openings`' table overflows its own container at a narrow column (right edge at
   1180px in a 365px column) and scrolls inside `[data-scroll="x"]` rather than scrolling the page.
   Slice 04's territory, not a regression.

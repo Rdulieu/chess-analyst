@@ -51,35 +51,43 @@ describe("Danger positions, as a grid of cards", () => {
 });
 
 describe("the explorer, with its candidates beside the board", () => {
-  const board = declarationsFor(css, 'section[aria-labelledby="explorer-heading"] > div');
+  const screen = declarationsFor(css, 'section[aria-labelledby="explorer-heading"]');
 
-  it("sets the board beside the content that annotates it", () => {
-    // A float rather than a two-column grid, and deliberately: the breadcrumb and
-    // the candidate list flow beside the board at a comfortable width and *under*
-    // it when there is no room, with no breakpoint designed and not one element
-    // moved in the document — so the reading order the screen reader follows is
-    // exactly the one it followed before.
-    expect(board.get("float")).toBe("inline-start");
-    // A proportion, not `min(24rem, 100%)`: a box beside a float gets whatever
-    // room the float leaves and OVERFLOWS rather than wrapping when that room is
-    // narrower than its content (the breadcrumb, at 380px, pushed the page
-    // sideways). Capped at a share of the column, the strip beside the board is
-    // never too narrow to hold what flows into it — and still no breakpoint.
-    expect(board.get("inline-size")).toContain("min(");
-    expect(board.get("inline-size")).toMatch(/\d+%\)/);
+  it("folds to one column on its own, with no width written down", () => {
+    // `auto-fit`, like the danger grid: two columns while a 20rem column fits
+    // twice and one when it does not. A float was tried here first and could not
+    // do this — a box beside a float overflows rather than wrapping when the room
+    // the float leaves is too narrow, and a float capped at a *share* of the
+    // column never folds at all, so a phone kept a half-width diagram for ever.
+    expect(screen.get("display")).toBe("grid");
+    expect(screen.get("grid-template-columns")).toContain("auto-fit");
+    expect(screen.get("grid-template-columns")).toContain("min(20rem, 100%)");
+    expect(screen.get("align-items")).toBe("start");
   });
 
-  it("measures the board in relative units only", () => {
-    noAbsoluteLength(board.get("inline-size"));
-    noAbsoluteLength(board.get("margin-inline-end"));
+  it("carves no pixel into the screen's own measurements", () => {
+    noAbsoluteLength(screen.get("grid-template-columns"));
+    noAbsoluteLength(screen.get("gap"));
   });
 
-  it("keeps the float inside its own screen", () => {
-    // Without this the board escapes the bottom of its section and lands on the
-    // next screen's content the moment the candidate list is short.
-    expect(declarationsFor(css, 'section[aria-labelledby="explorer-heading"]').get("display")).toBe(
-      "flow-root",
-    );
+  it("puts the board beside the content that annotates it, without moving either", () => {
+    // The board is the only item placed, and it is placed by SPAN, not by column:
+    // the breadcrumb and the candidate list take the next column instead of
+    // stacking under the diagram, and the document order is untouched — which is
+    // the order a screen reader reads, in both configurations.
+    expect(
+      declarationsFor(css, 'section[aria-labelledby="explorer-heading"] > div').get("grid-row"),
+    ).toBe("span 2");
+  });
+
+  it("gives the screen's own lines the whole width rather than a column", () => {
+    // The heading, the side selector and the side-to-move line are the screen's,
+    // not one column's. Sass emits `1 / -1` as `1/-1`; the span is the assertion.
+    const full = declarationsFor(
+      css,
+      'section[aria-labelledby="explorer-heading"] > h2',
+    ).get("grid-column");
+    expect(full?.replace(/\s/g, "")).toBe("1/-1");
   });
 });
 
@@ -157,14 +165,27 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     );
   });
 
+  it("reserves the bar's slot when the bar is gone, so the board cannot jump", () => {
+    // The bar sits above the row and goes away with the annotations, which used to
+    // raise the board by exactly its height — 8px of vertical jump under the eyes
+    // of someone reading a position. Reserved by `:has()`, so no wrapper element
+    // and no empty bar rendered, and from the SAME token the bar is sized with.
+    const reserved = declarationsFor(
+      css,
+      ':not(:has(> [data-bar=winning-chances])) > [data-row=board]',
+    );
+    expect(reserved.get("margin-block-start")).toBe("var(--bar-height)");
+    expect(declarationsFor(css, '[data-bar="winning-chances"]').get("block-size")).toBe(
+      "var(--bar-height)",
+    );
+  });
+
   it("styles the winning-chances bar as a bar, in relative units", () => {
     const bar = declarationsFor(css, '[data-bar="winning-chances"]');
     expect(bar.get("display")).toBe("flex");
-    expect(bar.get("block-size")).toBe("0.5rem");
     expect(bar.get("inline-size")).toBe("100%");
     expect(bar.get("border")).toBe("1px solid var(--border)");
     expect(bar.get("overflow")).toBe("hidden");
-    noAbsoluteLength(bar.get("block-size"));
   });
 });
 

@@ -83,29 +83,22 @@ export function EvaluationGraph({
         />
       </svg>
       {markers.map((marker) => (
+        // Four declarations, and every one of them is DATA: where the mark goes,
+        // and which severity it means. Its shape — absolutely placed, centred on
+        // its point, a bordered pill in mono — is the sheet's (`_dense`), which is
+        // why nothing static is written here any more.
         <span
           key={marker.x}
           style={{
-            position: "absolute",
             left: `${(marker.x / span) * 100}%`,
             top: `${100 - marker.whiteShare}%`,
-            transform: "translate(-50%, -50%)",
-            fontFamily: "var(--mono)",
-            fontWeight: 700,
-            fontSize: "var(--text-s)",
             // The tint AND its own ink, read as a pair from the single source the
             // move list reads: the two views of one severity cannot drift apart,
             // and the marker stays legible in both themes without borrowing the
-            // inherited `--ink` (which inverts while the tint does too).
+            // inherited `--ink` (which inverts while the tint does too). The
+            // border in the sheet is `currentColor`, so it follows this ink.
             background: SEVERITY_TINT[marker.severity],
             color: SEVERITY_TINT_INK[marker.severity],
-            // The border is the marker's own ink, so it detaches from whichever
-            // of the two constant grounds it happens to land on.
-            border: `1px solid ${SEVERITY_TINT_INK[marker.severity]}`,
-            borderRadius: 3,
-            padding: "0 2px",
-            lineHeight: 1.2,
-            whiteSpace: "nowrap",
           }}
         >
           {SEVERITY_GLYPH[marker.severity]}

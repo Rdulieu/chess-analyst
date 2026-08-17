@@ -58,32 +58,40 @@ ul[aria-label="positions dangereuses"] {
 // — and the drift US-10a noted (the side-to-move readout stranded far from the
 // candidates) shortens to the height of one diagram.
 //
-// A FLOAT rather than a two-column grid, and that is the interesting part: the
-// breadcrumb and the candidates flow beside the board while there is room and
-// under it when there is not, with no breakpoint designed and not one element
-// moved in the document. A grid would have needed either a media query or a
-// reordering, and reordering is exactly what costs a screen-reader user their
-// reading order.
+// A GRID, arrived at the hard way. A float was tried first and the Feature Path
+// killed it twice over: a box that establishes its own formatting context — which
+// both the breadcrumb (a flex container) and the candidate list do — is laid
+// *beside* a float in whatever room the float leaves, and it OVERFLOWS rather than
+// wrapping when that room is too narrow (the page scrolled sideways at 480px).
+// Capping the float at a share of the column stopped the overflow and bought a
+// worse bug: a share cannot fold, so a phone got a 191px diagram beside a 133px
+// strip of four-line rows, for ever, at every width.
+//
+// `auto-fit` folds, and folds on its own: two columns while a 20rem column fits
+// twice, one column when it does not, no width written down anywhere. The board is
+// the only item placed at all — it spans the rows its neighbours occupy — so
+// nothing is reordered and the reading order a screen reader follows is still the
+// document's, in both configurations.
 // -----------------------------------------------------------------------------
 section[aria-labelledby="explorer-heading"] {
-  // The float is contained here, or it escapes the bottom of the screen the
-  // moment the candidate list is shorter than the board.
-  display: flow-root;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: start;
 
+  // The heading, the side selector and the side-to-move line belong to the whole
+  // screen, not to one of its columns.
+  > h2,
+  > fieldset,
+  > p[aria-label="trait"] {
+    grid-column: 1 / -1;
+  }
+
+  // The board, spanning what sits beside it: the breadcrumb and the candidate
+  // list then take the next column instead of stacking under the diagram. Folded
+  // to one column the span costs nothing — there is no column to sit beside.
   > div {
-    float: inline-start;
-    // A PROPORTION and not `min(24rem, 100%)`, and the Feature Path is what
-    // taught the difference: a box that establishes its own formatting context —
-    // which both the breadcrumb (a flex container) and the candidate list below
-    // do — is laid beside a float in whatever room the float leaves, and it
-    // overflows rather than wrapping when that room is narrower than its content.
-    // At 380px the strip left beside a 24rem board was 49px and "Départ" is 86px,
-    // so the page scrolled sideways. Capped at 55% the board keeps its 24rem on
-    // any real screen and always leaves the strip beside it at least 45% of the
-    // column — no breakpoint, and nothing to push off the right edge.
-    inline-size: min(24rem, 55%);
-    margin-inline-end: var(--space-4);
-    margin-block-end: var(--space-3);
+    grid-row: span 2;
   }
 
   // The side to move reads as the diagram's own caption rather than as a line of
@@ -91,6 +99,8 @@ section[aria-labelledby="explorer-heading"] {
   > p[aria-label="trait"] {
     color: var(--ink-muted);
     font-size: var(--text-s);
+    // The caption belongs to the diagram under it, not to the selector above it.
+    margin-block-end: calc(-1 * var(--space-2));
   }
 
   // The breadcrumb: one line of steps, wrapping on its own.
@@ -99,13 +109,6 @@ section[aria-labelledby="explorer-heading"] {
     flex-wrap: wrap;
     gap: var(--space-1) var(--space-2);
     align-items: baseline;
-  }
-
-  // The list as a whole sits beside the float, rather than each row spanning the
-  // column with its content pushed aside: without this the rows' hairlines run
-  // on under the diagram, which draws six lines across the board for no reason.
-  ul[aria-label="candidates"] {
-    display: flow-root;
   }
 
   // A candidate is a row: its Move, then its figures. The rows are what the
@@ -129,6 +132,16 @@ section[aria-labelledby="explorer-heading"] {
 // happens to be next to it — and the second follows: with nothing growing into the
 // gap, removing the annotations leaves the board exactly where it was.
 // -----------------------------------------------------------------------------
+// Unchecking the annotations takes the winning-chances bar away too, and the bar
+// sits ABOVE the row — so the board used to rise by exactly the bar's height, 8px
+// of vertical jump under the eyes of someone reading a position. The bar's slot is
+// reserved instead, on the row and by `:has()`, i.e. without a wrapper element and
+// without rendering an empty bar: when the row's own container holds no bar, the
+// row carries the space the bar would have taken. Its height is written once, below.
+:not(:has(> [data-bar="winning-chances"])) > [data-row="board"] {
+  margin-block-start: var(--bar-height);
+}
+
 [data-row="board"] {
   display: flex;
   flex-wrap: wrap;
@@ -194,6 +207,22 @@ section[aria-labelledby="explorer-heading"] {
     fill: var(--white-share);
   }
 
+  // A marker: the Player's own flawed Move, placed where it was played. Only its
+  // POSITION and its severity's tint-and-ink pair come from the component, because
+  // only those are data; the shape is here. The border is `currentColor`, i.e. the
+  // marker's own ink, so it detaches from whichever of the two constant grounds it
+  // lands on without naming a colour twice.
+  span {
+    position: absolute;
+    // Centred ON its point rather than starting at it: the mark means "here".
+    transform: translate(-50%, -50%);
+    font: 700 var(--text-s) / 1.2 var(--mono);
+    border: 1px solid currentColor;
+    border-radius: var(--radius);
+    padding-inline: var(--space-1);
+    white-space: nowrap;
+  }
+
   // The equality line and the current-Move cursor. Declared here and not in the
   // component because a custom property resolves in a declaration and never in an
   // attribute value — `stroke="var(--curve-cursor)"` paints nothing at all.
@@ -211,7 +240,10 @@ section[aria-labelledby="explorer-heading"] {
 // theme (ADR-0013); the two widths stay inline, being the Position's own figures.
 [data-bar="winning-chances"] {
   display: flex;
-  block-size: 0.5rem;
+  // The one place the bar's height is written. `box-sizing: border-box` (_base)
+  // puts its border inside this, which is why the slot reserved above the row is
+  // the same value and not the value plus two hairlines.
+  block-size: var(--bar-height);
   inline-size: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius);
