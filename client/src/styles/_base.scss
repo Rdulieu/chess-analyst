@@ -1,0 +1,87 @@
+// =============================================================================
+// Base: the typography, the vertical rhythm, and the few resets the app needs.
+// Selectors lean on the already-semantic HTML — no class is invented for an
+// element that already carries its intent.
+// =============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  // Sizes are relative throughout (rem / ch / %): nothing here carves px into
+  // the layout, and no breakpoint is designed (fluid only — US-13 scope).
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--text-m);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--ground);
+  // Tabular numerals app-wide: evaluations, counts and win rates line up in
+  // columns wherever they appear, without each screen asking for it.
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+h1 {
+  font-size: var(--text-xl);
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: var(--text-l);
+}
+
+h3 {
+  font-size: var(--text-m);
+}
+
+p,
+ul,
+ol,
+table,
+form,
+fieldset {
+  margin: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+// Blocks are separated by spacing, never by a rule. One owl selector on the
+// screen's own children gives every page the same rhythm for free.
+main > [data-column] > section > * + * {
+  margin-block-start: var(--space-4);
+}
+
+// Nothing is allowed to push the page sideways: media stay inside their box and
+// what is genuinely wider than the viewport scrolls in its own container (the
+// tables themselves are styled in the lists-and-tables slice).
+img,
+svg {
+  max-inline-size: 100%;
+}
+
+[data-scroll="x"] {
+  overflow-x: auto;
+}

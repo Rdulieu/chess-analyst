@@ -1,0 +1,99 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve, extname } from "node:path";
+import { compile } from "sass";
+
+/** The client's single stylesheet entry point. */
+export const STYLESHEET = resolve(import.meta.dirname, "../../src/styles/main.scss");
+
+/** The client's source tree, where tokens are consumed from TypeScript. */
+export const SOURCE_ROOT = resolve(import.meta.dirname, "../../src");
+
+/**
+ * Compiles the stylesheet the way the build does. Working on the compiled CSS
+ * rather than on the SCSS text is what makes the audit honest: a token emitted
+ * by a loop or a mixin counts as declared, and a syntax error fails here.
+ */
+export function compileStylesheet(path: string = STYLESHEET): string {
+  return compile(path).css;
+}
+
+/**
+ * Splits the declared custom properties into the two themes. `light` is what a
+ * default-preference browser resolves; `dark` is only what the
+ * `prefers-color-scheme: dark` block *redefines* — a token absent from `dark`
+ * is not undeclared at night, it is deliberately theme-independent (the
+ * player/board family of ADR-0013).
+ */
+export function declaredTokens(css: string): {
+  light: Map<string, string>;
+  dark: Map<string, string>;
+} {
+  const darkPart = darkThemeBlock(css);
+  return {
+    light: customProperties(css.replace(darkPart, "")),
+    dark: customProperties(darkPart),
+  };
+}
+
+/**
+ * The `prefers-color-scheme: dark` block, brace-matched rather than sliced to
+ * the end of the file: the token partial is not the last thing in the sheet, and
+ * everything after the block belongs to the light theme too.
+ */
+export function darkThemeBlock(css: string): string {
+  const at = css.indexOf("prefers-color-scheme: dark");
+  if (at === -1) return "";
+  const open = css.indexOf("{", at);
+  let depth = 0;
+  for (let i = open; i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    else if (css[i] === "}" && --depth === 0) return css.slice(open, i + 1);
+  }
+  throw new Error("unterminated dark-theme block");
+}
+
+function customProperties(css: string): Map<string, string> {
+  const found = new Map<string, string>();
+  for (const [, name, value] of css.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)/g)) {
+    found.set(name, value.trim());
+  }
+  return found;
+}
+
+/** Every `var(--…)` read in a body of source. */
+export function consumedTokens(sources: string[]): Set<string> {
+  const found = new Set<string>();
+  for (const source of sources) {
+    for (const [, name] of source.matchAll(/var\(\s*(--[\w-]+)/g)) found.add(name);
+  }
+  return found;
+}
+
+/**
+ * The audit ADR-0013 asks for as the mitigation for the compile error custom
+ * properties cost us: every token consumed anywhere must resolve in *both*
+ * themes. Returns the offending names, so the failure message says which.
+ */
+export function undeclaredTokens(
+  consumed: Set<string>,
+  declared: { light: Map<string, string>; dark: Map<string, string> },
+): string[] {
+  return [...consumed]
+    .filter((t) => !declared.light.has(t) && !declared.dark.has(t))
+    .sort();
+}
+
+/** Reads every file the client ships or styles, so nothing escapes the audit. */
+export function clientSources(root: string = SOURCE_ROOT): string[] {
+  const wanted = new Set([".ts", ".tsx", ".scss", ".css"]);
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (wanted.has(extname(entry.name))) out.push(readFileSync(path, "utf8"));
+    }
+  };
+  walk(root);
+  return out;
+}
