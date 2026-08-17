@@ -6,9 +6,9 @@ Status: `ready-for-agent`
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
 > local check (build + tests + green FP, no blocking finding); `integration -> develop` stays human.
 
-> **Sequencing:** do not start before **US-13 (stylesheet)** has landed and this branch is rebased
-> on its outcome. This slice adds a banner to **every** page, which is exactly where US-13's rework
-> lands. See the PRD's *Further Notes*.
+> **Sequencing: unblocked.** US-13 landed in `develop` (PR #44/#49, 2026-08-17) and this branch is
+> rebased on it. The stylesheet, the page skeleton and the token audit are now constraints on this
+> slice, not a reason to wait — see the acceptance criteria.
 
 ## Parent
 
@@ -39,6 +39,27 @@ Two empty situations that must **not** be confused:
 - **A Profile selected but with no Games** → a proper **empty state** inviting an import. This is
   normal (a freshly created Profile) and redirecting here would send the user in circles about a
   problem they do not have.
+- **The load failed** → **say so**. See below: this is not ours by origin, but it is ours by
+  position.
+
+### The load-failure finding comes here
+
+US-13's HP replay filed `.scratch/games-load-failure/issues/01-a-failed-load-looks-like-an-empty-history.md`
+(`needs-triage`): a failed `GET /api/games` renders the **empty-history invitation** — the screen
+announced "no games yet" while 82 Games sat in the database, and pointed the Player at importing
+what they already had. Loading, genuinely-empty and load-failed are collapsed into one state, and
+the invitation is right for exactly one of them. The same shape likely exists on every screen that
+fetches on mount.
+
+**Fold it into this slice**, and close it on the technical backlog when done. The reason is
+position, not scope creep: this slice adds a **fourth** situation to the same code — "no Profile
+selected" — and writing a new empty state on top of an ambiguous one would make the ambiguity
+worse. More directly: the criterion "a Profile with no Games shows an empty state" is only
+meaningful if "no Games" cannot also mean "the request failed". We cannot assert what this slice is
+for without fixing it.
+
+Scope of the fix: the states are told apart and named on the screens that fetch on mount — a failed
+load says the load failed and offers to retry; it never invites an import.
 
 ## Acceptance criteria
 
@@ -58,6 +79,19 @@ Two empty situations that must **not** be confused:
 - [ ] HTTP-seam tests state the isolation property directly: data created under Profile A is absent
       from every answer given about Profile B, endpoint by endpoint.
 - [ ] Page-seam tests cover the banner, the redirect, and the empty state.
+- [ ] A **failed** load is distinguished from an empty history: it says the load failed and offers a
+      retry, and never renders the import invitation.
+- [ ] The distinction holds on every screen that fetches on mount, not only "Mes parties".
+- [ ] `.scratch/games-load-failure/issues/01-…` is closed, referencing this slice.
+
+**Post-US-13 constraints** (ADR-0013):
+
+- [ ] The banner lives in the **app chrome** US-13 built (`_chrome.scss`) and reads as chrome, not
+      as page content.
+- [ ] It marks the current Profile **without relying on colour alone** — the rule the navigation's
+      current tab already follows.
+- [ ] Banner, empty states and failure states all pass the token-consistency audit and are correct
+      in both themes.
 
 ### Feature Path (FP)
 

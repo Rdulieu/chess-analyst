@@ -6,8 +6,9 @@ Status: `ready-for-agent`
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
 > local check (build + tests + green FP, no blocking finding); `integration -> develop` stays human.
 
-> **Sequencing:** do not start before **US-13 (stylesheet)** has landed and this branch is rebased
-> on its outcome. US-13 reworks the same screens. See the PRD's *Further Notes*.
+> **Sequencing: unblocked.** US-13 landed in `develop` (PR #44/#49, 2026-08-17) and this branch is
+> rebased on it. The stylesheet, the page skeleton and the token audit are now constraints on this
+> slice, not a reason to wait — see the acceptance criteria.
 
 ## Parent
 
@@ -16,8 +17,11 @@ Status: `ready-for-agent`
 ## What to build
 
 `Import` becomes **an operation on one Profile** (`CONTEXT.md`). A new page, `/profiles/:id`, is
-that Profile's own page: its identity, its counters, and **its import form**. The top-level
-`/import` route is removed.
+that Profile's own page: its identity, its counters, and **its import form**.
+
+**Correction to the PRD's framing:** there is no top-level `/import` route to remove — the import
+form lives **on "Mes parties" (`/`)**, beside the Game list. What this slice does is **move it off
+that screen** onto the Profile's page, which also lightens the busiest screen in the app.
 
 The import form **loses its username field**. The account to fetch is the Profile's own, already
 validated at creation — which also removes the only way one account's Games could ever be imported
@@ -38,7 +42,7 @@ elsewhere you read *the* current Profile's data.
 
 - [ ] `/profiles/:id` shows one Profile's identity and counters (Games imported, Games analyzed).
 - [ ] The import form lives on that page and has **no username field**.
-- [ ] The top-level `/import` route no longer exists; nothing links to it.
+- [ ] The import form no longer appears on "Mes parties"; that screen shows the Game list alone.
 - [ ] An Import writes Games under the Profile it was run from, and no other.
 - [ ] Month range and time-control category selection behave as before.
 - [ ] Per-month progress and per-month outcome lines behave as before, a failed month still not
@@ -51,7 +55,18 @@ elsewhere you read *the* current Profile's data.
       is **refused** rather than answered.
 - [ ] HTTP-seam tests cover import under a Profile, the two-Profile same-URL case, the
       re-import-no-duplicate case, and the refusal cases.
-- [ ] Page-seam tests cover the Profile page and the absence of the username field.
+- [ ] Page-seam tests cover the Profile page, the absence of the username field, and the import
+      form's disappearance from "Mes parties".
+
+**Post-US-13 constraints** (ADR-0013):
+
+- [ ] The Profile page follows the page skeleton and passes the token-consistency audit, in both
+      themes — same bar as slice 01.
+- [ ] **A width decision is owed to the human before writing it.** US-13 bounds reading at 72ch and
+      reserves the `wide` variant for the dense screens, and it recorded that widening a screen is a
+      taste call, not a CSS one. The Profile page carries a form and counters: ask, do not assume.
+- [ ] The import summary keeps the `card` surface it already uses — it moves screen, it does not
+      change shape.
 
 ### Feature Path (FP)
 

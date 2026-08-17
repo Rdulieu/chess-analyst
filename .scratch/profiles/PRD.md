@@ -34,9 +34,10 @@ The user gets a dedicated area for them:
 - **`/profiles`** lists the Profiles (name, platform, games imported, games analyzed), creates new
   ones, and is where the **current Profile** is selected.
 - **`/profiles/:id`** is one Profile's own page: its identity and counters, **its Import**, its
-  analysis-pass state, and its deletion. The top-level `/import` page goes away — importing is an
-  operation *on a Profile*, and the username field disappears from the form because the Profile
-  already knows it.
+  analysis-pass state, and its deletion. The import form **moves off "Mes parties"** onto that page
+  — importing is an operation *on a Profile*, and the username field disappears from the form
+  because the Profile already knows it. (There is no top-level `/import` route: the form lives on
+  the Game list screen today.)
 
 Everywhere else — `/games`, `/stats`, `/openings`, `/danger`, the explorer — the pages are
 unchanged in purpose but now show **only the current Profile's** data, and a permanent banner
@@ -248,9 +249,11 @@ through a route that no longer exists, and none of them creates a Profile. Two d
   HP-01 keeps its own real-network import assertions (the incremental re-import, the per-month
   lines) — path 0 builds state, it does not take over what HP-01 is for.
 
-**Sequencing constraint:** US-13 (stylesheet) is in flight in another agent's worktree and will
-substantially rework the same three HP. The HP rewrite here **must be based on US-13's version**,
-not on today's. See *Further Notes*.
+**US-13 has landed** (PR #44/#49, merged into `develop` on 2026-08-17; this branch is rebased on
+it). It revised the suite rather than extending it, and added a **theme pass** as each scenario's
+final step — written once in `docs/test-scenarios/theme-pass.md`, driven by
+`tools/theme-audit.js`, walking a named inventory of six screens in both themes. This story takes
+that inventory to **eight** (the two profiles screens; none is removed). Slice 06 owns it.
 
 ## Out of Scope
 
@@ -267,15 +270,26 @@ not on today's. See *Further Notes*.
 
 ## Further Notes
 
-**Do not start implementation until US-13 has landed.** The user's instruction. US-13 reworks the
-visuals and will substantially rewrite the three HP; this story removes a route (`/import`), adds
-two (`/profiles`, `/profiles/:id`) and adds a banner to every page. Both touch the same screens and
-the same scenarios. Starting in parallel would guarantee a conflict on files where resolving means
-choosing between two intents — exactly the case the git-flow skill says to hand back to a human.
-The plan is therefore to **rebase this story's integration branch on US-13's outcome** and adjust
-the two client-facing slices — the profiles area and the HP rewrite — to the new visual language
-before writing them. The schema and migration slice is independent of US-13 and could in principle
-go first, but the sequencing instruction is deliberate and holds for the whole story.
+**US-13 landed; the branch is rebased (2026-08-18).** The rebase conflicted on `BACKLOG.md` alone
+— the two stories' transitions compose (US-13 to `Done`, US-11 to `Doing`) — and was resolved by
+the agent. No ADR collision: US-13 stopped at 0013.
+
+What it leaves as **standing constraints** on every client-facing slice: the page skeleton every
+screen was restructured to, the **token-consistency audit** (every consumed `var(--…)` declared in
+both themes, no hex in a component), the dark theme following the system preference with no
+control, and the rule that a current/selected state is never marked **by colour alone**. The
+72ch reading column with its `wide` variant also means the Profile page owes a **width decision to
+the human** before it is written — US-13 recorded explicitly that widening a screen is a taste call,
+not a CSS one.
+
+**One correction to what this PRD first claimed:** there is no top-level `/import` route. The
+import form lives on "Mes parties" (`/`), beside the Game list, and slice 03 moves it rather than
+deleting a route.
+
+**A US-13 finding moves into slice 04.** `.scratch/games-load-failure/issues/01-…`: a failed
+`/api/games` renders the empty-history invitation. Slice 04 adds a fourth situation to that same
+code path, and its own criterion ("a Profile with no Games shows an empty state") is unassertable
+while "no Games" can also mean "the request failed". Folded in, and closed there.
 
 **The `settings` table is empty.** The "remembered username" feature that `Profile` supersedes
 never worked in practice. Nothing to convert, only something to create — and worth knowing before

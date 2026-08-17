@@ -6,9 +6,9 @@ Status: `ready-for-agent`
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
 > local check (build + tests + green FP, no blocking finding); `integration -> develop` stays human.
 
-> **Sequencing:** this is the one slice with no screen, so it is technically independent of US-13 —
-> but the standing instruction is that nothing starts before US-13 lands. Confirm with the user
-> before starting early.
+> **Sequencing: unblocked.** US-13 landed in `develop` (PR #44/#49, 2026-08-17) and this branch is
+> rebased on it. The stylesheet, the page skeleton and the token audit are now constraints on this
+> slice, not a reason to wait — see the acceptance criteria.
 
 ## Parent
 

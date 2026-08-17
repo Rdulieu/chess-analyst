@@ -6,8 +6,9 @@ Status: `ready-for-agent`
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
 > local check (build + tests + green FP, no blocking finding); `integration -> develop` stays human.
 
-> **Sequencing:** do not start before **US-13 (stylesheet)** has landed and this branch is rebased
-> on its outcome. US-13 reworks the same screens. See the PRD's *Further Notes*.
+> **Sequencing: unblocked.** US-13 landed in `develop` (PR #44/#49, 2026-08-17) and this branch is
+> rebased on it. The stylesheet, the page skeleton and the token audit are now constraints on this
+> slice, not a reason to wait — see the acceptance criteria.
 
 ## Parent
 
@@ -55,6 +56,17 @@ adds the notion, later slices attach data to it.
       duplicate-by-casing, unknown username, unreachable platform, and deletion.
 - [ ] Client tests at the page seam cover the list, the creation error surfacing, and the
       persistence of the selection.
+
+**Post-US-13 constraints** (the app now has a stylesheet — ADR-0013):
+
+- [ ] The profiles page follows the **page skeleton** every screen was restructured to in US-13-01,
+      and uses the existing surfaces (`card`, lists, tables) rather than inventing its own.
+- [ ] It passes the **token-consistency audit**: every `var(--…)` it consumes is declared in **both**
+      themes, and the component holds no hex colour.
+- [ ] It is correct in the **light and dark** themes, the dark one following the system preference
+      with no control.
+- [ ] The navigation gains its entry, marked current the way the others are — **by weight and a
+      border, never by colour alone**.
 
 ### Feature Path (FP)
 

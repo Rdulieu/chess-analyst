@@ -73,8 +73,10 @@
   > **Conséquence hors story** : la base locale n'est plus jetable (20 parties analysées, 1199
   > `evaluations`). La règle « wiper et ré-importer » de `CLAUDE.md` est **retirée** — toute
   > évolution de schéma doit désormais venir avec sa migration.
-  > **Séquencement** : rien ne démarre avant la fin de **US-13** (refonte graphique), qui réécrit
-  > les mêmes écrans et les 3 HP ; la branche sera rebasée sur son résultat.
+  > **Débloquée** (2026-08-18) : US-13 est mergée dans `develop`, la branche est rebasée dessus. La
+  > feuille de style, le squelette de page et l'audit des tokens deviennent des contraintes des
+  > tranches côté écran ; le pass de thème passe de six à huit écrans (tranche 06) ; et le finding
+  > `games-load-failure` d'US-13 est rapatrié dans la tranche 04.
   > - Doc : `CONTEXT.md` (`Profile`, `Player`), ADR-0014 (le profil partitionne), ADR-0015 (la base
   >   porte des données irremplaçables), `CLAUDE.md` (phase dev amendée)
   > - PRD : `.scratch/profiles/PRD.md`
@@ -84,7 +86,7 @@
   >   - `03-import-from-the-profile-page.md` — l'import déménage sur la page du profil (AFK)
   >   - `04-every-view-speaks-of-the-current-profile.md` — scoping de toutes les vues + bandeau (AFK)
   >   - `05-the-analysis-pass-belongs-to-a-profile.md` — la passe d'analyse est scopée (AFK)
-  >   - `06-path-zero-and-the-hp-rework.md` — path 0 commun + reprise des 3 HP (**HITL**, bloqué par US-13)
+  >   - `06-path-zero-and-the-hp-rework.md` — path 0 + reprise des 3 HP et du pass de thème (**HITL**)
 
 ## In review
 
