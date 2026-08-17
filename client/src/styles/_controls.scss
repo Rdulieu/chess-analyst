@@ -96,3 +96,27 @@ fieldset label {
   color: var(--ink-muted);
   font-size: var(--text-s);
 }
+
+// -----------------------------------------------------------------------------
+// The import form, in its finished form. Three groups the Player reads as three
+// things: the username, the month RANGE (its two bounds side by side, which is
+// what makes it read as a range), and the cadence set. The grid reflows on its
+// own — no breakpoint is designed (PRD).
+// -----------------------------------------------------------------------------
+form[aria-label="import"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: start;
+
+  // A set and an action are not fields: they take the whole width rather than
+  // being squeezed into a field-sized column.
+  fieldset,
+  button[type="submit"] {
+    grid-column: 1 / -1;
+  }
+
+  // ...but the action is sized by its label, not by the width it is allowed.
+  button[type="submit"] {
+    justify-self: start;
+  }
+}

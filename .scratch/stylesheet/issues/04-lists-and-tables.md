@@ -1,6 +1,6 @@
 # 04 — Lists and tables, styled
 
-Status: ready-for-agent
+Status: done
 
 Implemented on the business-story integration branch **`integration/US-13-stylesheet`**: branch from
 it and merge back into it, never into `develop`. Auto-merges into the integration branch once the
@@ -33,22 +33,22 @@ order, with the same accessible names.
 
 ## Acceptance criteria
 
-- [ ] Game list entries align their checkbox, description and badge in consistent columns for the
+- [x] Game list entries align their checkbox, description and badge in consistent columns for the
       whole list.
-- [ ] Rows are separated by spacing and at most a hairline; no heavy rules.
-- [ ] A long Game list stays scannable, and its rows have a comfortable target size.
-- [ ] The import form groups its username, its range and its cadence choices legibly, with the
+- [x] Rows are separated by spacing and at most a hairline; no heavy rules.
+- [x] A long Game list stays scannable, and its rows have a comfortable target size.
+- [x] The import form groups its username, its range and its cadence choices legibly, with the
       primary action visibly primary.
-- [ ] Both tables show column headers that read as headers.
-- [ ] Numeric columns are right-aligned and use tabular numerals, so digits align vertically.
-- [ ] On the Stats table, the three row groups are visually distinguishable, each identifiable by its
+- [x] Both tables show column headers that read as headers.
+- [x] Numeric columns are right-aligned and use tabular numerals, so digits align vertically.
+- [x] On the Stats table, the three row groups are visually distinguishable, each identifiable by its
       own header.
-- [ ] Both tables scroll within their own container if they exceed the available width; the page never
+- [x] Both tables scroll within their own container if they exceed the available width; the page never
       scrolls horizontally.
-- [ ] Everything holds in both themes, with text contrast at least 4.5:1 (3:1 for large text).
-- [ ] No value, control or accessible name is added, removed or reordered.
-- [ ] No markup restructuring beyond adding classes: the structure came from slice 01.
-- [ ] Build and the full test suite are green.
+- [x] Everything holds in both themes, with text contrast at least 4.5:1 (3:1 for large text).
+- [x] No value, control or accessible name is added, removed or reordered.
+- [x] No markup restructuring beyond adding classes: the structure came from slice 01.
+- [x] Build and the full test suite are green.
 
 ### Feature Path (FP)
 
@@ -75,3 +75,45 @@ volume that makes scannability meaningful.
 ## Blocked by
 
 - `02-tokens-and-the-app-chrome`
+
+## FP run (feature/US-13-04-lists-and-tables)
+
+Run by a subagent against the running app (server on 3104, client on 5204, the main checkout's
+database copied in). **✅ green, no blocking finding.**
+
+| Step | Result | Evidence |
+|---|---|---|
+| 1 — import form | ✅ | `display: grid`, `repeat(auto-fit, minmax(11rem, 1fr))` → three tracks at 1004px; the cadence `fieldset` and the submit both span `1 / -1`; `Import` is the only filled button (accent ground, weight 600) |
+| 2 — import then read the list | ✅ | a real chess.com import (`hikaru`, 2025-01, blitz) took the list 166 → **499 Games**; `selection` x=172.5, `description` x=208.5, `state` x=744.2 — one value each across all 499 rows; row height 36.8px throughout, separator 0.8px |
+| 3 — select and analyse | ✅ | selection enables the action with its label unchanged, progress read `12/141 → 132/141`, badge count 20 → 22, badges still at x=744.2, selection cleared |
+| 4 — Stats | ✅ | collapsed table filling its container, quiet `thead th` (13px, `--ink-muted`, hairline), last three columns `text-align: end`, `tabular-nums` on every cell, group headers on `--ground-sunk` with `padding-top: 24px` |
+| 5 — Weak opening | ✅ | 121 rows, first three columns start-aligned and last three end-aligned, ordering by game count still descending (133, 30, 22, 16…), 26 `data-weak` rows keeping their `⚠` marker |
+| 6 — narrow viewport | ✅ | `scrollWidth === clientWidth` on all three screens at 380px and 700px; the openings container scrolls instead (1231/333 at 380px), the form folds to one column, the Game rows keep their three tracks |
+| 7 — dark theme | ✅ | every token resolves, cues intact, layout identical |
+
+Worst text contrast measured over every text element, against the background actually rendered
+behind it: **5.75:1 light / 6.81:1 dark** on all three screens (the nav link, in both cases) —
+zero failures. No unresolved `var(--…)`, no console error or warning.
+
+## Findings
+
+- **[non-blocking] Only the badge column's start edge is constant, not the description's end.** A row
+  with no badge gives the state track 0px and lets the description take the slack (606.9px against
+  519.6 + 87.3 on a badged row). Every badge still lands on the same x, so the sweep the criterion
+  asks for works; what shifts is the boundary between columns 2 and 3. A minimum width on the state
+  track would make it literal. Deliberately left as found — the requester's call.
+- **[non-blocking] The checkboxes are still the browser's, and read as bright white squares at
+  night** (no `accent-color`). A control concern rather than a list concern; noted so the forms work
+  does not lose it.
+- **[non-blocking] On Stats, a cadence with no games leaves its `Win rate` cell empty** rather than
+  showing a dash, so that one column does not read straight down. Pre-existing content behaviour,
+  untouched here.
+- **[environment note] The FP mutated the worktree's throwaway database**: the import added 333 Games
+  and two Games were analysed (166 → 499, 20 → 22 analysed). Legitimate under the dev-phase rules,
+  and the database is the worktree's own copy. Worth recording that chess.com is reachable from here,
+  so a later FP can rely on a real import.
+
+## Deviations
+
+None. **Not one line of markup was touched** — slice 01's `[data-part]`, `[data-scroll="x"]`,
+`[scope="colgroup"]` and `data-weak` hooks carried the whole slice, which is what that slice was for.
