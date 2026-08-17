@@ -17,9 +17,13 @@ export function setPlayerUsername(db: Db, username: string): void {
     .run();
 }
 
-/** Every retained Game. For US-1 this returns exactly one: the fixture. */
-export function listGames(db: Db): Game[] {
-  return db.select().from(games).all();
+/**
+ * The Games of **one `Profile`** (ADR-0014). There is deliberately no way to
+ * ask for "every Game": a list spanning two Profiles would be one player's
+ * history with another's mixed in, and nothing in the rows would say so.
+ */
+export function listGames(db: Db, profileId: number): Game[] {
+  return db.select().from(games).where(eq(games.profileId, profileId)).all();
 }
 
 /** A single Game's full detail, or undefined when no Game has that id. */

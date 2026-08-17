@@ -60,7 +60,7 @@ describe("createImportJob", () => {
     // appearing all at once at the end.
     expect(started).toMatchObject({ running: true, total: 3, done: 0 });
     expect(started.result).toMatchObject({ imported: 0, months: [] });
-    expect(listGames(db)).toHaveLength(0); // not awaited: nothing imported yet
+    expect(listGames(db, profileId)).toHaveLength(0); // not awaited: nothing imported yet
     await job.idle();
   });
 
@@ -79,7 +79,7 @@ describe("createImportJob", () => {
     expect(status.done).toBe(3);
     expect(status.total).toBe(3);
     expect(status.result).toMatchObject({ imported: 2, alreadyPresent: 0 });
-    expect(listGames(db)).toHaveLength(2);
+    expect(listGames(db, profileId)).toHaveLength(2);
   });
 
   it("ignores a start while an Import is already running and keeps the running status", async () => {
