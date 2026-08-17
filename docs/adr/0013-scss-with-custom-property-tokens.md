@@ -45,6 +45,13 @@ to the bundle) and express the **tokens as CSS custom properties on `:root`**, n
   the theme at all**: White's share is light because it is White, not because the theme is light.
   They gain a border instead, to stay detachable from a dark ground. A colour that says "White"
   does not say "background".
+- **A severity tint laid on a board square belongs to the constant family, not to the semantic
+  one.** Found by measuring the pilot: the highlighted square rendered its piece at 1.49:1 in the
+  dark theme, because a theme-varying tint had been put under a piece whose ink is constant by
+  nature. Severities therefore need a dedicated constant variant for the board
+  (`--square-inaccuracy` / `--square-mistake` / `--square-blunder`), distinct from the chrome's
+  `--tint-*`, which do follow the theme. The dividing line is not the meaning of the colour but
+  **what is painted on top of it**.
 - **Dark mode follows the system preference only** — a `@media (prefers-color-scheme: dark)` block
   redefining tokens. No control, no application state, no persistence, no server change. A
   `[data-theme]` toggle can be grafted later without touching a single rule.
@@ -57,3 +64,41 @@ to the bundle) and express the **tokens as CSS custom properties on `:root`**, n
 - Semantic highlights must survive the migration from inline to selectors, including their
   **non-chromatic cue** (the US-3 accessibility finding). Layout inline styles (`maxWidth`, `flex`,
   fixed heights in `Board.tsx`) are a separate family with no accessibility stake.
+- **Contrast is a blocking, measured criterion, and it is measured differently on the board.** Text
+  is held to 4.5:1 (3:1 when large) against the background actually rendered behind it, in **both**
+  themes. The board is **non-text content** — `react-chessboard` draws SVG pieces — so it is held to
+  the 3:1 graphics rule, and against **`max(fill, stroke)`** of the piece, not its fill alone: a
+  white piece on a light square measures 1.24:1 on fill and 14.65:1 on stroke, and it is the stroke
+  that carries legibility. Judged on fill alone the criterion would reject a perfectly legible
+  board. Measured on the validated pilot, the worst case across every piece/square combination is
+  4.81:1.
+
+## The frozen token set
+
+Validated on a throwaway pilot (`/` and `/analyse`, both themes) before any slice, precisely so the
+one decision nobody can delegate — taste — was not sitting behind a merged slice. The pilot is kept
+as the visual reference at `.scratch/stylesheet/pilot-reference.html`; it is a mockup, not code to
+port (its board is CSS, its curve a frozen SVG).
+
+| | light | dark |
+|---|---|---|
+| `--ground` | `#ffffff` | `#16181a` |
+| `--ground-sunk` | `#f4f5f7` | `#1e2124` |
+| `--ink` | `#14171a` | `#e6e8ea` |
+| `--ink-muted` | `#5a6169` | `#a2a9b0` |
+| `--border` | `#d7dbe0` | `#343b41` |
+| `--accent` / `--accent-ink` | `#1f5c8c` / `#ffffff` | `#8cbde8` / `#10222f` |
+| `--tint-review` + `-ink` | `#fbe0e0` / `#6e1414` | `#4a2020` / `#ffcaca` |
+| `--tint-ok` + `-ink` | `#e8f5e9` / `#17501c` | `#1c3a20` / `#b7e7bd` |
+| `--tint-fail` + `-ink` | `#fde8e6` / `#8a1b12` | `#4d1d18` / `#ffc3ba` |
+| `--tint-inaccuracy` + `-ink` | `#fff3b0` / `#4a3c00` | `#4a4218` / `#ffec9e` |
+| `--tint-mistake` + `-ink` | `#ffcc80` / `#4d2f00` | `#543417` / `#ffd7a8` |
+| `--tint-blunder` + `-ink` | `#ff8a80` / `#5c0f08` | `#5a201c` / `#ffbcb5` |
+
+Constant in both themes: `--white-share` `#ececec`, `--black-share` `#2f2f2f`, `--square-light`
+`#e9e2cf`, `--square-dark` `#9a8467`, `--square-inaccuracy` `#f2e08a`, `--square-mistake` `#edb463`,
+`--square-blunder` `#e8837a`.
+
+Scales: space `.25 / .5 / 1 / 1.5 / 2.5rem`; text `.8125 / 1 / 1.125 / 1.5rem`; radius `6px` and a
+pill; reading column `72ch`, with a wide variant for `/danger` and `/analyse`; `system-ui` for prose
+and a mono stack for evaluations, glyphs and SAN; `tabular-nums` app-wide.

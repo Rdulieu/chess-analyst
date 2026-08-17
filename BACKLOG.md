@@ -82,6 +82,8 @@
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
 
+## Doing
+
 - **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
   > **Grillée** (2026-08-17) — **ADR-0013**. `CONTEXT.md` **inchangé, et c'est un constat** : une
   > feuille de style n'introduit aucun concept de domaine, et « token » / « rôle de thème » sont du
@@ -165,6 +167,34 @@
   >   (plutôt que la greffe bornée sur HP-03 que je recommandais) : chaque HP gagne une **étape
   >   finale** qui repasse sous préférence sombre les écrans **déjà atteints**, sans réimporter ni
   >   réanalyser — le surcoût est du rendu, pas du parcours.
+  > - **Exigence du demandeur : la suite HP doit être revue pour visiter tous les écrans.** Une passe
+  >   thème qui ne voit pas un écran ne prouve rien sur cet écran, et aujourd'hui `/stats` n'est
+  >   visité par aucun HP, `/danger` seulement en drive-by. Forme retenue : l'étape finale de passe
+  >   thème **parcourt la navigation** et traverse les six écrans dans les deux thèmes, en réutilisant
+  >   l'état déjà construit — les journeys elles-mêmes restent des parcours de valeur et ne se
+  >   transforment pas en balayage de couverture. À confirmer au PRD.
+  >
+  > **Pilote validé avant toute tranche** (prototype jetable, `/` et `/analyse` dans les deux thèmes,
+  > conservé comme référence visuelle dans `.scratch/stylesheet/pilot-reference.html`). Produit
+  > **maintenant** plutôt qu'en tranche 2 sur remarque du demandeur : le goût est la seule décision
+  > qu'on ne peut pas déléguer, et elle ne devait pas se retrouver derrière une tranche déjà mergée.
+  > Deux pilotes plutôt qu'un, parce qu'une palette qui tient sur une liste peut s'effondrer sur la
+  > page Analyse. Il a payé son coût — **trois enseignements que rien d'autre n'aurait donnés avant
+  > la fin** :
+  > - **La règle des trois familles avait une faille** : une sévérité posée **sur une case** relève de
+  >   la famille constante, pas de la famille sémantique, parce que la pièce qu'elle porte garde son
+  >   encre dans les deux thèmes. La case surlignée tombait à **1.49:1** en sombre. D'où
+  >   `--square-inaccuracy/mistake/blunder`, constantes, distinctes des `--tint-*` du châssis. La
+  >   frontière n'est pas le sens de la couleur mais **ce qui est peint par-dessus**.
+  > - **Le plateau relève du 3:1 des graphiques non textuels**, pas du 4.5:1 du texte — en production
+  >   ce sont les SVG de `react-chessboard`.
+  > - **Et il se juge sur `max(remplissage, contour)` contre la case**, pas sur le remplissage seul :
+  >   une pièce blanche sur case claire mesure 1.24:1 en remplissage et 14.65:1 en contour, et c'est
+  >   le contour qui porte la lisibilité. Jugé au remplissage, le critère rejetterait un plateau
+  >   parfaitement lisible. Pire cas mesuré sur le pilote validé, toutes combinaisons confondues :
+  >   **4.81:1**. Texte : **0 faute** sur 63 nœuds par thème, aucun débordement horizontal.
+  >
+  > Tokens figés et référence visuelle : dans **ADR-0013**.
   >
   > Vigilances relevées : **aucun HP ne visite `/stats`**, or c'est l'écran dont le markup change le
   > plus — sa vérification repose entièrement sur sa FP. Les tests composants tournent en **jsdom**,
@@ -176,8 +206,6 @@
   > seule page sans `<section>` ni `<h2>`** (le squelette la réaligne) et porte **la seule chaîne
   > restée en anglais** de l'app (« No games yet — import your chess.com history to get started. ») ;
   > `client/package.json` déclare `vite ^8.1.5` alors que le `node_modules` installé est en 5.4.21.
-
-## Doing
 
 ## In review
 
@@ -301,7 +329,6 @@
   > d'HP-01, qui analyse déjà deux parties pour de vrai. Le demandeur se contente de **cette seule
   > étape 9** pour la PR `integration → develop` (HP-02 et HP-03 ne passent pas par Analyse) — à
   > reconfirmer au moment de la PR.
-
 
 - **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
   > **En revue** — PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
