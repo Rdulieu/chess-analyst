@@ -40,6 +40,14 @@ function stub(openings: WeakOpeningEntry[]) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("OpeningsPage", () => {
+  it("wraps its table in its own scroll container, so a wide table never scrolls the page", async () => {
+    stub(ENTRIES);
+    render(<OpeningsPage />);
+
+    const table = await screen.findByRole("table", { name: /ouvertures/i });
+    expect(table.parentElement?.dataset.scroll).toBe("x");
+  });
+
   it("renders a row per entry — opening name · ECO, side, cadence, spelled-out tally, Win rate — in the order served", async () => {
     stub(ENTRIES);
     render(<OpeningsPage />);

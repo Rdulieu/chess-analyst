@@ -44,7 +44,9 @@ export function GamesPage() {
   };
 
   return (
-    <>
+    <section aria-labelledby="games-heading">
+      <h2 id="games-heading">Mes parties</h2>
+
       <ImportForm onImported={refresh} />
 
       {games && games.length === 0 && (
@@ -69,6 +71,6 @@ export function GamesPage() {
           />
         </>
       )}
-    </>
+    </section>
   );
 }

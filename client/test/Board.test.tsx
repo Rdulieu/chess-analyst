@@ -230,6 +230,28 @@ describe("Evaluation curve", () => {
     expect(curve(container)).toBeTruthy();
   });
 
+  it("holds the board and the annotations as two named panes of one row", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    const row = container.querySelector('[data-row="board"]')!;
+    const board = row.querySelector('[data-pane="board"]')!;
+    const annotations = row.querySelector('[data-pane="annotations"]')!;
+
+    expect(board).toBeTruthy();
+    expect(annotations).toBeTruthy();
+    // Named panes rather than anonymous divs sized in pixels: the row can later
+    // be laid out — and reflowed into one column — without touching the board.
+    expect(annotations.contains(curve(container)!)).toBe(true);
+  });
+
+  it("keeps the board's pane when the annotations pane goes away", () => {
+    const { container } = render(<Board pgn="1. e4 e5" />);
+
+    const row = container.querySelector('[data-row="board"]')!;
+    expect(row.querySelector('[data-pane="board"]')).toBeTruthy();
+    expect(row.querySelector('[data-pane="annotations"]')).toBeNull();
+  });
+
   it("draws no curve for a Game with no Evaluations, or with the annotations hidden", () => {
     const { container } = render(<Board pgn="1. e4 e5" />);
 

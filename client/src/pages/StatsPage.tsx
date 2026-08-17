@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { fetchStats } from "../api";
 import { Tally } from "../components/Tally";
 import type { Side, StatsBucket, StatsSummary, TimeControlCategory } from "../types";
@@ -18,13 +18,41 @@ const SIDES: { key: Side; label: string }[] = [
 const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
 
-/** One results line: games · tally · Win rate (rate omitted when there are no games). */
-function Line({ bucket }: { bucket: StatsBucket }) {
+/**
+ * One results row: its label as the row header, then games, the tally and the
+ * `Win rate` each in its own cell — one concern per cell, so a column can be
+ * scanned (the rate cell stays empty when there are no games).
+ */
+function Row({ label, bucket, id }: { label: string; bucket: StatsBucket; id?: string }) {
   return (
-    <>
-      {games(bucket.games)} · <Tally win={bucket.win} draw={bucket.draw} loss={bucket.loss} />
-      {bucket.winRate !== null && <> · {percent(bucket.winRate)}</>}
-    </>
+    <tr>
+      <th scope="row" id={id}>
+        {label}
+      </th>
+      <td>{games(bucket.games)}</td>
+      <td>
+        <Tally win={bucket.win} draw={bucket.draw} loss={bucket.loss} />
+      </td>
+      <td>{bucket.winRate !== null ? percent(bucket.winRate) : null}</td>
+    </tr>
+  );
+}
+
+/**
+ * A breakdown as a row group: its own header row names it, and the group is
+ * labelled by that header — which is what lets the Player tell, for any row,
+ * which breakdown it belongs to.
+ */
+function Group({ id, header, children }: { id: string; header: string; children: ReactNode }) {
+  return (
+    <tbody aria-labelledby={id}>
+      <tr>
+        <th scope="colgroup" colSpan={4} id={id}>
+          {header}
+        </th>
+      </tr>
+      {children}
+    </tbody>
   );
 }
 
@@ -50,29 +78,39 @@ export function StatsPage() {
       {!stats ? null : stats.total.games === 0 ? (
         <p>Aucune partie importée — importez votre historique pour voir vos statistiques.</p>
       ) : (
-        <>
-          <p aria-label="total">
-            <strong>Total</strong> — <Line bucket={stats.total} />
-          </p>
+        // One table rather than three: the Total, the cadences and the sides are
+        // row groups of the same results, so a column can be scanned across all
+        // of them. The former "Par cadence" / "Par côté" sub-headings are now
+        // the groups' header rows, and carry the accessible names the two lists
+        // used to carry.
+        <div data-scroll="x">
+          <table aria-label="résultats">
+            <thead>
+              <tr>
+                <th scope="col">Ensemble</th>
+                <th scope="col">Parties</th>
+                <th scope="col">Résultats</th>
+                <th scope="col">Win rate</th>
+              </tr>
+            </thead>
 
-          <h3>Par cadence</h3>
-          <ul aria-label="par cadence">
-            {CADENCES.map(({ key, label }) => (
-              <li key={key}>
-                {label} : <Line bucket={stats.byCategory[key]} />
-              </li>
-            ))}
-          </ul>
+            <tbody aria-labelledby="stats-total">
+              <Row id="stats-total" label="Total" bucket={stats.total} />
+            </tbody>
 
-          <h3>Par côté</h3>
-          <ul aria-label="par côté">
-            {SIDES.map(({ key, label }) => (
-              <li key={key}>
-                {label} : <Line bucket={stats.bySide[key]} />
-              </li>
-            ))}
-          </ul>
-        </>
+            <Group id="stats-by-cadence" header="Par cadence">
+              {CADENCES.map(({ key, label }) => (
+                <Row key={key} label={label} bucket={stats.byCategory[key]} />
+              ))}
+            </Group>
+
+            <Group id="stats-by-side" header="Par côté">
+              {SIDES.map(({ key, label }) => (
+                <Row key={key} label={label} bucket={stats.bySide[key]} />
+              ))}
+            </Group>
+          </table>
+        </div>
       )}
     </section>
   );

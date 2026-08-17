@@ -39,46 +39,53 @@ export function OpeningsPage() {
       {!openings ? null : openings.length === 0 ? (
         <p>Aucune partie importée — importez votre historique pour voir vos ouvertures.</p>
       ) : (
-        <table aria-label="ouvertures">
-          <thead>
-            <tr>
-              <th scope="col">Ouverture</th>
-              <th scope="col">Côté</th>
-              <th scope="col">Cadence</th>
-              <th scope="col">Parties</th>
-              <th scope="col">Résultats</th>
-              <th scope="col">Win rate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {openings.map((o) => (
-              <tr
-                key={`${o.eco}-${o.side}-${o.cadence}`}
-                data-weak={isWeak(o) ? "true" : undefined}
-                style={isWeak(o) ? { backgroundColor: "#fbe0e0" } : undefined}
-              >
-                <td>
-                  {o.openingName} · {o.eco}
-                </td>
-                <td>{SIDE_LABEL[o.side]}</td>
-                <td>{CADENCE_LABEL[o.cadence]}</td>
-                <td>{o.games}</td>
-                <td>
-                  <Tally win={o.win} draw={o.draw} loss={o.loss} />
-                </td>
-                <td>
-                  {o.winRate !== null ? percent(o.winRate) : null}
-                  {isWeak(o) && (
-                    <span title="Ouverture faible, à revoir" aria-label="ouverture faible à revoir">
-                      {" "}
-                      ⚠
-                    </span>
-                  )}
-                </td>
+        // Six columns of figures: the table gets its own scroll container so a
+        // narrow window scrolls the table, never the page.
+        <div data-scroll="x">
+          <table aria-label="ouvertures">
+            <thead>
+              <tr>
+                <th scope="col">Ouverture</th>
+                <th scope="col">Côté</th>
+                <th scope="col">Cadence</th>
+                <th scope="col">Parties</th>
+                <th scope="col">Résultats</th>
+                <th scope="col">Win rate</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {openings.map((o) => (
+                <tr
+                  key={`${o.eco}-${o.side}-${o.cadence}`}
+                  data-weak={isWeak(o) ? "true" : undefined}
+                  style={isWeak(o) ? { backgroundColor: "#fbe0e0" } : undefined}
+                >
+                  <td>
+                    {o.openingName} · {o.eco}
+                  </td>
+                  <td>{SIDE_LABEL[o.side]}</td>
+                  <td>{CADENCE_LABEL[o.cadence]}</td>
+                  <td>{o.games}</td>
+                  <td>
+                    <Tally win={o.win} draw={o.draw} loss={o.loss} />
+                  </td>
+                  <td>
+                    {o.winRate !== null ? percent(o.winRate) : null}
+                    {isWeak(o) && (
+                      <span
+                        title="Ouverture faible, à revoir"
+                        aria-label="ouverture faible à revoir"
+                      >
+                        {" "}
+                        ⚠
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

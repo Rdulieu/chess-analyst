@@ -58,7 +58,8 @@ export function DangerPage() {
           : "nothing-recurring";
 
   return (
-    <section aria-labelledby="danger-heading">
+    // `wide`: thirty diagrams laid out as a grid need more than the reading column.
+    <section aria-labelledby="danger-heading" data-width="wide">
       <h2 id="danger-heading">Positions dangereuses</h2>
 
       {state === "error" && (
@@ -114,37 +115,42 @@ function DangerList({ dangers }: { dangers: DangerEntry[] }) {
             data-serious={isDangerous(d) ? "true" : undefined}
             style={isDangerous(d) ? { backgroundColor: "#fbe0e0" } : undefined}
           >
-            <div style={{ maxWidth: 240 }}>
-              <Chessboard
-                options={{
-                  id: `danger-board-${i}`,
-                  position: boardFen(d.fen),
-                  // Oriented to the side that has the move, read from the
-                  // entry's own stored FEN. Orienting to "the Player's side"
-                  // is **undefined** here, not merely unimplemented: the
-                  // 4-field FEN identity carries no player side, so one entry
-                  // merges Games played as White and as Black
-                  // (CONTEXT.md → Board orientation).
-                  boardOrientation: sideToMove(d.fen),
-                  allowDragging: false,
-                  showAnimations: false,
-                }}
-              />
-            </div>
-            {/* Spelled out, so the fact is not carried by the orientation alone. */}
-            <p aria-label="trait">Trait aux {SIDE_LABEL[sideToMove(d.fen)]}</p>
-            <p>
-              {d.reached} fois atteinte · {percent(d.proportion)} d'erreur sérieuse
-              {isDangerous(d) && (
-                <span
-                  title="Position dangereuse, à revoir"
-                  aria-label="position dangereuse, à revoir"
-                >
-                  {" "}
-                  ⚠
-                </span>
-              )}
-            </p>
+            {/* A self-contained card: the diagram, the side to move and the
+                figures of one Position, so the entries can later be laid out as
+                a reflowing grid rather than a single column. */}
+            <article>
+              <div style={{ maxWidth: 240 }}>
+                <Chessboard
+                  options={{
+                    id: `danger-board-${i}`,
+                    position: boardFen(d.fen),
+                    // Oriented to the side that has the move, read from the
+                    // entry's own stored FEN. Orienting to "the Player's side"
+                    // is **undefined** here, not merely unimplemented: the
+                    // 4-field FEN identity carries no player side, so one entry
+                    // merges Games played as White and as Black
+                    // (CONTEXT.md → Board orientation).
+                    boardOrientation: sideToMove(d.fen),
+                    allowDragging: false,
+                    showAnimations: false,
+                  }}
+                />
+              </div>
+              {/* Spelled out, so the fact is not carried by the orientation alone. */}
+              <p aria-label="trait">Trait aux {SIDE_LABEL[sideToMove(d.fen)]}</p>
+              <p>
+                {d.reached} fois atteinte · {percent(d.proportion)} d'erreur sérieuse
+                {isDangerous(d) && (
+                  <span
+                    title="Position dangereuse, à revoir"
+                    aria-label="position dangereuse, à revoir"
+                  >
+                    {" "}
+                    ⚠
+                  </span>
+                )}
+              </p>
+            </article>
           </li>
         ))}
       </ul>

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, it, expect, vi } from "vitest";
@@ -23,6 +23,28 @@ const json = (body: unknown, status = 200) =>
   ({ ok: status < 300, status, json: async () => body }) as Response;
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe("GamesPage — the screen announces itself", () => {
+  it("is one region named 'Mes parties', carrying a level-2 heading", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/games") return json([]);
+        if (url === "/api/settings") return json({ username: null });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage />
+      </MemoryRouter>,
+    );
+
+    const screenRegion = await screen.findByRole("region", { name: /mes parties/i });
+    expect(within(screenRegion).getByRole("heading", { level: 2, name: /mes parties/i })).toBeTruthy();
+  });
+});
 
 describe("GamesPage — analysis pass", () => {
   it("selects a Game, runs the analysis with a progress readout, and shows 'analysée' when done", async () => {

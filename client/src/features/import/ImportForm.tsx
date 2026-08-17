@@ -96,18 +96,30 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
   return (
     <>
       <form aria-label="import" onSubmit={submit}>
-        <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} />
-        </label>
-        <label>
-          Du
-          <input type="month" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label>
-          Au
-          <input type="month" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
+        {/* Label and field are siblings, the label associated by `for`: that is
+            what lets the label sit above its field and every field share one
+            height, instead of the text and the control being one inline run. */}
+        <div>
+          <label htmlFor="import-username">Username</label>
+          <input
+            id="import-username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="import-from">Du</label>
+          <input
+            id="import-from"
+            type="month"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="import-to">Au</label>
+          <input id="import-to" type="month" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
         <fieldset>
           <legend>Time control categories</legend>
           {CATEGORIES.map((c) => (
@@ -117,7 +129,9 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
             </label>
           ))}
         </fieldset>
-        <button type="submit" disabled={running}>
+        {/* The primary action, named as such on the element rather than left to
+            whichever button happens to be styled first. */}
+        <button type="submit" data-action="primary" disabled={running}>
           Import
         </button>
       </form>
