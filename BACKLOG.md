@@ -196,6 +196,28 @@
   >
   > Tokens figés et référence visuelle : dans **ADR-0013**.
   >
+  > PRD : `.scratch/stylesheet/PRD.md`. **Découpée en 6 issues**, toutes `ready-for-agent`, sur
+  > `integration/US-13-stylesheet` :
+  > - `01-restructure-markup-to-the-skeleton` — tous les écrans au squelette, **zéro style**, les
+  >   tests adaptés ici et nulle part ailleurs ; FP structurelle, pas esthétique
+  > - `02-tokens-and-the-app-chrome` — le pilote rendu réel : SCSS câblé, tokens, châssis, bloc
+  >   `prefers-color-scheme: dark`, et le test de cohérence des tokens (bloquée par 01)
+  > - `03-semantic-tints-move-to-tokens` — la tranche à risque : une source par teinte, famille
+  >   constante du plateau, repères non chromatiques intacts (bloquée par 02)
+  > - `04-lists-and-tables` — Mes parties, `/stats`, `/openings` : rangées constantes, chiffres
+  >   alignés (bloquée par 02)
+  > - `05-dense-screens` — `/danger` en grille de cartes, explorateur, rangée d'Analyse fluide ;
+  >   après elle, **plus aucun style inline de mise en page** (bloquée par 02)
+  > - `06-revise-the-hp-suite` — adapter les 3 HP au markup, puis l'étape finale qui parcourt les six
+  >   écrans dans les deux thèmes ; ferme l'angle mort `/stats` (bloquée par 03, 04, 05)
+  >
+  > Seams confirmés : **agentique en apex** (styles calculés via CDP — le seul endroit où une feuille
+  > de style est observable ; le script de mesure du pilote est réutilisable comme outillage de FP),
+  > **composants en jsdom** pour la structure et le nom du token seulement (jsdom ne charge pas la
+  > feuille), un **seam nouveau** de cohérence des tokens au niveau du repo, et le build. Aucun test
+  > serveur : l'US ne touche pas le serveur. Régression visuelle par captures **rejetée** (dépendance,
+  > binaires versionnés, flake notoire, aucune CI pour la porter).
+  >
   > Vigilances relevées : **aucun HP ne visite `/stats`**, or c'est l'écran dont le markup change le
   > plus — sa vérification repose entièrement sur sa FP. Les tests composants tournent en **jsdom**,
   > qui ne charge pas la feuille : les assertions de couleur littérale devront porter sur le nom du
