@@ -93,10 +93,16 @@ export function EvaluationGraph({
             left: `${(marker.x / span) * 100}%`,
             top: `${100 - marker.whiteShare}%`,
             // The tint AND its own ink, read as a pair from the single source the
-            // move list reads: the two views of one severity cannot drift apart,
-            // and the marker stays legible in both themes without borrowing the
-            // inherited `--ink` (which inverts while the tint does too). The
-            // border in the sheet is `currentColor`, so it follows this ink.
+            // move list reads, so the two views of one severity cannot drift
+            // apart. Why the PAIR and not the tint alone: `top` is the boundary
+            // between the two player grounds, so a marker does not sit on one of
+            // them — it STRADDLES both, and each half of the pair carries it over
+            // one. Measured: in dark the tint detaches it from White's share
+            // (8.53:1) and the border, which is `currentColor` in the sheet and so
+            // follows this ink, detaches it from Black's (11.31:1); in light the
+            // roles swap (9.17 / 11.92). Neither half would do the job alone, in
+            // either theme — which is a stronger reason than "the inherited
+            // `--ink` inverts", true though that also is.
             background: SEVERITY_TINT[marker.severity],
             color: SEVERITY_TINT_INK[marker.severity],
           }}
