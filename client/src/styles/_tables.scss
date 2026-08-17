@@ -1,0 +1,70 @@
+// =============================================================================
+// Tabular data: Stats (one table, three row groups) and Weak opening.
+//
+// Both tables are already `table` markup — slice 01 converted /stats and
+// /openings was one from the start — so every selector here leans on the
+// semantic HTML and not one class is invented. The two tables are styled by ONE
+// set of rules on purpose: a figure means the same thing on both screens, and
+// the day a third tabular screen appears it inherits this for free.
+//
+// Digits align because `body` sets `tabular-nums` app-wide (_base). Nothing
+// re-declares it here: one declaration, inherited.
+// =============================================================================
+
+table {
+  border-collapse: collapse;
+  inline-size: 100%;
+}
+
+th,
+td {
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  // A cell that wraps stops being comparable down its column. The cells hold
+  // their width; when the sum exceeds the container it is the container that
+  // scrolls (`[data-scroll="x"]`, _base), never the page.
+  white-space: nowrap;
+}
+
+// The column headers, read as headers: quieter and smaller than the figures they
+// name, and separated from the body by the one hairline the table needs.
+thead th {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  font-weight: 650;
+  border-block-end: 1px solid var(--border);
+}
+
+// The figures, pushed to the right so digits line up under one another. Counted
+// from the END of the row: both tables finish with the same three figure columns
+// (Parties, Résultats, Win rate) while their leading columns differ, so one rule
+// serves both screens and no class is needed. The stats group header spans the
+// row and is excluded — it is a heading, not a figure.
+tr > :nth-last-child(-n + 3):not([scope="colgroup"]) {
+  text-align: end;
+}
+
+// One hairline BETWEEN rows and none around them: enough to follow a line across
+// six columns, far from the boxed-in look a full border gives. On the cells and
+// not on the `tr`, because a collapsed table draws the cells' borders.
+tbody tr + tr > * {
+  border-block-start: 1px solid var(--border);
+}
+
+// -----------------------------------------------------------------------------
+// The Stats table's row groups. /stats is ONE table whose Total, cadences and
+// sides are `tbody` groups (PRD), which only works if the Player can tell, for
+// any row, which group it belongs to. Two cues do that: the group's own header
+// row sits on the sunk ground, and a gap opens before each group — so the three
+// blocks are separated by SPACE, not by a rule.
+// -----------------------------------------------------------------------------
+th[scope="colgroup"] {
+  background: var(--ground-sunk);
+  color: var(--ink);
+  font-size: var(--text-s);
+  font-weight: 650;
+}
+
+tbody + tbody > tr:first-child > * {
+  padding-block-start: var(--space-4);
+}

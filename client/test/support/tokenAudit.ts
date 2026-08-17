@@ -128,3 +128,54 @@ export function clientSources(root: string = SOURCE_ROOT): string[] {
   walk(root);
   return out;
 }
+
+/**
+ * The declarations the compiled stylesheet attaches to a given selector, merged
+ * across every rule that lists it. Compiled CSS is what the browser gets, so a
+ * declaration written in a nested block or emitted by a mixin counts here — the
+ * test asks what the sheet *says* about an element, not how the SCSS said it.
+ *
+ * Only top-level rules are read: the media block holds token redefinitions and
+ * nothing else (`tokens.test.ts` pins that), so nothing is lost.
+ */
+export function declarationsFor(css: string, selector: string): Map<string, string> {
+  const found = new Map<string, string>();
+  // Sass drops the quotes from `[aria-label="games"]` on the way out, so both
+  // sides are compared unquoted rather than making every test spell the
+  // compiler's output instead of the selector it means.
+  const unquoted = (s: string) => s.replace(/["']/g, "");
+  for (const { selectors, body } of topLevelRules(css)) {
+    if (!selectors.map(unquoted).includes(unquoted(selector))) continue;
+    for (const [, prop, value] of body.matchAll(/([a-z-]+)\s*:\s*([^;}]+)/g)) {
+      found.set(prop.trim(), value.trim());
+    }
+  }
+  return found;
+}
+
+/** Every top-level rule of a compiled sheet, as its selector list and its body. */
+export function topLevelRules(css: string): { selectors: string[]; body: string }[] {
+  const rules: { selectors: string[]; body: string }[] = [];
+  let depth = 0;
+  let start = 0;
+  let open = -1;
+  for (let i = 0; i < css.length; i++) {
+    if (css[i] === "{") {
+      if (depth === 0) open = i;
+      depth++;
+    } else if (css[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        const head = css.slice(start, open).trim();
+        if (!head.startsWith("@")) {
+          rules.push({
+            selectors: head.split(",").map((s) => s.replace(/\s+/g, " ").trim()),
+            body: css.slice(open + 1, i),
+          });
+        }
+        start = i + 1;
+      }
+    }
+  }
+  return rules;
+}
