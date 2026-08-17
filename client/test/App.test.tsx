@@ -47,6 +47,7 @@ describe("App — routing & navigation", () => {
         if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
         if (u === "/api/openings") return jsonResponse({ openings: [] });
         if (u === "/api/danger") return jsonResponse({ dangers: [] });
+        if (u === "/api/profiles") return jsonResponse([]);
         return jsonResponse({}, false, 404);
       }),
     );
@@ -91,6 +92,16 @@ describe("App — routing & navigation", () => {
     // Previous/Next work exactly as before: Next advances one Move.
     await user.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByLabelText("current move").textContent).toBe("e4");
+  });
+
+  it("navigates to the Profils page from the nav", async () => {
+    const user = userEvent.setup();
+    renderApp(["/"]);
+
+    await user.click(screen.getByRole("link", { name: /profils/i }));
+
+    expect(await screen.findByRole("heading", { name: /profils/i })).toBeTruthy();
+    expect(screen.getByRole("form", { name: /nouveau profil/i })).toBeTruthy();
   });
 
   it("navigates to the Explorateur page from the nav", async () => {
