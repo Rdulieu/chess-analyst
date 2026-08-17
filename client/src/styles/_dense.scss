@@ -67,15 +67,21 @@ ul[aria-label="positions dangereuses"] {
 // worse bug: a share cannot fold, so a phone got a 191px diagram beside a 133px
 // strip of four-line rows, for ever, at every width.
 //
-// `auto-fit` folds, and folds on its own: two columns while a 20rem column fits
-// twice, one column when it does not, no width written down anywhere. The board is
+// `auto-fit` folds, and folds on its own: two columns while an 18rem column fits
+// twice inside the reading column, one column when it does not, and no viewport
+// width written down anywhere. The board is
 // the only item placed at all — it spans the rows its neighbours occupy — so
 // nothing is reordered and the reading order a screen reader follows is still the
 // document's, in both configurations.
 // -----------------------------------------------------------------------------
 section[aria-labelledby="explorer-heading"] {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  // 18rem and not 20rem, measured rather than guessed: the explorer reads inside
+  // the 72ch column (~659px), and two 20rem tracks plus the gap want 664 — so a
+  // 20rem minimum silently gave the screen ONE column at every width and put the
+  // candidates back under the diagram, which is the arrangement this slice exists
+  // to undo. Two 18rem tracks fit in 600.
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: var(--space-3) var(--space-4);
   align-items: start;
 

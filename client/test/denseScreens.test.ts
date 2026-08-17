@@ -54,14 +54,17 @@ describe("the explorer, with its candidates beside the board", () => {
   const screen = declarationsFor(css, 'section[aria-labelledby="explorer-heading"]');
 
   it("folds to one column on its own, with no width written down", () => {
-    // `auto-fit`, like the danger grid: two columns while a 20rem column fits
-    // twice and one when it does not. A float was tried here first and could not
+    // `auto-fit`, like the danger grid: two columns while an 18rem column fits
+    // twice inside the reading column, and one when it does not. A float was tried here first and could not
     // do this — a box beside a float overflows rather than wrapping when the room
     // the float leaves is too narrow, and a float capped at a *share* of the
     // column never folds at all, so a phone kept a half-width diagram for ever.
     expect(screen.get("display")).toBe("grid");
     expect(screen.get("grid-template-columns")).toContain("auto-fit");
-    expect(screen.get("grid-template-columns")).toContain("min(20rem, 100%)");
+    // 18rem, and the figure is measured: the explorer reads inside the 72ch
+    // column, where two 20rem tracks plus the gap do not fit — a 20rem minimum
+    // gave the screen one column at EVERY width, candidates back under the board.
+    expect(screen.get("grid-template-columns")).toContain("min(18rem, 100%)");
     expect(screen.get("align-items")).toBe("start");
   });
 
