@@ -223,6 +223,11 @@ section[aria-labelledby="explorer-heading"] {
     // Centred ON its point rather than starting at it: the mark means "here".
     transform: translate(-50%, -50%);
     font: 700 var(--text-s) / 1.2 var(--mono);
+    // `currentColor`, i.e. the severity's own ink, set inline beside its tint. The
+    // border is not decoration: a marker sits ON the boundary between the two
+    // player grounds and straddles both, so the tint detaches it from one and this
+    // border from the other — and which does which swaps with the theme (measured
+    // in the component, beside the pair).
     border: 1px solid currentColor;
     border-radius: var(--radius);
     padding-inline: var(--space-1);
