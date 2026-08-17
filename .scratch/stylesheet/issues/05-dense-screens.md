@@ -150,6 +150,20 @@ accent instead of the browser's blue.
 
 ## Findings
 
+- **[open — a taste decision, deliberately left to the human at `integration → develop`] The
+  explorer's diagram shrank on a wide screen: 384 → 362 → 317px.** Splitting a 72ch reading column in
+  two is what did it, and the fix is one attribute: this screen is named in this very issue's title as
+  one of the three dense ones, yet slice 05 gave `data-width="wide"` to `/danger` and `/analyse` and
+  not to it. The sheet already supports the variant, so the change is `data-width="wide"` on the
+  explorer's `section` and nothing else. It is **not** applied here on purpose: how wide the explorer
+  should be is a matter of taste, taste was frozen on a pilot that covered two screens and not this
+  one, and widening a third screen on an agent's own initiative is exactly the call that belongs to
+  whoever validated the pilot. Cheap either way — and it wants a contrast and overflow pass, like any
+  layout change.
+- **[open — one unmeasured cell] `/analyse` at 480px in the *light* theme was never measured**: the
+  app's dev servers died mid-run (the client answering 404, nothing listening on the API port) and the
+  worktree went with the slice. `/analyse` passed at 380, 600, 1024 and 1440 in light and at 480 in
+  dark, so the gap is narrow, but it is a gap and not a pass.
 - **[found and fixed twice] The explorer's layout was a float, and a float was the wrong tool.**
   Round one: `min(24rem, 100%)` left a 49px strip beside the board while "Départ" is 86px, and the
   page scrolled sideways at 480 and 380px. The lesson is worth keeping — a box that establishes its
