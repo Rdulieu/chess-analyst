@@ -140,3 +140,27 @@ which is what the constant family was for.
 as source, so `--tint-#{$severity}` is a name it cannot see — and that audit is the only thing
 standing in for the compile error custom properties cost us. Found here by the audit itself, which
 reported `--tint-` as undeclared. The three severity rules are written out for that reason.
+
+### Deviation: this slice touched markup
+
+Slice 01 was meant to be the only slice touching markup, and this one bent that property twice, with
+the requester's approval: `data-severity` on the move list's glyph span and `data-failed` on the
+import's failed month line. Attribute-only — no element added, moved or renamed, no accessible name
+touched. The alternative was selecting on `[aria-label="blunder"]`, which welds the stylesheet to the
+accessible name in an app whose strings are still being cleaned up; attribute hooks are also the
+convention slice 01 established (`data-weak`, `data-serious`, `data-player`).
+
+### Slice 02's findings, closed here
+
+- **The weak-opening rows and the `/danger` cards at 1.02:1 in dark** — closed. The inline light
+  `#fbe0e0` is gone; both now read `--tint-review` **with its own ink**, which is exactly the hole
+  that finding exposed: a tint that follows the theme over text that inherits `--ink` inverts against
+  itself. Measured 9.50:1 light, 9.58:1 dark.
+- **The constant player/board family not consumed from TypeScript** — closed for the two players'
+  colours (the winning-chances bar and the curve's area both read `--white-share` / `--black-share`,
+  byte-identical between themes). **Still open for the board's base squares**: `--square-light` /
+  `--square-dark` remain declared and unconsumed, and with them the coordinate labels at 2.29:1. No
+  slice claims them (finding above).
+- **Component tests asserting a literal colour** — closed: they assert token names, in `Board`,
+  `WinningChancesBar`, `OpeningsPage`, `DangerPage`, `GameList`, `ImportSummary` and the new
+  `severity` tests.
