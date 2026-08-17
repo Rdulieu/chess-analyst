@@ -50,30 +50,30 @@ side by side; production uses the media query, with the same token names.
 
 ## Acceptance criteria
 
-- [ ] SCSS compiles through the existing build with no configuration beyond the one devDependency;
+- [x] SCSS compiles through the existing build with no configuration beyond the one devDependency;
       the stylesheet is imported once from the client's entry point.
-- [ ] The token set of ADR-0013 is declared: theme roles, semantic tints with their ink, and the
+- [x] The token set of ADR-0013 is declared: theme roles, semantic tints with their ink, and the
       constant player/board family, plus the space, type, radius and reading-column scales.
-- [ ] No colour, spacing or type value is hard-coded outside the token declarations.
-- [ ] The header reads as the app's chrome, distinct from the content beneath it.
-- [ ] The navigation marks the current screen by weight **and** a border, not by colour alone.
-- [ ] Content sits in a bounded reading column, with a wide variant available for the dense screens.
-- [ ] Buttons distinguish primary from secondary and show a disabled state; every interactive element
+- [x] No colour, spacing or type value is hard-coded outside the token declarations.
+- [x] The header reads as the app's chrome, distinct from the content beneath it.
+- [x] The navigation marks the current screen by weight **and** a border, not by colour alone.
+- [x] Content sits in a bounded reading column, with a wide variant available for the dense screens.
+- [x] Buttons distinguish primary from secondary and show a disabled state; every interactive element
       has a clearly visible focus indicator.
-- [ ] Form fields and fieldsets are consistently sized with their labels above them.
-- [ ] Figures use tabular numerals app-wide.
-- [ ] With the system preference set to dark, the whole app follows: no unresolved custom property,
+- [x] Form fields and fieldsets are consistently sized with their labels above them.
+- [x] Figures use tabular numerals app-wide.
+- [x] With the system preference set to dark, the whole app follows: no unresolved custom property,
       no element left with a light-theme background.
-- [ ] Text contrast is at least 4.5:1 (3:1 for large text) against the background actually rendered
+- [x] Text contrast is at least 4.5:1 (3:1 for large text) against the background actually rendered
       behind it, **in both themes**.
-- [ ] Player and board colours are byte-for-byte identical between the two themes.
-- [ ] The dark theme is expressed as a redefinition of tokens; no rule is duplicated per theme.
-- [ ] The token-consistency test exists, fails when a consumed custom property is undeclared in
+- [x] Player and board colours are byte-for-byte identical between the two themes.
+- [x] The dark theme is expressed as a redefinition of tokens; no rule is duplicated per theme.
+- [x] The token-consistency test exists, fails when a consumed custom property is undeclared in
       either theme, and passes on the delivered code.
-- [ ] Sizes are expressed in relative units; no designed breakpoint is introduced.
+- [x] Sizes are expressed in relative units; no designed breakpoint is introduced.
 - [ ] Component tests that previously asserted a literal colour now assert the token name instead.
-- [ ] No markup restructuring: this slice adds style and classes only.
-- [ ] Build and the full test suite are green.
+- [x] No markup restructuring: this slice adds style and classes only.
+- [x] Build and the full test suite are green.
 
 ### Feature Path (FP)
 
@@ -98,3 +98,31 @@ No backing-store probe — this slice touches no data.
 ## Blocked by
 
 - `01-restructure-markup-to-the-skeleton`
+
+## Findings from the Feature Path run (delivered)
+
+FP 8/8 pass, no blocking finding. Every criterion above holds, with one carried and one deferred:
+
+- **The criterion "component tests that asserted a literal colour now assert the token name" belongs
+  to slice 03**, not here: this slice declares the tints and consumes none of them, and no component
+  test changed. Recorded rather than silently ticked.
+- **Blocking for `integration → develop`, to close in slice 03: 1.02:1 in dark on the tint-carrying
+  rows.** The weak-opening `<tr>` (`/openings`) and the danger cards still carry the inline
+  `background-color: #fbe0e0` — the *light* `--tint-review` — while their text now inherits `--ink`,
+  which flips at night. Measured 1.02:1 (14.43:1 in light). The dark theme cannot ship while inline
+  light tints remain.
+- The constant family is declared but not yet consumed from TypeScript: the winning-chances bar
+  paints `#eee`/`#333`, the board keeps react-chessboard's own square colours, and
+  `EvaluationGraph`'s area is a hardcoded `#f5f5f5` (a near-white fill on a dark ground). Slice 03.
+- `/analyse` overflows horizontally at 380px (`scrollWidth 608` vs `clientWidth 365`), from the
+  analyse row's own pre-existing inline `flex` inside a `max-width: 820px` wrapper. Every other
+  screen is clean at that width. The analyse row is styled in slice 05.
+- The board's rank/file coordinate labels measure 2.29:1 in **both** themes — react-chessboard's
+  defaults, pre-existing, and moving only once the board consumes the square tokens (slice 03).
+- The disabled button's label composites to ~3.5:1 (`--ink-muted` at `opacity: .6`). WCAG exempts
+  inactive controls, and the `not-allowed` cursor carries the state; dimming the background rather
+  than the whole element would keep the label readable if we want it.
+- Remaining non-token literals, all deliberate and none of them a colour: the 2px tab-marker border,
+  the 2px focus offset, and the 2.25rem control height. ADR-0013 tokenises neither hairlines nor
+  control height. The wide column was the fourth and *was* tokenised (`--measure-wide`).
+- `.card` is declared and applied nowhere yet, per this slice's scope; slices 04/05 apply it.

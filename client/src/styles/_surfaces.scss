@@ -1,0 +1,16 @@
+// =============================================================================
+// The card surface: one definition of "a bounded block on its own ground", so
+// the danger diagrams and the import summary cannot drift apart. Declared here
+// with the rest of the chrome; the screens that apply it come in later slices.
+// =============================================================================
+
+@mixin card {
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.card {
+  @include card;
+}
