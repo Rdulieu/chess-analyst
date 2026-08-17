@@ -6,7 +6,7 @@ import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { recordMoveHabits } from "../src/move-habits/precompute";
-import { MORPHY_GAME, chessComGame, fakeClient } from "./fixtures";
+import { MORPHY_GAME, chessComGame, fakeClient, type PlayerAnswer } from "./fixtures";
 import type { ChessComClient } from "../src/chesscom";
 
 /** 4-field FEN of the standard starting Position. */
@@ -476,7 +476,7 @@ describe("import API", () => {
     const { db } = openDb(":memory:");
     let monthsFetched = 0;
     const app = createApp(db, {
-      playerExists: async () => true,
+      fetchPlayer: async (username) => ({ username }),
       fetchMonth: async () => {
         monthsFetched++;
         return [];
@@ -505,9 +505,9 @@ describe("import API", () => {
     let monthsFetched = 0;
     let existsChecks = 0;
     const client: ChessComClient = {
-      playerExists: async () => {
+      fetchPlayer: async () => {
         existsChecks++;
-        return false;
+        return null;
       },
       fetchMonth: async () => {
         monthsFetched++;
@@ -575,7 +575,7 @@ describe("import API", () => {
   it("stays responsive when the chess.com request fails", async () => {
     const { db } = openDb(":memory:");
     const failing: ChessComClient = {
-      playerExists: async () => true,
+      fetchPlayer: async (username) => ({ username }),
       fetchMonth: async () => {
         throw new Error("chess.com request failed (429)");
       },
@@ -707,5 +707,88 @@ describe("stats API", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.total).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
+  });
+});
+
+/**
+ * The `Profile` — one account on one platform (CONTEXT.md, ADR-0014) — before it
+ * owns anything. Creation goes through chess.com, so that what is stored is an
+ * account that exists, spelled the way chess.com spells it.
+ */
+describe("profiles API", () => {
+  /** An app whose chess.com always answers `canonical`, whatever casing is asked. */
+  const appAnswering = (canonical: PlayerAnswer) =>
+    createApp(openDb(":memory:").db, fakeClient({}, canonical));
+
+  it("POST /api/profiles stores the account under chess.com's own spelling", async () => {
+    const app = appAnswering("DudulSmash");
+
+    const res = await request(app).post("/api/profiles").send({ username: "dudulsmash" });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ platform: "chesscom", username: "DudulSmash" });
+    expect(res.body.id).toBeTypeOf("number");
+  });
+
+  it("POST /api/profiles a second time selects the Profile instead of duplicating it", async () => {
+    // The case the canonicalisation exists for: two spellings of one account.
+    const app = appAnswering("DudulSmash");
+    const first = await request(app).post("/api/profiles").send({ username: "DudulSmash" });
+
+    const again = await request(app).post("/api/profiles").send({ username: "dudulsmash" });
+
+    expect(again.status).toBe(200); // selected, not created
+    expect(again.body.id).toBe(first.body.id);
+    const list = await request(app).get("/api/profiles");
+    expect(list.body).toHaveLength(1);
+  });
+
+  it("POST /api/profiles refuses a username chess.com does not know, and persists nothing", async () => {
+    const app = appAnswering(false);
+
+    const res = await request(app).post("/api/profiles").send({ username: "ghost" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/ghost/);
+    expect((await request(app).get("/api/profiles")).body).toEqual([]);
+  });
+
+  it("POST /api/profiles refuses creation when chess.com cannot be reached", async () => {
+    // Never persisted, and never mistaken for a typo: a Profile that was not
+    // validated must not blend into the list looking like the others (US-11).
+    const app = appAnswering(new Error("connect ECONNREFUSED"));
+
+    const res = await request(app).post("/api/profiles").send({ username: "dudulsmash" });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toMatch(/chess\.com/i);
+    expect((await request(app).get("/api/profiles")).body).toEqual([]);
+  });
+
+  it("GET /api/profiles lists every Profile with its platform and username", async () => {
+    const { db } = openDb(":memory:");
+    for (const name of ["DudulSmash", "Hikaru"]) {
+      await request(createApp(db, fakeClient({}, name)))
+        .post("/api/profiles")
+        .send({ username: name });
+    }
+
+    const res = await request(createApp(db, fakeClient({}))).get("/api/profiles");
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((p: { platform: string; username: string }) => [p.platform, p.username]))
+      .toEqual([
+        ["chesscom", "DudulSmash"],
+        ["chesscom", "Hikaru"],
+      ]);
+  });
+
+  it("DELETE /api/profiles/:id removes it, and answers 404 for one that never existed", async () => {
+    const app = appAnswering("DudulSmash");
+    const created = await request(app).post("/api/profiles").send({ username: "dudulsmash" });
+
+    expect((await request(app).delete(`/api/profiles/${created.body.id}`)).status).toBe(204);
+    expect((await request(app).get("/api/profiles")).body).toEqual([]);
+    expect((await request(app).delete("/api/profiles/9999")).status).toBe(404);
   });
 });

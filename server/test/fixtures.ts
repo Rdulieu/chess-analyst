@@ -3,6 +3,13 @@ import type { ChessComClient, ChessComGame } from "../src/chesscom";
 
 let urlSeq = 0;
 
+/**
+ * How the fake answers `fetchPlayer`: `true` = known and spelled as typed,
+ * `false` = unknown to chess.com, a string = known under THAT canonical
+ * spelling, an `Error` = chess.com unreachable.
+ */
+export type PlayerAnswer = boolean | string | Error;
+
 /** A chess.com game as the public API returns it, with sensible defaults. */
 export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
   return {
@@ -25,10 +32,18 @@ export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
  */
 export function fakeClient(
   archives: Record<string, ChessComGame[] | Error>,
-  exists = true,
+  player: PlayerAnswer = true,
 ): ChessComClient {
   return {
-    playerExists: async () => exists,
+    fetchPlayer: async (username) => {
+      // An Error stands for chess.com being unreachable — the case a caller must
+      // tell apart from "this account does not exist" (US-11).
+      if (player instanceof Error) throw player;
+      if (player === false) return null;
+      // A string is the CANONICAL spelling chess.com answers, whatever casing
+      // was asked for; `true` means "known, spelled as typed".
+      return { username: typeof player === "string" ? player : username };
+    },
     fetchMonth: async (_username, year, month) => {
       const archive = archives[`${year}-${String(month).padStart(2, "0")}`];
       // An Error entry stands for a month chess.com could not answer for

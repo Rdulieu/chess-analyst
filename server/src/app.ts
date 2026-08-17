@@ -5,6 +5,7 @@ import { type Engine, createFixtureEngine } from "./engine";
 import { createAnalysisJob } from "./analysis/job";
 import { createImportJob } from "./import";
 import { createGamesRouter } from "./routes/games";
+import { createProfilesRouter } from "./routes/profiles";
 import { createImportRouter } from "./routes/import";
 import { createAnalyzeRouter } from "./routes/analyze";
 import { createSettingsRouter } from "./routes/settings";
@@ -31,6 +32,7 @@ export function createApp(
   const importJob = createImportJob(db, chessCom);
   const app = express();
   app.use(express.json());
+  app.use("/api/profiles", createProfilesRouter(db, chessCom));
   app.use("/api/games", createGamesRouter(db));
   app.use("/api/import", createImportRouter(importJob, chessCom));
   app.use("/api/analyze", createAnalyzeRouter(analysisJob));

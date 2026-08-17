@@ -26,7 +26,7 @@ export function createImportRouter(job: ImportJob, chessCom: ChessComClient): Ro
     // Checked once, here, before anything starts: an unknown username must fail
     // synchronously, and the answer cannot differ from one month to the next.
     try {
-      if (!(await chessCom.playerExists(username))) {
+      if ((await chessCom.fetchPlayer(username)) === null) {
         res.status(404).json({ error: `Unknown chess.com username: ${username}` });
         return;
       }

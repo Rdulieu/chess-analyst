@@ -1,4 +1,26 @@
-import { sqliteTable, integer, text, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, text, primaryKey, unique } from "drizzle-orm/sqlite-core";
+
+/**
+ * The `Profile` (CONTEXT.md, ADR-0014): **one account on one platform**, the
+ * pair (`platform`, `username`) — and the unit by which every view is
+ * partitioned. `platform` carries `chesscom` alone for now; it exists from the
+ * start so that Lichess (US-12) is a new *value* and an import client, not a new
+ * concept. `username` holds the **canonical casing the platform itself answers**,
+ * which is what stops `RDulieu` and `rdulieu` from becoming two Profiles
+ * splitting one history in half — the pair being unique enforces the rest.
+ */
+export const profiles = sqliteTable(
+  "profiles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    platform: text("platform").notNull().$type<"chesscom">(),
+    username: text("username").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [unique().on(t.platform, t.username)],
+);
+
+export type Profile = typeof profiles.$inferSelect;
 
 /**
  * The `games` table models the `Game` glossary term (see CONTEXT.md): an
