@@ -33,7 +33,7 @@ main {
 // board beside its curve, and the danger diagrams as a grid, are cramped at
 // 72ch. The screen declares its own need; the column obeys.
 main > [data-column]:has(> [data-width="wide"]) {
-  max-inline-size: 100rem;
+  max-inline-size: var(--measure-wide);
 }
 
 nav ul {

@@ -47,6 +47,7 @@ const SCALES = [
   "--radius",
   "--radius-pill",
   "--measure",
+  "--measure-wide",
   "--font",
   "--mono",
 ];

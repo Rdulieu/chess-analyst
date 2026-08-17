@@ -68,6 +68,8 @@
 
   // The reading column, in `ch` so it tracks the text rather than the screen.
   --measure: 72ch;
+  // The wide variant the two dense screens (/danger, /analyse) are allowed.
+  --measure-wide: 100rem;
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
