@@ -135,6 +135,14 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     expect(side.get("min-inline-size")).toBe("0");
   });
 
+  it("reserves the scrollbar's room, so a page that stops scrolling cannot widen the board", () => {
+    // The last way the board could still change size under the Player: unchecking
+    // the annotations shortened the page enough to remove the scrollbar, the layout
+    // gained 15px, and the board took its share — a 9px GROWTH at 760–800px wide,
+    // with the position unchanged, so a check on x and y alone passed it.
+    expect(declarationsFor(css, "html").get("scrollbar-gutter")).toBe("stable");
+  });
+
   it("reads the step controls and the readout beside the board, as the PRD's arrangement has it", () => {
     // They used to stack ABOVE the row, and that stack was what left the diagram no
     // height to be shown in full.

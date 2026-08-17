@@ -117,3 +117,14 @@ zero failures. No unresolved `var(--…)`, no console error or warning.
 
 None. **Not one line of markup was touched** — slice 01's `[data-part]`, `[data-scroll="x"]`,
 `[scope="colgroup"]` and `data-weak` hooks carried the whole slice, which is what that slice was for.
+
+## Open after the requester's pass (2026-08-17)
+
+- **[open — a design call, not a patch] `/openings` still hides its figures at 390px.** The wide
+  column and the wrapping name cell fixed this at 768px and above, where all six columns are in the
+  viewport. On a phone the table keeps a ~650px minimum inside its declared scroller, so all 61 rows
+  show the name, `Côté` and `Cadence` while `Parties`, `Résultats` and `Win rate` — and the `⚠` that
+  rides on `Win rate` — sit off-screen. Six columns do not fit 358px, so this is a decision (stack the
+  figures under the name below some width, or drop a column on narrow screens), not a fix. No
+  page-level overflow: the scroller is correctly declared, which is why nothing here is broken, only
+  unreachable. US-13 designs no mobile layout by scope, so it is recorded rather than fixed.
