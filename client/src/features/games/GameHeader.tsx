@@ -10,9 +10,9 @@ const RESULT_LABEL = { win: "Victoire", loss: "Défaite", draw: "Nulle" } as con
  * their colour, which one is the Player, and the Game's result, date, cadence
  * and `Opening`.
  *
- * The Player's side is marked **in words** ("vous"), never by colour alone —
- * the app ships no stylesheet (US-13), so the emphasis here is inline and is
- * only ever a reinforcement of a cue that already reads as text.
+ * The Player's side is marked **in words** ("vous"), never by colour alone. The
+ * emphasis is weight and nothing else — no tint at all, since the words already
+ * say it — applied by the stylesheet on the `data-player` hook.
  *
  * The result is stated from the Player's side, as everywhere else in the app,
  * rather than as a symmetric `1-0`: what is stored is Player-relative, and
@@ -33,7 +33,6 @@ export function GameHeader({ game }: { game: Game }) {
         <p
           key={side.color}
           data-player={side.isPlayer ? "true" : undefined}
-          style={side.isPlayer ? { fontWeight: "bold" } : undefined}
         >
           {COLOR_LABEL[side.color]} : {side.name ?? "joueur inconnu"}
           {side.isPlayer && ` (vous — ${RESULT_LABEL[result]})`}

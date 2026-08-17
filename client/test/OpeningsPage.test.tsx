@@ -73,15 +73,15 @@ describe("OpeningsPage", () => {
 
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
-    // The 25% Sicilian is flagged weak: DOM hook, a visible background tint (the
-    // app has no stylesheet, so the cue must not rely on CSS), and an accessible
-    // "à revoir" marker for assistive tech.
+    // The 25% Sicilian is flagged weak: the `data-weak` hook the stylesheet tints
+    // from, and — the cue that does not depend on colour at all — an accessible
+    // "à revoir" marker. jsdom never loads the sheet, so the tint itself is
+    // measured by the Feature Path, in both themes; here only the wiring is.
     expect(rows[1].getAttribute("data-weak")).toBe("true");
-    expect(rows[1].style.backgroundColor).not.toBe("");
+    expect(rows[1].getAttribute("style")).toBeNull();
     expect(within(rows[1]).getByLabelText(/faible|à revoir/i)).toBeTruthy();
     // The 100% Italian is not marked in any of those ways.
     expect(rows[2].getAttribute("data-weak")).toBeNull();
-    expect(rows[2].style.backgroundColor).toBe("");
     expect(within(rows[2]).queryByLabelText(/faible|à revoir/i)).toBeNull();
   });
 
@@ -92,7 +92,6 @@ describe("OpeningsPage", () => {
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
     expect(rows[1].getAttribute("data-weak")).toBeNull();
-    expect(rows[1].style.backgroundColor).toBe("");
     expect(within(rows[1]).queryByLabelText(/faible|à revoir/i)).toBeNull();
   });
 

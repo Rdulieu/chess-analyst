@@ -1,14 +1,29 @@
 import { evaluationCurve } from "../chess/evaluationCurve";
-import { SEVERITY_GLYPH, SEVERITY_TINT } from "../chess/severity";
+import { SEVERITY_GLYPH, SEVERITY_TINT, SEVERITY_TINT_INK } from "../chess/severity";
 import type { MoveAnnotation } from "../types";
 
-/** White's ground and Black's, plus the equality line and the current-Move cursor.
- *  Inline because the project has no stylesheet yet (US-13). */
-const WHITE_GROUND = "#f5f5f5";
-const BLACK_GROUND = "#2b2b2b";
+/**
+ * White's ground and Black's are the player colours, and they **never react to
+ * the theme**: a colour that says "White" does not say "background" (ADR-0013).
+ * They are the same two tokens the winning-chances bar reads, so the two pictures
+ * of the same advantage cannot disagree.
+ *
+ * Read as CSS `style` values and not as SVG presentation attributes, deliberately:
+ * a custom property is resolved in a *declaration*, never in an attribute value,
+ * so a `fill=` attribute holding one silently paints nothing.
+ */
+const WHITE_GROUND = "var(--white-share)";
+const BLACK_GROUND = "var(--black-share)";
+
+/**
+ * The equality line and the current-Move cursor are drawn **over the two
+ * constant player grounds**, so they are constant too — by the same rule that
+ * sends the board's severity tints to the constant family. They are not part of
+ * the frozen token set: no theme role would survive being laid over a ground that
+ * is light at one end of the picture and dark at the other.
+ */
 const EQUALITY = "#8a8a8a";
 const CURSOR = "#c05621";
-const MARKER_INK = "#1a1a1a";
 
 /**
  * A Game's `Evaluation curve` (CONTEXT.md), drawn beside the board: the Game runs
@@ -58,7 +73,7 @@ export function EvaluationGraph({
         preserveAspectRatio="none"
         style={{ width: "100%", height: "100%", display: "block", background: BLACK_GROUND }}
       >
-        <polygon points={whiteGround} fill={WHITE_GROUND} />
+        <polygon points={whiteGround} style={{ fill: WHITE_GROUND }} />
         <line
           x1={0}
           y1={50}
@@ -86,10 +101,18 @@ export function EvaluationGraph({
             left: `${(marker.x / span) * 100}%`,
             top: `${100 - marker.whiteShare}%`,
             transform: "translate(-50%, -50%)",
-            font: "bold 11px monospace",
-            color: MARKER_INK,
+            fontFamily: "var(--mono)",
+            fontWeight: 700,
+            fontSize: "var(--text-s)",
+            // The tint AND its own ink, read as a pair from the single source the
+            // move list reads: the two views of one severity cannot drift apart,
+            // and the marker stays legible in both themes without borrowing the
+            // inherited `--ink` (which inverts while the tint does too).
             background: SEVERITY_TINT[marker.severity],
-            border: `1px solid ${MARKER_INK}`,
+            color: SEVERITY_TINT_INK[marker.severity],
+            // The border is the marker's own ink, so it detaches from whichever
+            // of the two constant grounds it happens to land on.
+            border: `1px solid ${SEVERITY_TINT_INK[marker.severity]}`,
             borderRadius: 3,
             padding: "0 2px",
             lineHeight: 1.2,

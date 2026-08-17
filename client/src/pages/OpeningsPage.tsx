@@ -57,8 +57,10 @@ export function OpeningsPage() {
               {openings.map((o) => (
                 <tr
                   key={`${o.eco}-${o.side}-${o.cadence}`}
+                  // The row states that it is weak; the stylesheet tints it (the
+                  // review tint and its own ink). The "à revoir ⚠" marker below
+                  // is the cue that survives any perception of colour.
                   data-weak={isWeak(o) ? "true" : undefined}
-                  style={isWeak(o) ? { backgroundColor: "#fbe0e0" } : undefined}
                 >
                   <td>
                     {o.openingName} · {o.eco}

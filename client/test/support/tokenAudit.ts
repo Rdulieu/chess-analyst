@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { join, resolve, extname } from "node:path";
+import { join, relative, resolve, extname } from "node:path";
 import { compile } from "sass";
 
 /** The client's single stylesheet entry point. */
@@ -81,6 +81,37 @@ export function undeclaredTokens(
   return [...consumed]
     .filter((t) => !declared.light.has(t) && !declared.dark.has(t))
     .sort();
+}
+
+/**
+ * The client's TypeScript, each source paired with its path relative to the
+ * source root — so a failure names the file that still holds a colour rather
+ * than only reporting that one does.
+ */
+export function componentSources(
+  root: string = SOURCE_ROOT,
+): { path: string; source: string }[] {
+  const out: { path: string; source: string }[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) {
+        out.push({ path: relative(root, path), source: readFileSync(path, "utf8") });
+      }
+    }
+  };
+  walk(root);
+  return out;
+}
+
+/**
+ * Strips comments, because a colour *discussed* in a docstring is not a colour
+ * the app paints — and the reasons these tokens exist are written down in exactly
+ * those docstrings, hexes and all.
+ */
+export function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
 /** Reads every file the client ships or styles, so nothing escapes the audit. */

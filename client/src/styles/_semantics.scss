@@ -1,0 +1,124 @@
+// =============================================================================
+// The semantic tints: every colour in the app that carries a MEANING.
+//
+// Two rules govern this file and nothing else in the stylesheet does.
+//
+// 1. Each tint pairs with ITS OWN ink token. A semantic tint whose ink came from
+//    the inherited `--ink` would flip legibility with the theme — the tint is
+//    dark at night and the inherited ink is light by day. Every rule below sets
+//    `background` and `color` together, always.
+// 2. The tint is NEVER the signal. Each of these highlights doubles a cue that
+//    reads without colour — a glyph, a "à revoir ⚠" marker, a checkmark and a
+//    word, a failure stated in words. That doubling is the standing consequence
+//    of the US-3 finding (a highlight invisible for want of any CSS), and this
+//    file is where the reverse of that mistake would be made.
+//
+// The board's severity tints are NOT here: they are painted under a piece whose
+// ink is constant, so they belong to the constant family and reach the board
+// from TypeScript (`chess/severity.ts` → react-chessboard's `squareStyles`).
+// =============================================================================
+
+// The move list's glyph (`?!` / `?` / `??`). The glyph carries the severity; the
+// tint reinforces it. Mono, because a glyph read as punctuation needs the
+// fixed width the prose font does not give it.
+[data-severity] {
+  font-family: var(--mono);
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding-inline: var(--space-1);
+  margin-inline-start: var(--space-1);
+}
+
+// Written out rather than generated from a `@each` over the three severities,
+// and that is the point: the token-consistency audit reads this file as source,
+// so a token name assembled by interpolation (`--tint-#{$severity}`) is a token
+// name the audit cannot see — and the audit is the only thing standing in for the
+// compile error custom properties cost us (ADR-0013). Three rules that a grep
+// finds beat three rules a loop hides. The move list and the curve's markers read
+// the same pairs, the curve through TypeScript because its markers are positioned
+// per data point.
+[data-severity="inaccuracy"] {
+  background: var(--tint-inaccuracy);
+  color: var(--tint-inaccuracy-ink);
+}
+
+[data-severity="mistake"] {
+  background: var(--tint-mistake);
+  color: var(--tint-mistake-ink);
+}
+
+[data-severity="blunder"] {
+  background: var(--tint-blunder);
+  color: var(--tint-blunder-ink);
+}
+
+// The move list itself: rows rather than a run of inline text, so a Move, its
+// glyph and its `Evaluation` line up down eighty half-moves.
+ol[aria-label="moves"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+  }
+
+  [aria-label="evaluation"] {
+    font-family: var(--mono);
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+  }
+}
+
+// A row flagged FOR REVIEW: the weak `Opening` (win rate under 50%) and the
+// seriously dangerous `Danger position`. One tint for one meaning, so the two
+// screens say "to review" the same way. Both keep their "à revoir ⚠" marker
+// beside the tint — the marker is the cue, the tint is the emphasis.
+[data-weak="true"],
+[data-serious="true"] {
+  background: var(--tint-review);
+  color: var(--tint-review-ink);
+}
+
+// A table row is not a paintable box in every engine: the cells are. Setting the
+// pair on the cells too is what makes the highlight actually reach the figures.
+tr[data-weak="true"] > * {
+  background: var(--tint-review);
+  color: var(--tint-review-ink);
+}
+
+// The "analysée" badge: a bordered pill, its checkmark and its word inside the
+// border. In a list of eighty Games the pill is what the eye catches, but the
+// checkmark and the word are what the meaning rests on.
+[data-part="state"] > [aria-label="analysée"] {
+  display: inline-block;
+  background: var(--tint-ok);
+  color: var(--tint-ok-ink);
+  border: 1px solid var(--tint-ok-ink);
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-2);
+  font-size: var(--text-s);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// A month chess.com could not answer for. The failure is stated in words in the
+// line's own text — a month the Player was simply inactive in reads as a plain
+// zero, and the two must never be told apart by colour.
+[data-failed="true"] {
+  background: var(--tint-fail);
+  color: var(--tint-fail-ink);
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding-inline: var(--space-1);
+}
+
+// Which of the two players is the Player, in the Game header. Deliberately
+// WITHOUT a tint: the side is already marked in words ("vous"), and weight is
+// the whole emphasis it needs.
+p[data-player="true"] {
+  font-weight: 700;
+}

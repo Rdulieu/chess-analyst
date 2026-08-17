@@ -112,8 +112,9 @@ function DangerList({ dangers }: { dangers: DangerEntry[] }) {
         {dangers.slice(0, SHOWN_AT_MOST).map((d, i) => (
           <li
             key={d.fen}
+            // Same review tint as the weak `Opening`, from the same token: one
+            // meaning, one colour, said the same way on both screens.
             data-serious={isDangerous(d) ? "true" : undefined}
-            style={isDangerous(d) ? { backgroundColor: "#fbe0e0" } : undefined}
           >
             {/* A self-contained card: the diagram, the side to move and the
                 figures of one Position, so the entries can later be laid out as
