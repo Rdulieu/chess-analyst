@@ -54,18 +54,25 @@ describe("the explorer, with its candidates beside the board", () => {
   const screen = declarationsFor(css, 'section[aria-labelledby="explorer-heading"]');
 
   it("folds to one column on its own, with no width written down", () => {
-    // `auto-fit`, like the danger grid: two columns while an 18rem column fits
-    // twice inside the reading column, and one when it does not. A float was tried here first and could not
-    // do this — a box beside a float overflows rather than wrapping when the room
-    // the float leaves is too narrow, and a float capped at a *share* of the
-    // column never folds at all, so a phone kept a half-width diagram for ever.
+    // `auto-fit`, like the danger grid: as many tracks as fit, one when none does.
+    // A float was tried here first and could not do this — a box beside a float
+    // overflows rather than wrapping when the room the float leaves is too narrow,
+    // and a float capped at a *share* of the column never folds at all, so a phone
+    // kept a half-width diagram for ever.
     expect(screen.get("display")).toBe("grid");
     expect(screen.get("grid-template-columns")).toContain("auto-fit");
-    // 18rem, and the figure is measured: the explorer reads inside the 72ch
-    // column, where two 20rem tracks plus the gap do not fit — a 20rem minimum
-    // gave the screen one column at EVERY width, candidates back under the board.
-    expect(screen.get("grid-template-columns")).toContain("min(18rem, 100%)");
     expect(screen.get("align-items")).toBe("start");
+  });
+
+  it("takes the wide column but not all of it, so two tracks are all that fit", () => {
+    // Seen on screen the moment the explorer went wide: at 100rem `auto-fit` fitted
+    // a THIRD track — holding nothing but the breadcrumb, candidates squeezed into
+    // two lines each — and the diagram grew to 916px, pushing the candidate list
+    // off the bottom. Two 24rem tracks fit in 64rem and three do not, so the count
+    // is capped by the room and not by a trick, and the diagram lands at a size a
+    // diagram wants to be.
+    expect(screen.get("max-inline-size")).toBe("64rem");
+    expect(screen.get("grid-template-columns")).toContain("min(24rem, 100%)");
   });
 
   it("carves no pixel into the screen's own measurements", () => {
@@ -73,14 +80,19 @@ describe("the explorer, with its candidates beside the board", () => {
     noAbsoluteLength(screen.get("gap"));
   });
 
-  it("puts the board beside the content that annotates it, without moving either", () => {
-    // The board is the only item placed, and it is placed by SPAN, not by column:
-    // the breadcrumb and the candidate list take the next column instead of
-    // stacking under the diagram, and the document order is untouched — which is
-    // the order a screen reader reads, in both configurations.
-    expect(
-      declarationsFor(css, 'section[aria-labelledby="explorer-heading"] > div').get("grid-row"),
-    ).toBe("span 2");
+  it("puts the board beside the content that annotates it, and places nothing", () => {
+    // Two items in the row — the diagram, and one pane holding the breadcrumb and
+    // the candidates — so nothing is placed and nothing spans. The board used to
+    // span its neighbours' two rows, and a spanning item forces the sum of the rows
+    // it covers to fit it: the board's height was split between the breadcrumb's
+    // row and the candidates', opening a 250px hole between them.
+    expect(css).not.toContain("grid-row: span 2");
+    const pane = declarationsFor(
+      css,
+      'section[aria-labelledby="explorer-heading"] > [data-pane="candidates"]',
+    );
+    expect(pane.get("display")).toBe("flex");
+    expect(pane.get("flex-direction")).toBe("column");
   });
 
   it("gives the screen's own lines the whole width rather than a column", () => {
@@ -97,7 +109,7 @@ describe("the explorer, with its candidates beside the board", () => {
 describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
   const row = declarationsFor(css, '[data-row="board"]');
   const boardPane = declarationsFor(css, '[data-pane="board"]');
-  const annotations = declarationsFor(css, '[data-pane="annotations"]');
+  const side = declarationsFor(css, '[data-pane="side"]');
 
   it("sets the board beside its annotations and folds when there is no room", () => {
     // Wrapping, not a breakpoint: the row becomes one column when the two panes
@@ -108,27 +120,47 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     expect(row.get("align-items")).toBe("flex-start");
   });
 
-  it("gives the board a size of its own, so toggling the annotations cannot move it", () => {
-    // `flex-grow: 0` is the whole US-14 constraint: the board is sized by its own
-    // basis and never by what is or is not next to it, so unchecking the
-    // annotations does not resize the position the Player is reading.
-    expect(boardPane.get("flex-grow")).toBe("0");
-    expect(boardPane.get("flex-basis")).toBe("22.5rem");
+  it("gives the board three fifths of the row and the side pane two", () => {
+    // 3 against 2, on bases that are themselves 3:2 (24rem / 16rem): every part
+    // of the calculation is in the same proportion, so the split is 60/40 at any
+    // width the row does not fold at — not 60/40 of the free space alone.
+    // Requested after seeing the screen: the curve had 76% of the row and the
+    // diagram 24%.
+    expect(boardPane.get("flex-grow")).toBe("3");
+    expect(boardPane.get("flex-basis")).toBe("24rem");
     expect(boardPane.get("max-inline-size")).toBe("100%");
+    expect(side.get("flex-grow")).toBe("2");
+    expect(side.get("flex-basis")).toBe("16rem");
+    expect(side.get("min-inline-size")).toBe("0");
   });
 
-  it("lets the annotations take the width the board does not", () => {
-    expect(annotations.get("flex-grow")).toBe("1");
-    // A basis it can fall below only by wrapping: squeezed thinner than this the
-    // curve would stop being a time axis.
-    expect(annotations.get("flex-basis")).toBe("20rem");
-    expect(annotations.get("min-inline-size")).toBe("0");
+  it("stacks the board and its own gauge, a hair apart", () => {
+    // The bar is the board's gauge and lives in the board's pane, so it takes the
+    // board's width and not the row's. A hair of space — `--space-1` — because
+    // the bar reads as belonging to the diagram above it.
+    expect(boardPane.get("display")).toBe("flex");
+    expect(boardPane.get("flex-direction")).toBe("column");
+    expect(boardPane.get("gap")).toBe("var(--space-1)");
   });
 
   it("measures the row in relative units only", () => {
-    for (const pane of [row, boardPane, annotations]) {
+    for (const pane of [row, boardPane, side]) {
       for (const value of pane.values()) noAbsoluteLength(value);
     }
+  });
+
+  it("keeps the move list compact, so a whole Game is read without scrolling past it", () => {
+    // Forty half-moves beside the board rather than under it, and each one a
+    // narrow chip: the list's own buttons drop the padding and the height a form
+    // control needs, because forty of them are read as one block and not aimed at
+    // one at a time.
+    const move = declarationsFor(css, 'ol[aria-label="moves"] li button');
+    expect(move.get("padding")).toBe("0 var(--space-1)");
+    expect(move.get("font-size")).toBe("var(--text-s)");
+    expect(declarationsFor(css, 'ol[aria-label="moves"]').get("gap")).toBe(
+      "var(--space-1) var(--space-1)",
+    );
+    for (const value of move.values()) noAbsoluteLength(value);
   });
 
   it("keeps the curve landscape: its time axis stays wider than it is tall", () => {
@@ -168,16 +200,14 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     );
   });
 
-  it("reserves the bar's slot when the bar is gone, so the board cannot jump", () => {
-    // The bar sits above the row and goes away with the annotations, which used to
-    // raise the board by exactly its height — 8px of vertical jump under the eyes
-    // of someone reading a position. Reserved by `:has()`, so no wrapper element
-    // and no empty bar rendered, and from the SAME token the bar is sized with.
-    const reserved = declarationsFor(
-      css,
-      ':not(:has(> [data-bar=winning-chances])) > [data-row=board]',
-    );
-    expect(reserved.get("margin-block-start")).toBe("var(--bar-height)");
+  it("needs no reserved slot to keep the board from jumping", () => {
+    // The bar used to sit ABOVE the row, so losing it raised the board by exactly
+    // its height — 8px of jump under the eyes of someone reading a position — and
+    // the fix was a `:has()` rule reserving the slot. The bar now sits UNDER the
+    // diagram inside the board's pane, so what disappears is below what the Player
+    // is reading and nothing above it can move. The document order holds the
+    // constraint; the rule is gone rather than kept as a second mechanism.
+    expect(css).not.toContain("data-bar=winning-chances])");
     expect(declarationsFor(css, '[data-bar="winning-chances"]').get("block-size")).toBe(
       "var(--bar-height)",
     );

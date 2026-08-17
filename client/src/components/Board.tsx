@@ -59,7 +59,11 @@ export function Board({
         // (ADR-0013 — the theme-varying tint measured 1.49:1 in dark). This prop
         // is also the reason the tokens are custom properties: a third-party API
         // taking a style object cannot be reached by a class.
-        { [plies[index - 1].to]: { backgroundColor: SEVERITY_SQUARE_TINT[currentAnnotation.severity] } }
+        {
+          [plies[index - 1].to]: {
+            backgroundColor: SEVERITY_SQUARE_TINT[currentAnnotation.severity],
+          },
+        }
       : undefined;
 
   return (
@@ -84,7 +88,6 @@ export function Board({
         {currentMove}
         {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
       </p>
-      {currentAnnotation && <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />}
       {/*
         Two named panes rather than two anonymous divs: the row is the thing the
         stylesheet sizes and reflows, and the board must not resize when the curve
@@ -92,6 +95,12 @@ export function Board({
         Player is reading — US-14). The panes carry the names; the sizes are the
         sheet's (`_dense`), which is what makes that constraint one rule instead
         of two components agreeing by luck.
+
+        The pane beside the board is `side` and not `annotations`, because it holds
+        the move list too — and a move list is not an annotation: it is there for
+        every Game, analysed or not. So the pane never goes away; only its
+        annotations do. That is also what stops the move list from starting below
+        the fold, behind the whole height of the diagram.
       */}
       <div data-row="board">
         <div data-pane="board">
@@ -102,48 +111,62 @@ export function Board({
               position,
               boardOrientation: orientation,
               allowDragging: false,
-              showAnimations: false,
               squareStyles,
+              showAnimations: false,
             }}
           />
+          {/*
+            The bar is the BOARD's gauge, so it lives in the board's pane and takes
+            the board's width rather than the whole row's. Under the diagram and
+            not over it: it comes and goes with the annotations, and nothing above
+            the board may move when it does — which is the US-14 constraint, now
+            held by the document order instead of by a reserved slot.
+          */}
+          {currentAnnotation && (
+            <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />
+          )}
         </div>
-        {annotations && (
-          // Landscape, and deliberately so: squeezed into a narrow column the
-          // curve stops being a time axis and reads as a vertical drip.
-          <div data-pane="annotations">
-            <div data-part="curve">
-              <EvaluationGraph annotations={annotations} currentPly={index} />
-            </div>
-            <ErrorTallyReadout annotations={annotations} />
-          </div>
-        )}
+        <div data-pane="side">
+          {annotations && (
+            <>
+              {/* Landscape, and deliberately so: squeezed into a narrow column the
+                  curve stops being a time axis and reads as a vertical drip. */}
+              <div data-part="curve">
+                <EvaluationGraph annotations={annotations} currentPly={index} />
+              </div>
+              <ErrorTallyReadout annotations={annotations} />
+            </>
+          )}
+          <ol aria-label="moves">
+            {plies.map((ply, i) => {
+              const annotation = annotations?.[i + 1];
+              return (
+                <li key={i}>
+                  <button
+                    type="button"
+                    aria-current={index === i + 1 ? "true" : undefined}
+                    onClick={() => setIndex(i + 1)}
+                  >
+                    {ply.san}
+                  </button>
+                  {annotation?.severity && (
+                    // The glyph is the signal; `data-severity` only lets the sheet
+                    // reinforce it with the severity's own tint and ink. Naming the
+                    // severity on the element keeps the stylesheet off the accessible
+                    // name, which is a label, not a hook.
+                    <span data-severity={annotation.severity} aria-label={annotation.severity}>
+                      {SEVERITY_GLYPH[annotation.severity]}
+                    </span>
+                  )}
+                  {annotation && (
+                    <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </div>
-      <ol aria-label="moves">
-        {plies.map((ply, i) => {
-          const annotation = annotations?.[i + 1];
-          return (
-            <li key={i}>
-              <button
-                type="button"
-                aria-current={index === i + 1 ? "true" : undefined}
-                onClick={() => setIndex(i + 1)}
-              >
-                {ply.san}
-              </button>
-              {annotation?.severity && (
-                // The glyph is the signal; `data-severity` only lets the sheet
-                // reinforce it with the severity's own tint and ink. Naming the
-                // severity on the element keeps the stylesheet off the accessible
-                // name, which is a label, not a hook.
-                <span data-severity={annotation.severity} aria-label={annotation.severity}>
-                  {SEVERITY_GLYPH[annotation.severity]}
-                </span>
-              )}
-              {annotation && <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>}
-            </li>
-          );
-        })}
-      </ol>
     </div>
   );
 }

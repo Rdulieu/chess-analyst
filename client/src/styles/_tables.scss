@@ -26,6 +26,16 @@ td {
   white-space: nowrap;
 }
 
+// The one cell that may wrap: the row's leading LABEL. An `Opening` name runs past
+// sixty characters, and holding it on one line made the table wider than its
+// container and scrolled the five figure columns out of sight — the Player saw a
+// column of names and nothing else. A name is prose; only a figure has to hold its
+// line to stay comparable down its column.
+tbody td:first-child,
+tbody th[scope="row"] {
+  white-space: normal;
+}
+
 // The column headers, read as headers: quieter and smaller than the figures they
 // name, and separated from the body by the one hairline the table needs.
 thead th {

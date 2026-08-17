@@ -253,26 +253,48 @@ describe("Evaluation curve", () => {
     expect(curve(container)).toBeTruthy();
   });
 
-  it("holds the board and the annotations as two named panes of one row", () => {
+  it("holds the board and everything read beside it as two named panes of one row", () => {
     const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
 
     const row = container.querySelector('[data-row="board"]')!;
     const board = row.querySelector('[data-pane="board"]')!;
-    const annotations = row.querySelector('[data-pane="annotations"]')!;
+    const side = row.querySelector('[data-pane="side"]')!;
 
     expect(board).toBeTruthy();
-    expect(annotations).toBeTruthy();
-    // Named panes rather than anonymous divs sized in pixels: the row can later
-    // be laid out — and reflowed into one column — without touching the board.
-    expect(annotations.contains(curve(container)!)).toBe(true);
+    expect(side).toBeTruthy();
+    // The curve and the move list are read BESIDE the board, not stacked under
+    // it: on a wide screen the move list used to start below the fold, behind the
+    // whole height of the diagram.
+    expect(side.contains(curve(container)!)).toBe(true);
+    expect(side.contains(screen.getByRole("list", { name: "moves" }))).toBe(true);
   });
 
-  it("keeps the board's pane when the annotations pane goes away", () => {
+  it("keeps the winning-chances bar inside the board's pane, so it is the board's own gauge", () => {
+    const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
+
+    const boardPane = container.querySelector('[data-pane="board"]')!;
+    const bar = container.querySelector('[data-bar="winning-chances"]')!;
+
+    expect(boardPane.contains(bar)).toBe(true);
+    // Under the board and not over it: the bar comes and goes with the
+    // annotations, and nothing above the board may move when it does.
+    const diagram = boardPane.querySelector("[data-square]")!;
+    expect(diagram.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps both panes when the annotations go away — only the annotations do", () => {
     const { container } = render(<Board pgn="1. e4 e5" />);
 
     const row = container.querySelector('[data-row="board"]')!;
+    const side = row.querySelector('[data-pane="side"]')!;
+
     expect(row.querySelector('[data-pane="board"]')).toBeTruthy();
-    expect(row.querySelector('[data-pane="annotations"]')).toBeNull();
+    // The side pane survives, because the move list is not an annotation: it is
+    // there for every Game, analysed or not.
+    expect(side).toBeTruthy();
+    expect(side.contains(screen.getByRole("list", { name: "moves" }))).toBe(true);
+    expect(curve(container)).toBeNull();
+    expect(container.querySelector('[data-bar="winning-chances"]')).toBeNull();
   });
 
   it("draws no curve for a Game with no Evaluations, or with the annotations hidden", () => {

@@ -114,6 +114,21 @@ describe("the tabular screens (Stats, Weak opening)", () => {
   });
 });
 
+describe("a long label must not push the figures out of sight", () => {
+  it("lets the leading cell wrap, while the figures keep holding their line", () => {
+    // Found on screen with the real history: an `Opening` name runs past 60
+    // characters, `nowrap` made the table far wider than its container, and the
+    // five figure columns were scrolled out of view — the Player saw a column of
+    // names and nothing else. A name is PROSE and may wrap; a figure is what must
+    // not, or it stops being comparable down its column.
+    // Both leading cells: /openings' name is a `td`, /stats' label a row header.
+    for (const leading of ["tbody td:first-child", 'tbody th[scope="row"]']) {
+      expect(declarationsFor(css, leading).get("white-space"), leading).toBe("normal");
+    }
+    expect(declarationsFor(css, "td").get("white-space")).toBe("nowrap");
+  });
+});
+
 describe("the Stats table's row groups", () => {
   it("sets each group's own header apart from the rows it heads", () => {
     // "Par cadence" and "Par côté" are group headers, not data: on the sunk

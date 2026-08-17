@@ -57,13 +57,22 @@
 ol[aria-label="moves"] {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
+  gap: var(--space-1) var(--space-1);
   align-items: baseline;
 
   li {
     display: flex;
     align-items: baseline;
     gap: var(--space-1);
+  }
+
+  // Forty half-moves are read as ONE block, not aimed at one at a time, so each
+  // Move drops the padding and the comfortable height a form control is given
+  // (`_controls`) and becomes a chip. That is what lets a whole Game sit beside
+  // the board instead of running off the bottom of the page.
+  li button {
+    padding: 0 var(--space-1);
+    font-size: var(--text-s);
   }
 
   [aria-label="evaluation"] {
