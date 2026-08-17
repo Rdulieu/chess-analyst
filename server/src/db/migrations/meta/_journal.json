@@ -71,6 +71,13 @@
       "when": 1787005313304,
       "tag": "0009_sloppy_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787007016705,
+      "tag": "0010_lame_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }

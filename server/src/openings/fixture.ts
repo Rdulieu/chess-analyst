@@ -1,5 +1,5 @@
 import type { Db } from "../db";
-import { games, type NewGame } from "../db/schema";
+import { games, type NewGame, type UnownedGame } from "../db/schema";
 import { parseOpening } from "../import/opening";
 
 /**
@@ -33,7 +33,7 @@ function fixtureGame(
   playerColor: NewGame["playerColor"],
   result: Result,
   cadence: Cadence,
-): NewGame {
+): UnownedGame {
   const { eco, openingName } = parseOpening(pgnText);
   const ref = `g${seq++}`;
   return {
@@ -95,7 +95,7 @@ const french = (result: Result) =>
 const unclassified = (result: Result) =>
   fixtureGame(pgn([["Event", "Live Chess"]], "1. e4 e5"), "white", result, "bullet");
 
-export const OPENINGS_FIXTURE: NewGame[] = [
+export const OPENINGS_FIXTURE: UnownedGame[] = [
   sicilian("win"),
   sicilian("loss"),
   sicilian("loss"),
@@ -110,8 +110,8 @@ export const OPENINGS_FIXTURE: NewGame[] = [
  * Seeds the `Weak opening` fixture dataset. Idempotent: Games already present
  * (unique game URL) are skipped, so re-seeding never duplicates.
  */
-export function seedOpenings(db: Db): void {
+export function seedOpenings(db: Db, profileId: number): void {
   for (const game of OPENINGS_FIXTURE) {
-    db.insert(games).values(game).onConflictDoNothing().run();
+    db.insert(games).values({ ...game, profileId }).onConflictDoNothing().run();
   }
 }

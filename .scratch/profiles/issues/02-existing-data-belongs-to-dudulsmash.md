@@ -1,6 +1,6 @@
 # 02 — Existing data belongs to DudulSmash
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-11-profiles` (build + tests + FP 5/5 green, 2026-08-18)
 
 > **Implemented on the business-story integration branch `integration/US-11-profiles`.** Branch
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
@@ -38,20 +38,20 @@ there — drop the username key (or the table) rather than migrating it.
 
 ## Acceptance criteria
 
-- [ ] `games`, `move_habits` and `analysis_passes` carry a `NOT NULL profile_id` referencing
+- [x] `games`, `move_habits` and `analysis_passes` carry a `NOT NULL profile_id` referencing
       `profiles`.
-- [ ] `move_habits`' primary key includes `profile_id`.
-- [ ] The migration creates the `DudulSmash` chess.com Profile if it does not already exist.
-- [ ] Every pre-existing row in the three tables is assigned to that Profile.
-- [ ] No `Evaluation` is lost or altered; the count before and after is identical.
-- [ ] The migration is **re-runnable**: a second run changes nothing and does not fail.
-- [ ] The migration **fails loudly** if any row would be left unassigned — no partial success, no
+- [x] `move_habits`' primary key includes `profile_id`.
+- [x] The migration creates the `DudulSmash` chess.com Profile if it does not already exist.
+- [x] Every pre-existing row in the three tables is assigned to that Profile.
+- [x] No `Evaluation` is lost or altered; the count before and after is identical.
+- [x] The migration is **re-runnable**: a second run changes nothing and does not fail.
+- [x] The migration **fails loudly** if any row would be left unassigned — no partial success, no
       "legacy"/default Profile absorbing leftovers.
-- [ ] The unused `settings` username key is removed rather than migrated.
-- [ ] A migration test exists, using a **file** database (not `:memory:`, which cannot be
+- [x] The unused `settings` username key is removed rather than migrated.
+- [x] A migration test exists, using a **file** database (not `:memory:`, which cannot be
       reopened), seeded with pre-Profile rows through **raw SQL** — the schema no longer allows an
       insert without `profile_id`. Prior art: `server/test/db-open.test.ts`.
-- [ ] That test asserts the Profile is created, every row is assigned, no Evaluation is lost, and a
+- [x] That test asserts the Profile is created, every row is assigned, no Evaluation is lost, and a
       second run is a no-op.
 
 ### Feature Path (FP)
@@ -71,3 +71,26 @@ and that no row anywhere carries a null `profile_id`.
 
 - `.scratch/profiles/issues/01-profiles-exist.md` — the `profiles` table and the Profile listing
   this slice migrates into and verifies through.
+
+## What was decided while building it
+
+- **The Profile is derived from the Games, not fetched.** The PRD left the canonical casing to a
+  chess.com call "or passed in". Neither was needed: the PGN of each Game carries the `[White]` /
+  `[Black]` header for the side the Player played, so the upgrade reads the account off the data it
+  is migrating. It runs offline and cannot be told a different name than the one in the history.
+- **The `NOT NULL` tightening rebuilds the table, which SQLite only allows with foreign keys off.**
+  `openDb` now runs the migrations with `foreign_keys = OFF` and re-checks every reference with
+  `foreign_key_check` afterwards, failing loudly if a rebuild really did lose one.
+  `defer_foreign_keys` was tried first and does not work — it counts violations rather than
+  re-checking them, so a dropped-and-recreated table stays "violated" at commit.
+- **The `settings` table survives this slice, empty of its username key.** The key is deleted, per
+  the criterion; the table and its route still exist because the import form on "Mes parties" still
+  reads them. Slice 03 moves that form and can drop both.
+- **The profiles list gained its counters here** rather than in slice 01: a Profile only has
+  something to count once it owns Games.
+- **Every insert path now names an owner.** `toGame`, `importMonth`, the analysis pass and the three
+  fixture seeds take a `profileId`; `gameExistsByUrl` is scoped to the Profile. The import route
+  resolves the Profile from the username chess.com just vouched for (`resolveProfile`, shared with
+  the profiles route). Scoping the *read* paths — `/api/games`, `/stats`, `/openings`, `/danger`,
+  the explorer — remains slices 04-05.
+

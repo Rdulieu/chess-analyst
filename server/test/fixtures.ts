@@ -1,4 +1,6 @@
-import type { NewGame } from "../src/db/schema";
+import type { Db } from "../src/db";
+import type { NewGame, UnownedGame } from "../src/db/schema";
+import { resolveProfile } from "../src/profiles/repository";
 import type { ChessComClient, ChessComGame } from "../src/chesscom";
 
 let urlSeq = 0;
@@ -64,7 +66,7 @@ export function fakeClient(
  * (and chess clocks): Morphy played White and won, the URL is a placeholder, and
  * "rapid" is an arbitrary valid time control category.
  */
-export const MORPHY_GAME: NewGame = {
+export const MORPHY_GAME: UnownedGame = {
   gameUrl: "https://www.chess.com/game/fixture/opera-1858",
   pgn: [
     '[Event "Paris Opera"]',
@@ -85,3 +87,16 @@ export const MORPHY_GAME: NewGame = {
   date: "1858-11-02",
   timeControlCategory: "rapid",
 };
+
+/**
+ * The `Profile` a test's Games belong to — every Game needs one (ADR-0014), and
+ * most tests only need *a* Player, not a particular one.
+ */
+export function seedProfile(db: Db, username = "DudulSmash"): number {
+  return resolveProfile(db, "chesscom", username).profile.id;
+}
+
+/** The Opera Game, filed under a Profile. */
+export function morphyGame(profileId: number): NewGame {
+  return { ...MORPHY_GAME, profileId };
+}

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
 import { games, type NewGame } from "../src/db/schema";
 import { getStats } from "../src/stats/repository";
+import { seedProfile } from "./fixtures";
 
 function tempDb() {
   return openDb(":memory:").db;
@@ -11,6 +12,7 @@ let seq = 0;
 function seed(db: ReturnType<typeof tempDb>, g: Partial<NewGame> & Pick<NewGame, "result">) {
   db.insert(games)
     .values({
+      profileId: seedProfile(db),
       gameUrl: `https://chess.com/g/${seq++}`,
       pgn: "1. e4 e5",
       opponent: "opp",

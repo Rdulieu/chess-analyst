@@ -6,6 +6,8 @@ import type { ChessComClient, TimeControlCategory } from "../chesscom";
 import { toGame } from "./mapping";
 
 export interface ImportParams {
+  /** The `Profile` the imported Games belong to — never another's (ADR-0014). */
+  profileId: number;
   username: string;
   year: number;
   month: number;
@@ -71,10 +73,10 @@ export async function importMonth(
   for (const game of monthGames) {
     if (game.rules !== "chess") continue;
     if (!wanted.has(game.time_class)) continue;
-    const mapped = toGame(game, params.username);
+    const mapped = toGame(game, params.username, params.profileId);
     byCategory[mapped.timeControlCategory]++;
     results[mapped.result]++;
-    if (gameExistsByUrl(db, game.url)) {
+    if (gameExistsByUrl(db, params.profileId, game.url)) {
       alreadyPresent++;
       continue;
     }

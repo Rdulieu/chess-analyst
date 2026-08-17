@@ -66,9 +66,11 @@ function bumpCounter(db: Db, fen: string, game: Game, san: string): void {
     daily: one(game.timeControlCategory === "daily"),
   };
   db.insert(moveHabits)
-    .values({ fen, side: game.playerColor, san, ...delta })
+    .values({ profileId: game.profileId, fen, side: game.playerColor, san, ...delta })
     .onConflictDoUpdate({
-      target: [moveHabits.fen, moveHabits.side, moveHabits.san],
+      // Keyed by the owner too (ADR-0014): the same Move from the same Position
+      // is a different habit under a different Profile, never one shared total.
+      target: [moveHabits.profileId, moveHabits.fen, moveHabits.side, moveHabits.san],
       set: {
         count: sql`${moveHabits.count} + ${delta.count}`,
         win: sql`${moveHabits.win} + ${delta.win}`,

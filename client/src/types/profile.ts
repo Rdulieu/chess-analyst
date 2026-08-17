@@ -8,4 +8,8 @@ export interface Profile {
   platform: "chesscom";
   username: string;
   createdAt: string;
+  /** How many Games were imported under this Profile. */
+  games: number;
+  /** How many of them have been through an `Analysis pass`. */
+  analyzed: number;
 }

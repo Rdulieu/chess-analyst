@@ -7,6 +7,7 @@ import { createAnalysisJob } from "../src/analysis/job";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { gamePositions } from "../src/chess/positions";
 import type { Engine } from "../src/engine/types";
+import { seedProfile } from "./fixtures";
 
 function tempDb() {
   return openDb(":memory:").db;
@@ -18,6 +19,7 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
   return db
     .insert(games)
     .values({
+      profileId: seedProfile(db),
       gameUrl: `https://chess.com/g/${urlSeq++}`,
       opponent: "opp",
       playerColor: "white",

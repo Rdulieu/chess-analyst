@@ -10,6 +10,8 @@ const DUDUL: Profile = {
   platform: "chesscom",
   username: "DudulSmash",
   createdAt: "2026-08-18T10:00:00.000Z",
+  games: 166,
+  analyzed: 20,
 };
 const HIKARU: Profile = { ...DUDUL, id: 2, username: "Hikaru" };
 
@@ -56,6 +58,20 @@ describe("ProfilesPage — the Profiles it knows", () => {
     expect(rows[0].textContent).toMatch(/chess\.com/i);
     expect(rows[1].textContent).toContain("Hikaru");
     expect(screen.queryByText(/aucun profil/i)).toBeNull();
+  });
+
+  it("says how big each Profile's history is, and how much of it is analyzed", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json([DUDUL, { ...HIKARU, games: 0, analyzed: 0 }])));
+
+    renderPage();
+
+    const rows = within(await screen.findByRole("list", { name: /profils/i })).getAllByRole(
+      "listitem",
+    );
+    expect(rows[0].textContent).toMatch(/166\s*parties/i);
+    expect(rows[0].textContent).toMatch(/20\s*analys/i);
+    // A Profile with nothing under it says so in figures rather than staying silent.
+    expect(rows[1].textContent).toMatch(/0\s*partie/i);
   });
 
   it("surfaces the reason chess.com refused, and adds nothing to the list", async () => {

@@ -5,6 +5,7 @@ import { games, moveHabits, type NewGame } from "../src/db/schema";
 import { recordMoveHabits } from "../src/move-habits/precompute";
 import { seedMoveHabits } from "../src/move-habits/fixture";
 import { listCandidates } from "../src/move-habits/repository";
+import { seedProfile } from "./fixtures";
 
 /** The 4-field FEN of the standard starting position (no move counters). */
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
@@ -19,6 +20,7 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
   return db
     .insert(games)
     .values({
+      profileId: seedProfile(db),
       gameUrl: `https://chess.com/g/${urlSeq++}`,
       opponent: "opp",
       playerColor: "white",
@@ -127,7 +129,7 @@ describe("recordMoveHabits", () => {
 describe("seedMoveHabits (fixture dataset)", () => {
   it("seeds a deterministic dataset: shared first Moves aggregate on the White side", () => {
     const db = tempDb();
-    seedMoveHabits(db);
+    seedMoveHabits(db, seedProfile(db));
 
     const e4 = listCandidates(db, START, "white").find((c) => c.san === "e4")!;
     expect(e4.count).toBe(3); // three White games open 1. e4
@@ -136,7 +138,7 @@ describe("seedMoveHabits (fixture dataset)", () => {
 
   it("includes a deliberate transposition that merges into a single entry", () => {
     const db = tempDb();
-    seedMoveHabits(db);
+    seedMoveHabits(db, seedProfile(db));
 
     // Two Black games reach the same Position via different move orders (and
     // different halfmove clocks) before White plays Nc3 → one merged entry.
@@ -151,8 +153,8 @@ describe("seedMoveHabits (fixture dataset)", () => {
 
   it("is idempotent — seeding twice does not double-count", () => {
     const db = tempDb();
-    seedMoveHabits(db);
-    seedMoveHabits(db);
+    seedMoveHabits(db, seedProfile(db));
+    seedMoveHabits(db, seedProfile(db));
 
     const e4 = listCandidates(db, START, "white").find((c) => c.san === "e4")!;
     expect(e4.count).toBe(3);
