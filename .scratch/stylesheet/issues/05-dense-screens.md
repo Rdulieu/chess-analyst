@@ -56,6 +56,23 @@ After this slice, no layout inline style remains in the components.
 - [ ] Board orientation, arrow rendering, drill-down and move navigation all behave exactly as before.
 - [ ] Build and the full test suite are green.
 
+### Assigned here after slice 03 (decided, not open)
+
+Slice 03 raised two things it deliberately left out of the tint migration. Both are settled and land
+here, because this is the slice that owns the curve and the board:
+
+- [ ] **The curve's equality line (2.92:1) and its cursor (2.93:1) become tokens** and clear the 3:1
+      non-text threshold. They are unchanged US-14 values, so no regression — but they are two marks
+      the Player reads *on* a drawing, which is exactly the argument that produced the `--square-*`
+      family, and those were tokenised. Keeping a hex here for consistency with US-14 preserves the
+      wrong consistency.
+- [ ] **`--square-light` / `--square-dark` stop being dead tokens**: the board's base squares are
+      still `react-chessboard`'s own `#f0d9b5` / `#b58863`, so two frozen tokens are consumed
+      nowhere and no other slice claims them. Either the board consumes them here, or say so in
+      writing and delete them from ADR-0013 — a declared token nobody reads is a lie about the
+      palette. If the board consumes them, the coordinate labels' 2.29:1 (third-party defaults,
+      pre-existing) moves with it and should be measured.
+
 ### Feature Path (FP)
 
 1. Open the Danger positions screen on a real analysed history → the recurring positions are presented
