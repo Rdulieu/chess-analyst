@@ -37,9 +37,22 @@ ul[aria-label="games"] li {
 // The `Profile` list. Four constant columns — the account, its platform, the
 // state and the actions — so ten entries are swept down a column rather than
 // read one by one, and a compact row so ten of them fit without scrolling.
-ul[aria-label="profils"] li {
+//
+// The tracks belong to the LIST and the rows take them through `subgrid`. Sized
+// per row instead, the current row drifted a few pixels away from the others:
+// its state cell reads "Profil actuel" where the rest read "Sélectionner", and
+// its bolder text is wider — which is exactly the drift a constant column is
+// there to prevent. `display: contents` on the row would align them too, and
+// would take the row's box with it: no hairline, no current marker.
+ul[aria-label="profils"] {
   display: grid;
   grid-template-columns: 1fr auto auto auto;
+}
+
+ul[aria-label="profils"] li {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   align-items: center;
   gap: var(--space-3);
   padding-block: var(--space-1);
