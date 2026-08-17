@@ -53,6 +53,11 @@ describe("GameList", () => {
       const checkbox = within(item).getByRole("checkbox");
       const description = within(item).getByRole("button");
 
+      // Three named parts, present on every row whether or not the Game has
+      // been analysed, so the columns line up down the whole list.
+      const parts = [...item.children].map((child) => (child as HTMLElement).dataset.part);
+      expect(parts).toEqual(["selection", "description", "state"]);
+
       // Three parts side by side, never nested one inside another: what the
       // Player reads left to right is selection, then the Game, then its state.
       expect(checkbox.contains(description)).toBe(false);

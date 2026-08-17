@@ -21,38 +21,47 @@ export function GameList({
   return (
     <ul aria-label="games">
       {games.map((g) => (
+        // Three named parts on every row — the state part stays even when the
+        // Game is not analysed, so the columns line up down a list of eighty
+        // Games instead of shifting on each analysed entry.
         <li key={g.id}>
-          <input
-            type="checkbox"
-            aria-label={`sélectionner la partie vs ${g.opponent}`}
-            checked={selectedIds.has(g.id)}
-            onChange={() => onToggleSelect(g.id)}
-          />
-          <button type="button" onClick={() => onSelect(g)}>
-            vs {g.opponent} · {g.result} · {g.date} · {g.timeControlCategory}
-          </button>
-          {g.analyzed && (
-            <span
-              aria-label="analysée"
-              // A bordered pill rather than bold text: in a 54-row list the bold
-              // was easy to miss. Inline — the app ships no stylesheet — and the
-              // checkmark + word carry the meaning, so the tint is never the
-              // only cue.
-              style={{
-                marginLeft: "0.5rem",
-                padding: "0.05rem 0.4rem",
-                border: "1px solid #2e7d32",
-                borderRadius: "0.75rem",
-                backgroundColor: "#e8f5e9",
-                color: "#1b5e20",
-                fontWeight: "bold",
-                fontSize: "0.85em",
-                whiteSpace: "nowrap",
-              }}
-            >
-              ✓ analysée
-            </span>
-          )}
+          <span data-part="selection">
+            <input
+              type="checkbox"
+              aria-label={`sélectionner la partie vs ${g.opponent}`}
+              checked={selectedIds.has(g.id)}
+              onChange={() => onToggleSelect(g.id)}
+            />
+          </span>
+          <span data-part="description">
+            <button type="button" onClick={() => onSelect(g)}>
+              vs {g.opponent} · {g.result} · {g.date} · {g.timeControlCategory}
+            </button>
+          </span>
+          <span data-part="state">
+            {g.analyzed && (
+              <span
+                aria-label="analysée"
+                // A bordered pill rather than bold text: in a 54-row list the bold
+                // was easy to miss. Inline — the app ships no stylesheet — and the
+                // checkmark + word carry the meaning, so the tint is never the
+                // only cue.
+                style={{
+                  marginLeft: "0.5rem",
+                  padding: "0.05rem 0.4rem",
+                  border: "1px solid #2e7d32",
+                  borderRadius: "0.75rem",
+                  backgroundColor: "#e8f5e9",
+                  color: "#1b5e20",
+                  fontWeight: "bold",
+                  fontSize: "0.85em",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ✓ analysée
+              </span>
+            )}
+          </span>
         </li>
       ))}
     </ul>
