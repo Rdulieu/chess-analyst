@@ -7,7 +7,6 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { openDb } from "../src/db";
-import { profiles } from "../src/db/schema";
 
 // A **file** database: `:memory:` cannot be reopened, and everything this suite
 // asserts is about what a *second* open finds — the migration having run once.

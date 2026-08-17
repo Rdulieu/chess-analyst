@@ -72,6 +72,10 @@ ul[aria-label="profils"] li {
   [data-part="counts"] {
     color: var(--ink-muted);
     font-size: var(--text-s);
+    // One line, always: "166 parties · 20 analysées" broken in two reads as two
+    // facts and makes the row taller than its neighbours — the very drift the
+    // constant columns exist to prevent.
+    white-space: nowrap;
   }
 }
 

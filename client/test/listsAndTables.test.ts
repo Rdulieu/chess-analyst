@@ -155,7 +155,7 @@ describe("the Stats table's row groups", () => {
 describe("the Profile list, and which Profile is current", () => {
   const row = declarationsFor(css, 'ul[aria-label="profils"] li');
 
-  it("puts the account, the platform, the state and the actions in constant columns", () => {
+  it("puts the account, the platform, the counters, the state and the actions in constant columns", () => {
     // The columns are the LIST's, not each row's, and the rows take them through
     // `subgrid`. Seen on screen with ten Profiles: sized per row, the current
     // row's columns drifted a few pixels away from the others' — its state cell
@@ -165,7 +165,7 @@ describe("the Profile list, and which Profile is current", () => {
     // current marker still paint (which `display: contents` would have lost).
     const list = declarationsFor(css, 'ul[aria-label="profils"]');
     expect(list.get("display")).toBe("grid");
-    expect(list.get("grid-template-columns")).toBe("1fr auto auto auto");
+    expect(list.get("grid-template-columns")).toBe("1fr auto auto auto auto");
     expect(row.get("display")).toBe("grid");
     expect(row.get("grid-template-columns")).toBe("subgrid");
     expect(row.get("grid-column")?.replace(/\s/g, "")).toBe("1/-1");
