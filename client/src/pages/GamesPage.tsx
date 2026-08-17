@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { fetchGames } from "../api";
 import { useAnalysisPass } from "../features/analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
-import { ImportForm } from "../features/import/ImportForm";
 import { GameList } from "../features/games/GameList";
 import { AnalyzedCount } from "../features/games/AnalyzedCount";
 import type { Game } from "../types";
 
 /**
- * Mes parties (`/`): the import form, the Game list, and the engine-analysis
- * pass (US-4). The Player selects Games (checkboxes) and starts an analysis; a
+ * Mes parties (`/`): the Game list and the engine-analysis
+ * pass (US-4). Importing lives on the Profile's own page (US-11) — it is an
+ * operation on a Profile, and moving it also lightens the busiest screen in the
+ * app. The Player selects Games (checkboxes) and starts an analysis; a
  * determinate progress readout shows while it runs (polling the status), and
  * each analyzed Game gets an "analysée" badge once done. Selecting a Game's row
  * button navigates to its Analyse page.
@@ -46,8 +47,6 @@ export function GamesPage() {
   return (
     <section aria-labelledby="games-heading">
       <h2 id="games-heading">Mes parties</h2>
-
-      <ImportForm onImported={refresh} />
 
       {games && games.length === 0 && (
         <p>No games yet — import your chess.com history to get started.</p>

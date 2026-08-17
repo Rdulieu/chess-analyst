@@ -1,6 +1,6 @@
 # 03 — Import happens from a Profile's own page
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-11-profiles` (build + tests + FP green, 2026-08-18)
 
 > **Implemented on the business-story integration branch `integration/US-11-profiles`.** Branch
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
@@ -40,46 +40,46 @@ elsewhere you read *the* current Profile's data.
 
 ## Acceptance criteria
 
-- [ ] `/profiles/:id` shows one Profile's identity and counters (Games imported, Games analyzed).
-- [ ] The import form lives on that page and has **no username field**.
-- [ ] The import form no longer appears on "Mes parties"; that screen shows the Game list alone.
-- [ ] An Import writes Games under the Profile it was run from, and no other.
-- [ ] Month range and time-control category selection behave as before.
-- [ ] Per-month progress and per-month outcome lines behave as before, a failed month still not
+- [x] `/profiles/:id` shows one Profile's identity and counters (Games imported, Games analyzed).
+- [x] The import form lives on that page and has **no username field**.
+- [x] The import form no longer appears on "Mes parties"; that screen shows the Game list alone.
+- [x] An Import writes Games under the Profile it was run from, and no other.
+- [x] Month range and time-control category selection behave as before.
+- [x] Per-month progress and per-month outcome lines behave as before, a failed month still not
       aborting the Import.
-- [ ] Game uniqueness is `(profile_id, game_url)`: re-importing an overlapping range under one
+- [x] Game uniqueness is `(profile_id, game_url)`: re-importing an overlapping range under one
       Profile adds no duplicate.
-- [ ] The same `game_url` is accepted under two different Profiles, with each row carrying its own
+- [x] The same `game_url` is accepted under two different Profiles, with each row carrying its own
       Player-relative `player_color`, `result` and `opponent`.
-- [ ] The import API takes the Profile explicitly; a request naming no Profile, or an unknown one,
+- [x] The import API takes the Profile explicitly; a request naming no Profile, or an unknown one,
       is **refused** rather than answered.
-- [ ] HTTP-seam tests cover import under a Profile, the two-Profile same-URL case, the
+- [x] HTTP-seam tests cover import under a Profile, the two-Profile same-URL case, the
       re-import-no-duplicate case, and the refusal cases.
-- [ ] Page-seam tests cover the Profile page, the absence of the username field, and the import
+- [x] Page-seam tests cover the Profile page, the absence of the username field, and the import
       form's disappearance from "Mes parties".
 
 **Post-US-13 constraints** (ADR-0013):
 
-- [ ] The Profile page follows the page skeleton and passes the token-consistency audit, in both
+- [x] The Profile page follows the page skeleton and passes the token-consistency audit, in both
       themes — same bar as slice 01.
-- [ ] The Profile page is **narrow** — the default 72ch reading column, **not** `data-width="wide"`.
+- [x] The Profile page is **narrow** — the default 72ch reading column, **not** `data-width="wide"`.
       Decided by the requester on 2026-08-18: it carries a form and a few counters, nothing dense,
       so it has no claim on the wide variant US-13 reserves for the dense screens. Do not widen it
       because the import summary looks roomy — that is the taste call the requester made, and
       reversing it is theirs too.
-- [ ] The import summary keeps the `card` surface it already uses — it moves screen, it does not
+- [x] The import summary keeps the `card` surface it already uses — it moves screen, it does not
       change shape.
-- [ ] **Centred, and framed on a large screen.** The column is centred, and its content reads as a
+- [x] **Centred, and framed on a large screen.** The column is centred, and its content reads as a
       bounded surface with visible borders (the `card` surface) rather than as text floating in
       empty space. Requester's call, 2026-08-18.
-- [ ] **The whole page is readable without scrolling** at the reference window **1536x742** — the
+- [x] **The whole page is readable without scrolling** at the reference window **1536x742** — the
       one US-13-09 measured on. Identity, counters, import form, analysis state and deletion all
       visible at once.
-- [ ] Any height budget this needs is expressed with an **absolute `rem` ceiling**, not in viewport
+- [x] Any height budget this needs is expressed with an **absolute `rem` ceiling**, not in viewport
       units. US-13-09 paid for this lesson: `100dvh` is the *window*, and a maximized window behind
       a taskbar is taller than what the eye gets, so a viewport-unit budget puts the bottom of the
       page where nobody can see it.
-- [ ] The no-scroll promise is **measured**, not assumed — the same way US-13-09 reported its
+- [x] The no-scroll promise is **measured**, not assumed — the same way US-13-09 reported its
       numbers.
 
 ### Feature Path (FP)
@@ -98,3 +98,30 @@ Verify: UI first. Probe the database only to confirm the two Profiles' Games are
 
 - `.scratch/profiles/issues/02-existing-data-belongs-to-dudulsmash.md` — `games.profile_id` must
   exist before an Import can write it.
+
+## Outcome (2026-08-18)
+
+Every criterion met. Build green, 163 server + 395 client tests green, FP 5/5 on the real app
+against the real chess.com, on a throwaway database (never the user's — ADR-0015).
+
+**Measured, not assumed.** At the reference window **1536x742**, the page in its fullest state —
+identity, counters, import form *and* a three-month import summary — ends at **668 px**: no
+vertical scroll, 74 px of headroom, and no horizontal overflow (`scrollWidth` 1521 < 1536). It
+needed **no height budget at all**, so there was nothing to express in `rem` or otherwise; the
+US-13-09 lesson about `100dvh` simply never came up. Theme audit `pass: true`, 0 problems, in both
+themes, the invariant token family byte-identical between them.
+
+**The two-Profile probe.** `DudulSmash` (93 Games) and `ToreBjastad` (137 Games) side by side, one
+match played between them: **two rows**, `#32` white→black `win`/`loss` mirrored, opponents crossed.
+Zero duplicate `(profile_id, game_url)` pairs across 230 rows.
+
+**Left for the slices that own them:**
+
+- Analysis-pass state and deletion are **not** on this page yet (slice 05 owns the pass state; the
+  list owns deletion). The no-scroll criterion names them: with 74 px of headroom, slice 05 should
+  **re-measure** rather than assume the budget still holds.
+- "Mes parties" still lists **both** Profiles' Games blended (236 rows) — that is exactly what
+  slice 04 fixes, not a regression here.
+- The client's `getSettings`/`saveSettings` are now consumed by **nothing**: the import form was
+  their last caller. The PRD retires `settings` entirely; left standing so that removal happens in
+  one place rather than half here.

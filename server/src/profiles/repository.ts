@@ -14,6 +14,22 @@ export interface ProfileWithCounts extends Profile {
 
 /** Every `Profile`, oldest first — the order they were created in — with its counters. */
 export function listProfiles(db: Db): ProfileWithCounts[] {
+  return countedProfiles(db);
+}
+
+/**
+ * One `Profile` with the same counters the list shows, or `undefined` when no
+ * Profile has that id — what its own page reads. Deliberately the *same* query
+ * as the list, filtered: a Profile's page and its row in the list can then not
+ * disagree about how many Games it holds.
+ */
+export function getProfile(db: Db, id: number): ProfileWithCounts | undefined {
+  if (!Number.isInteger(id)) return undefined;
+  return countedProfiles(db, id)[0];
+}
+
+/** The counted-Profile query, over all of them or over the one `id` names. */
+function countedProfiles(db: Db, id?: number): ProfileWithCounts[] {
   return db
     .select({
       id: profiles.id,
@@ -27,6 +43,7 @@ export function listProfiles(db: Db): ProfileWithCounts[] {
     // A Profile with no Game yet is still a Profile, and reads zero rather than
     // disappearing from the list.
     .leftJoin(games, eq(games.profileId, profiles.id))
+    .where(id === undefined ? undefined : eq(profiles.id, id))
     .groupBy(profiles.id)
     .orderBy(profiles.id)
     .all();
@@ -53,6 +70,17 @@ export function findProfile(
       ),
     )
     .get();
+}
+
+/**
+ * The `Profile` this id names, or `undefined` when no Profile has it. What an
+ * endpoint scoped to a Profile calls before answering: a request naming an
+ * unknown Profile must be **refused**, never silently answered over every row
+ * (PRD, *API*).
+ */
+export function findProfileById(db: Db, id: number): Profile | undefined {
+  if (!Number.isInteger(id)) return undefined;
+  return db.select().from(profiles).where(eq(profiles.id, id)).get();
 }
 
 /**

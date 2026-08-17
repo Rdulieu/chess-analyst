@@ -34,7 +34,7 @@ export function createApp(
   app.use(express.json());
   app.use("/api/profiles", createProfilesRouter(db, chessCom));
   app.use("/api/games", createGamesRouter(db));
-  app.use("/api/import", createImportRouter(db, importJob, chessCom));
+  app.use("/api/import", createImportRouter(db, importJob));
   app.use("/api/analyze", createAnalyzeRouter(analysisJob));
   app.use("/api/settings", createSettingsRouter(db));
   app.use("/api/move-habits", createMoveHabitsRouter(db));

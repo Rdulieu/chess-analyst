@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Nav } from "./components/Nav";
 import { GamesPage } from "./pages/GamesPage";
 import { ProfilesPage } from "./pages/ProfilesPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { AnalysePage } from "./pages/AnalysePage";
 import { ExplorerPage } from "./pages/ExplorerPage";
 import { OpeningsPage } from "./pages/OpeningsPage";
@@ -35,6 +36,9 @@ export function App() {
             <Route path="/danger" element={<DangerPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/profiles" element={<ProfilesPage />} />
+          {/* The only route carrying an id: here the Player acts ON a named
+              Profile, everywhere else they read THE current one's data. */}
+          <Route path="/profiles/:id" element={<ProfilePage />} />
           </Routes>
         </div>
       </main>

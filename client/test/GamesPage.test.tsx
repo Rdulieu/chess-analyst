@@ -30,7 +30,6 @@ describe("GamesPage — the screen announces itself", () => {
       "fetch",
       vi.fn(async (url: string) => {
         if (url === "/api/games") return json([]);
-        if (url === "/api/settings") return json({ username: null });
         throw new Error(`unexpected fetch: ${url}`);
       }),
     );
@@ -43,6 +42,27 @@ describe("GamesPage — the screen announces itself", () => {
 
     const screenRegion = await screen.findByRole("region", { name: /mes parties/i });
     expect(within(screenRegion).getByRole("heading", { level: 2, name: /mes parties/i })).toBeTruthy();
+  });
+
+  it("shows the Game list alone — the import form moved onto the Profile's page", async () => {
+    // Importing is an operation ON a Profile (US-11): the form left the busiest
+    // screen in the app for the page of the Profile it imports under.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/games") return json([]);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("region", { name: /mes parties/i });
+    expect(screen.queryByRole("form", { name: /import/i })).toBeNull();
   });
 });
 

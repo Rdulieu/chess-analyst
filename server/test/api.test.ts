@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
+import { eq } from "drizzle-orm";
 import { openDb } from "../src/db";
 import { gamePositions } from "../src/chess/positions";
 import { games, evaluations } from "../src/db/schema";
@@ -396,18 +397,138 @@ describe("danger API", () => {
 });
 
 describe("import API", () => {
+  it("POST /api/import writes the Games under the Profile it names, and no other", async () => {
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db, "DudulSmash");
+    const friend = seedProfile(db, "Friend");
+    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        profileId: mine,
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["blitz"],
+      });
+
+    expect(res.status).toBe(202);
+    await importDone(app);
+
+    const rows = db.select().from(games).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].profileId).toBe(mine);
+    expect(db.select().from(games).where(eq(games.profileId, friend)).all()).toEqual([]);
+  });
+
+  it("re-imports an overlapping range under one Profile without adding a duplicate", async () => {
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db, "me");
+    const app = createApp(
+      db,
+      fakeClient({
+        "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/7" })],
+        "2024-02": [chessComGame({ url: "https://www.chess.com/game/live/8" })],
+      }),
+    );
+    const run = async (fromMonth: number) => {
+      await request(app)
+        .post("/api/import")
+        .send({
+          profileId: mine,
+          from: { year: 2024, month: fromMonth },
+          to: { year: 2024, month: 2 },
+          categories: ["blitz"],
+        });
+      return importDone(app);
+    };
+
+    await run(1);
+    const again = await run(2); // February a second time
+    expect(again.result.imported).toBe(0);
+    expect(again.result.alreadyPresent).toBe(1);
+    expect(db.select().from(games).all()).toHaveLength(2);
+  });
+
+  it("accepts the same game URL under two Profiles, each row from its own Player's side", async () => {
+    const { db } = openDb(":memory:");
+    const white = seedProfile(db, "me");
+    const black = seedProfile(db, "opp");
+    // One match between the two followed accounts — ADR-0014's two rows, not a
+    // dedup bug: each Profile records it as ITS Player played it.
+    const app = createApp(
+      db,
+      fakeClient({ "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/42" })] }),
+    );
+    const importFor = async (profileId: number) => {
+      await request(app)
+        .post("/api/import")
+        .send({
+          profileId,
+          from: { year: 2024, month: 1 },
+          to: { year: 2024, month: 1 },
+          categories: ["blitz"],
+        });
+      return importDone(app);
+    };
+
+    await importFor(white);
+    await importFor(black);
+
+    const rows = db.select().from(games).all();
+    expect(rows).toHaveLength(2);
+    expect(rows.map((g) => g.gameUrl)).toEqual([
+      "https://www.chess.com/game/live/42",
+      "https://www.chess.com/game/live/42",
+    ]);
+    expect(rows.find((g) => g.profileId === white)).toMatchObject({
+      playerColor: "white",
+      result: "win",
+      opponent: "opp",
+    });
+    expect(rows.find((g) => g.profileId === black)).toMatchObject({
+      playerColor: "black",
+      result: "loss",
+      opponent: "me",
+    });
+  });
+
+  it("POST /api/import refuses a request naming no Profile, or an unknown one, and starts nothing", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
+    const range = {
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 1 },
+      categories: ["blitz"],
+    };
+
+    const nameless = await request(app).post("/api/import").send(range);
+    expect(nameless.status).toBe(400);
+    expect(nameless.body.error).toMatch(/profil/i);
+
+    // An id that names nothing is a different mistake from naming none, and
+    // answers differently — 404 is "that Profile does not exist".
+    const unknown = await request(app).post("/api/import").send({ profileId: 4242, ...range });
+    expect(unknown.status).toBe(404);
+
+    const status = await request(app).get("/api/import/status");
+    expect(status.body.running).toBe(false);
+    expect(db.select().from(games).all()).toEqual([]);
+  });
+
   it("POST /api/import accepts a month range, runs it in the background, and the Games then show up in GET /api/games", async () => {
     const { db } = openDb(":memory:");
     const client = fakeClient({
       "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/1" })],
       "2024-03": [chessComGame({ url: "https://www.chess.com/game/live/2" })],
     });
+    const profileId = seedProfile(db, "me");
     const app = createApp(db, client);
 
     const res = await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: 2024, month: 1 },
         to: { year: 2024, month: 3 },
         categories: ["blitz"],
@@ -429,6 +550,7 @@ describe("import API", () => {
 
   it("GET /api/import/status carries a line per month, a failed month included, without aborting", async () => {
     const { db } = openDb(":memory:");
+    const profileId = seedProfile(db, "me");
     const app = createApp(
       db,
       fakeClient({
@@ -441,7 +563,7 @@ describe("import API", () => {
     await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: 2024, month: 1 },
         to: { year: 2024, month: 3 },
         categories: ["blitz"],
@@ -461,12 +583,13 @@ describe("import API", () => {
 
   it("POST /api/import rejects an inverted range with 400 and starts nothing", async () => {
     const { db } = openDb(":memory:");
+    const profileId = seedProfile(db, "me");
     const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
 
     const res = await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: 2024, month: 6 },
         to: { year: 2024, month: 3 },
         categories: ["blitz"],
@@ -483,6 +606,7 @@ describe("import API", () => {
   it("POST /api/import covers no month at all when the range lies entirely in the future", async () => {
     const { db } = openDb(":memory:");
     let monthsFetched = 0;
+    const profileId = seedProfile(db, "me");
     const app = createApp(db, {
       fetchPlayer: async (username) => ({ username }),
       fetchMonth: async () => {
@@ -495,7 +619,7 @@ describe("import API", () => {
     await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: nextYear, month: 1 },
         to: { year: nextYear, month: 6 },
         categories: ["blitz"],
@@ -508,45 +632,16 @@ describe("import API", () => {
     expect(final.result.message).toMatch(/no games found/i);
   });
 
-  it("POST /api/import checks the username once, before any month is fetched", async () => {
-    const { db } = openDb(":memory:");
-    let monthsFetched = 0;
-    let existsChecks = 0;
-    const client: ChessComClient = {
-      fetchPlayer: async () => {
-        existsChecks++;
-        return null;
-      },
-      fetchMonth: async () => {
-        monthsFetched++;
-        return [];
-      },
-    };
-    const app = createApp(db, client);
-
-    const res = await request(app)
-      .post("/api/import")
-      .send({
-        username: "ghost",
-        from: { year: 2024, month: 1 },
-        to: { year: 2024, month: 12 },
-        categories: ["blitz"],
-      });
-
-    expect(res.status).toBe(404);
-    expect(existsChecks).toBe(1); // once for the range, not once per month
-    expect(monthsFetched).toBe(0);
-  });
-
   it("POST /api/import imposes no cap on how long a range may be", async () => {
     const { db } = openDb(":memory:");
+    const profileId = seedProfile(db, "me");
     const app = createApp(db, fakeClient({}));
 
     // Rebuilding a whole history in one Import is a supported use (ADR-0010).
     const res = await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: 2010, month: 1 },
         to: { year: 2025, month: 12 },
         categories: ["blitz"],
@@ -557,29 +652,6 @@ describe("import API", () => {
     await importDone(app);
   });
 
-  it("POST /api/import returns an error and starts nothing for an unknown username", async () => {
-    const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }, false));
-
-    const res = await request(app)
-      .post("/api/import")
-      .send({
-        username: "ghost",
-        from: { year: 2024, month: 1 },
-        to: { year: 2024, month: 1 },
-        categories: ["blitz"],
-      });
-
-    expect(res.status).toBe(404);
-    expect(res.body.error).toMatch(/username/i);
-
-    // No job was started, so nothing was imported and the status is idle.
-    const status = await request(app).get("/api/import/status");
-    expect(status.body.running).toBe(false);
-    const list = await request(app).get("/api/games");
-    expect(list.body).toEqual([]);
-  });
-
   it("stays responsive when the chess.com request fails", async () => {
     const { db } = openDb(":memory:");
     const failing: ChessComClient = {
@@ -588,12 +660,13 @@ describe("import API", () => {
         throw new Error("chess.com request failed (429)");
       },
     };
+    const profileId = seedProfile(db, "me");
     const app = createApp(db, failing);
 
     const res = await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: 2024, month: 1 },
         to: { year: 2024, month: 1 },
         categories: ["blitz"],
@@ -610,12 +683,13 @@ describe("import API", () => {
 
   it("POST /api/import reports zero with a message covering the whole range", async () => {
     const { db } = openDb(":memory:");
+    const profileId = seedProfile(db, "me");
     const app = createApp(db, fakeClient({}));
 
     await request(app)
       .post("/api/import")
       .send({
-        username: "me",
+        profileId,
         from: { year: 2024, month: 1 },
         to: { year: 2024, month: 3 },
         categories: ["blitz"],
@@ -814,6 +888,32 @@ describe("profiles API", () => {
       { username: "DudulSmash", games: 2, analyzed: 1 },
       { username: "Hikaru", games: 1, analyzed: 0 },
     ]);
+  });
+
+  it("GET /api/profiles/:id answers that one Profile with its counters, and 404 for an unknown id", async () => {
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db, "DudulSmash");
+    const theirs = seedProfile(db, "Hikaru");
+    db.insert(games)
+      .values([
+        { ...morphyGame(mine), gameUrl: "https://chess.com/g/1", analyzed: true },
+        { ...morphyGame(theirs), gameUrl: "https://chess.com/g/2" },
+      ])
+      .run();
+    const app = createApp(db, fakeClient({}));
+
+    const res = await request(app).get(`/api/profiles/${mine}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: mine,
+      platform: "chesscom",
+      username: "DudulSmash",
+      games: 1,
+      analyzed: 1,
+    });
+    expect((await request(app).get(`/api/profiles/${theirs}`)).body).toMatchObject({ games: 1, analyzed: 0 });
+    expect((await request(app).get("/api/profiles/9999")).status).toBe(404);
   });
 
   it("DELETE /api/profiles/:id removes it, and answers 404 for one that never existed", async () => {

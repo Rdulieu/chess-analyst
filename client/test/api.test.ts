@@ -27,7 +27,7 @@ describe("startImport", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const params = {
-      username: "me",
+      profileId: 7,
       from: { year: 2024, month: 1 },
       to: { year: 2024, month: 3 },
       categories: ["blitz", "rapid"] as const,
@@ -40,7 +40,7 @@ describe("startImport", () => {
     expect(url).toBe("/api/import");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({
-      username: "me",
+      profileId: 7,
       from: { year: 2024, month: 1 },
       to: { year: 2024, month: 3 },
       categories: ["blitz", "rapid"],
@@ -55,19 +55,19 @@ describe("startImport", () => {
           ({
             ok: false,
             status: 404,
-            json: async () => ({ error: "Unknown chess.com username: ghost" }),
+            json: async () => ({ error: "Profil introuvable : 9999" }),
           }) as Response,
       ),
     );
 
     await expect(
       startImport({
-        username: "ghost",
+        profileId: 9999,
         from: { year: 2024, month: 1 },
         to: { year: 2024, month: 1 },
         categories: ["blitz"],
       }),
-    ).rejects.toThrow(/ghost/);
+    ).rejects.toThrow(/introuvable/);
   });
 });
 

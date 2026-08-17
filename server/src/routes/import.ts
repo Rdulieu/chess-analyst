@@ -1,20 +1,39 @@
 import { Router } from "express";
 import type { Db } from "../db";
-import type { ChessComClient } from "../chesscom";
 import { normalizeRange, type ImportJob } from "../import";
-import { resolveProfile } from "../profiles/repository";
+import { findProfileById } from "../profiles/repository";
 
 /**
  * Import routes (mounted at /api/import). A range Import is long-running, so
  * POST only *starts* it and answers 202 with the initial status; the client
  * polls GET /status for progress counted in months and reads the consolidated
  * summary once it stops running (ADR-0010).
+ *
+ * An Import is an operation **on one `Profile`** (ADR-0014): the request names
+ * the Profile, and the account to fetch is that Profile's own. There is no
+ * username input — it was the only way one account's Games could ever land
+ * under another's Profile, and chess.com already vouched for the account when
+ * the Profile was created, so asking again would check nothing.
  */
-export function createImportRouter(db: Db, job: ImportJob, chessCom: ChessComClient): Router {
+export function createImportRouter(db: Db, job: ImportJob): Router {
   const router = Router();
 
-  router.post("/", async (req, res) => {
-    const { username, from, to, categories } = req.body ?? {};
+  router.post("/", (req, res) => {
+    const { profileId, from, to, categories } = req.body ?? {};
+
+    // Naming no Profile, or an unknown one, is REFUSED rather than answered:
+    // the alternative is an Import quietly filing Games under whatever the
+    // server picked, which is exactly what the partitioning exists against.
+    const profile = findProfileById(db, Number(profileId));
+    if (profile === undefined) {
+      res.status(profileId === undefined || profileId === null ? 400 : 404).json({
+        error:
+          profileId === undefined || profileId === null
+            ? "Aucun profil indiqué : l'import s'exécute depuis la page d'un profil."
+            : `Profil introuvable : ${profileId}`,
+      });
+      return;
+    }
 
     // An inverted range is an incoherent entry, refused outright; a last month
     // in the future is clamped silently. The range length is not capped — the
@@ -25,29 +44,9 @@ export function createImportRouter(db: Db, job: ImportJob, chessCom: ChessComCli
       return;
     }
 
-    // Checked once, here, before anything starts: an unknown username must fail
-    // synchronously, and the answer cannot differ from one month to the next.
-    let player;
-    try {
-      player = await chessCom.fetchPlayer(username);
-      if (player === null) {
-        res.status(404).json({ error: `Unknown chess.com username: ${username}` });
-        return;
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Import failed";
-      console.error("Import failed:", message);
-      res.status(502).json({ error: `Import from chess.com failed: ${message}` });
-      return;
-    }
-
-    // Every Game needs an owner, and the check above just had chess.com vouch
-    // for this account under its canonical spelling — which is exactly what a
-    // `Profile` is. So the Import runs under that Profile, creating it the
-    // first time this account is imported. Slice 03 moves the form onto the
-    // Profile's own page and the account stops being typed in at all.
-    const { profile } = resolveProfile(db, "chesscom", player.username);
-    res.status(202).json(job.start({ profileId: profile.id, username: player.username, ...range, categories }));
+    res
+      .status(202)
+      .json(job.start({ profileId: profile.id, username: profile.username, ...range, categories }));
   });
 
   router.get("/status", (_req, res) => res.json(job.status()));
