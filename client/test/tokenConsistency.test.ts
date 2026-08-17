@@ -38,10 +38,12 @@ describe("the token-consistency audit", () => {
   it("finds no colour left hard-coded in a component", () => {
     // The other half of the same guarantee: the audit above proves the tokens
     // that ARE consumed resolve, this proves none was left behind as a hex.
-    // Only the components may hold a colour, and only for the two cases the ADR
-    // exempts — the arrows, one hsla per data point, and the curve's equality
-    // line and cursor, drawn over the two constant player grounds.
-    const EXEMPT = /^(chess\/arrows|components\/EvaluationGraph)\.tsx?$/;
+    // Only ONE component may still hold a colour, and only for the case the ADR
+    // exempts: the arrows, one `hsla` per data point (hue is the win rate, alpha
+    // the frequency), which no token can express. The curve's equality line and
+    // cursor used to be exempt too and are tokens since US-13, so the exemption
+    // shrank rather than being carried along.
+    const EXEMPT = /^chess\/arrows\.ts$/;
     const offenders = componentSources()
       .filter(({ path }) => !EXEMPT.test(path))
       .filter(({ source }) => /#[0-9a-fA-F]{3,8}\b|\b(rgba?|hsla?)\(/.test(stripComments(source)))

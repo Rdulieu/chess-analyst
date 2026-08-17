@@ -6,6 +6,7 @@ import { WinningChancesBar } from "./WinningChancesBar";
 import { EvaluationGraph } from "./EvaluationGraph";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
+import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { MoveAnnotation } from "../types";
 
 /**
@@ -86,15 +87,17 @@ export function Board({
       {currentAnnotation && <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />}
       {/*
         Two named panes rather than two anonymous divs: the row is the thing the
-        stylesheet will size and reflow, and the board must not resize when the
-        curve comes and goes (hiding the annotations must not move the position
-        the Player is reading — US-14). The pixel values below are the pre-
-        stylesheet stand-in and nothing depends on their being fixed.
+        stylesheet sizes and reflows, and the board must not resize when the curve
+        comes and goes (hiding the annotations must not move the position the
+        Player is reading — US-14). The panes carry the names; the sizes are the
+        sheet's (`_dense`), which is what makes that constraint one rule instead
+        of two components agreeing by luck.
       */}
-      <div data-row="board" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <div data-pane="board" style={{ flex: "0 0 360px", maxWidth: 360 }}>
+      <div data-row="board">
+        <div data-pane="board">
           <Chessboard
             options={{
+              ...BOARD_SQUARES,
               id: "game-board",
               position,
               boardOrientation: orientation,
@@ -107,8 +110,8 @@ export function Board({
         {annotations && (
           // Landscape, and deliberately so: squeezed into a narrow column the
           // curve stops being a time axis and reads as a vertical drip.
-          <div data-pane="annotations" style={{ flex: "1 1 260px", minWidth: 220 }}>
-            <div style={{ height: 220 }}>
+          <div data-pane="annotations">
+            <div data-part="curve">
               <EvaluationGraph annotations={annotations} currentPly={index} />
             </div>
             <ErrorTallyReadout annotations={annotations} />

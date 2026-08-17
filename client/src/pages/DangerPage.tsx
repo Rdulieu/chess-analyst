@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { fetchDangerView, type DangerView } from "../api";
 import { sideToMove } from "../chess/positions";
+import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { DangerEntry } from "../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
@@ -117,12 +118,13 @@ function DangerList({ dangers }: { dangers: DangerEntry[] }) {
             data-serious={isDangerous(d) ? "true" : undefined}
           >
             {/* A self-contained card: the diagram, the side to move and the
-                figures of one Position, so the entries can later be laid out as
-                a reflowing grid rather than a single column. */}
+                figures of one Position, laid out as a reflowing grid rather than
+                a single column (the stylesheet's `_dense`). */}
             <article>
-              <div style={{ maxWidth: 240 }}>
+              <div>
                 <Chessboard
                   options={{
+                    ...BOARD_SQUARES,
                     id: `danger-board-${i}`,
                     position: boardFen(d.fen),
                     // Oriented to the side that has the move, read from the

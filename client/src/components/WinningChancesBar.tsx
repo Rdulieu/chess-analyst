@@ -10,20 +10,13 @@ export function WinningChancesBar({ whiteWinChances }: { whiteWinChances: number
   const black = 100 - white;
 
   return (
+    // Named for the stylesheet, which holds the bar's shape and its frame — the
+    // border being what keeps White's light share detachable from a dark ground,
+    // since the shares themselves refuse to follow the theme (ADR-0013).
     <div
+      data-bar="winning-chances"
       role="img"
       aria-label={`Blancs ${white}% — Noirs ${black}%`}
-      style={{
-        display: "flex",
-        height: 8,
-        width: "100%",
-        // The border is what keeps White's light share detachable from a dark
-        // ground: the shares themselves refuse to follow the theme, so the
-        // frame has to do that work instead (ADR-0013).
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius)",
-        overflow: "hidden",
-      }}
     >
       {/* The widths are data and the colours are tokens, both inline because
           each share's size is computed per Position. `--white-share` and

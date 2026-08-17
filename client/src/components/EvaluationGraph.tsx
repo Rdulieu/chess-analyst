@@ -3,29 +3,6 @@ import { SEVERITY_GLYPH, SEVERITY_TINT, SEVERITY_TINT_INK } from "../chess/sever
 import type { MoveAnnotation } from "../types";
 
 /**
- * White's ground and Black's are the player colours, and they **never react to
- * the theme**: a colour that says "White" does not say "background" (ADR-0013).
- * They are the same two tokens the winning-chances bar reads, so the two pictures
- * of the same advantage cannot disagree.
- *
- * Read as CSS `style` values and not as SVG presentation attributes, deliberately:
- * a custom property is resolved in a *declaration*, never in an attribute value,
- * so a `fill=` attribute holding one silently paints nothing.
- */
-const WHITE_GROUND = "var(--white-share)";
-const BLACK_GROUND = "var(--black-share)";
-
-/**
- * The equality line and the current-Move cursor are drawn **over the two
- * constant player grounds**, so they are constant too — by the same rule that
- * sends the board's severity tints to the constant family. They are not part of
- * the frozen token set: no theme role would survive being laid over a ground that
- * is light at one end of the picture and dark at the other.
- */
-const EQUALITY = "#8a8a8a";
-const CURSOR = "#c05621";
-
-/**
  * A Game's `Evaluation curve` (CONTEXT.md), drawn beside the board: the Game runs
  * left (the starting Position) to right (its last Move), and each side's ground
  * is its winning chances there — White's rising from the bottom, Black's from the
@@ -43,6 +20,17 @@ const CURSOR = "#c05621";
  * again would be noise, and summarising them would be an interpretation this
  * feature does not compute. The non-colour cue for the current Move is the move
  * list's own `aria-current`, which already exists.
+ *
+ * **Not one colour of this picture is written here.** The two grounds, the equality
+ * line and the current-Move cursor are all declarations in the stylesheet
+ * (`_dense`), reached by `data-mark` where two marks had to be told apart: a custom
+ * property resolves in a declaration and never in an attribute value, so
+ * `stroke="var(--curve-cursor)"` would paint nothing at all. The marks are drawn
+ * over the two constant player grounds, so they are constant too — the same rule
+ * that sends the board's severity tints to the constant family — and their values
+ * clear 3:1 against **both** grounds at once, which is why neither is the
+ * eyeballed value US-14 shipped (2.92:1 and 2.93:1 against the one ground each
+ * happened to sit on).
  *
  * The ground is one stretched SVG (the shape is all that matters), but the
  * markers are **not** in it: the viewBox scales x and y by different factors, so
@@ -66,29 +54,30 @@ export function EvaluationGraph({
   const whiteGround = `0,100 ${boundary} ${lastX},100`;
 
   return (
-    <div aria-hidden="true" style={{ position: "relative", width: "100%", height: "100%" }}>
-      <svg
-        aria-hidden="true"
-        viewBox={`0 0 ${span} 100`}
-        preserveAspectRatio="none"
-        style={{ width: "100%", height: "100%", display: "block", background: BLACK_GROUND }}
-      >
-        <polygon points={whiteGround} style={{ fill: WHITE_GROUND }} />
+    // Neither box sizes itself any more: the sheet gives the curve its landscape
+    // box (`[data-part="curve"]`, `_dense`) and Black's ground with it, and this
+    // draws inside whatever it is given.
+    <div aria-hidden="true">
+      <svg aria-hidden="true" viewBox={`0 0 ${span} 100`} preserveAspectRatio="none">
+        {/* White's share of the picture. Its fill, like Black's ground behind it,
+            is the sheet's (`_dense`): a player colour is a declaration, and a
+            custom property never resolves in a `fill=` attribute anyway. */}
+        <polygon points={whiteGround} />
         <line
+          data-mark="equality"
           x1={0}
           y1={50}
           x2={lastX}
           y2={50}
-          stroke={EQUALITY}
           strokeWidth={0.5}
           strokeDasharray="2 2"
         />
         <line
+          data-mark="cursor"
           x1={currentPly}
           y1={0}
           x2={currentPly}
           y2={100}
-          stroke={CURSOR}
           strokeWidth={0.8}
           vectorEffect="non-scaling-stroke"
         />

@@ -1,0 +1,203 @@
+// =============================================================================
+// The dense screens: the ones that do not fit the reading column.
+//
+// `/danger` becomes a grid of cards, the explorer sets its candidates beside the
+// board they annotate, and the Analyse row keeps the arrangement US-14
+// established with fluid bases instead of the pixel stand-ins the components
+// carried while there was no stylesheet to put them in.
+//
+// Everything here is fluid: `auto-fit`, `min()`, `clamp()` and `rem`, and not one
+// designed breakpoint (PRD). A layout that folds because it ran out of room folds
+// at every width, including the ones nobody measured.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Danger positions: thirty diagrams the Player compares SIDE BY SIDE, which is
+// the whole reason the screen asks for the wide column.
+// -----------------------------------------------------------------------------
+ul[aria-label="positions dangereuses"] {
+  display: grid;
+  // The column count follows the window rather than a breakpoint: one card on a
+  // phone, seven on a wide monitor, nothing clipped in between.
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: var(--space-3);
+
+  // The card is the `li` and not the `article` inside it, deliberately: the
+  // review tint lands on the `li` (`data-serious`, _semantics), and a card
+  // painted on the `article` would cover the very highlight the screen exists to
+  // show. One card, one entry, tint included.
+  //
+  // The card's ground is the one thing NOT taken from the `card` mixin, and for
+  // the same reason: a dangerous entry's ground IS its review tint, and any
+  // `background` written on this selector would outrank `[data-serious]` and
+  // paint over it. On a page whose ground is already `--ground` the omission
+  // costs nothing to look at, and it keeps the highlight the screen exists for.
+  li {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+  }
+
+  // The diagram, the side to move and the figures, held together as one unit and
+  // spaced like everything else in the app.
+  article {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  // The board sizes itself to whatever it is given; all it needs is not to be
+  // given more than the card (the 240px stand-in it carried is gone).
+  article > div {
+    max-inline-size: 100%;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// The explorer. The candidate list annotates the board, so it belongs beside it
+// — and the drift US-10a noted (the side-to-move readout stranded far from the
+// candidates) shortens to the height of one diagram.
+//
+// A FLOAT rather than a two-column grid, and that is the interesting part: the
+// breadcrumb and the candidates flow beside the board while there is room and
+// under it when there is not, with no breakpoint designed and not one element
+// moved in the document. A grid would have needed either a media query or a
+// reordering, and reordering is exactly what costs a screen-reader user their
+// reading order.
+// -----------------------------------------------------------------------------
+section[aria-labelledby="explorer-heading"] {
+  // The float is contained here, or it escapes the bottom of the screen the
+  // moment the candidate list is shorter than the board.
+  display: flow-root;
+
+  > div {
+    float: inline-start;
+    inline-size: min(24rem, 100%);
+    margin-inline-end: var(--space-4);
+    margin-block-end: var(--space-3);
+  }
+
+  // The side to move reads as the diagram's own caption rather than as a line of
+  // prose that happens to precede it.
+  > p[aria-label="trait"] {
+    color: var(--ink-muted);
+    font-size: var(--text-s);
+  }
+
+  // The breadcrumb: one line of steps, wrapping on its own.
+  nav[aria-label="breadcrumb"] ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    align-items: baseline;
+  }
+
+  // A candidate is a row: its Move, then its figures. The rows are what the
+  // Player scans, so they get the hairline the Game list gets and nothing more.
+  ul[aria-label="candidates"] li {
+    padding-block: var(--space-1);
+    border-block-end: 1px solid var(--border);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// The Analyse row: the board on one side; the readout, the winning-chances bar,
+// the `Evaluation curve`, the error tally and the move list on the other — the
+// arrangement US-14 established, on fluid bases instead of the 360 / 260 / 220 px
+// stand-ins the component carried while there was nowhere to put a selector.
+//
+// Two constraints carry over from US-14 and they are both one declaration here:
+// the board must not resize when the curve comes and goes, and unchecking the
+// annotations must not collapse the row. `flex-grow: 0` on the board pane is what
+// enforces the first — the board is sized by its own basis and never by what
+// happens to be next to it — and the second follows: with nothing growing into the
+// gap, removing the annotations leaves the board exactly where it was.
+// -----------------------------------------------------------------------------
+[data-row="board"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+[data-pane="board"] {
+  flex-grow: 0;
+  flex-shrink: 1;
+  flex-basis: 22.5rem;
+  // The one thing that keeps a narrow window from scrolling sideways: the basis
+  // is a wish, this is the limit.
+  max-inline-size: 100%;
+}
+
+[data-pane="annotations"] {
+  flex-grow: 1;
+  flex-shrink: 1;
+  // Below this the pane wraps under the board rather than thinning: squeezed into
+  // a narrow column the curve stops being a time axis and reads as a vertical
+  // drip (US-14).
+  flex-basis: 20rem;
+  // A flex item refuses to go below its content's intrinsic width unless told it
+  // may; the curve's svg would hold the row open at a narrow viewport.
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+// The curve's box: LANDSCAPE by construction — 11rem tall inside a pane at least
+// 20rem wide, and once the row has folded the pane takes the whole column, so the
+// time axis is wider than it is tall at every width.
+[data-part="curve"] {
+  block-size: 11rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  // The markers are placed over the drawing, per data point, from the component:
+  // this is the box they are placed against.
+  position: relative;
+  // Black's ground is the box's; White's is the polygon the component draws on
+  // top. Both are player colours and neither follows the theme.
+  background: var(--black-share);
+
+  // The graph's own wrapper draws and no longer sizes itself.
+  > div {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  // White's share of the picture, drawn over Black's ground above it. Both are
+  // player colours: constant in both themes, so the picture never lies about
+  // which side is which.
+  polygon {
+    fill: var(--white-share);
+  }
+
+  // The equality line and the current-Move cursor. Declared here and not in the
+  // component because a custom property resolves in a declaration and never in an
+  // attribute value — `stroke="var(--curve-cursor)"` paints nothing at all.
+  [data-mark="equality"] {
+    stroke: var(--curve-equality);
+  }
+
+  [data-mark="cursor"] {
+    stroke: var(--curve-cursor);
+  }
+}
+
+// The winning-chances bar: a bar, framed. The frame is what keeps White's light
+// share detachable from a dark ground, since the shares refuse to follow the
+// theme (ADR-0013); the two widths stay inline, being the Position's own figures.
+[data-bar="winning-chances"] {
+  display: flex;
+  block-size: 0.5rem;
+  inline-size: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}

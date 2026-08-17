@@ -34,9 +34,11 @@ export function GameViewer({ game, onAnalyzed }: { game: Game; onAnalyzed?: () =
   };
 
   return (
-    // Wider than the board alone since US-14: the `Evaluation curve` sits beside
-    // it and needs width to be a *time* axis at all.
-    <div style={{ maxWidth: 820 }}>
+    // The screen's own `wide` column bounds this now (the Analyse `section` asks
+    // for it): the `Evaluation curve` beside the board needs width to be a *time*
+    // axis at all, and how much width is the stylesheet's call, not this
+    // component's.
+    <div>
       <GameHeader game={game} />
       {game.analyzed ? (
         <label>

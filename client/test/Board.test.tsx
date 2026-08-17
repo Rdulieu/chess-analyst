@@ -320,14 +320,14 @@ describe("Evaluation curve", () => {
     expect(glyphs).toEqual(["??"]);
   });
 
-  it("gives each share of the curve its player's own token, and each marker its severity's pair", () => {
+  it("gives each marker its severity's own tint-and-ink pair", () => {
     const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
 
-    // White's ground and Black's: the same two tokens the winning-chances bar
-    // uses, and neither is redefined by the dark theme.
-    const svg = curve(container)!;
-    expect(svg.style.background).toBe("var(--black-share)");
-    expect(svg.querySelector("polygon")!.style.fill).toBe("var(--white-share)");
+    // The curve's two grounds — White's share and Black's — moved out of this
+    // component and into the stylesheet with US-13's dense-screens slice, since a
+    // ground is a declaration a selector can hold. They are asserted where they
+    // now live: `denseScreens.test.ts`, on the compiled sheet. What stays inline,
+    // and stays asserted here, is what the DATA computes.
 
     // A marker carries the chrome tint AND its own ink — the pair, never the
     // tint alone, so its legibility does not depend on the inherited `--ink`

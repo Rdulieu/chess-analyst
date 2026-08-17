@@ -50,6 +50,18 @@
   --square-inaccuracy: #f2e08a;
   --square-mistake: #edb463;
   --square-blunder: #e8837a;
+  // The board's coordinate labels. One constant ink for BOTH squares rather than
+  // react-chessboard's alternation (each label in the other square's colour),
+  // which measured 2.29:1 — text, on a board, below any threshold. Against the
+  // two squares above this reads 12.89:1 and 4.66:1.
+  --square-notation: #241d13;
+  // The `Evaluation curve`'s equality line and current-Move cursor: two marks the
+  // Player reads ON a drawing, so the same rule that sends the board's severity
+  // tints here sends them here. Both clear 3:1 against BOTH player grounds at
+  // once (equality 3.44 / 3.30, cursor 3.36 / 3.37) — a luminance window of about
+  // 0.19–0.23, which no eyeballed value hits by chance.
+  --curve-equality: #7e7e7e;
+  --curve-cursor: #d45a25;
 
   // --- scales ---------------------------------------------------------------
   --space-1: 0.25rem;
