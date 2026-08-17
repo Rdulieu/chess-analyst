@@ -154,11 +154,30 @@ section[aria-labelledby="explorer-heading"] {
 // diagram, inside the board's pane: what disappears is below what the Player is
 // reading, so nothing above it can move. The document order holds the constraint
 // and the rule is gone, rather than kept as a second mechanism for the same thing.
+// How wide the diagram may be, which for a square board is also how TALL it may
+// be: the window, less everything the Analyse screen puts above the row (the app
+// header, the screen's heading, the Game's header, the annotations toggle, the
+// step controls and the current-Move readout — 327px measured on a 1536×690
+// window, so 21rem with a little air).
+//
+// A `$` variable and not a custom property, deliberately: both consumers are in
+// this file, nothing outside the sheet reads it, and a custom property would owe
+// the token audit a declaration in both themes for a length that has nothing to do
+// with either theme.
+$board-fits: calc(100vh - 21rem);
+
 [data-row="board"] {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
   align-items: flex-start;
+  // The board must be visible IN FULL — a position you have to scroll to read is
+  // not a position you can read. So the row is bounded by what the board is
+  // allowed to be, divided by the board's own share of it: cap the row and the
+  // 60/40 below still lands on a diagram that fits the window. Bounding only the
+  // board would have let the curve swallow the width the board gave up, which is
+  // the complaint this whole change started from.
+  max-inline-size: min(100%, calc(#{$board-fits} / 0.6));
 }
 
 // Three fifths of the row to the diagram, two to what is read beside it. Asked for
@@ -172,10 +191,13 @@ section[aria-labelledby="explorer-heading"] {
 [data-pane="board"] {
   flex-grow: 3;
   flex-shrink: 1;
-  flex-basis: 24rem;
-  // The one thing that keeps a narrow window from scrolling sideways: the basis
-  // is a wish, this is the limit.
-  max-inline-size: 100%;
+  // 21rem against the side pane's 14rem: 3:2, like the grow factors. The pair plus
+  // the gap must stay under the bounded row above, or the row folds on a window
+  // that has room for two columns.
+  flex-basis: 21rem;
+  // Two limits, and the second is the one that keeps the diagram on screen: never
+  // wider than the row, and never taller than the window has left for it.
+  max-inline-size: min(100%, #{$board-fits});
   // The board and its own gauge, a hair apart: the bar belongs to the diagram
   // above it, and `--space-1` is the smallest step the scale has.
   display: flex;
@@ -193,7 +215,7 @@ section[aria-labelledby="explorer-heading"] {
   // Below this the pane wraps under the board rather than thinning: squeezed into
   // a narrow column the curve stops being a time axis and reads as a vertical
   // drip (US-14).
-  flex-basis: 16rem;
+  flex-basis: 14rem;
   // A flex item refuses to go below its content's intrinsic width unless told it
   // may; the curve's svg would hold the row open at a narrow viewport.
   min-inline-size: 0;

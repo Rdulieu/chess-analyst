@@ -127,11 +127,24 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     // Requested after seeing the screen: the curve had 76% of the row and the
     // diagram 24%.
     expect(boardPane.get("flex-grow")).toBe("3");
-    expect(boardPane.get("flex-basis")).toBe("24rem");
-    expect(boardPane.get("max-inline-size")).toBe("100%");
+    expect(boardPane.get("flex-basis")).toBe("21rem");
     expect(side.get("flex-grow")).toBe("2");
-    expect(side.get("flex-basis")).toBe("16rem");
+    expect(side.get("flex-basis")).toBe("14rem");
     expect(side.get("min-inline-size")).toBe("0");
+  });
+
+  it("keeps the whole diagram on screen, by bounding the row and not just the board", () => {
+    // A position you have to scroll to read is not a position you can read. The
+    // board is square, so its width IS its height: bound it by what the window has
+    // left under everything the screen puts above the row. And bound the ROW by the
+    // same budget divided by the board's share — bounding only the board would let
+    // the curve swallow the width the board gave up, which is the complaint this
+    // change started from.
+    // Sass flattens the outer `calc()` away; `min()` is itself a math context, so
+    // the division stands and the browser resolves it to `-35rem + 166.667vh`.
+    const budget = "calc(100vh - 21rem)";
+    expect(boardPane.get("max-inline-size")).toBe(`min(100%, ${budget})`);
+    expect(row.get("max-inline-size")).toBe(`min(100%, ${budget} / 0.6)`);
   });
 
   it("stacks the board and its own gauge, a hair apart", () => {
