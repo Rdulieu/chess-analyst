@@ -48,6 +48,36 @@ describe("ProfilePage — one Profile's own page", () => {
     expect(region.textContent).toMatch(/chess\.com/i);
   });
 
+  it("reports THIS Profile's own analysis pass, asked for by id", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/profiles/7") return json(PROFILE);
+        if (url.startsWith("/api/analyze/status")) {
+          asked.push(url);
+          return json({
+            running: false,
+            total: 60,
+            done: 60,
+            games: 20,
+            acknowledged: false,
+            outcome: "completed",
+            error: null,
+          });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    renderPage();
+
+    // The pass state belongs beside the analyzed count: both answer "where does
+    // this Player's analysis stand?", and both are read for this Profile alone.
+    expect(await screen.findByText(/dernière analyse : 20 parties, 60 positions évaluées/i)).toBeTruthy();
+    expect(asked).toEqual(["/api/analyze/status?profileId=7"]);
+  });
+
   it("carries that Profile's import form, and no username field", async () => {
     const posted: unknown[] = [];
     vi.stubGlobal(

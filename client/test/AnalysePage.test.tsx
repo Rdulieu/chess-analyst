@@ -45,10 +45,10 @@ describe("AnalysePage", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed });
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json({ running: true, total: 1, done: 0 }, 202);
         }
-        if (url === "/api/analyze/status") {
+        if (url.startsWith("/api/analyze/status")) {
           analyzed = true; // the pass finishes on the first poll
           return json({ running: false, total: 1, done: 1 });
         }

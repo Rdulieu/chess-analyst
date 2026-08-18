@@ -24,7 +24,7 @@ import type { Profile } from "../types";
  */
 export function GamesPage({ profile }: { profile: Profile }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass();
+  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(profile.id);
   const navigate = useNavigate();
 
   const load = useCallback(() => fetchGames(profile.id), [profile.id]);
