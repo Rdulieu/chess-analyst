@@ -58,3 +58,32 @@ describe("a scoped page with a Profile selected", () => {
     expect(await screen.findByText(/figures for Alice/i)).toBeTruthy();
   });
 });
+
+describe("a selection pointing at a Profile that no longer exists", () => {
+  it("is treated as no selection: the Player lands on the profiles area, not on a dead retry", async () => {
+    // Deleted from another tab, or a database that moved on. The server's answer
+    // is unambiguous — this Profile is not there — so retrying could only fail
+    // again, while the app kept pointing at something that no longer exists.
+    saveCurrentProfileId(9999);
+    vi.stubGlobal("fetch", vi.fn(async () => json({ error: "Profil introuvable." }, 404)));
+
+    renderScoped();
+
+    expect(await screen.findByRole("heading", { name: /profils/i })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /réessayer/i })).toBeNull();
+    // And the stale selection is gone, so the next screen does not repeat it.
+    expect(localStorage.getItem("chess-analyst.current-profile")).toBeNull();
+  });
+
+  it("keeps the failure and its retry when the server is merely unreachable", async () => {
+    // Not the same thing at all: nothing says the Profile is gone, so dropping
+    // the selection would lose the Player's choice over a passing outage.
+    saveCurrentProfileId(7);
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network down"); }));
+
+    renderScoped();
+
+    expect(await screen.findByRole("button", { name: /réessayer/i })).toBeTruthy();
+    expect(localStorage.getItem("chess-analyst.current-profile")).toBe("7");
+  });
+});

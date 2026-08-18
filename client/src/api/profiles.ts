@@ -1,5 +1,13 @@
 import type { Profile } from "../types";
 
+/**
+ * The platform answered, and the answer is that this `Profile` is not there —
+ * as opposed to not being able to ask at all. A caller holding a selection can
+ * act on the first (drop it) and must not act on the second (an outage is not a
+ * reason to lose the Player's choice).
+ */
+export class ProfileNotFound extends Error {}
+
 /** The `Profile`s the app knows, oldest first. */
 export async function fetchProfiles(): Promise<Profile[]> {
   const res = await fetch("/api/profiles");
@@ -15,6 +23,7 @@ export async function fetchProfiles(): Promise<Profile[]> {
 export async function fetchProfile(id: number): Promise<Profile> {
   const res = await fetch(`/api/profiles/${id}`);
   const body = (await res.json().catch(() => ({}))) as Profile & { error?: string };
+  if (res.status === 404) throw new ProfileNotFound(body.error ?? `Profil introuvable : ${id}`);
   if (!res.ok) throw new Error(body.error ?? `Failed to load profile ${id} (${res.status})`);
   return body;
 }

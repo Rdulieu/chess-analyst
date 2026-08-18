@@ -1,6 +1,6 @@
 # 04 — Every view speaks only of the current Profile
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-11-profiles` (build + tests green, FP 7/7).
 
 > **Implemented on the business-story integration branch `integration/US-11-profiles`.** Branch
 > from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
@@ -63,34 +63,34 @@ load says the load failed and offers to retry; it never invites an import.
 
 ## Acceptance criteria
 
-- [ ] `/api/games`, `/api/stats`, `/api/openings`, `/api/danger` and `/api/move-habits` each take
+- [x] `/api/games`, `/api/stats`, `/api/openings`, `/api/danger` and `/api/move-habits` each take
       the Profile explicitly and answer about it alone.
-- [ ] A request naming no Profile, or an unknown Profile, is refused — never answered over all rows.
-- [ ] The Game list shows only the current Profile's Games.
-- [ ] Global stats, `Win rate` included, are computed over the current Profile's Games only.
-- [ ] `Weak opening`s are computed over the current Profile's Games only.
-- [ ] `Move habit`s and `Opponent repl`ies aggregate the current Profile's Games only; two
+- [x] A request naming no Profile, or an unknown Profile, is refused — never answered over all rows.
+- [x] The Game list shows only the current Profile's Games.
+- [x] Global stats, `Win rate` included, are computed over the current Profile's Games only.
+- [x] `Weak opening`s are computed over the current Profile's Games only.
+- [x] `Move habit`s and `Opponent repl`ies aggregate the current Profile's Games only; two
       Profiles' counters never merge into one line.
-- [ ] `Danger position`s are computed over the current Profile's Games only — a recurring Position
+- [x] `Danger position`s are computed over the current Profile's Games only — a recurring Position
       is one *this* Player keeps reaching (`CONTEXT.md`).
-- [ ] A banner naming the current Profile is present on every scoped page and links to `/profiles`.
-- [ ] Selecting no Profile and opening a scoped page redirects to `/profiles`.
-- [ ] Selecting a Profile with no Games shows an empty state inviting an import — not a redirect.
-- [ ] HTTP-seam tests state the isolation property directly: data created under Profile A is absent
+- [x] A banner naming the current Profile is present on every scoped page and links to `/profiles`.
+- [x] Selecting no Profile and opening a scoped page redirects to `/profiles`.
+- [x] Selecting a Profile with no Games shows an empty state inviting an import — not a redirect.
+- [x] HTTP-seam tests state the isolation property directly: data created under Profile A is absent
       from every answer given about Profile B, endpoint by endpoint.
-- [ ] Page-seam tests cover the banner, the redirect, and the empty state.
-- [ ] A **failed** load is distinguished from an empty history: it says the load failed and offers a
+- [x] Page-seam tests cover the banner, the redirect, and the empty state.
+- [x] A **failed** load is distinguished from an empty history: it says the load failed and offers a
       retry, and never renders the import invitation.
-- [ ] The distinction holds on every screen that fetches on mount, not only "Mes parties".
-- [ ] `.scratch/games-load-failure/issues/01-…` is closed, referencing this slice.
+- [x] The distinction holds on every screen that fetches on mount, not only "Mes parties".
+- [x] `.scratch/games-load-failure/issues/01-…` is closed, referencing this slice.
 
 **Post-US-13 constraints** (ADR-0013):
 
-- [ ] The banner lives in the **app chrome** US-13 built (`_chrome.scss`) and reads as chrome, not
+- [x] The banner lives in the **app chrome** US-13 built (`_chrome.scss`) and reads as chrome, not
       as page content.
-- [ ] It marks the current Profile **without relying on colour alone** — the rule the navigation's
+- [x] It marks the current Profile **without relying on colour alone** — the rule the navigation's
       current tab already follows.
-- [ ] Banner, empty states and failure states all pass the token-consistency audit and are correct
+- [x] Banner, empty states and failure states all pass the token-consistency audit and are correct
       in both themes.
 
 ### Feature Path (FP)
@@ -113,3 +113,45 @@ Verify: UI first throughout — this slice is about what the user sees being tru
 
 - `.scratch/profiles/issues/03-import-from-the-profile-page.md` — two Profiles must be fillable
   through the app before their isolation can be exercised.
+
+## Feature Path run (2026-08-18) — 7/7 green
+
+Driven UI-first against the running app (server on :3101 over a scratch database, client on :5273),
+with two real chess.com Profiles: `DudulSmash` (166 Games, 20 analyzed, blitz/bullet/daily) and
+`Hikaru` (18 Games, 0 analyzed, rapid only), the second created and imported **through the UI**.
+
+1. ✅ Two Profiles hold imported Games, with clearly different histories.
+2. ✅ Every analysis page names the current Profile in the banner and shows its figures alone.
+3. ✅ Noted per page — Hikaru: 18 parties / 58 %, QGD Exchange D35, d4 ×4 · e4 ×4 · c4 ×2, no
+   analyzed Game. DudulSmash: 166 parties / 53 %, Nimzowitsch-Larsen A01 ×41, b3 ×56, 38 danger
+   positions.
+4. ✅ Switching Profile from `/profiles` renamed the banner and changed **every** noted figure, with
+   no reload.
+5. ✅ Nothing leaked: under DudulSmash, zero of Hikaru's opponents, zero of his ECO codes, and not
+   one `Rapid` row — his whole history is rapid.
+6. ✅ With nothing selected, all five scoped pages land on `/profiles`.
+7. ✅ A Profile with no Games (Hikaru, before his import) showed the empty state naming him and
+   linking to his own page — not a redirect.
+
+Plus the absorbed finding: with only the scoped read failing, each of the five screens rendered
+"Erreur : impossible de charger … Réessayer" and **none** rendered its empty state or invitation.
+Banner and failure block checked in both themes (light: `#f4f5f7`/`#5a6169` and
+`#fde8e6`/`#8a1b12`; dark: `#1e2124`/`#a2a9b0` and `#4d1d18`/`#ffc3ba`). No console error or warning.
+
+### Findings
+
+- **[fixed during the run, non-blocking]** A selection pointing at a `Profile` that no longer exists
+  (deleted from another tab, or a database that moved on) rendered a failure with a retry that could
+  never succeed, while the app kept pointing at something that was not there. A 404 on the current
+  Profile is now read as *the selection is stale*: it is dropped and the Player lands on `/profiles`
+  like anyone with nothing selected. An **unreachable** server is deliberately not that case —
+  it says nothing about the Profile, and losing the choice over a passing outage would be worse.
+- **[non-blocking, out of scope]** `GET /api/games/:id` and `/api/games/:id/annotations` are not
+  scoped: they name one Game outright, and the criteria cover the five aggregate endpoints. An id
+  from another Profile is therefore still answerable by URL. Not reachable through the UI (the
+  Analyse page is entered from a list that was already the right Profile's), and no criterion asks
+  for it — but it is the one place where the partition is a property of the *navigation* rather than
+  of the *answer*.
+- **[non-blocking, out of scope]** `POST /api/analyze` still takes bare `gameIds` and no Profile
+  (PRD user story 26, not a criterion of this slice). The Games it receives come from a scoped list,
+  so a pass covers one Profile in practice; nothing enforces it at the seam.

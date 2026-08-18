@@ -7,9 +7,13 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { fetchProfile } from "../../api";
+import { fetchProfile, ProfileNotFound } from "../../api";
 import type { Profile } from "../../types";
-import { loadCurrentProfileId, subscribeCurrentProfileId } from "./currentProfile";
+import {
+  clearCurrentProfileId,
+  loadCurrentProfileId,
+  subscribeCurrentProfileId,
+} from "./currentProfile";
 
 /**
  * What the app knows about the **current `Profile`** right now. The four states
@@ -48,9 +52,21 @@ export function CurrentProfileProvider({ children }: { children: ReactNode }) {
     setCurrent({ state: "loading" });
     fetchProfile(id)
       .then((profile) => live && setCurrent({ state: "ready", profile }))
-      .catch((cause: Error) =>
-        live && setCurrent({ state: "failed", error: cause.message, retry }),
-      );
+      .catch((cause: Error) => {
+        if (!live) return;
+        // The Profile is GONE (deleted elsewhere, or a database that moved on).
+        // The app must never point at something that no longer exists, and a
+        // retry here could only fail again — so the selection is dropped and the
+        // Player is sent to `/profiles` like anyone with nothing selected. An
+        // outage is deliberately NOT this case: it says nothing about the
+        // Profile, and losing the choice over it would be the worse answer.
+        if (cause instanceof ProfileNotFound) {
+          clearCurrentProfileId();
+          setCurrent({ state: "none" });
+          return;
+        }
+        setCurrent({ state: "failed", error: cause.message, retry });
+      });
     return () => {
       live = false;
     };
