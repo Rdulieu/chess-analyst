@@ -5,6 +5,7 @@ import type { Game } from "../src/types";
 
 const game = (over: Partial<Game>): Game => ({
   id: 1,
+  profileId: 1,
   gameUrl: "u",
   pgn: "1. e4 e5",
   opponent: "opp",

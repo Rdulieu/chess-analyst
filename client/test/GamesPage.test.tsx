@@ -7,6 +7,7 @@ import type { Game } from "../src/types";
 
 const GAME: Game = {
   id: 42,
+  profileId: 7,
   gameUrl: "https://chess.com/g/42",
   pgn: "1. e4 e5",
   opponent: "opp",
@@ -77,6 +78,36 @@ describe("GamesPage — the screen announces itself", () => {
 });
 
 describe("GamesPage — analysis pass", () => {
+  it("starts the pass — and polls it — under the Profile the page is about", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url.startsWith("/api/games")) return json([GAME]);
+        if (url.startsWith("/api/analyze")) {
+          urls.push(url);
+          return json({ running: false, total: 1, done: 1, games: 1 }, opts?.method ? 202 : 200);
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(await screen.findByLabelText(/sélectionner la partie vs opp/i));
+    await userEvent.click(screen.getByRole("button", { name: /analyser la sélection/i }));
+
+    // Engine time goes where the screen says it goes (ADR-0014): every leg of
+    // the pass names this Profile, the arrival poll included.
+    expect(urls.length).toBeGreaterThan(0);
+    expect(urls.every((url) => url.includes(`profileId=${PROFILE.id}`))).toBe(true);
+  });
+
+
   it("selects a Game, runs the analysis with a progress readout, and shows 'analysée' when done", async () => {
     let analyzed = false; // flips once the pass completes; drives the badge
     let statusPolls = 0;
@@ -85,10 +116,10 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME, analyzed }]);
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json({ running: true, total: 1, done: 0 }, 202);
         }
-        if (url === "/api/analyze/status") {
+        if (url.startsWith("/api/analyze/status")) {
           statusPolls += 1;
           analyzed = true; // the pass finishes on the first poll
           return json({ running: false, total: 1, done: 1 });
@@ -121,10 +152,10 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME }]);
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json({ running: true, total: 4, done: 1, games: 1 }, 202);
         }
-        if (url === "/api/analyze/status") {
+        if (url.startsWith("/api/analyze/status")) {
           await held; // hold the pass open so the running readout can be observed
           return json({ running: false, total: 4, done: 4, games: 1 });
         }
@@ -150,10 +181,10 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME }]);
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json({ running: true, total: 4, done: 0, games: 1, acknowledged: false, started: true }, 202);
         }
-        if (url === "/api/analyze/status") {
+        if (url.startsWith("/api/analyze/status")) {
           return json({ running: false, total: 4, done: 4, games: 1 });
         }
         throw new Error(`unexpected fetch: ${url}`);
@@ -178,13 +209,13 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME }]);
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json(
             { running: true, total: 312, done: 0, games: 3, acknowledged: false, started: true },
             202,
           );
         }
-        if (url === "/api/analyze/status") {
+        if (url.startsWith("/api/analyze/status")) {
           return json({ running: false, total: 312, done: 312, games: 3, acknowledged: false });
         }
         throw new Error(`unexpected fetch: ${url}`);
@@ -211,8 +242,8 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME, analyzed: true }]);
-        if (url === "/api/analyze/status") return json(status());
-        if (url === "/api/analyze/acknowledge" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze/status")) return json(status());
+        if (url.startsWith("/api/analyze/acknowledge") && opts?.method === "POST") {
           acknowledged = true;
           return json(null, 204);
         }
@@ -241,14 +272,14 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME, analyzed: true }]);
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           // Everything selected is already analyzed: no pass was opened.
           return json(
             { running: false, total: 6, done: 6, games: 1, acknowledged: true, started: false },
             202,
           );
         }
-        if (url === "/api/analyze/status")
+        if (url.startsWith("/api/analyze/status"))
           return json({ running: false, total: 6, done: 6, games: 1, acknowledged: true });
         throw new Error(`unexpected fetch: ${url}`);
       }),
@@ -271,7 +302,7 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string) => {
         if (url.startsWith("/api/games")) return json([{ ...GAME, analyzed: true }]);
-        if (url === "/api/analyze/status")
+        if (url.startsWith("/api/analyze/status"))
           return json({ running: false, total: 6, done: 6, games: 1, acknowledged: true });
         throw new Error(`unexpected fetch: ${url}`);
       }),
@@ -297,7 +328,7 @@ describe("GamesPage — analysis pass", () => {
             { ...GAME, id: 2, opponent: "b", analyzed: false },
             { ...GAME, id: 3, opponent: "c", analyzed: false },
           ]);
-        if (url === "/api/analyze/status")
+        if (url.startsWith("/api/analyze/status"))
           return json({
             running: false,
             total: 0,
@@ -325,7 +356,7 @@ describe("GamesPage — analysis pass", () => {
       "fetch",
       vi.fn(async (url: string) => {
         if (url.startsWith("/api/games")) return json([]);
-        if (url === "/api/analyze/status")
+        if (url.startsWith("/api/analyze/status"))
           return json({
             running: false,
             total: 0,
@@ -402,7 +433,7 @@ describe("GamesPage — an empty history and a failed load are not the same scre
           attempts += 1;
           return json({ error: "boom" }, 500);
         }
-        if (url === "/api/analyze/status") return status();
+        if (url.startsWith("/api/analyze/status")) return status();
         throw new Error(`unexpected fetch: ${url}`);
       }),
     );
@@ -426,7 +457,7 @@ describe("GamesPage — an empty history and a failed load are not the same scre
       "fetch",
       vi.fn(async (url: string) => {
         if (url.startsWith("/api/games")) return json([]);
-        if (url === "/api/analyze/status") return status();
+        if (url.startsWith("/api/analyze/status")) return status();
         throw new Error(`unexpected fetch: ${url}`);
       }),
     );

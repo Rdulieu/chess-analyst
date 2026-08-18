@@ -2,11 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchProfile } from "../api";
 import { ImportForm } from "../features/import/ImportForm";
+import { ProfileAnalysisPass } from "../features/analysis/ProfileAnalysisPass";
 import type { Profile } from "../types";
 
 /**
  * One `Profile`'s own page (`/profiles/:id`): its identity, the size of the
- * history it owns, and **its Import**. Importing is an operation *on* a Profile
+ * history it owns, where **its** `Analysis pass` stands, and **its Import**.
+ * Everything on this page is about this account and nothing else — the counters
+ * and the pass state alike are read for this Profile by id (ADR-0014), so no
+ * figure here can be another Player's. Importing is an operation *on* a Profile
  * (ADR-0014), so the form lives here rather than on "Mes parties" — the account
  * being fetched is the one named at the top of the screen, and there is nothing
  * to type that could point it elsewhere.
@@ -55,6 +59,11 @@ export function ProfilePage() {
         {profile.games} {profile.games === 1 ? "partie importée" : "parties importées"} ·{" "}
         {profile.analyzed} {profile.analyzed === 1 ? "analysée" : "analysées"}
       </p>
+      {/* Where this Player's `Analysis pass` stands — theirs alone (ADR-0014).
+          It sits right under the analyzed count because the two answer the same
+          question at two grains: how much of the history is done, and how the
+          last attempt at it ended. */}
+      <ProfileAnalysisPass profileId={profile.id} />
 
       <h3>Importer des parties</h3>
       <ImportForm profileId={profile.id} onImported={refresh} />
