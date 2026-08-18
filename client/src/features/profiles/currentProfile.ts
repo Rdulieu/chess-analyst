@@ -21,9 +21,30 @@ export function loadCurrentProfileId(): number | null {
 /** Makes this Profile the current one, for this reload and the next. */
 export function saveCurrentProfileId(id: number): void {
   localStorage.setItem(KEY, String(id));
+  announce();
 }
 
 /** Leaves nothing selected — what deleting the current Profile must do. */
 export function clearCurrentProfileId(): void {
   localStorage.removeItem(KEY);
+  announce();
+}
+
+/**
+ * The selection is **observable**, not merely stored. Switching Profile happens
+ * on `/profiles` and its effect must be visible on the analysis screens the
+ * Player walks to next — with no reload, since the app never does one. Without
+ * this, the banner would keep naming the previous Profile while the figures
+ * below it changed: exactly the silent confusion the banner exists against.
+ */
+const listeners = new Set<() => void>();
+
+function announce(): void {
+  for (const listener of listeners) listener();
+}
+
+/** Subscribes to changes of the current Profile; returns the unsubscribe. */
+export function subscribeCurrentProfileId(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }

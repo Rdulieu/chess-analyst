@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
+import { Link } from "react-router-dom";
 import { fetchWeakOpenings } from "../api";
 import { Tally } from "../components/Tally";
-import type { Side, TimeControlCategory, WeakOpeningEntry } from "../types";
+import { useLoaded } from "../features/load/useLoaded";
+import { LoadFailure } from "../features/load/LoadFailure";
+import type { Profile, Side, TimeControlCategory, WeakOpeningEntry } from "../types";
 
 const SIDE_LABEL: Record<Side, string> = { white: "Blancs", black: "Noirs" };
 const CADENCE_LABEL: Record<TimeControlCategory, string> = {
@@ -17,20 +20,18 @@ const percent = (rate: number) => `${Math.round(rate * 100)} %`;
 const isWeak = (o: WeakOpeningEntry) => o.winRate !== null && o.winRate < 0.5;
 
 /**
- * Weak opening (`/openings`): every `Opening` the Player has played, one row per
+ * Weak opening (`/openings`): every `Opening` **the current `Profile`** has
+ * played — a repertoire belongs to one player (ADR-0014) — one row per
  * (opening, side, cadence) — name · ECO, side, cadence, games, the win/draw/loss
  * tally and the `Win rate` — sorted by game count descending (the server does
- * the sorting). Rows under a 50% `Win rate` are highlighted for review. With no
- * imported Games, shows an invitation only.
+ * the sorting). Rows under a 50% `Win rate` are highlighted for review.
+ *
+ * A failed load says so and offers a retry; only a genuinely empty history shows
+ * the invitation (`games-load-failure`).
  */
-export function OpeningsPage() {
-  const [openings, setOpenings] = useState<WeakOpeningEntry[] | null>(null);
-
-  useEffect(() => {
-    fetchWeakOpenings()
-      .then(setOpenings)
-      .catch(() => setOpenings(null));
-  }, []);
+export function OpeningsPage({ profile }: { profile: Profile }) {
+  const load = useCallback(() => fetchWeakOpenings(profile.id), [profile.id]);
+  const openings = useLoaded(load, [profile.id]);
 
   return (
     // `wide`: six columns, one of which holds an `Opening` name past sixty
@@ -39,8 +40,18 @@ export function OpeningsPage() {
     <section aria-labelledby="openings-heading" data-width="wide">
       <h2 id="openings-heading">Ouvertures</h2>
 
-      {!openings ? null : openings.length === 0 ? (
-        <p>Aucune partie importée — importez votre historique pour voir vos ouvertures.</p>
+      {openings.state === "loading" && <p role="status">Chargement de vos ouvertures…</p>}
+
+      {openings.state === "failed" && (
+        <LoadFailure what="vos ouvertures" error={openings.error} onRetry={openings.retry} />
+      )}
+
+      {openings.state !== "loaded" ? null : openings.data.length === 0 ? (
+        <p>
+          Aucune partie pour <strong>{profile.username}</strong> —{" "}
+          <Link to={`/profiles/${profile.id}`}>importez son historique</Link> pour voir ses
+          ouvertures.
+        </p>
       ) : (
         // Six columns of figures: the table gets its own scroll container so a
         // narrow window scrolls the table, never the page.
@@ -57,7 +68,7 @@ export function OpeningsPage() {
               </tr>
             </thead>
             <tbody>
-              {openings.map((o) => (
+              {openings.data.map((o) => (
                 <tr
                   key={`${o.eco}-${o.side}-${o.cadence}`}
                   // The row states that it is weak; the stylesheet tints it (the
