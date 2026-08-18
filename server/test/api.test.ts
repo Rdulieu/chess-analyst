@@ -166,10 +166,21 @@ describe("analysis API", () => {
 
   const appWithGames = (pgns: string[]) => appAndStore(pgns).app;
 
+  /** Starts a pass **for a Profile** — there is no unscoped way to start one. */
+  const startPass = (
+    app: Parameters<typeof request>[0],
+    gameIds: number[],
+    profileId: number = SOLE_PROFILE,
+  ) => request(app).post(`/api/analyze?profileId=${profileId}`).send({ gameIds });
+
+  /** `GET /api/analyze/status` about one Profile's own last pass. */
+  const statusOf = (app: Parameters<typeof request>[0], profileId: number = SOLE_PROFILE) =>
+    request(app).get(`/api/analyze/status?profileId=${profileId}`);
+
   /** Polls the status endpoint until the pass reports it is no longer running. */
-  async function waitDone(app: ReturnType<typeof appWithGames>) {
+  async function waitDone(app: Parameters<typeof request>[0], profileId: number = SOLE_PROFILE) {
     for (let i = 0; i < 50; i++) {
-      const res = await request(app).get("/api/analyze/status");
+      const res = await statusOf(app, profileId);
       if (!res.body.running) return res.body;
       await new Promise((r) => setTimeout(r, 5));
     }
@@ -179,10 +190,136 @@ describe("analysis API", () => {
   const idsOf = async (app: ReturnType<typeof appWithGames>) =>
     (await gamesOf(app)).body.map((g: { id: number }) => g.id);
 
+  it("POST /api/analyze refuses a request naming no Profile, or an unknown one", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+    const ids = await idsOf(app);
+
+    // Engine time is the most expensive thing this app spends: a pass that does
+    // not say whose Games it is for is not a pass to open (ADR-0014).
+    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).status).toBe(400);
+    expect(
+      (await request(app).post("/api/analyze?profileId=999").send({ gameIds: ids })).status,
+    ).toBe(404);
+  });
+
+  /**
+   * Two Profiles, one Game each — the shape every scoping question needs: the
+   * Game whose analysis is asked for, and the one that must be left alone.
+   */
+  function appWithTwoProfiles() {
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db, "DudulSmash");
+    const theirs = seedProfile(db, "Hikaru");
+    const seeded = [mine, theirs].map((profileId) =>
+      db
+        .insert(games)
+        .values({
+          profileId,
+          gameUrl: `https://www.chess.com/game/live/${seq++}`,
+          pgn: "1. e4 e5",
+          opponent: "o",
+          playerColor: "white",
+          result: "win",
+          date: "2026-01-01",
+          timeControlCategory: "blitz",
+        })
+        .returning()
+        .get(),
+    );
+    return {
+      app: createApp(db, fakeClient({}), createFixtureEngine()),
+      mine,
+      theirs,
+      myGame: seeded[0],
+      theirGame: seeded[1],
+    };
+  }
+
+  it("POST /api/analyze refuses to spend engine time on a Game the named Profile does not own", async () => {
+    const { app, mine, theirs, theirGame } = appWithTwoProfiles();
+
+    const res = await startPass(app, [theirGame.id], mine);
+
+    // Refused outright rather than quietly narrowed: a selection naming someone
+    // else's Game is a caller's mistake, and silently analyzing a subset would
+    // leave the Player thinking the rest was covered (ADR-0014).
+    expect(res.status).toBe(400);
+    expect((await gamesOf(app, theirs)).body[0].analyzed).toBe(false);
+  });
+
+  it("GET /api/analyze/status reports each Profile's OWN last pass, not simply the last one", async () => {
+    const { app, mine, theirs, myGame } = appWithTwoProfiles();
+
+    await startPass(app, [myGame.id], mine);
+    const finished = await waitDone(app, mine);
+    expect(finished).toMatchObject({ games: 1, done: 3, outcome: "completed" });
+
+    // The other Profile has run nothing. Its page must say so — reading its
+    // neighbour's summary would be the blend this whole story removes.
+    expect((await statusOf(app, theirs)).body).toMatchObject({
+      running: false,
+      games: 0,
+      total: 0,
+      done: 0,
+      outcome: null,
+    });
+  });
+
+  it("a pass run for one Profile leaves the other's analyzed count exactly where it was", async () => {
+    const { app, mine, theirs, myGame } = appWithTwoProfiles();
+    const countOf = async (id: number) => (await request(app).get(`/api/profiles/${id}`)).body;
+
+    expect(await countOf(theirs)).toMatchObject({ games: 1, analyzed: 0 });
+
+    await startPass(app, [myGame.id], mine);
+    await waitDone(app, mine);
+
+    expect(await countOf(mine)).toMatchObject({ games: 1, analyzed: 1 });
+    expect(await countOf(theirs)).toMatchObject({ games: 1, analyzed: 0 });
+  });
+
+  it("re-running a pass on a Profile skips its already-analyzed Games rather than recomputing them", async () => {
+    const { app, mine, myGame } = appWithTwoProfiles();
+
+    await startPass(app, [myGame.id], mine);
+    expect(await waitDone(app, mine)).toMatchObject({ done: 3, outcome: "completed" });
+    const stored = (await request(app).get(`/api/games/${myGame.id}/annotations`)).body;
+
+    // Incremental, as ADR-0011 has it: no pass is opened at all, and the Game's
+    // Evaluations are exactly the ones the first pass produced.
+    expect((await startPass(app, [myGame.id], mine)).body).toMatchObject({ started: false });
+    expect((await request(app).get(`/api/games/${myGame.id}/annotations`)).body).toEqual(stored);
+  });
+
+  it("acknowledging one Profile's summary leaves the other Profile's own summary standing", async () => {
+    const { app, mine, theirs, myGame, theirGame } = appWithTwoProfiles();
+    await startPass(app, [myGame.id], mine);
+    await waitDone(app, mine);
+    await startPass(app, [theirGame.id], theirs);
+    await waitDone(app, theirs);
+
+    await request(app).post(`/api/analyze/acknowledge?profileId=${mine}`);
+
+    expect((await statusOf(app, mine)).body).toMatchObject({ acknowledged: true });
+    // Dismissing a summary is one Player's gesture on one Player's screen.
+    expect((await statusOf(app, theirs)).body).toMatchObject({
+      acknowledged: false,
+      outcome: "completed",
+      games: 1,
+    });
+  });
+
+  it("GET /api/analyze/status refuses to answer without a Profile, or for an unknown one", async () => {
+    const app = appWithGames(["1. e4 e5"]);
+
+    expect((await request(app).get("/api/analyze/status")).status).toBe(400);
+    expect((await request(app).get("/api/analyze/status?profileId=999")).status).toBe(404);
+  });
+
   it("POST /api/analyze starts a background pass (202) and /status advances in Positions, reporting how many Games it covers", async () => {
     const app = appWithGames(["1. e4 e5", "1. d4 d5"]); // 2 Games, 3 Positions each
 
-    const started = await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    const started = await startPass(app, await idsOf(app));
     expect(started.status).toBe(202);
     expect(started.body).toMatchObject({ running: true, total: 6, games: 2 });
 
@@ -200,10 +337,10 @@ describe("analysis API", () => {
   it("re-analyzing an already-analyzed selection opens no new pass — the last one is still reported", async () => {
     const app = appWithGames(["1. e4 e5"]);
     const ids = await idsOf(app);
-    await request(app).post("/api/analyze").send({ gameIds: ids });
+    await startPass(app, ids);
     const finished = await waitDone(app);
 
-    const again = await request(app).post("/api/analyze").send({ gameIds: ids });
+    const again = await startPass(app, ids);
     expect(again.status).toBe(202);
     // An empty pass is not a pass: the previous one is reported, untouched.
     expect(again.body).toEqual({ ...finished, started: false });
@@ -211,18 +348,18 @@ describe("analysis API", () => {
 
   it("POST /api/analyze/acknowledge marks the last pass as seen, and is harmless twice", async () => {
     const app = appWithGames(["1. e4 e5"]);
-    await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    await startPass(app, await idsOf(app));
     expect(await waitDone(app)).toMatchObject({ acknowledged: false });
 
-    expect((await request(app).post("/api/analyze/acknowledge")).status).toBe(204);
-    expect((await request(app).get("/api/analyze/status")).body).toMatchObject({
+    expect((await request(app).post(`/api/analyze/acknowledge?profileId=${SOLE_PROFILE}`)).status).toBe(204);
+    expect((await statusOf(app)).body).toMatchObject({
       acknowledged: true,
       done: 3,
       games: 1,
     });
 
-    expect((await request(app).post("/api/analyze/acknowledge")).status).toBe(204);
-    expect((await request(app).get("/api/analyze/status")).body).toMatchObject({
+    expect((await request(app).post(`/api/analyze/acknowledge?profileId=${SOLE_PROFILE}`)).status).toBe(204);
+    expect((await statusOf(app)).body).toMatchObject({
       acknowledged: true,
     });
   });
@@ -231,24 +368,24 @@ describe("analysis API", () => {
     const app = appWithGames(["1. e4 e5"]);
     const ids = await idsOf(app);
 
-    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).body).toMatchObject({
+    expect((await startPass(app, ids)).body).toMatchObject({
       started: true,
     });
     await waitDone(app);
 
-    expect((await request(app).post("/api/analyze").send({ gameIds: ids })).body).toMatchObject({
+    expect((await startPass(app, ids)).body).toMatchObject({
       started: false,
     });
   });
 
   it("GET /api/analyze/status reports the last pass to a freshly built app (it outlives the process)", async () => {
     const { app, db } = appAndStore(["1. e4 e5"]);
-    await request(app).post("/api/analyze").send({ gameIds: await idsOf(app) });
+    await startPass(app, await idsOf(app));
     await waitDone(app);
 
     // A second app over the same store — as after a restart.
     const restarted = createApp(db, fakeClient({}), createFixtureEngine());
-    expect((await request(restarted).get("/api/analyze/status")).body).toEqual({
+    expect((await statusOf(restarted)).body).toEqual({
       running: false,
       total: 3,
       done: 3,
@@ -264,7 +401,7 @@ describe("analysis API", () => {
     const before = await gamesOf(app);
     expect(before.body[0].analyzed).toBe(false);
 
-    await request(app).post("/api/analyze").send({ gameIds: [before.body[0].id] });
+    await startPass(app, [before.body[0].id]);
     await waitDone(app);
 
     const after = await gamesOf(app);

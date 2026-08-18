@@ -112,15 +112,22 @@ describe("analyzeGame", () => {
 });
 
 describe("analysis job", () => {
+  /**
+   * The `Profile` these tests' Games belong to — the only one a fresh in-memory
+   * store holds. A pass is always **for** a Profile (ADR-0014), so every call
+   * names it, even when there is only one to name.
+   */
+  const SOLE_PROFILE = 1;
+
   it("counts progress in Positions to evaluate, not in Games", async () => {
     const db = tempDb();
     const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" }); // 3 half-moves → 4 Positions
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    expect(job.start([game.id])).toMatchObject({ running: true, total: 4, done: 0 });
+    expect(job.start(SOLE_PROFILE, [game.id])).toMatchObject({ running: true, total: 4, done: 0 });
 
     await job.idle();
-    expect(job.status()).toMatchObject({ running: false, total: 4, done: 4 });
+    expect(job.status(SOLE_PROFILE)).toMatchObject({ running: false, total: 4, done: 4 });
   });
 
   it("reports the Positions actually stored while the pass is still running", async () => {
@@ -140,14 +147,14 @@ describe("analysis job", () => {
     };
 
     const job = createAnalysisJob(db, slow);
-    job.start([game.id]);
+    job.start(SOLE_PROFILE, [game.id]);
     while (evaluated < 3) await new Promise((r) => setTimeout(r, 5));
 
-    expect(job.status()).toMatchObject({ running: true, done: 2, total: 4 });
+    expect(job.status(SOLE_PROFILE)).toMatchObject({ running: true, done: 2, total: 4 });
 
     release();
     await job.idle();
-    expect(job.status()).toMatchObject({ running: false, done: 4, total: 4 });
+    expect(job.status(SOLE_PROFILE)).toMatchObject({ running: false, done: 4, total: 4 });
   });
 
   it("runs only the not-yet-analyzed Games and advances to done === total, then running:false", async () => {
@@ -157,13 +164,13 @@ describe("analysis job", () => {
     await analyzeGame(db, createFixtureEngine(), already); // this one must be skipped
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    const started = job.start([already.id, pending.id]);
+    const started = job.start(SOLE_PROFILE, [already.id, pending.id]);
     // Only `pending` is left: 2 half-moves → 3 Positions. The already-analyzed
     // Game contributes neither to the total nor to the derived done.
     expect(started).toMatchObject({ running: true, total: 3 });
 
     await job.idle();
-    expect(job.status()).toEqual({
+    expect(job.status(SOLE_PROFILE)).toEqual({
       running: false,
       total: 3,
       done: 3,
@@ -180,12 +187,12 @@ describe("analysis job", () => {
     const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" }); // 4 Positions
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    job.start([game.id]);
+    job.start(SOLE_PROFILE, [game.id]);
     await job.idle();
 
     // A fresh job over the same store — as after an app restart.
     const rebuilt = createAnalysisJob(db, createFixtureEngine());
-    expect(rebuilt.status()).toMatchObject({ running: false, total: 4, done: 4 });
+    expect(rebuilt.status(SOLE_PROFILE)).toMatchObject({ running: false, total: 4, done: 4 });
   });
 
   it("closes a pass left open by a shutdown as interrupted, keeping what it evaluated", async () => {
@@ -202,7 +209,7 @@ describe("analysis job", () => {
       },
     };
     const killed = createAnalysisJob(db, dying);
-    killed.start([game.id]);
+    killed.start(SOLE_PROFILE, [game.id]);
     await killed.idle();
     db.update(analysisPasses).set({ endedAt: null, outcome: null, error: null }).run();
 
@@ -216,7 +223,7 @@ describe("analysis job", () => {
     };
     const rebuilt = createAnalysisJob(db, onRestart);
 
-    expect(rebuilt.status()).toMatchObject({
+    expect(rebuilt.status(SOLE_PROFILE)).toMatchObject({
       running: false,
       outcome: "interrupted",
       done: 2, // the Positions it did evaluate are kept
@@ -232,8 +239,8 @@ describe("analysis job", () => {
     const other = seedGame(db, { pgn: "1. d4 d5" });
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    job.start([first.id]);
-    job.start([other.id]); // ignored: a pass is already running
+    job.start(SOLE_PROFILE, [first.id]);
+    job.start(SOLE_PROFILE, [other.id]); // ignored: a pass is already running
 
     await job.idle();
     expect(db.select().from(games).where(eq(games.id, other.id)).get()!.analyzed).toBe(false);
@@ -245,7 +252,7 @@ describe("analysis job", () => {
     await analyzeGame(db, createFixtureEngine(), game);
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    expect(job.start([game.id])).toEqual({
+    expect(job.start(SOLE_PROFILE, [game.id])).toEqual({
       running: false,
       total: 0,
       done: 0,
@@ -267,10 +274,10 @@ describe("analysis job", () => {
     };
 
     const job = createAnalysisJob(db, failing);
-    job.start([game.id]);
+    job.start(SOLE_PROFILE, [game.id]);
     await job.idle();
 
-    expect(job.status()).toMatchObject({
+    expect(job.status(SOLE_PROFILE)).toMatchObject({
       running: false,
       outcome: "failed",
       error: "engine backend unavailable",
@@ -282,10 +289,10 @@ describe("analysis job", () => {
     const game = seedGame(db, { pgn: "1. e4 e5" });
 
     const job = createAnalysisJob(db, createFixtureEngine());
-    job.start([game.id]);
+    job.start(SOLE_PROFILE, [game.id]);
     await job.idle();
 
-    expect(job.status()).toMatchObject({ outcome: "completed", error: null });
+    expect(job.status(SOLE_PROFILE)).toMatchObject({ outcome: "completed", error: null });
   });
 
   it("ends the pass (running:false) instead of crashing when the engine backend fails", async () => {
@@ -298,10 +305,10 @@ describe("analysis job", () => {
     };
 
     const job = createAnalysisJob(db, failing);
-    job.start([game.id]);
+    job.start(SOLE_PROFILE, [game.id]);
     await job.idle();
 
-    expect(job.status().running).toBe(false);
+    expect(job.status(SOLE_PROFILE).running).toBe(false);
     expect(db.select().from(games).where(eq(games.id, game.id)).get()!.analyzed).toBe(false);
   });
 });

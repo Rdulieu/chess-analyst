@@ -35,7 +35,7 @@ export function createApp(
   app.use("/api/profiles", createProfilesRouter(db, chessCom));
   app.use("/api/games", createGamesRouter(db));
   app.use("/api/import", createImportRouter(db, importJob));
-  app.use("/api/analyze", createAnalyzeRouter(analysisJob));
+  app.use("/api/analyze", createAnalyzeRouter(db, analysisJob));
   app.use("/api/settings", createSettingsRouter(db));
   app.use("/api/move-habits", createMoveHabitsRouter(db));
   app.use("/api/stats", createStatsRouter(db));
