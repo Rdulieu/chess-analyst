@@ -3,7 +3,7 @@ import { Chessboard } from "react-chessboard";
 import { fetchDangerView, type DangerView } from "../api";
 import { sideToMove } from "../chess/positions";
 import { BOARD_SQUARES } from "../chess/boardTheme";
-import type { DangerEntry } from "../types";
+import type { DangerEntry, Profile } from "../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
 
@@ -21,15 +21,16 @@ const boardFen = (fen: string) => `${fen} 0 1`;
 const SHOWN_AT_MOST = 30;
 
 /**
- * Positions dangereuses (`/danger`): every recurring Position the Player has
- * reached across their analyzed Games, with its reach count and serious-error
+ * Positions dangereuses (`/danger`): every recurring Position **the current
+ * `Profile`'s** Player has reached across their analyzed Games — a recurring
+ * Position is one *this* Player keeps reaching (CONTEXT.md, ADR-0014), with its reach count and serious-error
  * proportion (CONTEXT.md `Danger position`), derived on the fly server-side.
  *
  * Four outcomes, each with its own state and none reachable as a fallback for
  * another — a failed request used to land on the "analysez vos parties"
  * branch, telling the Player to do what they had just done.
  */
-export function DangerPage() {
+export function DangerPage({ profile }: { profile: Profile }) {
   const [view, setView] = useState<DangerView | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -38,13 +39,13 @@ export function DangerPage() {
     let current = true;
     setView(null);
     setFailure(null);
-    fetchDangerView()
+    fetchDangerView(profile.id)
       .then((loaded) => current && setView(loaded))
       .catch((cause: Error) => current && setFailure(cause.message));
     return () => {
       current = false;
     };
-  }, [attempt]);
+  }, [attempt, profile.id]);
 
   // The four outcomes, named once and mutually exclusive by construction —
   // rather than left to the order of a chain of ternaries.

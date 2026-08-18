@@ -1,7 +1,18 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { OpeningsPage } from "../src/pages/OpeningsPage";
 import type { WeakOpeningEntry } from "../src/types";
+
+/** The current `Profile` the page is about — every scoped page takes one. */
+const PROFILE = {
+  id: 7,
+  platform: "chesscom" as const,
+  username: "Alice",
+  createdAt: "",
+  games: 6,
+  analyzed: 0,
+};
 
 const ENTRIES: WeakOpeningEntry[] = [
   // Weak: 4 games, 1 win / 3 loss → 25%
@@ -42,7 +53,11 @@ afterEach(() => vi.unstubAllGlobals());
 describe("OpeningsPage", () => {
   it("asks for the wide column: six columns of figures do not fit the reading column", async () => {
     stub(ENTRIES);
-    render(<OpeningsPage />);
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
 
     // With `Opening` names past sixty characters, the reading column left no room
     // for the five figure columns and they scrolled out of sight.
@@ -52,7 +67,11 @@ describe("OpeningsPage", () => {
 
   it("wraps its table in its own scroll container, so a wide table never scrolls the page", async () => {
     stub(ENTRIES);
-    render(<OpeningsPage />);
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
 
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     expect(table.parentElement?.dataset.scroll).toBe("x");
@@ -60,7 +79,11 @@ describe("OpeningsPage", () => {
 
   it("renders a row per entry — opening name · ECO, side, cadence, spelled-out tally, Win rate — in the order served", async () => {
     stub(ENTRIES);
-    render(<OpeningsPage />);
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
 
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
@@ -79,7 +102,11 @@ describe("OpeningsPage", () => {
 
   it("visibly highlights entries under a 50% Win rate for review, and only those", async () => {
     stub(ENTRIES);
-    render(<OpeningsPage />);
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
 
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
@@ -97,7 +124,11 @@ describe("OpeningsPage", () => {
 
   it("does not highlight an opening at exactly 50%", async () => {
     stub([{ ...ENTRIES[0], games: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 }]);
-    render(<OpeningsPage />);
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
 
     const table = await screen.findByRole("table", { name: /ouvertures/i });
     const rows = within(table).getAllByRole("row");
@@ -107,9 +138,32 @@ describe("OpeningsPage", () => {
 
   it("shows only an invitation when there are no played openings", async () => {
     stub([]);
-    render(<OpeningsPage />);
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
 
-    expect(await screen.findByText(/aucune partie importée/i)).toBeTruthy();
+    expect(await screen.findByText(/aucune partie/i)).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+describe("OpeningsPage — the three load outcomes stay apart", () => {
+  it("says the load failed and offers to retry, instead of reading as an empty repertoire", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
+    );
+
+    render(
+      <MemoryRouter>
+        <OpeningsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.queryByText(/aucune partie/i)).toBeNull();
+    expect(screen.getByRole("button", { name: /réessayer/i })).toBeTruthy();
   });
 });

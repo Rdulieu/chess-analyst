@@ -32,7 +32,7 @@ describe("importMonth", () => {
     });
 
     expect(result.imported).toBe(1);
-    const all = listGames(db);
+    const all = listGames(db, profileId);
     expect(all).toHaveLength(1);
     expect(all[0]).toMatchObject({
       gameUrl: "https://www.chess.com/game/live/100",
@@ -64,7 +64,7 @@ describe("importMonth", () => {
 
     await importMonth(db, client, { profileId, username: "me", year: 2024, month: 1, categories: ["blitz"] });
 
-    const byUrl = Object.fromEntries(listGames(db).map((g) => [g.gameUrl, g]));
+    const byUrl = Object.fromEntries(listGames(db, profileId).map((g) => [g.gameUrl, g]));
     expect(byUrl["https://www.chess.com/game/live/1"]).toMatchObject({
       playerColor: "black",
       opponent: "opp",
@@ -94,7 +94,7 @@ describe("importMonth", () => {
     });
 
     expect(result.imported).toBe(2);
-    expect(listGames(db).map((g) => g.timeControlCategory).sort()).toEqual(["blitz", "rapid"]);
+    expect(listGames(db, profileId).map((g) => g.timeControlCategory).sort()).toEqual(["blitz", "rapid"]);
   });
 
   it("skips non-standard variants (rules other than 'chess')", async () => {
@@ -113,7 +113,7 @@ describe("importMonth", () => {
     });
 
     expect(result.imported).toBe(1);
-    expect(listGames(db).map((g) => g.gameUrl)).toEqual(["https://www.chess.com/game/live/std"]);
+    expect(listGames(db, profileId).map((g) => g.gameUrl)).toEqual(["https://www.chess.com/game/live/std"]);
   });
 
   it("skips Games already retained and reports them as already present (dedup by URL)", async () => {
@@ -129,7 +129,7 @@ describe("importMonth", () => {
 
     expect(first).toMatchObject({ imported: 2, alreadyPresent: 0 });
     expect(second).toMatchObject({ imported: 0, alreadyPresent: 2 });
-    expect(listGames(db)).toHaveLength(2);
+    expect(listGames(db, profileId)).toHaveLength(2);
   });
 
   it("reports a full summary: total fetched, per-category counts and a win/draw/loss tally", async () => {
@@ -193,6 +193,6 @@ describe("importMonth", () => {
     expect(result.alreadyPresent).toBe(0);
     expect(result.message).toMatch(/no games found/i);
     expect(result.message).toContain("2024-03");
-    expect(listGames(db)).toHaveLength(0);
+    expect(listGames(db, profileId)).toHaveLength(0);
   });
 });

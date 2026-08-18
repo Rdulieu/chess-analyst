@@ -11,9 +11,10 @@ function tempDb() {
 describe("game repository", () => {
   it("reads back a stored Game with all of the Game glossary fields", () => {
     const { db } = tempDb();
+    const profileId = seedProfile(db);
     db.insert(games)
       .values({
-        profileId: seedProfile(db),
+        profileId,
         gameUrl: "https://www.chess.com/game/live/1",
         pgn: "1. e4 e5",
         opponent: "Alice",
@@ -24,7 +25,7 @@ describe("game repository", () => {
       })
       .run();
 
-    const all = listGames(db);
+    const all = listGames(db, profileId);
 
     expect(all).toHaveLength(1);
     expect(all[0]).toMatchObject({

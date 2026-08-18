@@ -9,6 +9,9 @@ function tempDb() {
   return openDb(":memory:").db;
 }
 
+/** The sole `Profile` every Game below is seeded under — every read names it. */
+const PROFILE = 1;
+
 let seq = 0;
 function seed(db: ReturnType<typeof tempDb>, g: Partial<NewGame> & Pick<NewGame, "result">) {
   db.insert(games)
@@ -38,7 +41,7 @@ describe("getWeakOpenings", () => {
     // Same Sicilian ECO but Black, rapid — a separate entry, not merged with the White/blitz one
     seed(db, { playerColor: "black", timeControlCategory: "rapid", result: "draw" });
 
-    const entries = getWeakOpenings(db);
+    const entries = getWeakOpenings(db, PROFILE);
 
     expect(entries).toHaveLength(3);
     // Most-played first: the White/blitz Sicilian (2 games) leads.
@@ -69,21 +72,21 @@ describe("getWeakOpenings", () => {
     seed(db, { eco: "other", openingName: "Autre / non classée", result: "win" });
     seed(db, { eco: "other", openingName: "Autre / non classée", result: "loss" });
 
-    const entries = getWeakOpenings(db);
+    const entries = getWeakOpenings(db, PROFILE);
 
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ eco: "other", side: "white", cadence: "blitz", games: 2, winRate: 0.5 });
   });
 
   it("returns nothing for an empty history", () => {
-    expect(getWeakOpenings(tempDb())).toEqual([]);
+    expect(getWeakOpenings(tempDb(), PROFILE)).toEqual([]);
   });
 
   it("produces the deterministic figures the Feature Path fixture is built for", () => {
     const db = tempDb();
     seedOpenings(db, seedProfile(db));
 
-    const entries = getWeakOpenings(db);
+    const entries = getWeakOpenings(db, PROFILE);
     const by = (eco: string, side: string) => entries.find((e) => e.eco === eco && e.side === side)!;
 
     // Sorted by game count desc; the Sicilian (3 games) leads.

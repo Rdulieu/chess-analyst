@@ -2,13 +2,20 @@ import { Router } from "express";
 import type { Db } from "../db";
 import { listGames, getGame } from "../repository";
 import { getGameAnnotations } from "../annotations/repository";
+import { scopedProfile } from "./scope";
 
-/** Read routes for retained Games (mounted at /api/games). */
+/**
+ * Read routes for retained Games (mounted at /api/games). The list is **about
+ * one `Profile`**, named by the request (ADR-0014); the per-Game routes name a
+ * Game outright and need no scope to be unambiguous.
+ */
 export function createGamesRouter(db: Db): Router {
   const router = Router();
 
-  router.get("/", (_req, res) => {
-    res.json(listGames(db));
+  router.get("/", (req, res) => {
+    const profile = scopedProfile(db, req, res);
+    if (!profile) return;
+    res.json(listGames(db, profile.id));
   });
 
   router.get("/:id", (req, res) => {

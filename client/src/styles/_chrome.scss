@@ -71,3 +71,30 @@ nav a[aria-current="page"] {
   font-weight: 700;
   border-block-end-color: var(--accent);
 }
+
+// The banner naming the current `Profile`. It belongs to the chrome, and reads
+// as chrome: the header's own sunk ground, the hairline that separates the frame
+// from the page, and the small step for its height. A band, not a card — a card
+// here would read as the first paragraph of every screen.
+//
+// The Profile is named IN WORDS ("Profil courant : …"), so nothing about whose
+// figures are on screen rests on a colour — the rule the navigation's current
+// tab already follows.
+[data-banner="profile"] {
+  background: var(--ground-sunk);
+  color: var(--ink-muted);
+  border-block-start: 1px solid var(--border);
+  padding-block: var(--space-1);
+  font-size: var(--text-s);
+
+  // The name itself is the one thing the eye must catch, so it takes the full
+  // ink and the link's accent while the label around it stays muted.
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+}

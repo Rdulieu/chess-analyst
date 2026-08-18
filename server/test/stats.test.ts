@@ -8,6 +8,9 @@ function tempDb() {
   return openDb(":memory:").db;
 }
 
+/** The sole `Profile` every Game below is seeded under — every read names it. */
+const PROFILE = 1;
+
 let seq = 0;
 function seed(db: ReturnType<typeof tempDb>, g: Partial<NewGame> & Pick<NewGame, "result">) {
   db.insert(games)
@@ -31,7 +34,7 @@ describe("getStats", () => {
     seed(db, { result: "loss" });
     seed(db, { result: "draw" });
 
-    const stats = getStats(db);
+    const stats = getStats(db, PROFILE);
 
     expect(stats.total.games).toBe(3);
     expect([stats.total.win, stats.total.draw, stats.total.loss]).toEqual([1, 1, 1]);
@@ -39,12 +42,12 @@ describe("getStats", () => {
 
   it("computes the Win rate with standard scoring, and null when there are no Games", () => {
     const db = tempDb();
-    expect(getStats(db).total.winRate).toBeNull(); // empty history: no rate
+    expect(getStats(db, PROFILE).total.winRate).toBeNull(); // empty history: no rate
 
     seed(db, { result: "win" });
     seed(db, { result: "draw" });
     // (1 win + 0.5·1 draw) / 2 games = 0.75
-    expect(getStats(db).total.winRate).toBe(0.75);
+    expect(getStats(db, PROFILE).total.winRate).toBe(0.75);
   });
 
   it("breaks the results down per cadence, with all four cadences always present", () => {
@@ -53,7 +56,7 @@ describe("getStats", () => {
     seed(db, { result: "loss", timeControlCategory: "blitz" });
     seed(db, { result: "win", timeControlCategory: "bullet" });
 
-    const { byCategory } = getStats(db);
+    const { byCategory } = getStats(db, PROFILE);
 
     expect(byCategory.blitz).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
     expect(byCategory.bullet).toMatchObject({ games: 1, win: 1, winRate: 1 });
@@ -68,7 +71,7 @@ describe("getStats", () => {
     seed(db, { result: "loss", playerColor: "white" });
     seed(db, { result: "draw", playerColor: "black" });
 
-    const { bySide } = getStats(db);
+    const { bySide } = getStats(db, PROFILE);
 
     expect(bySide.white).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
     expect(bySide.black).toMatchObject({ games: 1, draw: 1, winRate: 0.5 });

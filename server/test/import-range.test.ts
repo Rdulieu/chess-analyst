@@ -29,7 +29,7 @@ describe("importRange", () => {
     const result = await importRange(db, client, params(profileId));
 
     expect(result.imported).toBe(1);
-    expect(listGames(db)).toHaveLength(1);
+    expect(listGames(db, profileId)).toHaveLength(1);
   });
 
   it("covers every month of the range in order and consolidates their figures", async () => {
@@ -62,7 +62,7 @@ describe("importRange", () => {
     expect(result.imported).toBe(3);
     expect(result.byCategory).toMatchObject({ blitz: 1, rapid: 2 });
     expect(result.results).toEqual({ win: 2, draw: 0, loss: 1 });
-    expect(listGames(db)).toHaveLength(3);
+    expect(listGames(db, profileId)).toHaveLength(3);
   });
 
   it("adds nothing on a replay of the same range and counts the Games as already present", async () => {
@@ -75,7 +75,7 @@ describe("importRange", () => {
 
     expect(replay.imported).toBe(0);
     expect(replay.alreadyPresent).toBe(2);
-    expect(listGames(db)).toHaveLength(2);
+    expect(listGames(db, profileId)).toHaveLength(2);
   });
 
   it("reports one line per month of the range, in order, an inactive month included at zero", async () => {
@@ -110,7 +110,7 @@ describe("importRange", () => {
     expect(result.months[1]).toMatchObject({ imported: 0, failure: expect.stringMatching(/429/) });
     expect(result.months[0].failure).toBeUndefined();
     expect(result.months[2]).toMatchObject({ imported: 1 });
-    expect(listGames(db)).toHaveLength(2);
+    expect(listGames(db, profileId)).toHaveLength(2);
   });
 
   it("consolidates only the months it actually covered", async () => {
@@ -146,7 +146,7 @@ describe("importRange", () => {
     expect(replay.imported).toBe(1); // only February
     expect(replay.alreadyPresent).toBe(1); // January was already retained
     expect(replay.months.every((m) => m.failure === undefined)).toBe(true);
-    expect(listGames(db)).toHaveLength(2);
+    expect(listGames(db, profileId)).toHaveLength(2);
   });
 
   it("reports nothing found over the whole range, not month by month", async () => {

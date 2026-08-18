@@ -129,9 +129,10 @@ describe("recordMoveHabits", () => {
 describe("seedMoveHabits (fixture dataset)", () => {
   it("seeds a deterministic dataset: shared first Moves aggregate on the White side", () => {
     const db = tempDb();
-    seedMoveHabits(db, seedProfile(db));
+    const owner = seedProfile(db);
+    seedMoveHabits(db, owner);
 
-    const e4 = listCandidates(db, START, "white").find((c) => c.san === "e4")!;
+    const e4 = listCandidates(db, owner, START, "white").find((c) => c.san === "e4")!;
     expect(e4.count).toBe(3); // three White games open 1. e4
     expect(e4.winRate).toBe(0.5); // one win, one loss, one draw
   });
@@ -154,9 +155,10 @@ describe("seedMoveHabits (fixture dataset)", () => {
   it("is idempotent — seeding twice does not double-count", () => {
     const db = tempDb();
     seedMoveHabits(db, seedProfile(db));
-    seedMoveHabits(db, seedProfile(db));
+    const owner = seedProfile(db);
+    seedMoveHabits(db, owner);
 
-    const e4 = listCandidates(db, START, "white").find((c) => c.san === "e4")!;
+    const e4 = listCandidates(db, owner, START, "white").find((c) => c.san === "e4")!;
     expect(e4.count).toBe(3);
   });
 });

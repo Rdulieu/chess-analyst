@@ -24,6 +24,16 @@ async function importDone(app: Parameters<typeof request>[0]) {
   throw new Error("Import never finished");
 }
 
+/**
+ * The id of the one `Profile` a fresh in-memory database holds: the tests below
+ * seed exactly one, and it is what every scoped read must name (ADR-0014).
+ */
+const SOLE_PROFILE = 1;
+
+/** `GET /api/games` **about a Profile** — there is no unscoped Game list. */
+const gamesOf = (app: Parameters<typeof request>[0], profileId: number = SOLE_PROFILE) =>
+  request(app).get(`/api/games?profileId=${profileId}`);
+
 function appWithGame() {
   const { db } = openDb(":memory:");
   db.insert(games).values(morphyGame(seedProfile(db))).run();
@@ -34,7 +44,7 @@ describe("games API", () => {
   it("GET /api/games returns the stored Games with their Game fields", async () => {
     const app = appWithGame();
 
-    const res = await request(app).get("/api/games");
+    const res = await gamesOf(app);
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
@@ -50,7 +60,7 @@ describe("games API", () => {
 
   it("GET /api/games/:id returns that Game's full detail", async () => {
     const app = appWithGame();
-    const list = await request(app).get("/api/games");
+    const list = await gamesOf(app);
     const id = list.body[0].id as number;
 
     const res = await request(app).get(`/api/games/${id}`);
@@ -68,11 +78,12 @@ describe("games API", () => {
     expect(res.status).toBe(404);
   });
 
-  it("GET /api/games returns an empty list on a fresh database (no fixture seeded)", async () => {
+  it("GET /api/games returns an empty list for a Profile that holds no Game yet", async () => {
     const { db } = openDb(":memory:");
+    seedProfile(db);
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/games");
+    const res = await gamesOf(app);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
@@ -88,7 +99,7 @@ describe("games API", () => {
 
   it("GET /api/games/:id/annotations reports analyzed:false and no plies for a not-yet-analyzed Game", async () => {
     const app = appWithGame();
-    const list = await request(app).get("/api/games");
+    const list = await gamesOf(app);
     const id = list.body[0].id as number;
 
     const res = await request(app).get(`/api/games/${id}/annotations`);
@@ -166,7 +177,7 @@ describe("analysis API", () => {
   }
 
   const idsOf = async (app: ReturnType<typeof appWithGames>) =>
-    (await request(app).get("/api/games")).body.map((g: { id: number }) => g.id);
+    (await gamesOf(app)).body.map((g: { id: number }) => g.id);
 
   it("POST /api/analyze starts a background pass (202) and /status advances in Positions, reporting how many Games it covers", async () => {
     const app = appWithGames(["1. e4 e5", "1. d4 d5"]); // 2 Games, 3 Positions each
@@ -250,13 +261,13 @@ describe("analysis API", () => {
 
   it("GET /api/games exposes the analyzed flag — false before, true after the pass", async () => {
     const app = appWithGames(["1. e4 e5"]);
-    const before = await request(app).get("/api/games");
+    const before = await gamesOf(app);
     expect(before.body[0].analyzed).toBe(false);
 
     await request(app).post("/api/analyze").send({ gameIds: [before.body[0].id] });
     await waitDone(app);
 
-    const after = await request(app).get("/api/games");
+    const after = await gamesOf(app);
     expect(after.body[0].analyzed).toBe(true);
   });
 });
@@ -291,7 +302,7 @@ describe("openings API", () => {
       .run();
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/openings");
+    const res = await request(app).get(`/api/openings?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body.openings).toHaveLength(2);
@@ -308,11 +319,12 @@ describe("openings API", () => {
     expect(res.body.openings[1]).toMatchObject({ eco: "C50", games: 1, winRate: 1 });
   });
 
-  it("GET /api/openings returns { openings: [] } for an empty history", async () => {
+  it("GET /api/openings returns { openings: [] } for a Profile with no Game", async () => {
     const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/openings");
+    const res = await request(app).get(`/api/openings?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ openings: [] });
@@ -347,7 +359,7 @@ describe("danger API", () => {
       .run();
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/danger");
+    const res = await request(app).get(`/api/danger?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body.dangers).toEqual([
@@ -378,18 +390,19 @@ describe("danger API", () => {
       .run();
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/danger");
+    const res = await request(app).get(`/api/danger?profileId=${owner}`);
 
     // One analyzed Game reaches no Position twice, so the list is empty while
     // an analysis has taken place — a different state from "nothing analyzed".
     expect(res.body).toEqual({ dangers: [], analyzedGames: 1 });
   });
 
-  it("GET /api/danger returns no entry and no analyzed Game for an empty history", async () => {
+  it("GET /api/danger returns no entry and no analyzed Game for a Profile with no Game", async () => {
     const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/danger");
+    const res = await request(app).get(`/api/danger?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ dangers: [], analyzedGames: 0 });
@@ -543,7 +556,7 @@ describe("import API", () => {
     expect(final).toMatchObject({ running: false, total: 3, done: 3 });
     expect(final.result).toMatchObject({ imported: 2, alreadyPresent: 0 });
 
-    const list = await request(app).get("/api/games");
+    const list = await gamesOf(app);
     expect(list.body).toHaveLength(2);
     expect(list.body[0]).toMatchObject({ playerColor: "white", result: "win" });
   });
@@ -577,7 +590,7 @@ describe("import API", () => {
     expect(final.result.months[1].failure).toMatch(/429/);
     expect(final.result.months[0].failure).toBeUndefined();
 
-    const list = await request(app).get("/api/games");
+    const list = await gamesOf(app);
     expect(list.body).toHaveLength(2);
   });
 
@@ -600,7 +613,7 @@ describe("import API", () => {
 
     const status = await request(app).get("/api/import/status");
     expect(status.body.running).toBe(false);
-    expect((await request(app).get("/api/games")).body).toEqual([]);
+    expect((await gamesOf(app)).body).toEqual([]);
   });
 
   it("POST /api/import covers no month at all when the range lies entirely in the future", async () => {
@@ -677,7 +690,7 @@ describe("import API", () => {
     expect(final.running).toBe(false);
 
     // The relay must not have crashed: a later request still works.
-    const list = await request(app).get("/api/games");
+    const list = await gamesOf(app);
     expect(list.status).toBe(200);
   });
 
@@ -746,7 +759,7 @@ describe("move habits API", () => {
 
     const res = await request(app)
       .get("/api/move-habits")
-      .query({ side: "white", fen: START });
+      .query({ profileId: SOLE_PROFILE, side: "white", fen: START });
 
     expect(res.status).toBe(200);
     const e4 = res.body.candidates.find((c: { san: string }) => c.san === "e4");
@@ -777,7 +790,7 @@ describe("stats API", () => {
     db.insert(games).values(game(owner, { result: "loss", timeControlCategory: "bullet", playerColor: "black" })).run();
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/stats");
+    const res = await request(app).get(`/api/stats?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body.total).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
@@ -786,11 +799,12 @@ describe("stats API", () => {
     expect(res.body.bySide.black).toMatchObject({ games: 1, loss: 1 });
   });
 
-  it("GET /api/stats returns zeros with a null rate on an empty history", async () => {
+  it("GET /api/stats returns zeros with a null rate for a Profile with no Game", async () => {
     const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
     const app = createApp(db, fakeClient({}));
 
-    const res = await request(app).get("/api/stats");
+    const res = await request(app).get(`/api/stats?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body.total).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
@@ -923,5 +937,168 @@ describe("profiles API", () => {
     expect((await request(app).delete(`/api/profiles/${created.body.id}`)).status).toBe(204);
     expect((await request(app).get("/api/profiles")).body).toEqual([]);
     expect((await request(app).delete("/api/profiles/9999")).status).toBe(404);
+  });
+});
+
+/**
+ * The partitioning property of ADR-0014, stated the way the PRD asks for it:
+ * *data created under Profile A is absent from every answer given about Profile
+ * B* — endpoint by endpoint, at the HTTP seam, never by inspecting a query.
+ */
+describe("profile scoping", () => {
+  let seq = 0;
+
+  /** A Game under `profileId`, with whatever distinguishes it from its neighbours. */
+  function scopedGame(profileId: number, over: Partial<import("../src/db/schema").NewGame> = {}) {
+    return {
+      profileId,
+      gameUrl: `https://www.chess.com/game/live/scoped-${seq++}`,
+      pgn: "1. e4 e5",
+      opponent: "opp",
+      playerColor: "white" as const,
+      result: "win" as const,
+      date: "2026-01-01",
+      timeControlCategory: "blitz" as const,
+      eco: "C20",
+      openingName: "King's Pawn Game",
+      ...over,
+    };
+  }
+
+  /** Two Profiles with clearly different histories: one Game for A, two for B. */
+  function twoProfiles() {
+    const { db } = openDb(":memory:");
+    const a = seedProfile(db, "Alice");
+    const b = seedProfile(db, "Bob");
+    db.insert(games)
+      .values([
+        scopedGame(a, { opponent: "alice-opponent", result: "win" }),
+        scopedGame(b, { opponent: "bob-opponent", result: "loss" }),
+        scopedGame(b, { opponent: "bob-opponent", result: "loss" }),
+      ])
+      .run();
+    return { db, a, b, app: createApp(db, fakeClient({})) };
+  }
+
+  it("GET /api/games answers about the named Profile alone", async () => {
+    const { app, a, b } = twoProfiles();
+
+    const mine = await request(app).get(`/api/games?profileId=${a}`);
+    const theirs = await request(app).get(`/api/games?profileId=${b}`);
+
+    expect(mine.status).toBe(200);
+    expect(mine.body.map((g: { opponent: string }) => g.opponent)).toEqual(["alice-opponent"]);
+    expect(theirs.body).toHaveLength(2);
+  });
+
+  it("GET /api/games naming no Profile, or an unknown one, is refused — never answered over all rows", async () => {
+    const { app } = twoProfiles();
+
+    const unscoped = await request(app).get("/api/games");
+    const unknown = await request(app).get("/api/games?profileId=9999");
+
+    expect(unscoped.status).toBe(400);
+    expect(unscoped.body.error).toMatch(/profil/i);
+    expect(unknown.status).toBe(404);
+    // The point of the refusal: neither answer carries a Game.
+    expect(unscoped.body.length).toBeUndefined();
+    expect(unknown.body.length).toBeUndefined();
+  });
+
+  it("GET /api/stats counts the named Profile's Games only — one Win rate per player", async () => {
+    const { app, a, b } = twoProfiles();
+
+    const mine = await request(app).get(`/api/stats?profileId=${a}`);
+    const theirs = await request(app).get(`/api/stats?profileId=${b}`);
+
+    // Alice won her only Game, Bob lost both: a blend would read 1 win / 2
+    // losses over three Games for either of them.
+    expect(mine.body.total).toMatchObject({ games: 1, win: 1, loss: 0, winRate: 1 });
+    expect(theirs.body.total).toMatchObject({ games: 2, win: 0, loss: 2, winRate: 0 });
+    expect((await request(app).get("/api/stats")).status).toBe(400);
+    expect((await request(app).get("/api/stats?profileId=9999")).status).toBe(404);
+  });
+
+  it("GET /api/openings computes a repertoire from the named Profile's Games alone", async () => {
+    const { db, app, a, b } = twoProfiles();
+    // Both players reach the same `Opening` as White in blitz: merged, it would
+    // be one entry over three Games, and neither player's repertoire.
+    db.insert(games).values(scopedGame(b, { eco: "C20", result: "loss" })).run();
+
+    const mine = await request(app).get(`/api/openings?profileId=${a}`);
+    const theirs = await request(app).get(`/api/openings?profileId=${b}`);
+
+    expect(mine.body.openings).toEqual([
+      expect.objectContaining({ eco: "C20", games: 1, win: 1, winRate: 1 }),
+    ]);
+    expect(theirs.body.openings).toEqual([
+      expect.objectContaining({ eco: "C20", games: 3, loss: 3, winRate: 0 }),
+    ]);
+    expect((await request(app).get("/api/openings")).status).toBe(400);
+    expect((await request(app).get("/api/openings?profileId=9999")).status).toBe(404);
+  });
+
+  it("GET /api/danger derives the recurring Positions of the named Profile alone", async () => {
+    const { db } = openDb(":memory:");
+    const a = seedProfile(db, "Alice");
+    const b = seedProfile(db, "Bob");
+    // Alice reaches the same Position in two analyzed Games — a `Danger
+    // position` for her. Bob reaches it once: for him nothing recurs. Blended,
+    // Bob's page would show a recurring Position he never played twice.
+    const inserted = db
+      .insert(games)
+      .values([
+        scopedGame(a, { pgn: "1. e4", analyzed: true }),
+        scopedGame(a, { pgn: "1. e4", analyzed: true }),
+        scopedGame(b, { pgn: "1. e4", analyzed: true }),
+      ])
+      .returning()
+      .all();
+    db.insert(evaluations)
+      .values(
+        inserted.flatMap((g) =>
+          gamePositions("1. e4").map((fen, ply) => ({ gameId: g.id, ply, fen, cp: 0 })),
+        ),
+      )
+      .run();
+    const app = createApp(db, fakeClient({}));
+
+    const mine = await request(app).get(`/api/danger?profileId=${a}`);
+    const theirs = await request(app).get(`/api/danger?profileId=${b}`);
+
+    expect(mine.body).toEqual({
+      dangers: [{ fen: AFTER_E4, reached: 2, seriousErrors: 0, proportion: 0 }],
+      analyzedGames: 2,
+    });
+    expect(theirs.body).toEqual({ dangers: [], analyzedGames: 1 });
+    expect((await request(app).get("/api/danger")).status).toBe(400);
+    expect((await request(app).get("/api/danger?profileId=9999")).status).toBe(404);
+  });
+
+  it("GET /api/move-habits aggregates the named Profile's counters — two repertoires never merge into one line", async () => {
+    const { db } = openDb(":memory:");
+    const a = seedProfile(db, "Alice");
+    const b = seedProfile(db, "Bob");
+    // Both open 1. e4; Alice once, Bob twice. One line for the pair would read
+    // "3 parties" and belong to neither of them.
+    for (const [owner, times] of [[a, 1], [b, 2]] as const) {
+      for (let i = 0; i < times; i++) {
+        recordMoveHabits(db, db.insert(games).values(scopedGame(owner)).returning().get());
+      }
+    }
+    const app = createApp(db, fakeClient({}));
+
+    const ask = (profileId: number | string) =>
+      request(app).get("/api/move-habits").query({ profileId, side: "white", fen: START });
+
+    const mine = (await ask(a)).body.candidates.find((c: { san: string }) => c.san === "e4");
+    const theirs = (await ask(b)).body.candidates.find((c: { san: string }) => c.san === "e4");
+
+    expect(mine).toMatchObject({ count: 1 });
+    expect(theirs).toMatchObject({ count: 2 });
+    expect(
+      (await request(app).get("/api/move-habits").query({ side: "white", fen: START })).status,
+    ).toBe(400);
+    expect((await ask(9999)).status).toBe(404);
   });
 });

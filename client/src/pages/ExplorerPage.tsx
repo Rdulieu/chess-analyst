@@ -1,43 +1,51 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { fetchMoveHabits } from "../api";
 import { positionAfter, boardFen, sideToMove } from "../chess/positions";
 import { candidateArrows } from "../chess/arrows";
 import { BOARD_SQUARES } from "../chess/boardTheme";
-import type { MoveHabitCandidate, Side } from "../types";
+import { useLoaded } from "../features/load/useLoaded";
+import { LoadFailure } from "../features/load/LoadFailure";
+import type { MoveHabitCandidate, Profile, Side } from "../types";
+
+/** One shared empty list, so "nothing loaded yet" is a stable reference. */
+const EMPTY: MoveHabitCandidate[] = [];
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
 const SIDE_LABEL: Record<Side, string> = { white: "Blancs", black: "Noirs" };
 
 /**
- * Explorateur (`/explorer`): the `Move habit` explorer. For the chosen side the
+ * Explorateur (`/explorer`): **the current `Profile`'s** `Move habit` explorer —
+ * two players' counters are never added into one line (ADR-0014). For the chosen side the
  * Player played, it lists the candidate Moves recorded from the current
  * Position (frequency, win rate, per-time-control breakdown) and lets the
  * Player drill down level by level. Selecting a candidate descends into the
  * resulting Position; a breadcrumb tracks the path and jumps back up. The
  * current Position is derived by replaying the path from the start, so the
- * lookup key matches the server's precomputed one. Board arrows arrive in the
- * next sub-issue.
+ * lookup key matches the server's precomputed one.
+ *
+ * A failed load says so and offers a retry: an unreachable server must not read
+ * as a line this player never walked (`games-load-failure`).
  */
-export function ExplorerPage() {
+export function ExplorerPage({ profile }: { profile: Profile }) {
   const [side, setSide] = useState<Side>("white");
   const [path, setPath] = useState<string[]>([]);
-  const [candidates, setCandidates] = useState<MoveHabitCandidate[]>([]);
 
   const fen = useMemo(() => positionAfter(path), [path]);
   const position = useMemo(() => boardFen(path), [path]);
-  const arrows = useMemo(() => candidateArrows(path, candidates), [path, candidates]);
 
-  useEffect(() => {
-    let active = true;
-    fetchMoveHabits(fen, side)
-      .then((c) => active && setCandidates(c))
-      .catch(() => active && setCandidates([]));
-    return () => {
-      active = false;
-    };
-  }, [fen, side]);
+  const load = useCallback(
+    () => fetchMoveHabits(profile.id, fen, side),
+    [profile.id, fen, side],
+  );
+  const loaded = useLoaded(load, [profile.id, fen, side]);
+  // One stable reference either way: the loaded array comes from state, and
+  // "nothing yet" is the shared empty list — so the arrows below are recomputed
+  // when the candidates change and not on every render.
+  const candidates = loaded.state === "loaded" ? loaded.data : EMPTY;
+
+  const arrows = useMemo(() => candidateArrows(path, candidates), [path, candidates]);
 
   const descend = (san: string) => setPath((p) => [...p, san]);
 
@@ -135,7 +143,11 @@ export function ExplorerPage() {
           </ol>
         </nav>
 
-        {candidates.length === 0 ? (
+        {loaded.state === "failed" ? (
+          <LoadFailure what="vos coups" error={loaded.error} onRetry={loaded.retry} />
+        ) : loaded.state === "loading" ? (
+          <p role="status">Chargement de vos coups…</p>
+        ) : candidates.length === 0 ? (
           <p>Aucun coup enregistré plus loin dans cette ligne.</p>
         ) : (
           <ul aria-label="candidates">

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
@@ -25,6 +25,7 @@ function currentMonth(): string {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  localStorage.clear();
 });
 
 const ZERO = { games: 0, win: 0, draw: 0, loss: 0, winRate: null };
@@ -44,19 +45,26 @@ const PROFILE = {
   analyzed: 0,
 };
 
+/** Makes a `Profile` current, as selecting it on `/profiles` would: every
+ *  analysis screen is about one, and without a selection they redirect. */
+function selectProfile(id = PROFILE.id) {
+  localStorage.setItem("chess-analyst.current-profile", String(id));
+}
+
 describe("App — routing & navigation", () => {
   beforeEach(() => {
+    selectProfile();
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string | URL): Promise<Response> => {
         const u = url.toString();
-        if (u === "/api/games") return jsonResponse([OPERA_GAME]);
+        if (u.startsWith("/api/games") && !u.includes("/api/games/")) return jsonResponse([OPERA_GAME]);
         // Analyzed here so the deep-link test below exercises the board, not US-7's not-yet-analyzed path.
         if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse({ ...OPERA_GAME, analyzed: true });
         if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
-        if (u === "/api/stats") return jsonResponse(STATS_SUMMARY);
-        if (u === "/api/openings") return jsonResponse({ openings: [] });
-        if (u === "/api/danger") return jsonResponse({ dangers: [] });
+        if (u.startsWith("/api/stats")) return jsonResponse(STATS_SUMMARY);
+        if (u.startsWith("/api/openings")) return jsonResponse({ openings: [] });
+        if (u.startsWith("/api/danger")) return jsonResponse({ dangers: [], analyzedGames: 0 });
         if (u === "/api/profiles") return jsonResponse([PROFILE]);
         if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse(PROFILE);
         return jsonResponse({}, false, 404);
@@ -191,11 +199,12 @@ describe("App — import UI", () => {
 
   describe("with an empty history", () => {
     beforeEach(() => {
+      selectProfile();
       vi.stubGlobal(
         "fetch",
         vi.fn(async (url: string | URL): Promise<Response> => {
           const u = url.toString();
-          if (u === "/api/games") return jsonResponse([]);
+          if (u.startsWith("/api/games") && !u.includes("/api/games/")) return jsonResponse([]);
           if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse({ ...PROFILE, games: 0 });
           return jsonResponse({}, false, 404);
         }),
@@ -219,7 +228,9 @@ describe("App — import UI", () => {
     it("still invites the Player to import from an empty Mes parties", async () => {
       renderApp(["/"]);
 
-      await screen.findByText(/import your chess\.com history/i);
+      // Named, and pointing at the Profile's own page: importing is an
+      // operation ON a Profile (US-11).
+      expect((await screen.findByText(/aucune partie/i)).textContent).toContain("DudulSmash");
     });
 
     it("defaults both ends of the range to the current month", async () => {
@@ -237,7 +248,7 @@ describe("App — import UI", () => {
     const fetchMock = vi.fn<(url: string | URL, init?: RequestInit) => Promise<Response>>(
       async (url) => {
         const u = url.toString();
-        if (u === "/api/games") return jsonResponse(imported ? [OPERA_GAME] : []);
+        if (u.startsWith("/api/games") && !u.includes("/api/games/")) return jsonResponse(imported ? [OPERA_GAME] : []);
         if (u === `/api/profiles/${PROFILE.id}`)
           return jsonResponse({ ...PROFILE, games: imported ? 1 : 0 });
         if (u === "/api/import") {
@@ -296,7 +307,7 @@ describe("App — import UI", () => {
     const statusInFlight = new Promise<Response>((r) => (resolveStatus = r));
     const fetchMock = vi.fn((url: string | URL): Promise<Response> => {
       const u = url.toString();
-      if (u === "/api/games") return Promise.resolve(jsonResponse([]));
+      if (u.startsWith("/api/games") && !u.includes("/api/games/")) return Promise.resolve(jsonResponse([]));
       if (u === `/api/profiles/${PROFILE.id}`) return Promise.resolve(jsonResponse(PROFILE));
       if (u === "/api/import")
         return Promise.resolve(jsonResponse({ running: true, total: 3, done: 1, result: null }, true, 202));
@@ -339,7 +350,7 @@ describe("App — import UI", () => {
       "fetch",
       vi.fn(async (url: string | URL): Promise<Response> => {
         const u = url.toString();
-        if (u === "/api/games") return jsonResponse([]);
+        if (u.startsWith("/api/games") && !u.includes("/api/games/")) return jsonResponse([]);
         if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse(PROFILE);
         if (u === "/api/import")
           return jsonResponse({ error: "Profil introuvable : 7" }, false, 404);
@@ -355,5 +366,64 @@ describe("App — import UI", () => {
     expect(await screen.findByText(/profil introuvable/i)).toBeTruthy();
     // The form is still there — no crash.
     expect(screen.getByRole("button", { name: /^import$/i })).toBeTruthy();
+  });
+});
+
+/**
+ * The banner is what makes the display unable to lie: `/danger` and `/openings`
+ * look identical whoever the Player is, and reading a friend's recurring
+ * mistakes while believing they are your own is a silent, easy confusion.
+ */
+describe("App — the chrome names whose figures these are", () => {
+  const BOB = { ...PROFILE, id: 8, username: "Bob", games: 4 };
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL): Promise<Response> => {
+        const u = url.toString();
+        if (u.startsWith("/api/games")) return jsonResponse([]);
+        if (u.startsWith("/api/danger")) return jsonResponse({ dangers: [], analyzedGames: 0 });
+        if (u === "/api/profiles") return jsonResponse([PROFILE, BOB]);
+        if (u === `/api/profiles/${PROFILE.id}`) return jsonResponse(PROFILE);
+        if (u === `/api/profiles/${BOB.id}`) return jsonResponse(BOB);
+        if (u === "/api/analyze/status")
+          return jsonResponse({ running: false, total: 0, done: 0, games: 0, acknowledged: true });
+        return jsonResponse({}, false, 404);
+      }),
+    );
+  });
+
+  it("names the current Profile in the chrome, with a link to the profiles area", async () => {
+    selectProfile();
+    const { container } = renderApp(["/danger"]);
+
+    const banner = await screen.findByRole("complementary", { name: /profil courant/i });
+    expect(banner.textContent).toContain("DudulSmash");
+    // Chrome, not page content: it sits in the header, above the routed page.
+    expect(container.querySelector("header")!.contains(banner)).toBe(true);
+  });
+
+  it("follows the selection: switching Profile renames the banner with no reload", async () => {
+    selectProfile();
+    const user = userEvent.setup();
+    renderApp(["/profiles"]);
+
+    const list = await screen.findByRole("list", { name: /profils/i });
+    const rows = within(list).getAllByRole("listitem");
+    const bobRow = rows.find((r) => r.textContent?.includes("Bob"))!;
+    await user.click(within(bobRow).getByRole("button", { name: /sélectionner/i }));
+
+    await user.click(screen.getByRole("link", { name: /positions dangereuses/i }));
+    const banner = await screen.findByRole("complementary", { name: /profil courant/i });
+    await waitFor(() => expect(banner.textContent).toContain("Bob"));
+  });
+
+  it("takes the Player to the profiles area when nothing is selected", async () => {
+    const { container } = renderApp(["/openings"]);
+
+    expect(await screen.findByRole("form", { name: /nouveau profil/i })).toBeTruthy();
+    // Nothing is current, so the chrome names nobody rather than guessing.
+    expect(container.querySelector('[data-banner="profile"]')).toBeNull();
   });
 });

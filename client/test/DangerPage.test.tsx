@@ -3,6 +3,16 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { DangerPage } from "../src/pages/DangerPage";
 import type { DangerEntry } from "../src/types";
 
+/** The current `Profile` the page is about — every scoped page takes one. */
+const PROFILE = {
+  id: 7,
+  platform: "chesscom" as const,
+  username: "Alice",
+  createdAt: "",
+  games: 4,
+  analyzed: 4,
+};
+
 function stub(dangers: DangerEntry[], analyzedGames = dangers.length) {
   vi.stubGlobal(
     "fetch",
@@ -35,7 +45,7 @@ describe("DangerPage — the four states", () => {
       }),
     );
 
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     // Never blank and silent: a text readout, announced rather than only drawn.
     const status = screen.getByRole("status");
@@ -53,7 +63,7 @@ describe("DangerPage — the four states", () => {
       vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
     );
 
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const error = await screen.findByRole("alert");
     expect(error.textContent).toMatch(/erreur|échec|impossible/i);
@@ -77,7 +87,7 @@ describe("DangerPage — the four states", () => {
       } as Response);
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
     fireEvent.click(await screen.findByRole("button", { name: /réessayer/i }));
 
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
@@ -88,7 +98,7 @@ describe("DangerPage — the four states", () => {
   it("tells a Player with analyzed Games but no recurring Position what is missing", async () => {
     stub([], 1);
 
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const message = await screen.findByText(/repassent pas|ne reviennent pas|même position/i);
     expect(message).toBeTruthy();
@@ -101,7 +111,7 @@ describe("DangerPage — the four states", () => {
 describe("DangerPage", () => {
   it("shows only an invitation when no Game has been analyzed", async () => {
     stub([]);
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     expect(await screen.findByText(/analysez vos parties/i)).toBeTruthy();
     expect(screen.queryByRole("list", { name: /positions dangereuses/i })).toBeNull();
@@ -109,7 +119,7 @@ describe("DangerPage", () => {
 
   it("renders a board diagram per Position, with its reach count and proportion, in the served order", async () => {
     stub(ENTRIES);
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
     const items = within(list).getAllByRole("listitem");
@@ -125,7 +135,7 @@ describe("DangerPage", () => {
 
   it("asks for the wide column: a wall of diagrams is not reading-column material", async () => {
     stub(ENTRIES);
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const region = await screen.findByRole("region", { name: /positions dangereuses/i });
     expect(region.dataset.width).toBe("wide");
@@ -133,7 +143,7 @@ describe("DangerPage", () => {
 
   it("presents each entry as one self-contained card inside the list", async () => {
     stub(ENTRIES);
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
     const items = within(list).getAllByRole("listitem");
@@ -150,7 +160,7 @@ describe("DangerPage", () => {
 
   it("visibly highlights entries with a serious-error proportion of 50% or more, and only those", async () => {
     stub(ENTRIES); // 20% then 67%
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
     const items = within(list).getAllByRole("listitem");
@@ -191,7 +201,7 @@ describe("DangerPage — how many are shown", () => {
 
   it("renders every Position when they fit under the display cap", async () => {
     stub(ranked(30));
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
     expect(within(list).getAllByRole("listitem")).toHaveLength(30);
@@ -199,7 +209,7 @@ describe("DangerPage — how many are shown", () => {
 
   it("renders at most 30 diagrams and states the real total beyond that", async () => {
     stub(ranked(42));
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
 
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
     expect(within(list).getAllByRole("listitem")).toHaveLength(30);
@@ -217,7 +227,7 @@ describe("DangerPage — board orientation", () => {
 
   async function entries(dangers: DangerEntry[]) {
     stub(dangers);
-    render(<DangerPage />);
+    render(<DangerPage profile={PROFILE} />);
     const list = await screen.findByRole("list", { name: /positions dangereuses/i });
     return within(list).getAllByRole("listitem");
   }
@@ -268,5 +278,20 @@ describe("DangerPage — board orientation", () => {
     for (const item of items) {
       expect(item.textContent).not.toMatch(/vous|votre/i);
     }
+  });
+});
+
+describe("DangerPage — whose positions these are", () => {
+  it("asks for the current Profile's Positions: a recurrence is one THIS Player keeps reaching", async () => {
+    const fetchMock = vi.fn<(url: string | URL) => Promise<Response>>(
+      async () =>
+        ({ ok: true, status: 200, json: async () => ({ dangers: [], analyzedGames: 0 }) }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DangerPage profile={PROFILE} />);
+
+    await screen.findByText(/analysez vos parties/i);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("profileId=7");
   });
 });
