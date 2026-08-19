@@ -1,6 +1,6 @@
 # 06 — Path 0 and the HP rework
 
-Status: `ready-for-human`
+Status: `done` — merged into `integration/US-11-profiles` (build + tests green; path 0 + HP-01/02/03 all green, 2026-08-19). The suite result is pasted into the integration→develop PR, which stays a human decision.
 
 > **Implemented on the business-story integration branch `integration/US-11-profiles`.** Branch
 > from it, PR back into it — **not** `develop`.
@@ -54,23 +54,23 @@ Profile's page. The README's inventory table and the per-scenario `covers:` fron
 
 ## Acceptance criteria
 
-- [ ] A path 0 scenario exists under `docs/test-scenarios/`, in the suite's scenario format.
-- [ ] Path 0 creates the `DudulSmash` Profile, imports the reference range against the real
+- [x] A path 0 scenario exists under `docs/test-scenarios/`, in the suite's scenario format.
+- [x] Path 0 creates the `DudulSmash` Profile, imports the reference range against the real
       chess.com API, and produces a reusable database snapshot.
-- [ ] HP-01, HP-02 and HP-03 restore that snapshot rather than importing again — except HP-01's own
+- [x] HP-01, HP-02 and HP-03 restore that snapshot rather than importing again — except HP-01's own
       import assertions, which are its subject and stay.
-- [ ] All three HP select a Profile before reading anything, and assert the banner names it.
-- [ ] HP-01's import steps target the Profile's page; no scenario imports from "Mes parties".
-- [ ] `theme-pass.md`'s screen inventory covers **eight** screens including the two profiles
+- [x] All three HP select a Profile before reading anything, and assert the banner names it.
+- [x] HP-01's import steps target the Profile's page; no scenario imports from "Mes parties".
+- [x] `theme-pass.md`'s screen inventory covers **eight** screens including the two profiles
       screens, edited there and not copied into the scenarios.
-- [ ] The theme pass still triggers no Import and no analysis of its own.
-- [ ] The profiles screens pass the audit in both themes on all three scenarios — including the
+- [x] The theme pass still triggers no Import and no analysis of its own.
+- [x] The profiles screens pass the audit in both themes on all three scenarios — including the
       empty-state renderings, which are screens too.
-- [ ] The suite README's inventory table and each scenario's `covers:` frontmatter are updated;
+- [x] The suite README's inventory table and each scenario's `covers:` frontmatter are updated;
       path 0 is documented as a prerequisite, explicitly **outside** the 3-HP cap.
-- [ ] The economy rules the README already states (no polling of harness-reported work, shortest
+- [x] The economy rules the README already states (no polling of harness-reported work, shortest
       Games for the pass, wait on conditions) survive the rewrite.
-- [ ] The full suite is run and its result pasted into the `integration -> develop` PR, per the
+- [x] The full suite is run and its result pasted into the `integration -> develop` PR, per the
       git-flow gate.
 
 ### Feature Path (FP)
