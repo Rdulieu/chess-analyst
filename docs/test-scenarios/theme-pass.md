@@ -42,7 +42,7 @@ The extra cost is rendering, not journey: on a warm app it is sixteen navigation
 | 3 | Ouvertures (`/openings`) | navigation |
 | 4 | Positions dangereuses (`/danger`) | navigation |
 | 5 | Stats (`/stats`) | navigation |
-| 6 | Analyse (`/analyse/:gameId`) | selecting a Game in "Mes parties" — it is Game-scoped and deliberately absent from the navigation |
+| 6 | Analyse (`/analyse/:gameId`) | selecting a Game in "Mes parties" — it is Game-scoped and deliberately absent from the navigation. **The Game row is a `button`, not a link**: a driver hunting for an `href` matching `/analyse/` finds nothing and wrongly records the screen as unreachable (measured on the 2026-08-19 run). Click the row's button, or navigate to the URL directly. |
 | 7 | Profils (`/profiles`) | navigation — where the current `Profile` is chosen |
 | 8 | Profil (`/profiles/:id`) | selecting a Profile in the list — it is Profile-scoped, like Analyse is Game-scoped |
 
@@ -94,6 +94,13 @@ screen in each theme; compare the `constants` block between the two themes for a
 theme itself is switched by the **driver** emulating `prefers-color-scheme: dark` (CDP
 `Emulation.setEmulatedMedia`), never from inside the page — the app ships a media query, so the media
 query is what must be exercised.
+
+**Emulate the light half explicitly too, and assert the theme you think you are in.** A browser is
+not neutral: a headless Chrome launched with its own profile defaulted to `prefers-color-scheme:
+dark` on the 2026-08-19 run, so the walk labelled "light" rendered the dark palette and the pass
+would have reported a green light theme it never saw. Emulate `light` for the first half rather than
+trusting the default, and check the audit's own `dark:` readout — and the ground it measured —
+against the half you believe you are running. A pass over one theme twice is a pass over nothing.
 
 Contrast is **blocking**, not a report: US-3 shipped a highlight that was invisible for want of any
 CSS, and the point of a stylesheet is not to replay that finding in reverse.
