@@ -95,7 +95,11 @@ once and verified once: path 0 imports the reference range against the real API 
 snapshot (HP-02's and HP-03's). Restore by file copy **into each scenario's own database file** —
 never point two scenarios at the shared snapshot, which they would then both write to. **Stop the
 server before copying or deleting the file**: SQLite keeps serving a deleted or replaced inode, so a
-copy on a running server silently leaves the old data in place.
+copy on a running server silently leaves the old data in place. **And checkpoint the WAL before
+copying** — the database runs in WAL mode, so a stopped server leaves the data in the `-wal` sidecar
+and a plain copy of the `.db` captures almost nothing (2026-08-19: 4 KB of `.db` beside 95 KB of
+`-wal`, restoring to a database with no tables). `PRAGMA wal_checkpoint(TRUNCATE)`, then read the
+copy back to confirm it holds what you think.
 
 The real chess.com contract is therefore exercised **once per suite run** in path 0, plus HP-01's own
 import — which is HP-01's subject, not a duplicate.
@@ -118,6 +122,13 @@ each scenario on its own ports and its own `DB_FILE`, guard every injected scrip
 `location.port` check, re-assert the viewport and the emulated colour scheme before trusting a
 measurement, and drive a browser instance of your own. Likewise, never `pkill` by a pattern that
 matches another agent's server — kill your own process by pid.
+
+**Drive React-controlled fields with real events.** The import form's month fields keep their default
+value if a driver assigns `value` directly or uses a high-level fill helper on the composite month
+control — measured on the 2026-08-19 run, where the range silently stayed on the current month while
+the checkboxes took, which would have imported the wrong months and failed the figures for a reason
+that has nothing to do with the app. Use the native value setter plus an `input`/`change` event, and
+**read the field back before submitting**.
 
 **Wait on conditions, not on clocks.** Fixed sleeps sprinkled through a driver add up to tens of
 seconds per run and are simultaneously too slow and too flaky. Wait for the element or the state.

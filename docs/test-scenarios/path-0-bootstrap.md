@@ -50,7 +50,8 @@ imported, 0 already present" against a database that already holds them.
    listed with the **canonical casing chess.com returned**, and its counters read zero Games.
 3. Stop the server and **take the empty-history snapshot** → a copy of the database file holding
    the Profile and no Games. This is what HP-01 restores.
-4. Restart, select `DudulSmash` as the current Profile, open its page (`/profiles/:id`) and import
+4. Restart and open the Profile's page (`/profiles/:id`) — creating the first Profile already made
+   it the current one, so no selection is needed here — and import
    the reference range (2026-05 → 2026-06, Blitz + Bullet) from **its own import form** → the
    import completes and the summary reports the range's figures.
 5. Confirm the state is the one claimed → the Profile's counters and the Game list agree with the
@@ -61,8 +62,11 @@ imported, 0 already present" against a database that already holds them.
 ## Checks
 ### UI
 - Step 2: the Profile appears in the list under chess.com's canonical spelling of `DudulSmash`,
-  with `0` Games imported and `0` analyzed. A typo would have been refused here — that assertion
-  belongs to the slice's Feature Path, not to a bootstrap step.
+  with `0` Games imported and `0` analyzed, and is marked "Profil actuel" — the first Profile
+  created becomes the current one. **Type the username in the wrong case on purpose** (`dudulsmash`):
+  the row must read `DudulSmash`, which is the whole point of storing what chess.com returns. A typo
+  would have been refused here — that assertion belongs to the slice's Feature Path, not to a
+  bootstrap step.
 - Step 4: the import form on the Profile's page has **no username field** — the Profile already
   names the account — and the import runs against it.
 - Step 5: the consolidated summary reports **82** games fetched and **82** imported over the range,
@@ -70,9 +74,16 @@ imported, 0 already present" against a database that already holds them.
   entries. Two `Monthly import` lines, in order: `2026-05` at 28, `2026-06` at 54.
 
 ### Backing store
-- Both snapshots are ordinary copies of the SQLite file, taken with the **server stopped**: SQLite
-  keeps serving a deleted or replaced inode, so a copy taken under a running server can capture a
-  state no scenario will actually see.
+- Both snapshots are copies of the SQLite file taken with the **server stopped**: SQLite keeps
+  serving a deleted or replaced inode, so a copy taken under a running server can capture a state no
+  scenario will actually see.
+- **Checkpoint the WAL before copying.** The database runs in WAL mode, so stopping the server
+  leaves the run's data in the `-wal` sidecar and the main file nearly empty — measured on the
+  2026-08-19 run: **4 KB** of `.db` beside **95 KB** of `-wal`, and a plain `cp` of the `.db` alone
+  produced a snapshot with **no `profiles` table at all**. Run `PRAGMA wal_checkpoint(TRUNCATE)`
+  against the file (or copy the `-wal`/`-shm` sidecars alongside it) and **verify the copy by
+  reading it back** — a snapshot that restores to an empty database fails every scenario downstream
+  with a precondition error that looks like an app defect.
 - The imported snapshot holds 82 `Game` rows, all carrying the `DudulSmash` Profile's id, and no
   `Evaluation` — the analysis pass belongs to HP-01, which runs it on its own restored state.
 
@@ -90,6 +101,12 @@ names the right one.
   real imported Games and can be discarded afterwards — path 0 rebuilds them from the network.
 
 ## Notes
+- **The import form's month fields need a real input event.** They are React-controlled, so a
+  driver that assigns `value` (or uses a high-level "fill" helper on the composite month control)
+  leaves the component's state on its default — measured on the 2026-08-19 run, where the range
+  silently stayed on the current month while the checkboxes took. Use the native value setter and
+  dispatch `input` (and `change`), then **read the values back before submitting**. Every scenario
+  that drives this form is exposed to it.
 - **Snapshot into each scenario's own file.** Scenarios run on their own ports and their own
   `DB_FILE`; restore is a copy **into** that file, never a scenario pointing at the shared
   snapshot, which two scenarios would then write to at once.
