@@ -2,6 +2,41 @@
 
 ## To do
 
+- **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
+  seulement par ouverture ou par position.
+  > **Recadrage de l'objectif du produit** (2026-08-19). **Grilling commencé puis interrompu** — à
+  > reprendre : `.scratch/weakness-profile/GRILL-NOTES.md` (état complet, décisions prises,
+  > questions ouvertes Q3-bis à Q10). Branche `integration/US-15-weakness-profile`.
+  >
+  > Ce n'est **pas une US mais une EPIC** : elle se découpera en plusieurs US grillées séparément.
+  > Les briques existantes (`/openings`, `/danger`, annotations `?!`/`?`/`??`) ont été construites
+  > parce qu'elles étaient les plus simples, pas parce qu'elles étaient le but : l'app **détecte**
+  > déjà des faiblesses sous trois formes, mais ne rend **aucun verdict** et ne dit jamais la
+  > **cause**.
+  >
+  > Déjà tranché :
+  > - L'objectif est bien le **thème** (« je m'effondre en finale », « je rate les fourchettes »),
+  >   pas un classement des briques actuelles.
+  > - Méthode : **dorsale sans motifs** (axes dérivés du moteur et du FEN — phase, matériel,
+  >   tactique manquée vs dérive, pression du temps, position calme/tranchante), puis **détection par
+  >   règles greffée un motif à la fois**. **Pas de LLM** (décision du demandeur).
+  > - **Premier chantier identifié** : le moteur calcule `bestmove` et on le **jette**
+  >   (`engine/uci-driver.ts:68` le renvoie, `evaluations` n'a pas la colonne), et aucune **PV** n'est
+  >   conservée (mono-PV, profondeur 16). Tout motif est une affirmation sur l'écart entre le coup
+  >   joué et le meilleur coup — sans lui, rien n'est possible. C'est le seul manque dont la
+  >   réparation est **coûteuse** (ré-analyse moteur, non rejouable depuis le PGN, contrairement au
+  >   FEN d'ADR-0012) : il passe donc **en premier**.
+  >
+  > Non tranché, bloquant pour la première US : comment un « bucket » devient une faiblesse. Le
+  > problème du dénominateur est réglé (taux dans le bucket, comparé à sa propre moyenne), mais six
+  > problèmes ont été trouvés dans cette approche — dont un **non réparable** par des taux marginaux
+  > (les axes sont **corrélés** : en blitz les coups de finale *sont* les coups à faible horloge,
+  > donc l'outil risque de dire « travaille tes finales » quand la vraie cause est l'horloge). Voir
+  > les notes.
+  >
+  > Dépendance : **US-11 (Profils)** — tous les constats de cette EPIC sont des agrégats, ils doivent
+  > naître **déjà cloisonnés par profil**.
+
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
   > seul username chess.com (clé/valeur), et `games` n'a **aucune notion de propriétaire** — même

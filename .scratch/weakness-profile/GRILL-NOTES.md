@@ -1,0 +1,278 @@
+# US-15 (EPIC) — Identifier les points faibles du joueur — notes de grilling
+
+**Statut : grilling INTERROMPU** (2026-08-19), à reprendre. Branche
+`integration/US-15-weakness-profile` (depuis `develop` @ 7cb477f).
+
+Rien n'est encore écrit dans `CONTEXT.md` ni dans `docs/adr/` : la terminologie n'est pas tranchée
+et les décisions restantes sont trop ouvertes. Ce fichier est le seul état.
+
+> ⚠️ Ce n'est **pas** une US mais une **EPIC** : elle se découpera en plusieurs US, chacune grillée
+> puis passée par `/to-prd` + `/to-issues`. La roadmap n'est pas encore établie — c'est l'objet de
+> la reprise.
+
+---
+
+## L'objectif final (recadrage du demandeur)
+
+> « Je veux que l'application permette d'identifier les points faibles du joueur pour mettre en
+> avant des points sur lesquels travailler. »
+
+Les briques existantes (`/openings`, `/danger`, annotations `?!`/`?`/`??`) ont été construites
+**parce qu'elles étaient plus simples**, pas parce qu'elles étaient le but. Le but réel est de
+nommer des **thèmes** de faiblesse — « je m'effondre en finale de pions », « je rate les fourchettes
+de cavalier », « je dérive après le coup 20 » — et pas seulement de lister des ouvertures ou des
+positions.
+
+État constaté : l'app **détecte** déjà des faiblesses, trois fois, sous trois formes différentes
+(une `Opening`, une `Position` récurrente, un `Move` isolé), mais elle ne rend **aucun verdict** :
+trois listes, trois métriques, aucune façon de savoir laquelle compte le plus. Le manque n'est pas
+la détection, c'est la **synthèse** — et surtout la **cause**.
+
+---
+
+## Décisions prises
+
+### D1 — L'objectif est bien (B) : des **thèmes**, pas un simple classement des briques existantes
+
+Deux lectures avaient été proposées :
+
+- **(A)** un « point faible » = une des choses déjà calculées (cette ouverture, cette position, ce
+  coup) ; l'US n'ajoute alors qu'un **classement inter-dimensions** et une page d'entrée unique.
+- **(B)** un « point faible » = un **thème** ou une **compétence** (motif tactique, phase de jeu,
+  gestion du temps, dérive positionnelle), ce qui demande une classification qui **n'existe pas**
+  aujourd'hui.
+
+**Retenu : (B)**, assumé comme l'objectif final de l'EPIC. (A) n'est pas rejeté en soi mais n'est
+pas le but ; il pourra ressortir comme sous-produit d'une étape.
+
+### D2 — Comment un thème est **établi** : (ii) en dorsale, (i) greffé thème par thème, (iii) exclu
+
+Trois familles de méthodes avaient été posées :
+
+- **(i) Détection par règles** dans notre code : prédicats d'échecs sur (position avant, coup joué,
+  meilleur coup, PV) — « une pièce est attaquée et non défendue », « le meilleur coup adverse
+  fourche deux pièces ». Déterministe, testable, gratuit, hors-ligne — mais chaque motif est un
+  vrai chantier, la couverture croît un motif à la fois, et la version naïve se trompe souvent (une
+  pièce « en l'air » qui est en fait un sacrifice sain).
+- **(ii) Thèmes dérivés du moteur, sans nommer de motif** : classer les erreurs sur des axes que le
+  moteur et le FEN donnent déjà — phase de jeu, équilibre matériel, « tactique manquée » (le
+  meilleur coup était une prise/un échec et pas le vôtre) vs **dérive positionnelle**, pression du
+  temps, position calme ou tranchante (dispersion des meilleurs coups → demande MultiPV). Honnête et
+  bon marché, mais plus grossier : « tu rates des tactiques dans les milieux de partie tranchants
+  sous pression du temps » plutôt que « tu rates les fourchettes de cavalier ».
+- **(iii) Un LLM explique chaque erreur** et nomme le motif. Couverture immédiate, aucune logique
+  d'échecs à écrire — mais non déterministe, invérifiable, inventif, et un appel distant casserait
+  ADR-0002 (app locale).
+
+**Retenu : (ii) en dorsale**, puis **(i) greffé un thème après l'autre**. **(iii) écarté pour
+l'instant** (décision explicite du demandeur : « avoid llm for now »).
+
+Raison de l'ordre : (ii) donne une image complète et fiable du **quand/comment** dès la première
+étape, à partir de données obtenables en une seule ré-analyse ; (i) ajoute ensuite le **quoi**
+incrémentalement, chaque motif étant validable à l'œil sur ses propres parties. Commencer par (i)
+c'est un long chantier avant le premier verdict ; commencer par (iii) c'est une démo rapide et
+non fiable — et un conseil d'entraînement faux est pire que pas de conseil (même argument que celui
+qui a fait refuser de figer les seuils en base, ADR-0009).
+
+---
+
+## Analyse d'écart — ce que (B) exige et que nous n'avons pas
+
+Vérifié dans le code, pas supposé.
+
+### Acquis, réutilisable tel quel
+
+- `Evaluation` **et FEN par ply** pour chaque partie analysée (`evaluations`, ADR-0012) : pour tout
+  coup fautif on connaît la position exacte avant et après. C'est la matière première du classement.
+- Le cadrage systématiquement relatif au joueur (`player_color`, `result`).
+- La méthode de sévérité par **winning chances** déjà implémentée
+  (`server/src/analysis/derivation.ts`).
+- Le **PGN complet** conservé par partie.
+
+### Manques, par coût croissant de réparation
+
+| # | Manque | Coût de réparation |
+|---|---|---|
+| G1 | **Le meilleur coup du moteur est calculé puis jeté.** `server/src/engine/uci-driver.ts:68` le renvoie, `engine/types.ts:22` le déclare — `evaluations` n'a **pas de colonne**. | **Ré-analyse complète** (minutes/lot). Contrairement au FEN, **non rejouable depuis le PGN**. |
+| G2 | **Aucune variante principale (PV).** Recherche mono-PV à profondeur 16, `MultiPV` inutilisé. Or « tu as raté une fourchette » demande souvent 2 à 4 plys de réfutation pour être **montré**, pas seulement affirmé. | Ré-analyse (idem G1 — à faire **en même temps**). |
+| G3 | **Aucune notion de phase de jeu** (ouverture / milieu / finale). | Dérivable des FEN stockés (matériel + numéro de coup). Bon marché, rien à persister. |
+| G4 | **Aucune donnée d'horloge.** | Les PGN chess.com portent des commentaires `[%clk ...]` → temps par coup **récupérable du PGN déjà stocké**, sans ré-import ni ré-analyse. **À VÉRIFIER** : confirmer que les `[%clk]` sont bien dans nos PGN en base avant de s'appuyer dessus dans la roadmap. |
+| G5 | **Aucun vocabulaire de motifs** : rien ne nomme une fourchette, un clouage, une pièce en l'air, une faiblesse de dernière rangée. C'est le contenu même de (B) et il n'existe sous aucune forme. | Le chantier (i), thème par thème. |
+| G6 | **Aucune notion de durée de vie d'un constat.** La sortie de (B) est un **conseil**, et un conseil doit être re-vérifiable plus tard : est-ce que ça s'est amélioré ? Rien ne modélise aujourd'hui une faiblesse **suivie dans le temps**. | Modélisation à faire ; dépend de tout le reste. |
+
+**Conséquence d'ordonnancement déjà claire** : **G1 + G2 d'abord**, car c'est le seul manque dont la
+réparation est réellement coûteuse (ré-analyse moteur) et dont **tout le reste dépend**. Tout motif
+est en réalité une affirmation sur **l'écart entre le coup joué et le meilleur coup** : pas de
+meilleur coup, pas de motif.
+
+---
+
+## Question EN COURS (non tranchée) — Q3 : qu'est-ce qui fait d'un « bucket » une faiblesse ?
+
+C'est là que la session s'est arrêtée. Le fil complet, pour ne pas le refaire.
+
+### Le problème du dénominateur
+
+« 63 % de tes erreurs graves sont en milieu de partie » est probablement **vrai et sans valeur** :
+la plupart de tes coups *sont* des coups de milieu de partie. Une distribution brute d'erreurs par
+bucket reproduit surtout la distribution des **coups** par bucket — on « découvrirait » qu'on est
+faible là où on joue le plus.
+
+Options posées :
+
+- **(a) Compte d'erreurs** — rejeté (le piège ci-dessus).
+- **(b) Taux d'erreur dans le bucket** : `erreurs graves du bucket / tes Moves du bucket`. Les
+  buckets redeviennent comparables ; une finale courte n'est plus mécaniquement gonflée ou
+  dégonflée.
+- **(c) Taux comparé à une référence** :
+  - **ta propre moyenne globale** (« tu te trompes 1,8× plus souvent en finale qu'en moyenne ») —
+    autonome, et répond directement à « où suis-je *relativement* le plus mauvais » ;
+  - **une référence externe** (joueurs de ton Elo) — bien plus parlant comme coaching, mais donnée
+    inaccessible en local. **Hors de portée**, noté et écarté.
+- **(d) Winning chances perdues par Move dans le bucket** (au lieu de compter des erreurs
+  seuillées). Capte la **dérive positionnelle** — mourir de mille coupures sans jamais gaffer — à
+  laquelle un comptage seuillé à 20 % est **structurellement aveugle**, alors que la dérive est
+  justement un des thèmes qu'on veut le plus voir sortir.
+
+### Recommandation initiale (puis critiquée, voir ci-dessous)
+
+**(b) + (c-moyenne-propre)**, avec **(d) comme seconde métrique co-égale** et non comme
+remplacement : une faiblesse = un bucket où **soit** le taux d'erreur grave seuillé, **soit** les
+winning chances perdues par Move sont nettement pires que ta propre moyenne. Deux métriques parce
+qu'elles attrapent des échecs différents et qu'aucune n'absorbe l'autre (une gaffe catastrophique
+par partie sort dans la première et à peine dans la seconde ; une dérive lente sort dans la seconde
+et pas du tout dans la première) ; les fusionner en un seul nombre cacherait **laquelle des deux**
+se produit — or c'est ça qui change ce qu'on va travailler.
+
+Conséquence assumée : cela **casse une règle explicite de `CONTEXT.md`**, énoncée deux fois
+(`Danger position`, `Win rate`) : *« aucune taille d'échantillon minimale n'est jamais imposée — le
+compte est affiché à côté du taux, le joueur juge la significativité »*. Cette règle tient quand on
+**lit une liste**. Elle casse dès qu'on **classe des buckets entre eux** : le haut du classement
+serait systématiquement occupé par les tout petits buckets (6 coups de finale, une gaffe → 17 %,
+premier du classement). Classer, contrairement à lister, **oblige l'outil à prendre position sur le
+bruit**.
+
+### Les problèmes trouvés dans cette recommandation (demande du demandeur : « est-ce que tu vois des problèmes ? »)
+
+1. **Les buckets sont confondus, donc un classement invente des causes.** *Le plus grave.* Phase,
+   pression du temps et caractère tranchant ne sont pas des axes indépendants : en blitz, les coups
+   de finale **sont** les coups à faible horloge, presque par construction. Les mêmes 40 erreurs
+   sont attribuées simultanément à « finales », « pression du temps » et « positions tranchantes »,
+   chaque bucket affichant un taux élevé, et **rien dans la méthode ne dit lequel est le moteur**.
+   L'outil dirait « travaille tes finales » alors que la vérité est « arrête de brûler ton horloge
+   avant le coup 20 » — soit exactement l'échec que cette EPIC existe pour éviter. Des **taux
+   marginaux par axe** sont structurellement incapables de séparer des causes corrélées.
+2. **Les winning chances saturent, et les buckets diffèrent systématiquement en « à quel point la
+   partie est déjà jouée ».** `CONTEXT.md` invoque la saturation *en faveur* de la méthode (un
+   mauvais coup en position déjà gagnée/perdue n'est pas signalé) — correct pour juger **un coup**,
+   mais cela veut dire que la sensibilité de la métrique dépend de la proximité de l'équilibre. Les
+   finales sont atteintes de façon disproportionnée quand la partie est déjà décidée : le bucket
+   « finale » affichera un taux **mécaniquement déprimé**, non parce qu'on y joue bien mais parce
+   qu'il y avait moins à perdre. Le biais va dans le même sens pour **les deux** métriques — en
+   avoir deux n'aide donc pas.
+3. **La référence à sa propre moyenne garantit toujours un verdict.** Quelque chose est toujours
+   « le pire » par rapport à sa moyenne. L'outil ne peut **jamais** dire « ton jeu est assez
+   homogène, rien ne ressort » — alors qu'il doit pouvoir le dire, sinon toute lecture est un faux
+   positif. Pire : il ne distingue pas « je suis mauvais en finale » de « je suis exceptionnellement
+   bon en milieu de partie » — sortie identique, actions opposées. Et il **ne converge pas** :
+   corrige ton pire bucket, un autre prend la tête, donc le progrès ressemble à une absence de
+   progrès.
+4. **Le lissage (shrinkage) rend le classement non reproductible depuis l'écran.** Si la page
+   affiche « finale : 17 % sur 6 coups » **sous** « milieu : 4 % sur 900 coups », le joueur voit un
+   bug. Dans un outil dont le seul produit est un conseil qu'on **décide de croire**, un ordre qu'on
+   ne peut pas retrouver depuis les chiffres affichés ronge exactement ce qui est vendu. Les stats
+   sont justes et la présentation est une **faute de confiance** — la plus chère des deux ici.
+5. **Le bruit de la profondeur 16 se charge sur la métrique de dérive, et inégalement selon les
+   buckets.** Sommer des milliers de petits deltas **accumule** le bruit au lieu de le moyenner, et
+   la profondeur 16 est relativement la plus faible là où les horizons sont les plus longs — les
+   **finales**. La métrique de dérive tendra donc à **inventer** de la dérive en finale. Là encore
+   le biais tombe sur un axe de bucket, le seul endroit où on ne peut pas se le permettre.
+6. **(mineur, mais mine le dénominateur)** « tes Moves du bucket » compte les coups où tu n'avais
+   **aucun choix réel** (reprises forcées, coup unique). Leur part varie selon le bucket (positions
+   tranchantes et finales en ont beaucoup), donc les dénominateurs ne sont pas comparables. MultiPV
+   permettrait d'exclure les positions quasi forcées ; le mono-PV ne les voit pas.
+
+### Recommandation révisée (posée, PAS validée)
+
+Garder **(b) + (c)** comme arithmétique — cette partie survit — mais avec trois contraintes sans
+lesquelles la sortie n'est pas fiable :
+
+- **Restreindre toute comparaison inter-buckets aux positions encore compétitives** (bande de
+  winning chances autour de l'équilibre, p. ex. aucun camp au-delà de ~85/15 avant le coup) → règle
+  le problème 2, et c'est de toute façon ce que « un coup qui comptait » veut dire.
+- **Rendre un verdict de dispersion AVANT tout classement** : si aucun bucket ne se détache de la
+  moyenne au-delà du bruit, la page le dit et **ne classe rien** → règle le problème 3 et rend
+  l'outil **falsifiable**.
+- **Abandonner le lissage au profit d'un intervalle affiché**, et classer sur sa **borne
+  conservatrice**, intervalle visible : « finale 17 % (6 coups, 3–48 %) » chevauche visiblement tout
+  le reste, donc son classement bas devient **évident** au lieu d'être mystérieux → règle le
+  problème 4.
+
+Le **problème 1 n'est pas réparable à l'intérieur de (ii) seul** : séparer des causes corrélées
+demande soit une **tabulation croisée** (qui multiplie les buckets et détruit la taille
+d'échantillon à l'échelle de l'historique du joueur), soit une méthode différente — **fixer un axe
+et comparer à l'intérieur** (« parmi tes seuls coups de milieu de partie, la pression du temps
+change-t-elle ton taux d'erreur ? »). C'est un vrai problème de conception : il mérite **sa propre
+étape dans la roadmap** plutôt que d'être glissé sous le tapis de la première.
+
+---
+
+## Questions ENCORE OUVERTES, pour la reprise
+
+**Q3-bis (bloquante, la question posée au moment de l'arrêt).** Pour la **première US** de l'EPIC :
+
+- **(α)** livrer des **taux marginaux mono-axe**, avec un cadrage explicite « ces axes se
+  recouvrent, c'est descriptif et non causal », et traiter la confusion (problème 1) dans une US
+  ultérieure ; **ou**
+- **(β)** faire dès le départ la **comparaison conditionnelle intra-axe**, en acceptant un jeu
+  d'axes plus restreint parce que la taille d'échantillon ne suivra pas.
+
+> Le demandeur n'a pas pu trancher et a explicitement demandé à reprendre plus tard.
+
+**Q4 — Terminologie.** Collision déjà repérée, à régler avant toute écriture dans `CONTEXT.md` :
+l'entrée `Weak opening` liste explicitement `Weakness` et `Weak spot` sous *_Avoid_* — le langage
+avait été **volontairement gardé étroit** pour que « weak X » veuille dire exactement « ouverture à
+mauvais taux de victoire ». Si cette EPIC introduit une notion générale de point faible, il faut
+**lever cette réservation** ou trouver un autre terme. Termes à définir : le **thème/axe**, le
+**bucket**, le **constat** (le point faible lui-même, avec ses preuves), et le rapport de tout ça
+avec `Mistake`/`Danger position`/`Weak opening` existants.
+
+**Q5 — Les axes de la dorsale (ii), lesquels exactement ?** Candidats posés : phase de jeu (G3),
+équilibre matériel, tactique manquée vs dérive positionnelle, pression du temps (G4), position calme
+vs tranchante (demande MultiPV, G2). Lesquels retenus dans la première US, dans quel ordre, et
+lesquels l'historique du joueur peut-il alimenter ?
+
+**Q6 — Où ça se voit.** Une nouvelle page ? Une page d'entrée unique qui devient l'accueil (le
+« recentrage » suggère que oui) ? Que deviennent alors `/openings` et `/danger` — preuves vers
+lesquelles on descend, ou vues autonomes conservées ? Rappel : ADR-0006 (routage client, une page
+par parcours).
+
+**Q7 — Coût et déclenchement de la ré-analyse (G1+G2).** Stocker `bestmove` + PV impose une
+ré-analyse. Interaction avec les règles de phase dev (schéma libre, ré-import bon marché) : on repart
+d'une base neuve, ou on ajoute une colonne et on relance un `Analysis pass` ? Le passage en MultiPV
+**augmente le coût moteur par position** — de combien, et est-ce que la profondeur 16 (fixée pour la
+reproductibilité, ADR-0009) tient encore ? À **mesurer**, comme US-10b l'avait fait pour `/danger`.
+
+**Q8 — La progression dans le temps (G6).** Un point faible se suit-il d'une ré-analyse à l'autre ?
+Sur quel découpage (par mois, par lot de parties) ? Cela conditionne s'il faut **persister des
+constats** — donc un arbitrage contre l'esprit d'ADR-0009 (ne persister que le brut, tout dériver).
+
+**Q9 — La roadmap elle-même.** Non établie. Seul point acquis : **G1+G2 en premier** (coût de
+réparation le plus élevé, tout en dépend). Reste à découper (ii) en US, puis à décider si le premier
+motif (i) entre dans cette EPIC ou en sort.
+
+**Q10 — Dépendance à US-11 (Profils).** US-11 est en cours (tranches 01-05 livrées, 06 HITL
+bloquante) et fait des agrégats des choses **cloisonnées par profil**. Tous les buckets et constats
+de cette EPIC sont des agrégats : ils devront naître **déjà cloisonnés par profil**, sinon on refait
+le travail. À confirmer au moment de l'ordonnancement.
+
+---
+
+## Rappels d'exploration (vérifiés dans le code, 2026-08-19)
+
+- `evaluations(game_id, ply, fen, cp, mate)` — pas de `bestmove`, pas de PV.
+- `engine/uci-driver.ts` : `go depth ${depth}`, lit le dernier `score cp`/`score mate` **et**
+  `bestmove` (ligne 68) ; `MultiPV` n'apparaît nulle part.
+- Sévérités et `Danger position` dérivées à la lecture depuis `analysis/derivation.ts`
+  (`gamePlies()` est le point d'entrée partagé).
+- Pages clientes existantes : `Analyse`, `Danger`, `Explorer`, `Games`, `Openings`, `Stats`.
