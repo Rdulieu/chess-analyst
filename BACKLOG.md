@@ -60,6 +60,9 @@
 
 ## Doing
 
+
+## In review
+
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > **Grillée** (2026-08-17) — branche `integration/US-11-profiles`.
   > Un **`Profile`** = **un compte sur une plateforme** (plateforme + username), validé chez
@@ -87,8 +90,12 @@
   >   - `04-every-view-speaks-of-the-current-profile.md` — scoping de toutes les vues + bandeau (AFK)
   >   - `05-the-analysis-pass-belongs-to-a-profile.md` — la passe d'analyse est scopée (AFK)
   >   - `06-path-zero-and-the-hp-rework.md` — path 0 + reprise des 3 HP et du pass de thème (**HITL**)
-
-## In review
+  > **Livrée** (2026-08-19) — les six tranches sont mergées sur `integration/US-11-profiles`.
+  > Suite agentique rejouée sur la story : **path 0 + HP-01 + HP-02 + HP-03 tous verts**, 599 tests
+  > et le build verts. Path 0 est un nouveau **prérequis hors plafond des 3 HP** : il crée le profil
+  > de référence, importe la plage contre l'API chess.com réelle et laisse deux snapshots que les
+  > trois journeys restaurent. PR `integration -> develop` ouverte, **le merge reste une décision
+  > humaine**.
 
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,

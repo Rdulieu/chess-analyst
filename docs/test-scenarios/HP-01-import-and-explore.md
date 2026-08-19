@@ -106,8 +106,11 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    > single shortest Game the step used to analyse (~40). Measured at **~14 s** on the 2026-08-14
    > run — the estimate here read ~3.5 min, some 15x pessimistic, from before the native engine
    > backend. Verified on this suite's
-   > reference dataset (2026-08-14): of the 6 first-Move groups holding at least two Games, **none**
-   > fails to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4.
+   > reference dataset — re-verified on the reworked range (82 Games, 2026-08-19): of the **5**
+   > first-Move groups holding at least two Games (e4 28, d4 34, b3 13, Nc3 3, e3 2), **none** fails
+   > to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4, and
+   > the pass reports **29 Positions** — the figure this step has always quoted. (The count read
+   > "6 groups" while the scenario imported 2026/06 alone.)
    >
    Then reopen **whichever of the two Games carries at least one flawed Move of the Player's** (the
    move list and the error tally say which; if neither does, record the curve's error marking as *not
@@ -115,7 +118,9 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    no mistake at all) → beside its board, in the annotations pane, an `Evaluation curve`
    runs from the starting Position on the left to the last Move on the right; stepping through
    the Moves moves a mark along it, and the Player's own flawed Moves are marked on it by the
-   same glyph the move list uses, with a count of them in words.
+   same glyph the move list uses, beside a tally that names the fault in words (`Vos erreurs : 1
+   grosse erreur ??` — the category spelled out and the glyph repeated, so the tint is never the only
+   cue).
 
    > **Why here and not as a scenario of its own**: the curve needs a Game with real
    > `Evaluation`s, which this step has just produced — it costs one navigation and no engine
@@ -186,9 +191,15 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   already validated when the Profile was created, so that case is now unreachable from the UI.
 - Use an **immutable past month** as the anchor (2026-06) so counts are stable; the current
   month keeps changing as the Player plays.
-- **Watch the progress readout from before the click.** On the 2026-08-17 run the real two-month
-  import completed in **under two seconds**, so a driver that starts polling *after* submitting sees
-  the summary and never the readout — and step 3 asserts the readout. Install the observer first.
+- **Watch the progress readout from before the click** — for the Import *and* for the analysis pass.
+  On the 2026-08-17 run the real two-month import completed in **under two seconds**, so a driver
+  that starts polling *after* submitting sees the summary and never the readout — and step 3 asserts
+  the readout. Install the observer first. The **analysis pass is now just as fast**: 29 Positions on
+  the native engine backend finished before an observer installed at click time recorded a single
+  intermediate value on the 2026-08-19 run — only the final `29` was captured, so the "count
+  advances, it does not sit at zero" half of step 10 went **unobserved rather than green**. Install
+  that observer before the click too, and if a run still only sees the final figure, record it as
+  *not exercised* rather than as a pass.
   There is no analysis status endpoint to poll (`/api/import/status` exists, its analysis counterpart
   does not): watch the DOM readout, which is what is under test anyway.
 - The Import is one fetch **per month**, run sequentially — expect the progress readout to sit on
