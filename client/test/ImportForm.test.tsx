@@ -173,7 +173,7 @@ describe("ImportForm", () => {
     render(<ImportForm profile={{ ...PROFILE, platform: "lichess", username: "Metalyst" }} onImported={() => {}} />);
 
     const text = screen.getByRole("form", { name: "import" }).textContent ?? "";
-    expect(text).toMatch(/Lichess/);
+    expect(text).toMatch(/lichess\.org/);
     expect(text).toMatch(/Metalyst/);
     expect(text).not.toMatch(/chess\.com/);
   });

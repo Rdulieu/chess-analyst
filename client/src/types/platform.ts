@@ -8,7 +8,7 @@ export type Platform = "chesscom" | "lichess";
 
 const LABELS: Record<Platform, string> = {
   chesscom: "chess.com",
-  lichess: "Lichess",
+  lichess: "lichess.org",
 };
 
 /** How this Platform is named to the Player. */

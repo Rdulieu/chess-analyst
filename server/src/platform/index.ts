@@ -13,3 +13,4 @@ export {
   type PlatformRegistry,
 } from "./types";
 export { createHttpChessComClient } from "./chesscom/client";
+export { createHttpLichessClient } from "./lichess/client";

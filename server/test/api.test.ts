@@ -1060,7 +1060,7 @@ describe("the Platform is resolved from the Profile", () => {
       .send({ platform: "lichess", username: "metalyst" });
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toContain("Lichess");
+    expect(res.body.error).toContain("lichess.org");
     expect(res.body.error).not.toContain("chess.com");
   });
 
@@ -1073,7 +1073,7 @@ describe("the Platform is resolved from the Profile", () => {
       .send({ platform: "lichess", username: "ghost" });
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toContain("Lichess");
+    expect(res.body.error).toContain("lichess.org");
   });
 
   it("an Import fetches through the Profile's own Platform, not the app's first one", async () => {

@@ -10,7 +10,10 @@
 export type Platform = "chesscom" | "lichess";
 
 /** How a Platform is named to the Player — never spelled in place. */
-const PLATFORM_LABELS: Record<Platform, string> = { chesscom: "chess.com", lichess: "Lichess" };
+const PLATFORM_LABELS: Record<Platform, string> = {
+  chesscom: "chess.com",
+  lichess: "lichess.org",
+};
 
 /** The Platform's own name, for a message or a label the Player reads. */
 export function platformLabel(platform: Platform): string {

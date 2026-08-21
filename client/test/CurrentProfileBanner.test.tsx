@@ -53,7 +53,7 @@ describe("the current-Profile banner", () => {
     );
 
     const banner = screen.getByRole("complementary", { name: /profil courant/i });
-    expect(banner.textContent).toMatch(/Lichess/);
+    expect(banner.textContent).toMatch(/lichess\.org/);
     expect(banner.textContent).not.toMatch(/chess\.com/);
   });
 });
