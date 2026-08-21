@@ -61,7 +61,23 @@
   > les cas précis sur fixture (`LICHESS_BASE_URL` en miroir de `CHESSCOM_BASE_URL`).
   > Dette signalée hors périmètre : la table `settings` (username chess.com mémorisé) est caduque
   > depuis US-11 et ne doit **pas** être étendue à Lichess.
-  > Reste à faire : `/to-prd` puis `/to-issues`.
+  > PRD : `.scratch/lichess-import/PRD.md` (38 user stories). Découpée en 7 issues techniques,
+  > `.scratch/lichess-import/issues/` :
+  > - `01-platform-is-a-value.md` — le port parle le domaine, chess.com devient un adaptateur, la
+  >   plateforme est nommée à l'écran (AFK)
+  > - `02-five-time-control-categories.md` — `classical` ajoutée, `daily` → `correspondence`, les
+  >   deux migrations dues (AFK, bloquée par 01 — **séquencement**, pas dépendance logique)
+  > - `03-a-lichess-profile-exists.md` — choix de la plateforme, vérification du compte chez Lichess
+  >   (AFK, bloquée par 01)
+  > - `04-a-lichess-month-lands.md` — l'adaptateur Lichess sur le chemin nominal, IPv4 épinglé
+  >   (AFK, bloquée par 01/02/03)
+  > - `05-what-we-do-not-keep.md` — variantes, position arbitraire, parties contre l'ordinateur
+  >   (AFK, bloquée par 04)
+  > - `06-month-boundary-and-rate-limit.md` — datation par le début, partie à cheval, 429
+  >   (AFK, bloquée par 04)
+  > - `07-path-zero-and-the-cross-platform-switch.md` — path 0 contre l'API réelle + étape HP-01
+  >   (**HITL**, bloquée par 02/05/06)
+  > Reste à faire : implémenter, en commençant par la tranche 01.
   >
   > Points tranchés au grilling (énoncé d'origine) :
   > - Forme du port : `since`/`until` en millisecondes couvre nativement la plage introduite par
