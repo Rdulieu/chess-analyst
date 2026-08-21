@@ -1,6 +1,6 @@
 # 01 — The Platform is a value, not a word
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-12-lichess-import` (build + tests + FP 3/3 verts, 2026-08-21)
 
 > **Implemented on the business-story integration branch `integration/US-12-lichess-import`.**
 > Branch from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a

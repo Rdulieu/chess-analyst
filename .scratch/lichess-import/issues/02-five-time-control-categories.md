@@ -1,6 +1,6 @@
 # 02 — Five Time control categories
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-12-lichess-import` (build + tests + FP 3/3 verts, migration 0011 vérifiée sur une base pré-migration, 2026-08-21)
 
 > **Implemented on the business-story integration branch `integration/US-12-lichess-import`.**
 > Branch from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a

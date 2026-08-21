@@ -1,6 +1,6 @@
 # 06 — The month boundary and the rate limit
 
-Status: `ready-for-agent`
+Status: `done` — merged into `integration/US-12-lichess-import` (build + tests + FP 4/4 verts, 2026-08-21)
 
 > **Implemented on the business-story integration branch `integration/US-12-lichess-import`.**
 > Branch from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a

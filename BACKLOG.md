@@ -79,7 +79,16 @@
   >   (AFK, bloquée par 04)
   > - `07-path-zero-and-the-cross-platform-switch.md` — path 0 contre l'API réelle + étape HP-01
   >   (**HITL**, bloquée par 02/05/06)
-  > Reste à faire : implémenter, en commençant par la tranche 01.
+  > **Tranches 01 à 06 livrées** (2026-08-21) sur la branche d'intégration, chacune build + tests +
+  > FP verts : le port parle le domaine et chess.com devient un adaptateur, cinq cadences
+  > (`daily` → `correspondence`, `classical` ajoutée, migration 0011), un profil Lichess existe,
+  > un mois Lichess atterrit, les exclusions (variantes, position arbitraire, parties contre
+  > l'ordinateur ; abandonnées gardées), la datation par le début et le `429` traité comme une
+  > instruction. Deux défauts réels trouvés par les FP et corrigés au passage : un PGN sans coup
+  > (partie abandonnée) faisait échouer l'import du mois entier, et l'attente imposée par la
+  > plateforme n'était pas dite à l'écran.
+  > Reste à faire : la tranche **07 (HITL)** — path 0 contre l'API réelle et l'étape inter-plateformes
+  > d'HP-01 — puis la suite HP et la PR `integration -> develop`, décision humaine.
   >
   > Points tranchés au grilling (énoncé d'origine) :
   > - Forme du port : `since`/`until` en millisecondes couvre nativement la plage introduite par
