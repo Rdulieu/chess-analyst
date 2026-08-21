@@ -54,6 +54,51 @@
   > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
   > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
 
+- **US-16**: Analyser moi-même une de mes parties — commenter, explorer des variations, désigner les
+  coups qui me semblent importants — puis confronter mon analyse à celle du moteur pour progresser en
+  analyse.
+  > Pas encore grillée. Le but n'est **pas** de mieux montrer l'analyse moteur (c'est US-15a) mais de
+  > faire **travailler le joueur** : d'abord analyser **sans moteur**, pour exercer sa capacité
+  > d'analyse et sa compréhension du jeu ; ensuite seulement, confronter son analyse à celle du moteur
+  > et de notre moteur d'analyse (US-15) pour en évaluer la pertinence, et faire ressortir ses points
+  > forts et faibles **en analyse** (et non plus seulement en jeu).
+  > **Bonus visé par le demandeur** : c'est aussi une manière d'évaluer la pertinence de *notre*
+  > moteur d'analyse.
+  >
+  > État vérifié : **ADR-0004 a déjà payé pour cette US, en US-1.** `cm-chess` a été choisi *contre*
+  > `chess.js`, malgré une communauté bien plus petite, précisément pour son **historique en arbre
+  > (variations)** et ses **annotations PGN natives (NAG, commentaires)** — « branching analysis lines
+  > are of real interest for this project ». Rien n'exploite encore cette capacité : `history.ts`
+  > aplatit le PGN en une liste linéaire de plys.
+  >
+  > Points à trancher au grilling :
+  > - **Terminologie** : « commentaire », « variation », « coup important » n'existent pas au
+  >   glossaire, et « important » demande un terme propre qui ne collide ni avec `Danger position`
+  >   (récurrence, agrégat) ni avec `Move habit`. L'analyse du joueur elle-même est un objet à nommer.
+  > - **Le problème de l'aveuglement, structurel.** La page Analyse montre aujourd'hui l'info moteur
+  >   **en permanence** : `WinningChancesBar` et `EvaluationGraph` sont dans `Board.tsx`, et le toggle
+  >   d'annotations est **à `true` par défaut** (`GameViewer.tsx:27`). US-15a en ajoutera encore. Or
+  >   analyser « sans moteur » n'est pas un simple interrupteur : **une fois vu, on ne peut pas ne pas
+  >   avoir vu**. Il faut donc un **ordre** (analyser → révéler), pas seulement un affichage
+  >   conditionnel — et décider ce qui se passe si le joueur révèle puis modifie son analyse.
+  > - **Ce que « pertinent » veut dire**, et c'est le cœur : comparer les coups désignés importants aux
+  >   Moves signalés / `Counted Move` d'US-15a ? Les variations proposées à la `Best line` ? Les
+  >   commentaires à rien du tout (non comparables) ? Chaque réponse est un critère de notation
+  >   différent, et un mauvais critère apprendra au joueur à imiter le moteur plutôt qu'à comprendre.
+  > - **Découpage / dépendance** : la moitié « annoter en aveugle » est constructible **tout de
+  >   suite** ; la moitié « confronter » dépend d'**US-15a** (le relevé par Move). Donc probablement
+  >   deux stories, et c'est ce qui permet de commencer celle-ci avant le reste de l'EPIC.
+  > - **Persistance** : l'analyse du joueur est une donnée **irremplaçable** (elle n'a aucun amont) —
+  >   ADR-0015 s'applique pleinement, migration due, et elle est à **cloisonner par `Profile`**
+  >   (ADR-0014). Stockage sous forme de **PGN annoté** (ce que `cm-chess` sait lire et écrire nativement,
+  >   donc exportable vers d'autres outils) ou en modèle relationnel ? Vrai arbitrage, **ADR probable**.
+  > - **Où ça vit** : dans la page Analyse ou dans un parcours dédié « exercice » (ADR-0006 : une page
+  >   par parcours) ? La page Analyse est déjà la plus dense de l'app.
+  > - **La circularité du bonus, à assumer** : utiliser l'accord joueur/moteur pour juger *notre*
+  >   moteur d'analyse suppose que le joueur a raison. Un désaccord révèle une **divergence**, jamais
+  >   **qui se trompe**. C'est un signal utile (où regarder) et non un oracle de validation — à écrire
+  >   noir sur blanc, sinon la story promet une garantie qu'elle ne peut pas tenir.
+
 - **US-15a**: Comprendre, sur **une** partie, comment l'analyse juge mes coups — pour pouvoir croire
   (ou contester) ce que l'app me dira plus tard sur mes faiblesses.
   > **Grillée avec l'EPIC US-15** (2026-08-21) : décisions D1→D14 dans
