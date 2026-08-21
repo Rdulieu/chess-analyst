@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { games, evaluations } from "../db/schema";
 import { gamePlies, moveSeverities } from "../analysis/derivation";
@@ -35,12 +35,26 @@ function fourFieldFen(fen: string): string {
  * analyzed Games that simply never revisit the same Position — two different
  * things to tell the Player, indistinguishable from `dangers` alone.
  */
-export function countAnalyzedGames(db: Db): number {
-  return db.select().from(games).where(eq(games.analyzed, true)).all().length;
+export function countAnalyzedGames(db: Db, profileId: number): number {
+  return analyzedGamesOf(db, profileId).length;
 }
 
-export function getDangerPositions(db: Db): DangerEntry[] {
-  const analyzedGames = db.select().from(games).where(eq(games.analyzed, true)).all();
+/**
+ * A `Danger position` is a Position **this** Player keeps reaching (CONTEXT.md),
+ * so the derivation reads one `Profile`'s analyzed Games and no others: two
+ * Profiles passing once each through the same Position is not a recurrence,
+ * it is two players' single visits.
+ */
+function analyzedGamesOf(db: Db, profileId: number) {
+  return db
+    .select()
+    .from(games)
+    .where(and(eq(games.profileId, profileId), eq(games.analyzed, true)))
+    .all();
+}
+
+export function getDangerPositions(db: Db, profileId: number): DangerEntry[] {
+  const analyzedGames = analyzedGamesOf(db, profileId);
 
   const reached = new Map<string, number>();
   const seriousErrorReaches = new Map<string, number>();

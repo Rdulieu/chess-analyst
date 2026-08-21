@@ -1,4 +1,26 @@
-import { sqliteTable, integer, text, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, text, primaryKey, unique } from "drizzle-orm/sqlite-core";
+
+/**
+ * The `Profile` (CONTEXT.md, ADR-0014): **one account on one platform**, the
+ * pair (`platform`, `username`) — and the unit by which every view is
+ * partitioned. `platform` carries `chesscom` alone for now; it exists from the
+ * start so that Lichess (US-12) is a new *value* and an import client, not a new
+ * concept. `username` holds the **canonical casing the platform itself answers**,
+ * which is what stops `RDulieu` and `rdulieu` from becoming two Profiles
+ * splitting one history in half — the pair being unique enforces the rest.
+ */
+export const profiles = sqliteTable(
+  "profiles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    platform: text("platform").notNull().$type<"chesscom">(),
+    username: text("username").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [unique().on(t.platform, t.username)],
+);
+
+export type Profile = typeof profiles.$inferSelect;
 
 /**
  * The `games` table models the `Game` glossary term (see CONTEXT.md): an
@@ -8,39 +30,56 @@ import { sqliteTable, integer, text, primaryKey } from "drizzle-orm/sqlite-core"
  * the time control category. No Evaluation/Mistake storage yet — that arrives
  * with US-4.
  */
-export const games = sqliteTable("games", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  gameUrl: text("game_url").notNull().unique(),
-  pgn: text("pgn").notNull(),
-  opponent: text("opponent").notNull(),
-  playerColor: text("player_color").notNull().$type<"white" | "black">(),
-  result: text("result").notNull().$type<"win" | "loss" | "draw">(),
-  date: text("date").notNull(),
-  timeControlCategory: text("time_control_category")
-    .notNull()
-    .$type<"bullet" | "blitz" | "rapid" | "daily">(),
-  // The Game's `Opening` per chess.com's own classification, resolved once at
-  // import from the PGN's [ECO]/[ECOUrl] headers (ADR-0007). `eco` is the
-  // identity (the sentinel "other" when chess.com did not classify the Game);
-  // `openingName` is the human-readable display name. The defaults fill
-  // pre-existing rows on migration — the real values come from re-importing
-  // (dev-phase rule: re-import is cheap, no backfill machinery).
-  eco: text("eco").notNull().default("other"),
-  openingName: text("opening_name").notNull().default("Autre / non classée"),
-  // Set once this Game's Moves have been folded into the move_habits counters,
-  // so the pre-aggregated totals cannot be double-counted (ADR-0005).
-  moveHabitsComputed: integer("move_habits_computed", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  // Set once this Game has been through the engine analysis pass and its per-ply
-  // `Evaluation`s are stored (ADR-0009, US-4). The analysis twin of
-  // `moveHabitsComputed`: makes the pass incremental and idempotent, so already-
-  // analyzed Games are skipped and their Evaluations are never recomputed.
-  analyzed: integer("analyzed", { mode: "boolean" }).notNull().default(false),
-});
+export const games = sqliteTable(
+  "games",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // The `Profile` this Game belongs to (ADR-0014). Uniqueness is
+    // `(profile_id, game_url)`, not the URL alone: the same match followed under
+    // two Profiles is **two rows**, each recorded from its own Player's point of
+    // view — by design, not a dedup bug.
+    profileId: integer("profile_id")
+      .notNull()
+      .references(() => profiles.id),
+    gameUrl: text("game_url").notNull(),
+    pgn: text("pgn").notNull(),
+    opponent: text("opponent").notNull(),
+    playerColor: text("player_color").notNull().$type<"white" | "black">(),
+    result: text("result").notNull().$type<"win" | "loss" | "draw">(),
+    date: text("date").notNull(),
+    timeControlCategory: text("time_control_category")
+      .notNull()
+      .$type<"bullet" | "blitz" | "rapid" | "daily">(),
+    // The Game's `Opening` per chess.com's own classification, resolved once at
+    // import from the PGN's [ECO]/[ECOUrl] headers (ADR-0007). `eco` is the
+    // identity (the sentinel "other" when chess.com did not classify the Game);
+    // `openingName` is the human-readable display name. The defaults fill
+    // pre-existing rows on migration — the real values come from re-importing
+    // (dev-phase rule: re-import is cheap, no backfill machinery).
+    eco: text("eco").notNull().default("other"),
+    openingName: text("opening_name").notNull().default("Autre / non classée"),
+    // Set once this Game's Moves have been folded into the move_habits counters,
+    // so the pre-aggregated totals cannot be double-counted (ADR-0005).
+    moveHabitsComputed: integer("move_habits_computed", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    // Set once this Game has been through the engine analysis pass and its per-ply
+    // `Evaluation`s are stored (ADR-0009, US-4). The analysis twin of
+    // `moveHabitsComputed`: makes the pass incremental and idempotent, so already-
+    // analyzed Games are skipped and their Evaluations are never recomputed.
+    analyzed: integer("analyzed", { mode: "boolean" }).notNull().default(false),
+  },
+  (t) => [unique().on(t.profileId, t.gameUrl)],
+);
 
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+/**
+ * A Game **before it has an owner**: the shape fixtures and seeds describe, the
+ * `Profile` being supplied by whoever seeds them. Nothing is ever *stored* in
+ * this shape — the column is `NOT NULL` (ADR-0014).
+ */
+export type UnownedGame = Omit<NewGame, "profileId">;
 
 /**
  * Raw per-ply engine `Evaluation`s (ADR-0009), one row per analyzed Position of
@@ -86,6 +125,11 @@ export type NewEvaluation = typeof evaluations.$inferInsert;
  */
 export const analysisPasses = sqliteTable("analysis_passes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  // The `Profile` this pass ran for (ADR-0014): engine time is spent on one
+  // Player's Games, and the pass is reported on that Player's page.
+  profileId: integer("profile_id")
+    .notNull()
+    .references(() => profiles.id),
   gameIds: text("game_ids", { mode: "json" }).notNull().$type<number[]>(),
   total: integer("total").notNull(),
   startedAt: text("started_at").notNull(),
@@ -116,6 +160,12 @@ export type AnalysisPass = typeof analysisPasses.$inferSelect;
 export const moveHabits = sqliteTable(
   "move_habits",
   {
+    // Part of the key, not a mere column (ADR-0014): two Profiles reaching the
+    // same Position and playing the same Move keep two counters, so one
+    // player's repertoire can never be added into another's.
+    profileId: integer("profile_id")
+      .notNull()
+      .references(() => profiles.id),
     fen: text("fen").notNull(),
     side: text("side").notNull().$type<"white" | "black">(),
     san: text("san").notNull(),
@@ -128,7 +178,7 @@ export const moveHabits = sqliteTable(
     rapid: integer("rapid").notNull().default(0),
     daily: integer("daily").notNull().default(0),
   },
-  (t) => [primaryKey({ columns: [t.fen, t.side, t.san] })],
+  (t) => [primaryKey({ columns: [t.profileId, t.fen, t.side, t.san] })],
 );
 
 export type MoveHabit = typeof moveHabits.$inferSelect;

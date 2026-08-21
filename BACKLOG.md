@@ -37,30 +37,6 @@
   > Dépendance : **US-11 (Profils)** — tous les constats de cette EPIC sont des agrégats, ils doivent
   > naître **déjà cloisonnés par profil**.
 
-- **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
-  > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
-  > seul username chess.com (clé/valeur), et `games` n'a **aucune notion de propriétaire** — même
-  > chose pour les agrégats (`move_habits`, stats `/stats`, `/openings`, `/danger` et les
-  > `evaluations`), calculés sur *toutes* les lignes. Importer un second compte mélangerait donc
-  > silencieusement les historiques et fausserait tous les indicateurs. Le besoin : un **Profil**
-  > sélectionnable, sous lequel on retrouve son propre historique importé **et son état d'analyse**
-  > (parties déjà analysées conservées, pas à re-analyser en changeant de profil).
-  > Points à trancher au grilling :
-  > - Terminologie et périmètre : un `Profile` = un compte chess.com, ou un libellé libre pouvant
-  >   regrouper plusieurs comptes ? Rapport avec le terme `Player` de `CONTEXT.md`.
-  > - Une même `Game` peut-elle appartenir à deux profils (partie entre deux comptes suivis) — et
-  >   `player_color`/`result` sont **relatifs au joueur**, donc dépendants du profil.
-  > - Portée du scoping : import, liste des parties, `move_habits` (précalculés, cf. ADR-0005),
-  >   stats/openings/danger. Les `evaluations` sont-elles partageables (propriété de la position,
-  >   pas du joueur) ?
-  > - Sélection et persistance du profil courant (remplace la mémorisation du username), création /
-  >   suppression d'un profil, et ce qu'on fait des données existantes (règle de phase dev : le
-  >   ré-import est bon marché, un profil par défaut migré ou une DB repartie de zéro sont
-  >   acceptables).
-  >
-  > **À griller avant US-12** (import Lichess) : le `Profile` est le porteur naturel du couple
-  > plateforme + compte, donc c'est ici que la question se tranche.
-
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
@@ -121,6 +97,52 @@
 
 
 ## In review
+
+## Done
+
+- **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
+  > **Grillée** (2026-08-17) — branche `integration/US-11-profiles`.
+  > Un **`Profile`** = **un compte sur une plateforme** (plateforme + username), validé chez
+  > chess.com à la création et stocké dans sa casse canonique. Il **partitionne** : chaque `Game` et
+  > chaque agrégat appartient à un seul profil, **rien n'est partagé** — une partie jouée entre deux
+  > profils suivis est stockée deux fois, chacune du point de vue de son `Player`. `Player` est
+  > redéfini comme le **point de vue** (la personne derrière le profil courant, éventuellement un
+  > ami), plus comme une identité. Sélection côté client passée explicitement à chaque appel API,
+  > bandeau permanent qui nomme le profil courant, page dédiée `/profiles` + `/profiles/:id` qui
+  > **accueille désormais l'import** (l'ancien `/import` disparaît).
+  > **Conséquence hors story** : la base locale n'est plus jetable (20 parties analysées, 1199
+  > `evaluations`). La règle « wiper et ré-importer » de `CLAUDE.md` est **retirée** — toute
+  > évolution de schéma doit désormais venir avec sa migration.
+  > **Débloquée** (2026-08-18) : US-13 est mergée dans `develop`, la branche est rebasée dessus. La
+  > feuille de style, le squelette de page et l'audit des tokens deviennent des contraintes des
+  > tranches côté écran ; le pass de thème passe de six à huit écrans (tranche 06) ; et le finding
+  > `games-load-failure` d'US-13 est rapatrié dans la tranche 04.
+  > - Doc : `CONTEXT.md` (`Profile`, `Player`), ADR-0014 (le profil partitionne), ADR-0015 (la base
+  >   porte des données irremplaçables), `CLAUDE.md` (phase dev amendée)
+  > - PRD : `.scratch/profiles/PRD.md`
+  > - Issues techniques : `.scratch/profiles/issues/`
+  >   - `01-profiles-exist.md` — créer / lister / sélectionner / supprimer un profil (AFK)
+  >   - `02-existing-data-belongs-to-dudulsmash.md` — la migration, préserve les 1199 évaluations (AFK)
+  >   - `03-import-from-the-profile-page.md` — l'import déménage sur la page du profil (AFK)
+  >   - `04-every-view-speaks-of-the-current-profile.md` — scoping de toutes les vues + bandeau (AFK)
+  >   - `05-the-analysis-pass-belongs-to-a-profile.md` — la passe d'analyse est scopée (AFK)
+  >   - `06-path-zero-and-the-hp-rework.md` — path 0 + reprise des 3 HP et du pass de thème (**HITL**)
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #51, mergée le
+  > 2026-08-21). Trace de la revue : les six tranches mergées sur `integration/US-11-profiles`,
+  > **path 0 + HP-01 + HP-02 + HP-03 tous verts**, build et tests verts. Path 0 est un nouveau
+  > **prérequis hors plafond des 3 HP** : il crée les profils de référence, importe la plage contre
+  > l'API chess.com réelle et laisse deux snapshots que les trois journeys restaurent.
+  >
+  > **Trois retours d'usage traités après la livraison, avant le merge** (2026-08-21) : l'import
+  > était livré mais **introuvable** (un seul bouton sur `/profiles` l'ouvre désormais, focus dans le
+  > formulaire) ; la liste des profils **débordait de sa carte dès le second profil** (colonne large,
+  > comme les autres écrans denses) ; et surtout la suite HP **ne tenait qu'un seul profil**, si bien
+  > que huit écrans dans deux thèmes déclaraient propre un écran cassé — path 0 crée maintenant un
+  > second profil vide et HP-03 bascule de l'un à l'autre, ce qui rend ADR-0014 observable au lieu
+  > de supposée. Leçon transférable : *une fixture dont la cardinalité est toujours un ne prouve
+  > rien sur la cardinalité.*
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
@@ -219,7 +241,8 @@
   > PRD : présence, sens de l'axe, synchronisation du curseur, position des marqueurs, cohérence du
   > décompte — jamais l'esthétique.
   >
-  > **En revue** — PR `integration/US-14-evaluation-graph` → `develop`, **étape 9 d'HP-01 rejouée**
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #35, mergée le 2026-08-14).
+  > Trace de la revue : PR `integration/US-14-evaluation-graph` → `develop`, **étape 9 d'HP-01 rejouée**
   > (greffe incluse) contre le vrai chess.com et le vrai Stockfish, base repartie de zéro.
   > PRD : `.scratch/evaluation-curve/PRD.md`. Découpée en **2 issues**, sur
   > `integration/US-14-evaluation-graph` :
@@ -242,9 +265,12 @@
   > d'HP-01, qui analyse déjà deux parties pour de vrai. Le demandeur se contente de **cette seule
   > étape 9** pour la PR `integration → develop` (HP-02 et HP-03 ne passent pas par Analyse) — à
   > reconfirmer au moment de la PR.
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
-  > **En revue** — PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #34, mergée le 2026-08-14).
+  > Trace de la revue : PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
   > entier (3/3 vertes), les 3 issues livrées et auto-mergées (PR #31, #32, #33). Issue de la
   > scission d'US-10 (les deux préoccupations qui y étaient réunies n'ont rien en commun). `GET /api/danger` (`server/src/routes/danger.ts:13`) est synchrone — pas
   > de job de fond comme l'`Analysis pass` — et `DangerPage.tsx:21,33` rend `null` tant que la
@@ -280,9 +306,12 @@
   > 55 ms**, et l'agrégat passe de 3736 entrées à 109. La page ne rend plus jamais d'écran muet :
   > quatre états distincts, dont l'échec serveur qui ne renvoie plus le joueur analyser ce qu'il
   > vient d'analyser.
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-10a**: Savoir dans quel sens lire un échiquier et qui joue quoi.
-  > **En revue** — PR `integration/US-10a-players-on-the-board` → `develop`, suite HP rejouée en
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #29, mergée le 2026-08-14).
+  > Trace de la revue : PR `integration/US-10a-players-on-the-board` → `develop`, suite HP rejouée en
   > entier (3/3 vertes). Issue de la scission d'US-10 (voir US-10b pour l'autre moitié). **Grillée** — pas d'ADR : rien
   > n'est coûteux à défaire ici. `CONTEXT.md` : nouveau terme **`Board orientation`**.
   > Branche : `integration/US-10a-players-on-the-board`.
@@ -351,9 +380,12 @@
   > l'Explorateur le libellé du trait est loin de la liste des candidats ; `react-chessboard` injecte
   > ses instructions de glisser-déposer dans chacun des 119 diagrammes de `/danger` (tierce partie) ;
   > cette même page rend tous ses diagrammes d'un coup, ce qui **se combine avec US-10b**.
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
-  > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #19, mergée le 2026-08-12).
+  > Trace de la revue : PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
   > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
   > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
   > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
@@ -376,8 +408,8 @@
   > absorbée dans le scénario d'import existant.
   >
   > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
-
-## Done
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
   > **Grillée** (2026-08-17) — **ADR-0013**. `CONTEXT.md` **inchangé, et c'est un constat** : une

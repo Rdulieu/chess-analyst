@@ -8,11 +8,12 @@ export interface DangerView {
 }
 
 /**
- * The `Danger position` view (GET /api/danger), derived server-side on the fly
- * — the full list, already ranked by serious-error proportion.
+ * One `Profile`'s `Danger position` view (GET /api/danger), derived server-side
+ * on the fly — the full list, ranked by serious-error proportion. A recurring
+ * Position is one *this* Player keeps reaching (CONTEXT.md).
  */
-export async function fetchDangerView(): Promise<DangerView> {
-  const res = await fetch("/api/danger");
+export async function fetchDangerView(profileId: number): Promise<DangerView> {
+  const res = await fetch(`/api/danger?profileId=${profileId}`);
   if (!res.ok) throw new Error(`Failed to load danger positions (${res.status})`);
   return (await res.json()) as DangerView;
 }

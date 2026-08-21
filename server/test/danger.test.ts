@@ -3,10 +3,14 @@ import { openDb } from "../src/db";
 import { games, evaluations, type NewGame } from "../src/db/schema";
 import { getDangerPositions } from "../src/danger/repository";
 import { gamePositions } from "../src/chess/positions";
+import { seedProfile } from "./fixtures";
 
 function tempDb() {
   return openDb(":memory:").db;
 }
+
+/** The sole `Profile` every Game below is seeded under — every read names it. */
+const PROFILE = 1;
 
 let urlSeq = 0;
 /** Inserts an analyzed Game (playing card for `getDangerPositions`). */
@@ -14,6 +18,7 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
   return db
     .insert(games)
     .values({
+      profileId: seedProfile(db),
       gameUrl: `https://chess.com/g/${urlSeq++}`,
       opponent: "opp",
       playerColor: "white",
@@ -59,7 +64,7 @@ describe("getDangerPositions", () => {
       seedEvaluation(db, game, 1, { cp: 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     const afterE4 = dangers.find((d) => d.fen === AFTER_E4);
     expect(afterE4).toMatchObject({ reached: 2, seriousErrors: 0, proportion: 0 });
@@ -76,7 +81,7 @@ describe("getDangerPositions", () => {
       seedEvaluation(db, g2, ply, { cp: 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     // Of the 9 distinct FENs the 12 Position-instances (6 plies × 2 Games)
     // collapse to, only the pre-/post-Nc3 Positions the two move orders
@@ -107,7 +112,7 @@ describe("getDangerPositions", () => {
       seedEvaluation(db, outside, ply, { cp: ply === 13 ? 1000 : 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     const probe = dangers.find((d) => d.fen === AFTER_E4_E5)!;
     expect(probe).toMatchObject({ reached: 2, seriousErrors: 1, proportion: 0.5 });
@@ -124,7 +129,7 @@ describe("getDangerPositions", () => {
       seedEvaluation(db, g2, ply, { cp: 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     expect(dangers.every((d) => d.reached >= 2)).toBe(true);
   });
@@ -136,7 +141,7 @@ describe("getDangerPositions", () => {
       for (const ply of [0, 1, 2]) seedEvaluation(db, game, ply, { cp: 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     // Reached by every Game by construction, so it would otherwise top the list.
     expect(dangers.find((d) => d.fen === START_FEN)).toBeUndefined();
@@ -156,7 +161,7 @@ describe("getDangerPositions", () => {
       for (const ply of [0, 1, 2]) seedEvaluation(db, sharp, ply, { cp: ply === 2 ? 1000 : 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     expect(dangers[0]).toMatchObject({ fen: AFTER_E4, reached: 2, proportion: 1 });
     expect(dangers.map((d) => d.proportion)).toEqual(
@@ -177,7 +182,7 @@ describe("getDangerPositions", () => {
       for (const ply of [0, 1, 2]) seedEvaluation(db, g, ply, { cp: 0 });
     }
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     expect(dangers.every((d) => d.proportion === 0)).toBe(true);
     expect(dangers.map((d) => d.reached)).toEqual([...dangers.map((d) => d.reached)].sort((a, b) => b - a));
@@ -188,7 +193,7 @@ describe("getDangerPositions", () => {
     const db = tempDb();
     seedGame(db, { pgn: "1. e4", analyzed: false });
 
-    const dangers = getDangerPositions(db);
+    const dangers = getDangerPositions(db, PROFILE);
 
     expect(dangers).toEqual([]);
   });

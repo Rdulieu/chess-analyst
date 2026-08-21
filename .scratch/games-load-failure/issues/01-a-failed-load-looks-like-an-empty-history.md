@@ -1,6 +1,16 @@
 # 01 — "Mes parties" tells the Player their history is empty when the load fails
 
-Status: needs-triage
+Status: `done` — fixed in `.scratch/profiles/issues/04-every-view-speaks-of-the-current-profile.md`
+(US-11 slice 04, 2026-08-18).
+
+> **Closed there, by position rather than by scope creep.** Slice 04 adds a *fourth* situation to
+> the same code — "no Profile selected" — and its own criterion ("a Profile with no Games shows an
+> empty state") is unassertable while "no Games" can also mean "the request failed". The three
+> states are now named once, in `client/src/features/load/useLoaded.ts`, and said once, in
+> `LoadFailure`; every screen that fetches on mount uses them — "Mes parties", Stats, Ouvertures,
+> Positions dangereuses and l'Explorateur. A failed load says the load failed, carries the cause,
+> and offers a retry; it can no longer render the import invitation. Verified against the running
+> app on all five screens, in both themes.
 
 Reported from the US-13 Happy Path replay (2026-08-17). It is **not US-13's to fix** — no stylesheet
 change causes it and none would fix it — and it is filed here rather than left inside

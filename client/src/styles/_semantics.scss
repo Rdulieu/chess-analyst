@@ -131,3 +131,14 @@ tr[data-weak="true"] > * {
 p[data-player="true"] {
   font-weight: 700;
 }
+
+// A load that FAILED, on any screen that fetches on mount. The words say it
+// ("Erreur : impossible de charger …") and a retry sits under them; the tint is
+// emphasis, never the signal — the whole point of this block is that a failure
+// can no longer be mistaken for an empty result (`games-load-failure`).
+[data-state="failed"] {
+  background: var(--tint-fail);
+  color: var(--tint-fail-ink);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+}

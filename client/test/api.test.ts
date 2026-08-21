@@ -1,6 +1,9 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import {
+  fetchDangerView,
   fetchGame,
+  fetchGames,
+  fetchWeakOpenings,
   fetchGameAnnotations,
   fetchMoveHabits,
   fetchStats,
@@ -27,7 +30,7 @@ describe("startImport", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const params = {
-      username: "me",
+      profileId: 7,
       from: { year: 2024, month: 1 },
       to: { year: 2024, month: 3 },
       categories: ["blitz", "rapid"] as const,
@@ -40,7 +43,7 @@ describe("startImport", () => {
     expect(url).toBe("/api/import");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({
-      username: "me",
+      profileId: 7,
       from: { year: 2024, month: 1 },
       to: { year: 2024, month: 3 },
       categories: ["blitz", "rapid"],
@@ -55,19 +58,19 @@ describe("startImport", () => {
           ({
             ok: false,
             status: 404,
-            json: async () => ({ error: "Unknown chess.com username: ghost" }),
+            json: async () => ({ error: "Profil introuvable : 9999" }),
           }) as Response,
       ),
     );
 
     await expect(
       startImport({
-        username: "ghost",
+        profileId: 9999,
         from: { year: 2024, month: 1 },
         to: { year: 2024, month: 1 },
         categories: ["blitz"],
       }),
-    ).rejects.toThrow(/ghost/);
+    ).rejects.toThrow(/introuvable/);
   });
 });
 
@@ -162,7 +165,7 @@ describe("fetchMoveHabits", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchMoveHabits("START_FEN", "white");
+    const result = await fetchMoveHabits(7, "START_FEN", "white");
 
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toContain("/api/move-habits");
@@ -177,7 +180,7 @@ describe("fetchMoveHabits", () => {
       vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
     );
 
-    await expect(fetchMoveHabits("FEN", "black")).rejects.toThrow();
+    await expect(fetchMoveHabits(7, "FEN", "black")).rejects.toThrow();
   });
 });
 
@@ -201,9 +204,9 @@ describe("fetchStats", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchStats();
+    const result = await fetchStats(7);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/stats");
+    expect(fetchMock).toHaveBeenCalledWith("/api/stats?profileId=7");
     expect(result).toEqual(summary);
   });
 
@@ -213,6 +216,39 @@ describe("fetchStats", () => {
       vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
     );
 
-    await expect(fetchStats()).rejects.toThrow();
+    await expect(fetchStats(7)).rejects.toThrow();
+  });
+});
+
+/**
+ * Client-side, the scoping is carried the same way it is server-side: the
+ * caller names the `Profile` (ADR-0014). A read that forgot to name one cannot
+ * come back with somebody else's figures — it comes back refused.
+ */
+describe("the scoped reads name their Profile", () => {
+  const ok = (body: unknown) =>
+    vi.fn<(url: string | URL) => Promise<Response>>(
+      async () => ({ ok: true, status: 200, json: async () => body }) as Response,
+    );
+
+  it("puts the Profile in the query of every scoped read", async () => {
+    const cases: [string, (mock: ReturnType<typeof ok>) => Promise<unknown>][] = [
+      ["/api/games", async () => fetchGames(7)],
+      ["/api/stats", async () => fetchStats(7)],
+      ["/api/openings", async () => fetchWeakOpenings(7)],
+      ["/api/danger", async () => fetchDangerView(7)],
+      ["/api/move-habits", async () => fetchMoveHabits(7, "FEN", "white")],
+    ];
+
+    for (const [path, call] of cases) {
+      const fetchMock = ok({ openings: [], dangers: [], analyzedGames: 0, candidates: [] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      await call(fetchMock);
+
+      const url = String(fetchMock.mock.calls[0][0]);
+      expect(url).toContain(path);
+      expect(url).toContain("profileId=7");
+    }
   });
 });

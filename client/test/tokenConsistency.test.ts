@@ -4,6 +4,7 @@ import {
   compileStylesheet,
   componentSources,
   consumedTokens,
+  declarationsFor,
   declaredTokens,
   stripComments,
   undeclaredTokens,
@@ -55,5 +56,36 @@ describe("the token-consistency audit", () => {
   it("finds no undeclared token anywhere in the client", () => {
     const declared = declaredTokens(compileStylesheet());
     expect(undeclaredTokens(consumedTokens(clientSources()), declared)).toEqual([]);
+  });
+});
+
+/**
+ * The banner is chrome, and the stylesheet has to say so — US-13's page skeleton
+ * is what tells the app's frame from its content, and a banner that read as
+ * content would be one more paragraph the eye skips.
+ */
+describe("the current-Profile banner is styled as chrome", () => {
+  const css = compileStylesheet();
+
+  it("takes its ground, its ink and its rule from the chrome's own tokens", () => {
+    const declarations = declarationsFor(css, '[data-banner="profile"]');
+
+    expect(declarations.size).toBeGreaterThan(0);
+    // Every colour it paints is a token, resolving in both themes — the audit
+    // above covers the resolution, this covers that it paints at all.
+    for (const property of ["background", "color"]) {
+      expect(declarations.get(property)).toMatch(/var\(--/);
+    }
+  });
+});
+
+describe("a failed load is painted like the failure it is", () => {
+  const css = compileStylesheet();
+
+  it("pairs the failure tint with its own ink, so it stays legible in both themes", () => {
+    const declarations = declarationsFor(css, '[data-state="failed"]');
+
+    expect(declarations.get("background")).toBe("var(--tint-fail)");
+    expect(declarations.get("color")).toBe("var(--tint-fail-ink)");
   });
 });

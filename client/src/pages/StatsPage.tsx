@@ -1,7 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { fetchStats } from "../api";
 import { Tally } from "../components/Tally";
-import type { Side, StatsBucket, StatsSummary, TimeControlCategory } from "../types";
+import { useLoaded } from "../features/load/useLoaded";
+import { LoadFailure } from "../features/load/LoadFailure";
+import type { Profile, Side, StatsBucket, TimeControlCategory } from "../types";
 
 const CADENCES: { key: TimeControlCategory; label: string }[] = [
   { key: "bullet", label: "Bullet" },
@@ -57,26 +60,35 @@ function Group({ id, header, children }: { id: string; header: string; children:
 }
 
 /**
- * Stats (`/stats`): the history-wide results summary — a Total plus breakdowns
- * by time control category and by the side the Player played (each with games,
- * the win/draw/loss tally and the `Win rate`). Aggregated on the fly server-side
- * (`GET /api/stats`). With no imported Games, shows an invitation only.
+ * Stats (`/stats`): **the current `Profile`'s** results summary — a Total plus
+ * breakdowns by time control category and by the side the Player played (each
+ * with games, the win/draw/loss tally and the `Win rate`). Aggregated on the fly
+ * server-side over that Profile's Games alone (ADR-0014), so the `Win rate` is
+ * that player's win rate and nobody else's.
+ *
+ * A failed load says so and offers a retry; only a genuinely empty history shows
+ * the invitation (`games-load-failure`).
  */
-export function StatsPage() {
-  const [stats, setStats] = useState<StatsSummary | null>(null);
-
-  useEffect(() => {
-    fetchStats()
-      .then(setStats)
-      .catch(() => setStats(null));
-  }, []);
+export function StatsPage({ profile }: { profile: Profile }) {
+  const load = useCallback(() => fetchStats(profile.id), [profile.id]);
+  const stats = useLoaded(load, [profile.id]);
 
   return (
     <section aria-labelledby="stats-heading">
       <h2 id="stats-heading">Stats</h2>
 
-      {!stats ? null : stats.total.games === 0 ? (
-        <p>Aucune partie importée — importez votre historique pour voir vos statistiques.</p>
+      {stats.state === "loading" && <p role="status">Chargement de vos statistiques…</p>}
+
+      {stats.state === "failed" && (
+        <LoadFailure what="vos statistiques" error={stats.error} onRetry={stats.retry} />
+      )}
+
+      {stats.state !== "loaded" ? null : stats.data.total.games === 0 ? (
+        <p>
+          Aucune partie pour <strong>{profile.username}</strong> —{" "}
+          <Link to={`/profiles/${profile.id}`}>importez son historique</Link> pour voir ses
+          statistiques.
+        </p>
       ) : (
         // One table rather than three: the Total, the cadences and the sides are
         // row groups of the same results, so a column can be scanned across all
@@ -95,18 +107,18 @@ export function StatsPage() {
             </thead>
 
             <tbody aria-labelledby="stats-total">
-              <Row id="stats-total" label="Total" bucket={stats.total} />
+              <Row id="stats-total" label="Total" bucket={stats.data.total} />
             </tbody>
 
             <Group id="stats-by-cadence" header="Par cadence">
               {CADENCES.map(({ key, label }) => (
-                <Row key={key} label={label} bucket={stats.byCategory[key]} />
+                <Row key={key} label={label} bucket={stats.data.byCategory[key]} />
               ))}
             </Group>
 
             <Group id="stats-by-side" header="Par côté">
               {SIDES.map(({ key, label }) => (
-                <Row key={key} label={label} bucket={stats.bySide[key]} />
+                <Row key={key} label={label} bucket={stats.data.bySide[key]} />
               ))}
             </Group>
           </table>

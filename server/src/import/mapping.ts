@@ -25,12 +25,17 @@ export function normalizeResult(code: string): "win" | "loss" | "draw" {
   return "loss";
 }
 
-/** Maps a chess.com game to the Player-relative Game shape. */
-export function toGame(game: ChessComGame, username: string): NewGame {
+/**
+ * Maps a chess.com game to the Player-relative Game shape, **owned by the
+ * `Profile` the Import ran for** (ADR-0014) — the point of view the row is
+ * recorded from and the account it is filed under are the same thing.
+ */
+export function toGame(game: ChessComGame, username: string, profileId: number): NewGame {
   const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
   const [self, other] = isWhite ? [game.white, game.black] : [game.black, game.white];
   const { eco, openingName } = parseOpening(game.pgn);
   return {
+    profileId,
     gameUrl: game.url,
     pgn: game.pgn,
     opponent: other.username,

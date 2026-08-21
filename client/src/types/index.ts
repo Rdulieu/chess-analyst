@@ -1,4 +1,5 @@
 export type { TimeControlCategory, Game } from "./game";
+export type { Profile } from "./profile";
 export type { Side, MoveHabitCandidate } from "./move-habit";
 export type { StatsBucket, StatsSummary } from "./stats";
 export type { WeakOpeningEntry } from "./opening";
