@@ -390,3 +390,64 @@ paierait MultiPV=2, mais ADR-0009 a fixé 16 pour la **reproductibilité**, et b
 aggrave le bruit (problème 5) **exactement** sur la métrique de dérive que D5 impose de pouvoir
 regarder. Une analyse moins chère d'un signal plus bruité est un mauvais échange pour un outil dont
 le produit est la confiance.
+
+### D8 — Contexte oui, **nature de l'erreur pas encore**, dérive comme **résidu**
+
+Première proposition (contexte × nature, nature à trois valeurs, dérive comme **span**) : **corrigée
+après critique**, elle avait cinq défauts dont deux rédhibitoires.
+
+- **Double comptage** : un span de dérive qui somme les pertes sur cinq coups dont un `?` à −25 %
+  compte ces 25 % **deux fois** (numérateur d'erreurs *et* total de dérive). Les deux métriques de D3
+  cessent d'être complémentaires, et surtout **D5 casse** : le récapitulatif par partie ne se
+  décompose plus, donc sommer les parties ne redonne plus l'agrégat.
+- **Un « span » n'a pas de frontière non arbitraire** : toute définition (« ≥3 coups consécutifs à
+  moins de 10 % chacun, total > 20 % ») introduit deux nouveaux réglages, et deux segmentations
+  différentes donnent deux totaux de dérive pour la même partie. La forme regardée dépendrait donc de
+  paramètres invisibles — **D4 violé par l'objet même censé le satisfaire**.
+- **Le critère « tactique » proposé était mauvais** (« le meilleur coup était une prise ou un échec et
+  pas le tien ») : beaucoup de tactiques commencent par un coup calme, beaucoup de prises sont
+  positionnelles. Étiquette souvent fausse avec assurance — exactement le mode d'échec pour lequel le
+  LLM avait été écarté (D2). Rejeter le non-déterminisme pour livrer un classifieur déterministe et
+  faux n'est pas un progrès.
+- **Contradiction interne sur la taille d'échantillon** : contexte × nature **est** une tabulation
+  croisée, celle-là même écartée pour le problème 1. « 70 % de tes pertes en finale sont de la
+  dérive » demande assez d'erreurs de finale pour les diviser en trois ; sur 271 parties on en aura
+  peut-être 30, soit ~10 par case.
+- « 70 % de ce que tu perds » **mélange les deux métriques** (70 % des erreurs signalées, ou 70 % des
+  chances perdues ? deux nombres, deux sens).
+
+**Modèle retenu, plus simple :**
+
+1. **Les axes de contexte** (phase, matériel, horloge, caractère tranchant) sont des faits sur la
+   **position**, vrais avant de jouer et indépendants de ce qu'on joue : ils partitionnent le
+   **dénominateur**. Ils restent.
+2. **La dérive est un résidu, par construction.** Pour une partie, le total de winning chances
+   perdues par le joueur se partitionne **exactement** en deux : la part imputable aux **Moves
+   signalés** (`?!`/`?`/`??`, ceux qu'on peut montrer du doigt) et **tout le reste** — la somme des
+   pertes sur les Moves qui n'ont individuellement franchi aucun seuil. **Ce reste EST la dérive.**
+   Pas de span, pas de segmentation, aucun nouveau réglage, aucun double comptage : les deux parts
+   font le total par définition. Directement lisible sur le tracé cumulé de D5 — **les pertes
+   signalées sont les falaises, la dérive est la pente entre elles** — et l'arithmétique est
+   vérifiable à la main sur une partie, ce que D4 exige. Le seuil qui définit « signalé » est déjà
+   public (10 %, `CONTEXT.md`) : rien de caché ne gouverne le partage.
+3. **Aucune étiquette de nature d'erreur à l'étape 1.** À la place : **montrer les variantes**. Le
+   pass évaluant **toutes** les positions, deux PV sortent gratuitement autour de chaque Move joué —
+   celle de la position **avant** (commence par le meilleur coup : *ce qu'il fallait jouer et la
+   suite*) et celle de la position **après** (commence par la meilleure réponse adverse : *pourquoi
+   le coup est mauvais*, la réfutation). La seconde est en général la plus parlante. Les deux sont
+   déjà calculées aujourd'hui et jetées.
+
+Forme d'une entrée, sans étiquette :
+
+> **17. Nf3?** −28 % (72 % → 44 %)
+> Meilleur : **Bxh7+** — `Bxh7+ Kxh7 Ng5+ Kg8 Qh5 Re8 Qxf7+` → +1.9
+> Après Nf3, les Noirs jouent **Qd4+** — `Qd4+ Kh1 Qxa1` → −1.4
+
+Cela en dit **plus** qu'une étiquette « erreur tactique », et chaque caractère est de la sortie
+moteur plutôt que de l'interprétation maison. Ce que « pas d'étiquette » coûte est réel et assumé :
+**on ne peut pas dire « 38 % de tes erreurs sont tactiques »** sans classifieur, donc cette phrase-là
+n'existe pas à l'étape 1. Les axes de **contexte** restent comptables, eux, parce que ce sont des
+faits sur la position et non des interprétations de l'erreur.
+
+Les étiquettes arrivent **plus tard**, avec le chantier (i), un motif à la fois, chacune étant un
+prédicat nommé et vérifiable sur les parties qu'on a justement passé du temps à lire.
