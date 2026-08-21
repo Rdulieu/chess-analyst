@@ -52,3 +52,26 @@ export async function readText(body: IncomingMessage): Promise<string> {
 export function discard(body: IncomingMessage): void {
   body.resume();
 }
+
+/**
+ * The body as ndjson: one JSON document **per line**. A multi-object body is not
+ * parseable as a single JSON document, and the export is a stream, so the lines
+ * are consumed as they arrive rather than buffered and split afterwards. Blank
+ * lines (including the trailing one) are ordinary in a stream and are skipped.
+ */
+export async function* readNdjson(body: IncomingMessage): AsyncGenerator<unknown> {
+  let pending = "";
+  for await (const chunk of body) {
+    pending += (chunk as Buffer).toString("utf8");
+    let cut = pending.indexOf("\n");
+    while (cut >= 0) {
+      const line = pending.slice(0, cut).trim();
+      pending = pending.slice(cut + 1);
+      if (line !== "") yield JSON.parse(line);
+      cut = pending.indexOf("\n");
+    }
+  }
+  // A last line with no newline after it is still a document.
+  const tail = pending.trim();
+  if (tail !== "") yield JSON.parse(tail);
+}

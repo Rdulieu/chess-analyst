@@ -13,6 +13,21 @@ import { createHttpLichessClient } from "../src/platform/lichess/client";
 
 let server: Server;
 let baseUrl: string;
+/** Every export request the stand-in received, so the query can be asserted. */
+const exportCalls: { username: string; query: Record<string, unknown> }[] = [];
+
+/** A game as the ndjson export serves it. */
+const game = (over: Record<string, unknown> = {}) => ({
+  id: "abcd1234",
+  speed: "blitz",
+  variant: "standard",
+  createdAt: Date.UTC(2024, 0, 15),
+  winner: "white",
+  players: { white: { user: { name: "Metalyst" } }, black: { user: { name: "opp" } } },
+  opening: { eco: "B22", name: "Sicilian Defense: Alapin Variation" },
+  pgn: "1. e4 c5 2. c3",
+  ...over,
+});
 
 beforeAll(async () => {
   const app = express();
@@ -23,6 +38,21 @@ beforeAll(async () => {
     if (asked === "metalyst") res.json({ id: "metalyst", username: "Metalyst" });
     else if (asked === "closed") res.json({ id: "closed", username: "Closed", disabled: true });
     else res.status(404).json({ error: "Not found" });
+  });
+  app.get("/api/games/user/:username", (req, res) => {
+    exportCalls.push({ username: req.params.username, query: req.query });
+    // ndjson: one JSON document per line, which is exactly why the body cannot
+    // be parsed as a single one.
+    const lines = [
+      game(),
+      game({ id: "ultra1", speed: "ultraBullet", winner: undefined }),
+      // A variant, served like any other game: counted as fetched, never a Game.
+      game({ id: "wild99", variant: "chess960" }),
+    ];
+    res.type("application/x-ndjson");
+    // A trailing newline and a stray blank line: both are ordinary in a stream,
+    // and neither may become a parse error.
+    res.send(lines.map((l) => JSON.stringify(l)).join("\n") + "\n\n");
   });
   await new Promise<void>((resolve) => {
     server = app.listen(0, "127.0.0.1", resolve);
@@ -65,5 +95,47 @@ describe("the Lichess adapter's account lookup", () => {
     const client = createHttpLichessClient(baseUrl);
 
     await expect(client.fetchPlayer("closed")).resolves.toBeNull();
+  });
+});
+
+describe("the Lichess adapter's month fetch", () => {
+  it("reads the ndjson stream line by line and answers our shapes", async () => {
+    const client = createHttpLichessClient(baseUrl);
+
+    const month = await client.fetchMonth("Metalyst", 2024, 1);
+
+    // Everything the Platform returned is "fetched", the variant included; only
+    // what we study is handed over.
+    expect(month.totalFetched).toBe(3);
+    expect(month.games.map((g) => g.gameUrl)).toEqual([
+      "https://lichess.org/abcd1234",
+      "https://lichess.org/ultra1",
+    ]);
+    expect(month.games[0]).toMatchObject({
+      opponent: "opp",
+      playerColor: "white",
+      result: "win",
+      date: "2024-01-15",
+      timeControlCategory: "blitz",
+      eco: "B22",
+    });
+    expect(month.games[1]).toMatchObject({ timeControlCategory: "bullet", result: "draw" });
+  });
+
+  it("asks for the month as a UTC instant window, with the PGN and the opening included", async () => {
+    exportCalls.length = 0;
+    const client = createHttpLichessClient(baseUrl);
+
+    await client.fetchMonth("Metalyst", 2024, 2);
+
+    expect(exportCalls).toHaveLength(1);
+    const { username, query } = exportCalls[0];
+    expect(username).toBe("Metalyst");
+    expect(Number(query.since)).toBe(Date.UTC(2024, 1, 1));
+    expect(Number(query.until)).toBe(Date.UTC(2024, 2, 1) - 1);
+    // Without these two the PGN and the Opening would have to come from
+    // somewhere else — a second request, or a classification of our own.
+    expect(query.pgnInJson).toBe("true");
+    expect(query.opening).toBe("true");
   });
 });

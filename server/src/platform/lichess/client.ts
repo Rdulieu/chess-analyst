@@ -1,5 +1,7 @@
 import type { MonthFetch, PlatformAccount, PlatformClient } from "../types";
-import { discard, lichessGet, readText } from "./request";
+import { discard, lichessGet, readNdjson, readText } from "./request";
+import { isInScope, monthWindow, toImportedGame } from "./mapping";
+import type { LichessGame } from "./payload";
 
 /**
  * The Lichess adapter, answering the `PlatformClient` port's shapes (ADR-0016)
@@ -48,12 +50,41 @@ export function createHttpLichessClient(
       return { username: user.username ?? username };
     },
 
-    async fetchMonth(): Promise<MonthFetch> {
-      // Slice 03 stops at existence: a Lichess Profile can be created, named and
-      // selected. Fetching its months is the next slice, and until then this
-      // fails **loudly** rather than reporting an empty month — a silent zero
-      // would read as "you played nothing", which is a different claim.
-      throw new Error("L'import Lichess n'est pas encore disponible.");
+    async fetchMonth(username, year, month): Promise<MonthFetch> {
+      // The month is OUR unit (ADR-0016). Lichess could stream a whole range in
+      // one request; we deliberately ask month by month, because the month is
+      // what makes progress countable and a failure local. Months are never
+      // fetched in parallel either — already true for memory (ADR-0010), and now
+      // also what keeps us inside Lichess's "one request at a time" rule.
+      const { since, until } = monthWindow(year, month);
+      const query = new URLSearchParams({
+        since: String(since),
+        until: String(until),
+        // Both are what spare us a second request and a classification of our
+        // own (ADR-0007's amendment).
+        pgnInJson: "true",
+        opening: "true",
+        sort: "dateAsc",
+      });
+      const { status, body } = await lichessGet(
+        `${root}/api/games/user/${encodeURIComponent(username)}?${query}`,
+        { accept: "application/x-ndjson" },
+      );
+      if (status < 200 || status >= 300) {
+        discard(body);
+        throw new Error(`Lichess request failed (${status})`);
+      }
+
+      let totalFetched = 0;
+      const games = [];
+      for await (const line of readNdjson(body)) {
+        const game = line as LichessGame;
+        // `totalFetched` says what Lichess HAD, out-of-scope games included, so
+        // a month mostly out of scope never reads as an empty one.
+        totalFetched++;
+        if (isInScope(game)) games.push(toImportedGame(game, username));
+      }
+      return { totalFetched, games };
     },
   };
 }
