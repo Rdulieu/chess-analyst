@@ -1,14 +1,6 @@
 import { evaluationCurve } from "../chess/evaluationCurve";
-import { SEVERITY_GLYPH, SEVERITY_TINT } from "../chess/severity";
+import { SEVERITY_GLYPH, SEVERITY_TINT, SEVERITY_TINT_INK } from "../chess/severity";
 import type { MoveAnnotation } from "../types";
-
-/** White's ground and Black's, plus the equality line and the current-Move cursor.
- *  Inline because the project has no stylesheet yet (US-13). */
-const WHITE_GROUND = "#f5f5f5";
-const BLACK_GROUND = "#2b2b2b";
-const EQUALITY = "#8a8a8a";
-const CURSOR = "#c05621";
-const MARKER_INK = "#1a1a1a";
 
 /**
  * A Game's `Evaluation curve` (CONTEXT.md), drawn beside the board: the Game runs
@@ -28,6 +20,17 @@ const MARKER_INK = "#1a1a1a";
  * again would be noise, and summarising them would be an interpretation this
  * feature does not compute. The non-colour cue for the current Move is the move
  * list's own `aria-current`, which already exists.
+ *
+ * **Not one colour of this picture is written here.** The two grounds, the equality
+ * line and the current-Move cursor are all declarations in the stylesheet
+ * (`_dense`), reached by `data-mark` where two marks had to be told apart: a custom
+ * property resolves in a declaration and never in an attribute value, so
+ * `stroke="var(--curve-cursor)"` would paint nothing at all. The marks are drawn
+ * over the two constant player grounds, so they are constant too — the same rule
+ * that sends the board's severity tints to the constant family — and their values
+ * clear 3:1 against **both** grounds at once, which is why neither is the
+ * eyeballed value US-14 shipped (2.92:1 and 2.93:1 against the one ground each
+ * happened to sit on).
  *
  * The ground is one stretched SVG (the shape is all that matters), but the
  * markers are **not** in it: the viewBox scales x and y by different factors, so
@@ -51,49 +54,57 @@ export function EvaluationGraph({
   const whiteGround = `0,100 ${boundary} ${lastX},100`;
 
   return (
-    <div aria-hidden="true" style={{ position: "relative", width: "100%", height: "100%" }}>
-      <svg
-        aria-hidden="true"
-        viewBox={`0 0 ${span} 100`}
-        preserveAspectRatio="none"
-        style={{ width: "100%", height: "100%", display: "block", background: BLACK_GROUND }}
-      >
-        <polygon points={whiteGround} fill={WHITE_GROUND} />
+    // Neither box sizes itself any more: the sheet gives the curve its landscape
+    // box (`[data-part="curve"]`, `_dense`) and Black's ground with it, and this
+    // draws inside whatever it is given.
+    <div aria-hidden="true">
+      <svg aria-hidden="true" viewBox={`0 0 ${span} 100`} preserveAspectRatio="none">
+        {/* White's share of the picture. Its fill, like Black's ground behind it,
+            is the sheet's (`_dense`): a player colour is a declaration, and a
+            custom property never resolves in a `fill=` attribute anyway. */}
+        <polygon points={whiteGround} />
         <line
+          data-mark="equality"
           x1={0}
           y1={50}
           x2={lastX}
           y2={50}
-          stroke={EQUALITY}
           strokeWidth={0.5}
           strokeDasharray="2 2"
         />
         <line
+          data-mark="cursor"
           x1={currentPly}
           y1={0}
           x2={currentPly}
           y2={100}
-          stroke={CURSOR}
           strokeWidth={0.8}
           vectorEffect="non-scaling-stroke"
         />
       </svg>
       {markers.map((marker) => (
+        // Four declarations, and every one of them is DATA: where the mark goes,
+        // and which severity it means. Its shape — absolutely placed, centred on
+        // its point, a bordered pill in mono — is the sheet's (`_dense`), which is
+        // why nothing static is written here any more.
         <span
           key={marker.x}
           style={{
-            position: "absolute",
             left: `${(marker.x / span) * 100}%`,
             top: `${100 - marker.whiteShare}%`,
-            transform: "translate(-50%, -50%)",
-            font: "bold 11px monospace",
-            color: MARKER_INK,
+            // The tint AND its own ink, read as a pair from the single source the
+            // move list reads, so the two views of one severity cannot drift
+            // apart. Why the PAIR and not the tint alone: `top` is the boundary
+            // between the two player grounds, so a marker does not sit on one of
+            // them — it STRADDLES both, and each half of the pair carries it over
+            // one. Measured: in dark the tint detaches it from White's share
+            // (8.53:1) and the border, which is `currentColor` in the sheet and so
+            // follows this ink, detaches it from Black's (11.31:1); in light the
+            // roles swap (9.17 / 11.92). Neither half would do the job alone, in
+            // either theme — which is a stronger reason than "the inherited
+            // `--ink` inverts", true though that also is.
             background: SEVERITY_TINT[marker.severity],
-            border: `1px solid ${MARKER_INK}`,
-            borderRadius: 3,
-            padding: "0 2px",
-            lineHeight: 1.2,
-            whiteSpace: "nowrap",
+            color: SEVERITY_TINT_INK[marker.severity],
           }}
         >
           {SEVERITY_GLYPH[marker.severity]}

@@ -26,12 +26,21 @@ afterEach(() => {
  *  longest Game of the real history costs 105 ms to replay on its own. */
 function seedPreFenGame(file: string, pgn: string): number {
   const sqlite = new Database(file);
+  // The Game needs an owner like any other (ADR-0014); this fixture only needs
+  // *a* Profile, so it reuses whichever one is already there.
+  const { id: profileId } = sqlite
+    .prepare(
+      `INSERT INTO profiles (platform, username, created_at)
+       VALUES ('chesscom', 'DudulSmash', '2026-01-01T00:00:00Z')
+       ON CONFLICT DO UPDATE SET username = excluded.username RETURNING id`,
+    )
+    .get() as { id: number };
   const { id } = sqlite
     .prepare(
-      `INSERT INTO games (game_url, pgn, opponent, player_color, result, date, time_control_category, analyzed)
-       VALUES (?, ?, 'opp', 'white', 'win', '2026-01-01', 'blitz', 1) RETURNING id`,
+      `INSERT INTO games (profile_id, game_url, pgn, opponent, player_color, result, date, time_control_category, analyzed)
+       VALUES (?, ?, ?, 'opp', 'white', 'win', '2026-01-01', 'blitz', 1) RETURNING id`,
     )
-    .get(`fixture://pre-fen/${Math.abs(hash(pgn))}`, pgn) as { id: number };
+    .get(profileId, `fixture://pre-fen/${Math.abs(hash(pgn))}`, pgn) as { id: number };
   const insert = sqlite.prepare(`INSERT INTO evaluations (game_id, ply, fen, cp) VALUES (?, ?, '', 0)`);
   const plies = pgn.trim() === "" ? 1 : pgn.split(" ").filter((t) => !t.endsWith(".")).length + 1;
   for (let ply = 0; ply < plies; ply++) insert.run(id, ply);

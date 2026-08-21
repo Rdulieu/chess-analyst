@@ -1,5 +1,5 @@
 import type { Db } from "../db";
-import { games, evaluations, type NewGame } from "../db/schema";
+import { games, evaluations, type NewGame, type UnownedGame } from "../db/schema";
 import { gamePositions } from "../chess/positions";
 
 /**
@@ -17,9 +17,13 @@ import { gamePositions } from "../chess/positions";
  *   orders — **the transposition** — merging into one entry): no serious
  *   error in either → **0%**, the "nothing to see here" case.
  */
-export function seedDangerFixture(db: Db): void {
+export function seedDangerFixture(db: Db, profileId: number): void {
   for (const { game, evals } of DANGER_FIXTURE_GAMES) {
-    const { id } = db.insert(games).values(game).returning({ id: games.id }).get();
+    const { id } = db
+      .insert(games)
+      .values({ ...game, profileId })
+      .returning({ id: games.id })
+      .get();
     // The fixture stands in for an `Analysis pass`, so it stores what a pass
     // stores — the FEN included (ADR-0012).
     const fens = gamePositions(game.pgn);
@@ -30,12 +34,12 @@ export function seedDangerFixture(db: Db): void {
 }
 
 interface FixtureGame {
-  game: NewGame;
+  game: UnownedGame;
   /** `[ply, cp]` pairs — one per Position reached in the Game's PGN. */
   evals: [number, number][];
 }
 
-function fixtureGame(ref: string, pgn: string, playerColor: NewGame["playerColor"]): NewGame {
+function fixtureGame(ref: string, pgn: string, playerColor: NewGame["playerColor"]): UnownedGame {
   return {
     gameUrl: `fixture://danger/${ref}`,
     pgn,

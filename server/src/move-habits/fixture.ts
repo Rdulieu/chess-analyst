@@ -1,5 +1,5 @@
 import type { Db } from "../db";
-import { games, type NewGame } from "../db/schema";
+import { games, type UnownedGame } from "../db/schema";
 import { recordMoveHabits } from "./precompute";
 
 /**
@@ -11,7 +11,7 @@ import { recordMoveHabits } from "./precompute";
  * FEN merge rule. This is the offline substrate the sub-issues' Feature Paths
  * run against; it never touches the network.
  */
-export const MOVE_HABIT_FIXTURE: NewGame[] = [
+export const MOVE_HABIT_FIXTURE: UnownedGame[] = [
   // White games — all open 1. e4 (→ aggregate to count 3, one win/loss/draw).
   fixtureGame("w1", "1. e4 e5 2. Nf3 Nc6 3. Bb5", "white", "win", "blitz"),
   fixtureGame("w2", "1. e4 e5 2. Nf3 Nc6 3. Bc4", "white", "loss", "blitz"),
@@ -28,7 +28,7 @@ function fixtureGame(
   playerColor: "white" | "black",
   result: "win" | "loss" | "draw",
   timeControlCategory: "bullet" | "blitz" | "rapid" | "daily",
-): NewGame {
+): UnownedGame {
   return {
     gameUrl: `fixture://move-habits/${ref}`,
     pgn,
@@ -46,9 +46,14 @@ function fixtureGame(
  * points, one logic). Idempotent: Games already present (unique game URL) are
  * skipped, so re-seeding never double-counts.
  */
-export function seedMoveHabits(db: Db): void {
+export function seedMoveHabits(db: Db, profileId: number): void {
   for (const game of MOVE_HABIT_FIXTURE) {
-    const inserted = db.insert(games).values(game).onConflictDoNothing().returning().get();
+    const inserted = db
+      .insert(games)
+      .values({ ...game, profileId })
+      .onConflictDoNothing()
+      .returning()
+      .get();
     if (inserted) recordMoveHabits(db, inserted);
   }
 }

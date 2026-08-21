@@ -1,0 +1,87 @@
+// =============================================================================
+// Lists that are read as ROWS. What is a list stays a list (PRD): the Game list
+// is not turned into a table, it is laid out in columns by a grid.
+// =============================================================================
+
+// The Game list. Slice 01 named the row's three parts precisely so that this
+// grid could exist without touching the markup: the state part is present even
+// when the Game is not analysed, so the columns do not shift on each entry.
+ul[aria-label="games"] li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  // A hairline, not a rule: the separation the eye needs to follow a line across
+  // eighty entries, without the list turning into a grid of boxes.
+  border-block-end: 1px solid var(--border);
+
+  // The description is the row's target, so it takes the row's width and a
+  // height worth aiming at — and loses the button chrome, because a whole row
+  // that looks like a button reads as a wall of buttons.
+  [data-part="description"] button {
+    inline-size: 100%;
+    min-block-size: 2.25rem;
+    text-align: start;
+    padding-inline: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  [data-part="description"] button:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+}
+
+// The `Profile` list. Five constant columns — the account, its platform, the
+// size of its history, the state and the actions — so ten entries are swept down a column rather than
+// read one by one, and a compact row so ten of them fit without scrolling.
+//
+// The tracks belong to the LIST and the rows take them through `subgrid`. Sized
+// per row instead, the current row drifted a few pixels away from the others:
+// its state cell reads "Profil actuel" where the rest read "Sélectionner", and
+// its bolder text is wider — which is exactly the drift a constant column is
+// there to prevent. `display: contents` on the row would align them too, and
+// would take the row's box with it: no hairline, no current marker.
+ul[aria-label="profils"] {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+}
+
+ul[aria-label="profils"] li {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+  border-block-end: 1px solid var(--border);
+  // Reserved on every row, transparent until current, so the marker appearing
+  // shifts nothing — the same device the navigation uses for the current tab.
+  // A HAIRLINE and not the nav's 2px: inside a list, no rule may be heavier than
+  // one (the standing rule the lists-and-tables suite holds), and here the
+  // border is the third cue rather than the first — the row already says "Profil
+  // actuel" in words and carries the weight.
+  border-inline-start: 1px solid transparent;
+  padding-inline-start: var(--space-2);
+
+  [data-part="platform"],
+  // The counters read as secondary to the account they describe — same
+  // treatment as the platform, for the same reason.
+  [data-part="counts"] {
+    color: var(--ink-muted);
+    font-size: var(--text-s);
+    // One line, always: "166 parties · 20 analysées" broken in two reads as two
+    // facts and makes the row taller than its neighbours — the very drift the
+    // constant columns exist to prevent.
+    white-space: nowrap;
+  }
+}
+
+// WEIGHT AND A BORDER, never colour alone: the rule US-13 set for the current
+// screen, applied to the current Profile.
+ul[aria-label="profils"] li[data-current="true"] {
+  font-weight: 700;
+  border-inline-start: 1px solid var(--accent);
+}

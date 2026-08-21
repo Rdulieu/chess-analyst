@@ -1,0 +1,140 @@
+// =============================================================================
+// Controls: buttons, form fields, fieldsets, and the focus indicator.
+// =============================================================================
+
+// A link that carries `data-action` is an **action** the Player takes, and must
+// read as one — even though navigation is what it does, so an anchor is what it
+// stays (middle-click, "open in a new tab", and the status bar all keep working).
+// Marking it on the element is the same contract as the primary action below:
+// the look follows what the element says it is, never its position.
+:is(button, a[data-action]) {
+  font: inherit;
+  color: var(--ink);
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+a[data-action] {
+  display: inline-block;
+  text-decoration: none;
+}
+
+:is(button, a[data-action]):hover:not(:disabled) {
+  border-color: var(--ink-muted);
+}
+
+button:disabled {
+  color: var(--ink-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+// The primary action is named on the element (`data-action="primary"`), not left
+// to whichever button happens to come first in the document.
+:is(button, a)[data-action="primary"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+// One focus indicator for everything that takes focus, so the keyboard journey
+// never goes dark. `:focus-visible`, so a mouse click does not draw a ring.
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+// A field group: the label sits ABOVE its field, and every field shares one
+// height, instead of the text and the control running inline.
+form > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+form > div > label {
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+input:not([type="checkbox"]):not([type="radio"]) {
+  font: inherit;
+  color: var(--ink);
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+  block-size: 2.25rem;
+  max-inline-size: 100%;
+}
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  // The checkbox rows reflow on their own rather than at a designed breakpoint.
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+legend {
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+  padding-inline: var(--space-1);
+}
+
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+// A checked box in the app's accent rather than in the browser's blue. The box
+// itself is the browser's widget and stays that way — `color-scheme` (_tokens) is
+// what makes it follow the theme; this is only its tick.
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+// A status line the app writes as it works (import progress, analysis pass).
+[role="status"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}
+
+// -----------------------------------------------------------------------------
+// The import form, in its finished form. Three groups the Player reads as three
+// things: the username, the month RANGE (its two bounds side by side, which is
+// what makes it read as a range), and the cadence set. The grid reflows on its
+// own — no breakpoint is designed (PRD).
+// -----------------------------------------------------------------------------
+form[aria-label="import"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: start;
+
+  // A set and an action are not fields: they take the whole width rather than
+  // being squeezed into a field-sized column.
+  fieldset,
+  button[type="submit"] {
+    grid-column: 1 / -1;
+  }
+
+  // ...but the action is sized by its label, not by the width it is allowed.
+  button[type="submit"] {
+    justify-self: start;
+  }
+}

@@ -21,16 +21,27 @@ export interface MoveHabitCandidate {
  * own `Move habit`s; at the opponent's turn they are `Opponent reply`s — the
  * caller reads that from the Position's side to move. Win rate is always
  * Player-relative.
+ *
+ * Counted for **one `Profile`** (ADR-0014): the counters are keyed by Profile,
+ * so two players reaching the same Position keep two rows and their repertoires
+ * are never added into a single line.
  */
 export function listCandidates(
   db: Db,
+  profileId: number,
   fen: string,
   side: "white" | "black",
 ): MoveHabitCandidate[] {
   return db
     .select()
     .from(moveHabits)
-    .where(and(eq(moveHabits.fen, fen), eq(moveHabits.side, side)))
+    .where(
+      and(
+        eq(moveHabits.profileId, profileId),
+        eq(moveHabits.fen, fen),
+        eq(moveHabits.side, side),
+      ),
+    )
     .all()
     .map((r) => ({
       san: r.san,

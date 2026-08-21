@@ -7,6 +7,7 @@ import type { Game } from "../src/types";
 function game(over: Partial<Game>): Game {
   return {
     id: 1,
+    profileId: 1,
     gameUrl: "u",
     pgn: "1. e4 e5",
     opponent: "opp",
@@ -39,7 +40,40 @@ describe("GameList", () => {
     expect(within(items[1]).queryByLabelText(/analysée/i)).toBeNull();
   });
 
-  it("carries its own styling and a textual cue — the app ships no stylesheet, and colour alone is not a cue", () => {
+  it("exposes each entry as three distinct parts, in the same order on every row", () => {
+    render(
+      <GameList
+        games={[game({ id: 1, opponent: "a", analyzed: true }), game({ id: 2, opponent: "b" })]}
+        onSelect={noop}
+        selectedIds={new Set()}
+        onToggleSelect={noop}
+      />,
+    );
+
+    for (const item of screen.getAllByRole("listitem")) {
+      const checkbox = within(item).getByRole("checkbox");
+      const description = within(item).getByRole("button");
+
+      // Three named parts, present on every row whether or not the Game has
+      // been analysed, so the columns line up down the whole list.
+      const parts = [...item.children].map((child) => (child as HTMLElement).dataset.part);
+      expect(parts).toEqual(["selection", "description", "state"]);
+
+      // Three parts side by side, never nested one inside another: what the
+      // Player reads left to right is selection, then the Game, then its state.
+      expect(checkbox.contains(description)).toBe(false);
+      expect(description.contains(checkbox)).toBe(false);
+      expect(checkbox.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      const badge = within(item).queryByLabelText(/analysée/i);
+      if (badge) {
+        expect(description.contains(badge)).toBe(false);
+        expect(description.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    }
+  });
+
+  it("carries a textual cue on the badge — colour alone is not a cue", () => {
     render(
       <GameList
         games={[game({ id: 1, analyzed: true })]}
@@ -50,9 +84,13 @@ describe("GameList", () => {
     );
 
     const badge = screen.getByLabelText(/analysée/i);
-    expect(badge.className).toBe(""); // no class: there is no stylesheet to hook into
-    expect(badge.getAttribute("style")).toBeTruthy();
-    expect(badge.textContent?.trim()).toMatch(/analysée/i); // legible without colour
+    // The checkmark and the word are what carry the meaning; the tint only ever
+    // reinforces them.
+    expect(badge.textContent?.trim()).toMatch(/✓/);
+    expect(badge.textContent?.trim()).toMatch(/analysée/i);
+    // And the pill's tint, ink and border now come from the stylesheet, so no
+    // colour is left hard-coded on the element.
+    expect(badge.getAttribute("style")).toBeNull();
   });
 
   it("lets the Player select a Game via its checkbox", async () => {

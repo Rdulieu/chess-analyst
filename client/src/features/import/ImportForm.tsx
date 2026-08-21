@@ -1,5 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { getSettings, saveSettings } from "../../api";
+import { useState, type FormEvent } from "react";
 import { runImport } from "./runImport";
 import { ImportSummary } from "./ImportSummary";
 import type { ImportResult, ImportStatus, MonthRef, TimeControlCategory } from "../../types";
@@ -25,28 +24,31 @@ const monthSpan = (from: MonthRef, to: MonthRef) =>
   (to.year - from.year) * 12 + (to.month - from.month) + 1;
 
 /**
- * The chess.com import form: username, the month **range** to cover (both
+ * The import form of ONE `Profile`: the month **range** to cover (both
  * bounds default to the current month, so the routine one-month import stays a
  * single click — US-9), and the time control categories, which apply to the
  * whole range. A range Import runs in the background, so the form reports
  * determinate progress counted in months while it runs; `onImported` lets the
- * parent refresh the Game list once it finishes.
+ * page refresh its counters once it finishes.
+ *
+ * There is **no username field**: the account to fetch is the Profile's own,
+ * already validated against chess.com when the Profile was created. Typing it
+ * was the only way one account's Games could ever land under another's Profile
+ * (US-11), so the guarantee is the field's absence, not a check.
  */
-export function ImportForm({ onImported }: { onImported: () => void | Promise<void> }) {
-  const [username, setUsername] = useState("");
+export function ImportForm({
+  profileId,
+  onImported,
+}: {
+  profileId: number;
+  onImported: () => void | Promise<void>;
+}) {
   const [from, setFrom] = useState(thisMonth);
   const [to, setTo] = useState(thisMonth);
   const [categories, setCategories] = useState<Set<TimeControlCategory>>(new Set(CATEGORIES));
   const [status, setStatus] = useState<string | null>(null);
   const [progress, setProgress] = useState<ImportStatus | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-
-  // Prefill from the remembered username (best-effort; a missing store is fine).
-  useEffect(() => {
-    getSettings()
-      .then((s) => s.username && setUsername(s.username))
-      .catch(() => {});
-  }, []);
 
   const toggleCategory = (c: TimeControlCategory) =>
     setCategories((prev) => {
@@ -73,7 +75,7 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
     try {
       const final = await runImport(
         {
-          username,
+          profileId,
           ...range,
           categories: CATEGORIES.filter((c) => categories.has(c)),
         },
@@ -82,8 +84,6 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
       await onImported();
       setResult(final.result);
       setStatus(final.result?.message ?? null);
-      // Remember the username for next time (best-effort).
-      saveSettings(username).catch(() => {});
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Import failed.");
     } finally {
@@ -96,18 +96,22 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
   return (
     <>
       <form aria-label="import" onSubmit={submit}>
-        <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} />
-        </label>
-        <label>
-          Du
-          <input type="month" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label>
-          Au
-          <input type="month" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
+        {/* Label and field are siblings, the label associated by `for`: that is
+            what lets the label sit above its field and every field share one
+            height, instead of the text and the control being one inline run. */}
+        <div>
+          <label htmlFor="import-from">Du</label>
+          <input
+            id="import-from"
+            type="month"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="import-to">Au</label>
+          <input id="import-to" type="month" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
         <fieldset>
           <legend>Time control categories</legend>
           {CATEGORIES.map((c) => (
@@ -117,7 +121,9 @@ export function ImportForm({ onImported }: { onImported: () => void | Promise<vo
             </label>
           ))}
         </fieldset>
-        <button type="submit" disabled={running}>
+        {/* The primary action, named as such on the element rather than left to
+            whichever button happens to be styled first. */}
+        <button type="submit" data-action="primary" disabled={running}>
           Import
         </button>
       </form>

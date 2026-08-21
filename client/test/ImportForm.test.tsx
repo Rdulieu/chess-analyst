@@ -30,7 +30,6 @@ function stubRelay(polls: unknown[], total = polls.length) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, opts?: RequestInit) => {
-      if (url === "/api/settings") return json({ username: null });
       if (url === "/api/import" && opts?.method === "POST") {
         posted.push(JSON.parse(opts.body as string));
         return json({ running: true, total, done: 0, result: null }, 202);
@@ -43,9 +42,41 @@ function stubRelay(polls: unknown[], total = polls.length) {
 }
 
 describe("ImportForm", () => {
+  it("labels each field beside its own control, and marks one action as the primary one", async () => {
+    stubRelay([]);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
+
+    // Each text field is a labelled control of its own, not a control buried in
+    // the label's text — which is what lets the label sit above the field.
+    for (const name of [/^du$/i, /^au$/i]) {
+      const field = await screen.findByLabelText(name);
+      const label = document.querySelector(`label[for="${field.id}"]`);
+      expect(field.id).toBeTruthy();
+      expect(label).toBeTruthy();
+      expect(label!.contains(field)).toBe(false);
+      expect(label!.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+
+    // The action that starts the Import is the form's primary one, and says so
+    // structurally rather than by looking different.
+    const submit = screen.getByRole("button", { name: /import/i });
+    expect(submit.getAttribute("type")).toBe("submit");
+    expect(submit.dataset.action).toBe("primary");
+  });
+
+  it("asks for no username — the account is the Profile's own", async () => {
+    // The field's disappearance IS the guarantee: it was the only way one
+    // account's Games could ever be imported under another's Profile (US-11).
+    stubRelay([]);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
+
+    await screen.findByLabelText(/^du$/i);
+    expect(screen.queryByLabelText(/username|compte/i)).toBeNull();
+  });
+
   it("offers a first and a last month, both defaulting to the current month", async () => {
     stubRelay([]);
-    render(<ImportForm onImported={() => {}} />);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
 
     const from = await screen.findByLabelText(/^du$/i);
     const to = screen.getByLabelText(/^au$/i);
@@ -55,9 +86,8 @@ describe("ImportForm", () => {
 
   it("submits the range the Player chose and reports progress in months", async () => {
     const posted = stubRelay([{ running: false, total: 3, done: 3, result: emptyResult }], 3);
-    render(<ImportForm onImported={() => {}} />);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
 
-    await userEvent.type(await screen.findByLabelText(/username/i), "me");
     await userEvent.clear(screen.getByLabelText(/^du$/i));
     await userEvent.type(screen.getByLabelText(/^du$/i), "2024-01");
     await userEvent.clear(screen.getByLabelText(/^au$/i));
@@ -66,7 +96,7 @@ describe("ImportForm", () => {
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
-      username: "me",
+      profileId: 7,
       from: { year: 2024, month: 1 },
       to: { year: 2024, month: 3 },
     });
@@ -80,9 +110,8 @@ describe("ImportForm", () => {
 
   /** Types a range into the form, both bounds. */
   async function chooseRange(from: string, to: string) {
-    await userEvent.type(await screen.findByLabelText(/username/i), "me");
     for (const [label, value] of [[/^du$/i, from], [/^au$/i, to]] as const) {
-      await userEvent.clear(screen.getByLabelText(label));
+      await userEvent.clear(await screen.findByLabelText(label));
       await userEvent.type(screen.getByLabelText(label), value);
     }
   }
@@ -91,7 +120,7 @@ describe("ImportForm", () => {
     const posted = stubRelay([{ running: false, total: 36, done: 36, result: emptyResult }], 36);
     const confirm = vi.fn((message: string) => Boolean(message));
     vi.stubGlobal("confirm", confirm);
-    render(<ImportForm onImported={() => {}} />);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
 
     await chooseRange("2021-01", "2023-12"); // 36 months
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
@@ -104,7 +133,7 @@ describe("ImportForm", () => {
   it("starts nothing and keeps the entry intact when the Player declines", async () => {
     const posted = stubRelay([]);
     vi.stubGlobal("confirm", vi.fn(() => false));
-    render(<ImportForm onImported={() => {}} />);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
 
     await chooseRange("2021-01", "2023-12");
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
@@ -118,7 +147,7 @@ describe("ImportForm", () => {
     const posted = stubRelay([{ running: false, total: 24, done: 24, result: emptyResult }], 24);
     const confirm = vi.fn((message: string) => Boolean(message));
     vi.stubGlobal("confirm", confirm);
-    render(<ImportForm onImported={() => {}} />);
+    render(<ImportForm profileId={7} onImported={() => {}} />);
 
     await chooseRange("2022-01", "2023-12"); // exactly 24 months
     await userEvent.click(screen.getByRole("button", { name: /import/i }));

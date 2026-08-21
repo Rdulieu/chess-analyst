@@ -29,7 +29,7 @@ describe("normalizeResult", () => {
 
 describe("toGame", () => {
   it("records the Player's side, opponent and result when the Player is White", () => {
-    const g = toGame(chessComGame(), "me");
+    const g = toGame(chessComGame(), "me", 1);
     expect(g).toMatchObject({
       gameUrl: "https://www.chess.com/game/live/1",
       opponent: "opp",
@@ -47,6 +47,7 @@ describe("toGame", () => {
         black: { username: "Me", result: "checkmated" },
       }),
       "me",
+      1,
     );
     expect(g).toMatchObject({ playerColor: "black", opponent: "opp", result: "loss" });
   });
@@ -62,12 +63,13 @@ describe("toGame", () => {
         ].join("\n"),
       }),
       "me",
+      1,
     );
     expect(g).toMatchObject({ eco: "B22", openingName: "Sicilian Defense Alapin Variation" });
   });
 
   it("records the Other opening for a Game chess.com did not classify", () => {
-    const g = toGame(chessComGame({ pgn: "1. e4 e5" }), "me");
+    const g = toGame(chessComGame({ pgn: "1. e4 e5" }), "me", 1);
     expect(g).toMatchObject({ eco: "other", openingName: "Autre / non classée" });
   });
 });

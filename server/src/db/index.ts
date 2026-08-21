@@ -31,6 +31,24 @@ export function openDb(filename: string): {
   const sqlite = new Database(filename);
   sqlite.pragma("journal_mode = WAL");
   const db = drizzle(sqlite, { schema });
+
+  // A migration that tightens a column to NOT NULL has to rebuild its table,
+  // and SQLite's own procedure for that requires foreign keys to be off: the
+  // table is dropped and recreated, so anything referencing it is momentarily
+  // orphaned even though the ids are preserved. `defer_foreign_keys` is not
+  // enough — it counts violations rather than re-checking them. So the keys go
+  // off for the migrations and `foreign_key_check` speaks for them afterwards:
+  // a rebuild that really did lose a reference fails loudly (ADR-0015) instead
+  // of leaving the database quietly inconsistent.
+  sqlite.pragma("foreign_keys = OFF");
   migrate(db, { migrationsFolder });
+  sqlite.pragma("foreign_keys = ON");
+  const broken = sqlite.pragma("foreign_key_check") as unknown[];
+  if (broken.length > 0) {
+    throw new Error(
+      `Migration left ${broken.length} broken foreign key reference(s); the database was not upgraded safely.`,
+    );
+  }
+
   return { db, sqlite, repairedEvaluations: repairMissingFens(db) };
 }

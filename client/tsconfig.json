@@ -4,7 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    // `vite/client` is what declares the side-effect import of a stylesheet
+    // (ADR-0013): the SCSS is compiled by the bundler, not by tsc.
+    "types": ["node", "vite/client"],
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,

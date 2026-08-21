@@ -1,0 +1,100 @@
+// =============================================================================
+// The app chrome: the header, the navigation, and the reading column both sides
+// share. The markup hooks (`[data-column]`, `[data-width="wide"]`) come from the
+// restructuring slice; this file only styles them.
+// =============================================================================
+
+// The chrome is a band, not a room: it is padded on the small step, so the height
+// it costs is the height its own two lines need and no more. Every rem here is a rem
+// the board on the Analyse screen does not get.
+header {
+  background: var(--ground-sunk);
+  border-block-end: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+}
+
+// One alignment, declared once: the header's contents and the page's contents
+// sit in the same column, which is what makes the chrome read as the app's frame
+// rather than as another band of content.
+[data-column] {
+  max-inline-size: var(--measure);
+  margin-inline: auto;
+}
+
+// The title and the navigation share one line and one baseline. The row gap is the
+// small step, and it only ever applies on a window narrow enough to wrap them.
+header > [data-column] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+}
+
+// The gap under the chrome is the SMALL step, not the block step: the header
+// already separates itself from the content with its ground and its hairline, so a
+// block-sized gap on top of that read as an empty band between the two.
+main {
+  padding: var(--space-2) var(--space-3);
+}
+
+// The two dense screens are allowed more width than the reading column: the
+// board beside its curve, and the danger diagrams as a grid, are cramped at
+// 72ch. The screen declares its own need; the column obeys.
+main > [data-column]:has(> [data-width="wide"]) {
+  max-inline-size: var(--measure-wide);
+}
+
+nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+nav a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  padding-block: var(--space-1);
+  // Reserved on every tab, transparent until current, so the marker appearing
+  // does not shift the bar.
+  border-block-end: 2px solid transparent;
+}
+
+nav a:hover {
+  color: var(--ink);
+}
+
+// The current screen is marked by WEIGHT AND A BORDER, not by colour alone —
+// styled on the `aria-current="page"` the router already sets, so the
+// non-chromatic cue costs nothing and no class is needed.
+nav a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 700;
+  border-block-end-color: var(--accent);
+}
+
+// The banner naming the current `Profile`. It belongs to the chrome, and reads
+// as chrome: the header's own sunk ground, the hairline that separates the frame
+// from the page, and the small step for its height. A band, not a card — a card
+// here would read as the first paragraph of every screen.
+//
+// The Profile is named IN WORDS ("Profil courant : …"), so nothing about whose
+// figures are on screen rests on a colour — the rule the navigation's current
+// tab already follows.
+[data-banner="profile"] {
+  background: var(--ground-sunk);
+  color: var(--ink-muted);
+  border-block-start: 1px solid var(--border);
+  padding-block: var(--space-1);
+  font-size: var(--text-s);
+
+  // The name itself is the one thing the eye must catch, so it takes the full
+  // ink and the link's accent while the label around it stays muted.
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+}

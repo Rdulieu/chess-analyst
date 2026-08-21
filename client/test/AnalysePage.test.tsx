@@ -20,6 +20,24 @@ function renderAt(gameId: number) {
   );
 }
 
+describe("AnalysePage — the screen announces itself", () => {
+  it("is one region named 'Analyse', with a level-2 heading, and asks for the wide column", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed: false });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    renderAt(1);
+
+    const region = await screen.findByRole("region", { name: /^analyse$/i });
+    expect(screen.getByRole("heading", { level: 2, name: /^analyse$/i })).toBeTruthy();
+    // A dense screen: it is allowed more width than the reading column.
+    expect(region.dataset.width).toBe("wide");
+  });
+});
+
 describe("AnalysePage", () => {
   it("refreshes the Game and its annotations once the 'Analyser' action completes, with no manual reload", async () => {
     let analyzed = false;
@@ -27,10 +45,10 @@ describe("AnalysePage", () => {
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed });
-        if (url === "/api/analyze" && opts?.method === "POST") {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json({ running: true, total: 1, done: 0 }, 202);
         }
-        if (url === "/api/analyze/status") {
+        if (url.startsWith("/api/analyze/status")) {
           analyzed = true; // the pass finishes on the first poll
           return json({ running: false, total: 1, done: 1 });
         }

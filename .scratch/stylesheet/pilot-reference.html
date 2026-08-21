@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US-13 — prototype jetable : tokens + squelette</title>
+<style>
+/* =========================================================================
+   PROTOTYPE JETABLE — US-13
+   Le markup ci-dessous reproduit celui de l'app (GamesPage / AnalysePage).
+   En production ces tokens vivront en SCSS et le thème sombre sera un
+   @media (prefers-color-scheme: dark) ; ici c'est [data-theme] pour pouvoir
+   regarder les deux côte à côte. Les NOMS de tokens sont identiques.
+   ========================================================================= */
+
+[data-theme="light"] {
+  --ground:        #ffffff;
+  --ground-sunk:   #f4f5f7;
+  --ink:           #14171a;
+  --ink-muted:     #5a6169;
+  --border:        #d7dbe0;
+  --accent:        #1f5c8c;
+  --accent-ink:    #ffffff;
+
+  --tint-review:       #fbe0e0;  --tint-review-ink:      #6e1414;
+  --tint-ok:           #e8f5e9;  --tint-ok-ink:          #17501c;
+  --tint-fail:         #fde8e6;  --tint-fail-ink:        #8a1b12;
+  --tint-inaccuracy:   #fff3b0;  --tint-inaccuracy-ink:  #4a3c00;
+  --tint-mistake:      #ffcc80;  --tint-mistake-ink:     #4d2f00;
+  --tint-blunder:      #ff8a80;  --tint-blunder-ink:     #5c0f08;
+}
+
+[data-theme="dark"] {
+  --ground:        #16181a;
+  --ground-sunk:   #1e2124;
+  --ink:           #e6e8ea;
+  --ink-muted:     #a2a9b0;
+  --border:        #343b41;
+  --accent:        #8cbde8;
+  --accent-ink:    #10222f;
+
+  --tint-review:       #4a2020;  --tint-review-ink:      #ffcaca;
+  --tint-ok:           #1c3a20;  --tint-ok-ink:          #b7e7bd;
+  --tint-fail:         #4d1d18;  --tint-fail-ink:        #ffc3ba;
+  --tint-inaccuracy:   #4a4218;  --tint-inaccuracy-ink:  #ffec9e;
+  --tint-mistake:      #543417;  --tint-mistake-ink:     #ffd7a8;
+  --tint-blunder:      #5a201c;  --tint-blunder-ink:     #ffbcb5;
+}
+
+/* --- 3e famille : ne réagit JAMAIS au thème ---------------------------- */
+:root {
+  --white-share:   #ececec;
+  --black-share:   #2f2f2f;
+  --square-light:  #e9e2cf;
+  --square-dark:   #9a8467;
+  /* Une sévérité posée SUR UNE CASE relève de la famille constante : la pièce
+     qu'elle porte garde son encre sombre dans les deux thèmes. Variante
+     dédiée, distincte des --tint-* du châssis, qui eux suivent le thème. */
+  --square-inaccuracy: #f2e08a;
+  --square-mistake:    #edb463;
+  --square-blunder:    #e8837a;
+
+  --space-1: .25rem; --space-2: .5rem;  --space-3: 1rem;
+  --space-4: 1.5rem; --space-5: 2.5rem;
+  --text-s: .8125rem; --text-m: 1rem; --text-l: 1.125rem; --text-xl: 1.5rem;
+  --radius: 6px; --radius-pill: 999px;
+  --measure: 72ch;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ===================== base ===================== */
+* { box-sizing: border-box; }
+.app {
+  font-family: var(--font); font-size: var(--text-m); line-height: 1.5;
+  color: var(--ink); background: var(--ground);
+  font-variant-numeric: tabular-nums;
+}
+.app h1, .app h2, .app h3 { line-height: 1.25; margin: 0; }
+.app p, .app ul, .app ol, .app table, .app form { margin: 0; }
+.app ul, .app ol { list-style: none; padding: 0; }
+
+.app > header {
+  background: var(--ground-sunk);
+  border-block-end: 1px solid var(--border);
+  padding: var(--space-3);
+  display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4);
+  align-items: baseline;
+}
+.app > header h1 { font-size: var(--text-xl); letter-spacing: -.01em; }
+.app nav ul { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.app nav a {
+  color: var(--ink-muted); text-decoration: none;
+  padding-block: var(--space-1);
+  border-block-end: 2px solid transparent;
+}
+.app nav a:hover { color: var(--ink); }
+/* onglet courant : repère non chromatique (graisse + bordure), pas la couleur seule */
+.app nav a[aria-current="page"] {
+  color: var(--ink); font-weight: 650; border-block-end-color: var(--accent);
+}
+
+.app main { padding: var(--space-4) var(--space-3); }
+.app main > section { max-inline-size: var(--measure); margin-inline: auto; }
+.app main > section.is-wide { max-inline-size: 100%; }
+.app h2 { font-size: var(--text-l); margin-block-end: var(--space-3); }
+.app h3 { font-size: var(--text-m); }
+
+.stack     { display: flex; flex-direction: column; gap: var(--space-4); }
+.stack-tight { display: flex; flex-direction: column; gap: var(--space-2); }
+.muted     { color: var(--ink-muted); font-size: var(--text-s); }
+
+/* boutons */
+.app button {
+  font: inherit; color: var(--ink); background: var(--ground);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3); cursor: pointer;
+}
+.app button:hover:not(:disabled) { border-color: var(--ink-muted); }
+.app button:disabled { color: var(--ink-muted); cursor: not-allowed; opacity: .6; }
+.app button.is-primary {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+  font-weight: 600;
+}
+.app :is(button, a, input):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* formulaire */
+.app form { display: flex; flex-direction: column; gap: var(--space-3); }
+.app form label { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-s); color: var(--ink-muted); }
+.app input:not([type=checkbox]) {
+  font: inherit; color: var(--ink); background: var(--ground);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2); block-size: 2.25rem;
+}
+.app fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2) var(--space-3) var(--space-3); }
+.app legend { font-size: var(--text-s); color: var(--ink-muted); padding-inline: var(--space-1); }
+.checks { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.checks label { flex-direction: row; align-items: center; gap: var(--space-2); color: var(--ink); font-size: var(--text-m); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-3); }
+
+/* liste des parties : un ul, mis en colonnes par la grille */
+.games li {
+  display: grid; align-items: center; gap: var(--space-3);
+  grid-template-columns: auto 1fr auto;
+  border-block-end: 1px solid var(--border);
+}
+.games li > button {
+  border: 0; background: none; text-align: start; padding: var(--space-2) 0;
+  inline-size: 100%; border-radius: 0;
+}
+.games li > button:hover { color: var(--accent); text-decoration: underline; }
+.pill {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  background: var(--tint-ok); color: var(--tint-ok-ink);
+  border: 1px solid currentColor; border-radius: var(--radius-pill);
+  padding: 0 var(--space-2); font-size: var(--text-s); font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ===================== page Analyse ===================== */
+.game-head { display: flex; flex-direction: column; gap: var(--space-1); margin-block-end: var(--space-3); }
+.game-head p[data-player] { font-weight: 700; }
+.game-head p[data-player]::before { content: "▸ "; color: var(--accent); }
+
+.analysis { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-start; }
+.board-col { flex: 0 0 22.5rem; max-inline-size: 22.5rem; }
+.graph-col { flex: 1 1 20rem; min-inline-size: 16rem; display: flex; flex-direction: column; gap: var(--space-2); }
+
+.board { display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.board div { display: grid; place-items: center; font-size: 1.6rem; line-height: 1; }
+.board .lt { background: var(--square-light); }
+.board .dk { background: var(--square-dark); }
+.board .hit { background: var(--square-blunder); box-shadow: inset 0 0 0 2px #5c0f08; }
+.board div { color: transparent; }
+/* Un seul jeu de glyphes (les pleins) : le camp se lit à l'encre + au contour,
+   jamais à deux dessins différents. Dans l'app réelle ce sont les SVG standard
+   de react-chessboard ; ici on imite leur rendu, pas leur implémentation. */
+.board .wp, .board .bp { -webkit-text-stroke: 1.2px #14100c; paint-order: stroke fill; }
+.board .wp { color: #fbfaf7; }
+.board .bp { color: #201a14; -webkit-text-stroke-color: #f2ede4; }
+
+.readout { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.readout .eval { font-family: var(--mono); font-weight: 700; }
+
+/* barre de winning chances : couleurs de joueur, constantes, + bordure */
+.chances { display: flex; block-size: .5rem; inline-size: 100%; border: 1px solid var(--border); border-radius: var(--radius-pill); overflow: hidden; }
+.chances .w { background: var(--white-share); }
+.chances .b { background: var(--black-share); }
+
+.curve { block-size: 11rem; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; position: relative; background: var(--black-share); }
+.curve svg { display: block; inline-size: 100%; block-size: 100%; }
+.marker {
+  position: absolute; transform: translate(-50%, -50%);
+  font: 700 var(--text-s)/1.2 var(--mono);
+  border: 1px solid currentColor; border-radius: 3px; padding: 0 3px;
+}
+.marker.blunder    { background: var(--tint-blunder);    color: var(--tint-blunder-ink); }
+.marker.mistake    { background: var(--tint-mistake);    color: var(--tint-mistake-ink); }
+.marker.inaccuracy { background: var(--tint-inaccuracy); color: var(--tint-inaccuracy-ink); }
+
+.moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: var(--space-1); margin-block-start: var(--space-3); }
+.moves li { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-s); }
+.moves button { padding: 0 var(--space-1); border: 0; background: none; font-family: var(--mono); }
+.moves button[aria-current] { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius); font-weight: 700; }
+.moves .glyph { font-family: var(--mono); font-weight: 700; border-radius: 3px; padding: 0 3px; border: 1px solid currentColor; }
+.moves .glyph.blunder    { background: var(--tint-blunder);    color: var(--tint-blunder-ink); }
+.moves .glyph.mistake    { background: var(--tint-mistake);    color: var(--tint-mistake-ink); }
+.moves .glyph.inaccuracy { background: var(--tint-inaccuracy); color: var(--tint-inaccuracy-ink); }
+.moves .ev { color: var(--ink-muted); font-family: var(--mono); margin-inline-start: auto; }
+
+/* ligne « à revoir » (openings / danger) — montrée dans la bande de tokens */
+.review { background: var(--tint-review); color: var(--tint-review-ink); }
+
+/* ===================== châssis du prototype (jetable) ===================== */
+body { margin: 0; font-family: system-ui, sans-serif; background: #6b7178; }
+.rig { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #6b7178; }
+.rig > figure { margin: 0; min-inline-size: 0; }
+.rig figcaption {
+  font: 600 .75rem/1 system-ui; text-transform: uppercase; letter-spacing: .08em;
+  color: #fff; padding: .6rem .8rem; background: #4a5057;
+}
+.tokens { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3); border-block-start: 1px dashed var(--border); }
+.chip { font: 600 var(--text-s)/1.6 var(--mono); border: 1px solid currentColor; border-radius: var(--radius); padding: 0 var(--space-2); }
+</style>
+</head>
+<body>
+
+<!-- ============================ ÉCRAN 1 : / ============================ -->
+<div class="rig">
+<figure>
+  <figcaption>/ — Mes parties · clair</figcaption>
+  <div class="app" data-theme="light">
+    <header>
+      <h1>chess-analyst</h1>
+      <nav aria-label="main"><ul>
+        <li><a href="#" aria-current="page">Mes parties</a></li>
+        <li><a href="#">Explorateur</a></li>
+        <li><a href="#">Ouvertures</a></li>
+        <li><a href="#">Positions dangereuses</a></li>
+        <li><a href="#">Stats</a></li>
+      </ul></nav>
+    </header>
+    <main><section aria-labelledby="g1"><div class="stack">
+      <h2 id="g1">Mes parties</h2>
+      <form aria-label="import">
+        <div class="fields">
+          <label>Nom d'utilisateur chess.com<input value="DudulSmash"></label>
+          <label>Du<input type="month" value="2026-05"></label>
+          <label>Au<input type="month" value="2026-06"></label>
+        </div>
+        <fieldset><legend>Cadences</legend><div class="checks">
+          <label><input type="checkbox" checked>Bullet</label>
+          <label><input type="checkbox" checked>Blitz</label>
+          <label><input type="checkbox">Rapid</label>
+          <label><input type="checkbox">Daily</label>
+        </div></fieldset>
+        <div><button type="submit" class="is-primary">Importer</button></div>
+      </form>
+      <div class="stack-tight">
+        <p class="muted">82 parties importées — 78 analysées, 4 restantes.</p>
+        <div><button type="button">Analyser la sélection</button></div>
+      </div>
+      <ul class="games">
+        <li><input type="checkbox"><button type="button">vs Kasparov1987 · Victoire · 2026-06-14 · blitz</button><span class="pill">✓ analysée</span></li>
+        <li><input type="checkbox" checked><button type="button">vs petitcheval · Défaite · 2026-06-13 · bullet</button><span class="pill">✓ analysée</span></li>
+        <li><input type="checkbox"><button type="button">vs enpassant_fan · Nulle · 2026-06-11 · blitz</button><span></span></li>
+        <li><input type="checkbox"><button type="button">vs RookiePlayer · Victoire · 2026-06-09 · blitz</button><span class="pill">✓ analysée</span></li>
+      </ul>
+      <div class="tokens">
+        <span class="chip review">à revoir ⚠</span>
+        <span class="chip" style="background:var(--tint-fail);color:var(--tint-fail-ink)">échec d'import</span>
+        <span class="chip" style="background:var(--tint-inaccuracy);color:var(--tint-inaccuracy-ink)">?!</span>
+        <span class="chip" style="background:var(--tint-mistake);color:var(--tint-mistake-ink)">?</span>
+        <span class="chip" style="background:var(--tint-blunder);color:var(--tint-blunder-ink)">??</span>
+        <span class="chip" style="background:var(--white-share);color:#111">part Blancs</span>
+        <span class="chip" style="background:var(--black-share);color:#eee">part Noirs</span>
+      </div>
+    </div></section></main>
+  </div>
+</figure>
+
+<figure>
+  <figcaption>/ — Mes parties · sombre</figcaption>
+  <div class="app" data-theme="dark">
+    <header>
+      <h1>chess-analyst</h1>
+      <nav aria-label="main"><ul>
+        <li><a href="#" aria-current="page">Mes parties</a></li>
+        <li><a href="#">Explorateur</a></li>
+        <li><a href="#">Ouvertures</a></li>
+        <li><a href="#">Positions dangereuses</a></li>
+        <li><a href="#">Stats</a></li>
+      </ul></nav>
+    </header>
+    <main><section aria-labelledby="g2"><div class="stack">
+      <h2 id="g2">Mes parties</h2>
+      <form aria-label="import">
+        <div class="fields">
+          <label>Nom d'utilisateur chess.com<input value="DudulSmash"></label>
+          <label>Du<input type="month" value="2026-05"></label>
+          <label>Au<input type="month" value="2026-06"></label>
+        </div>
+        <fieldset><legend>Cadences</legend><div class="checks">
+          <label><input type="checkbox" checked>Bullet</label>
+          <label><input type="checkbox" checked>Blitz</label>
+          <label><input type="checkbox">Rapid</label>
+          <label><input type="checkbox">Daily</label>
+        </div></fieldset>
+        <div><button type="submit" class="is-primary">Importer</button></div>
+      </form>
+      <div class="stack-tight">
+        <p class="muted">82 parties importées — 78 analysées, 4 restantes.</p>
+        <div><button type="button">Analyser la sélection</button></div>
+      </div>
+      <ul class="games">
+        <li><input type="checkbox"><button type="button">vs Kasparov1987 · Victoire · 2026-06-14 · blitz</button><span class="pill">✓ analysée</span></li>
+        <li><input type="checkbox" checked><button type="button">vs petitcheval · Défaite · 2026-06-13 · bullet</button><span class="pill">✓ analysée</span></li>
+        <li><input type="checkbox"><button type="button">vs enpassant_fan · Nulle · 2026-06-11 · blitz</button><span></span></li>
+        <li><input type="checkbox"><button type="button">vs RookiePlayer · Victoire · 2026-06-09 · blitz</button><span class="pill">✓ analysée</span></li>
+      </ul>
+      <div class="tokens">
+        <span class="chip review">à revoir ⚠</span>
+        <span class="chip" style="background:var(--tint-fail);color:var(--tint-fail-ink)">échec d'import</span>
+        <span class="chip" style="background:var(--tint-inaccuracy);color:var(--tint-inaccuracy-ink)">?!</span>
+        <span class="chip" style="background:var(--tint-mistake);color:var(--tint-mistake-ink)">?</span>
+        <span class="chip" style="background:var(--tint-blunder);color:var(--tint-blunder-ink)">??</span>
+        <span class="chip" style="background:var(--white-share);color:#111">part Blancs</span>
+        <span class="chip" style="background:var(--black-share);color:#eee">part Noirs</span>
+      </div>
+    </div></section></main>
+  </div>
+</figure>
+</div>
+
+<!-- ======================= ÉCRAN 2 : /analyse ======================= -->
+<div class="rig">
+<figure>
+  <figcaption>/analyse/:id · clair</figcaption>
+  <div class="app" data-theme="light">
+    <header>
+      <h1>chess-analyst</h1>
+      <nav aria-label="main"><ul>
+        <li><a href="#">Mes parties</a></li><li><a href="#">Explorateur</a></li>
+        <li><a href="#">Ouvertures</a></li><li><a href="#">Positions dangereuses</a></li>
+        <li><a href="#">Stats</a></li>
+      </ul></nav>
+    </header>
+    <main><section class="is-wide" aria-label="partie">
+      <div class="game-head">
+        <p data-player="true">Blancs : DudulSmash (vous — Défaite)</p>
+        <p>Noirs : petitcheval</p>
+        <p class="muted">2026-06-13 · blitz · C50 — Italian Game</p>
+      </div>
+      <div style="display:flex;gap:var(--space-2);margin-block-end:var(--space-3)">
+        <button type="button" disabled>Précédent</button><button type="button">Suivant</button>
+      </div>
+      <div class="analysis">
+        <div class="board-col stack-tight">
+          <div class="readout"><span>12. Nf3</span><span class="eval">+0.3</span></div>
+          <div class="chances" role="img" aria-label="chances de gain : Blancs 55 %"><div class="w" style="width:55%"></div><div class="b" style="width:45%"></div></div>
+          <div class="board" role="img" aria-label="position" data-nontext="true">
+            <div class="lt"><span class="bp">♜</span></div><div class="dk"></span></div><div class="lt"><span class="bp">♝</span></div><div class="dk"><span class="bp">♛</span></span></div><div class="lt"><span class="bp">♚</span></div><div class="dk"><span class="bp">♝</span></div><div class="lt"></div><div class="dk"><span class="bp">♜</span></div>
+            <div class="dk"><span class="bp">♟</span></span></div><div class="lt"><span class="bp">♟</span></div><div class="dk"><span class="bp">♟</span></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="bp">♟</span></div><div class="dk"><span class="bp">♟</span></span></div><div class="lt"><span class="bp">♟</span></div>
+            <div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="bp">♞</span></div><div class="dk"></div><div class="lt"></div><div class="dk"><span class="bp">♞</span></div><div class="lt"></div><div class="dk"></div>
+            <div class="dk"></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="bp">♟</span></div><div class="hit"><span class="bp">♟</span></div><div class="lt"></div><div class="dk"></div><div class="lt"></div>
+            <div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="wp">♝</span></div><div class="dk"><span class="wp">♟</span></span></div><div class="lt"><span class="wp">♟</span></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+            <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="wp">♞</span></div><div class="dk"></div><div class="lt"></div>
+            <div class="lt"><span class="wp">♟</span></div><div class="dk"><span class="wp">♟</span></span></div><div class="lt"><span class="wp">♟</span></div><div class="dk"></div><div class="lt"></div><div class="dk"><span class="wp">♟</span></span></div><div class="lt"><span class="wp">♟</span></div><div class="dk"><span class="wp">♟</span></div>
+            <div class="dk"><span class="wp">♜</span></span></div><div class="lt"><span class="wp">♞</span></div><div class="dk"><span class="wp">♝</span></span></div><div class="lt"><span class="wp">♛</span></div><div class="dk"><span class="wp">♚</span></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="wp">♜</span></div>
+          </div>
+        </div>
+        <div class="graph-col">
+          <div class="curve">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,50 L8,48 L16,52 L24,45 L32,47 L40,30 L48,33 L56,35 L64,62 L72,58 L80,60 L88,78 L96,80 L100,82 L100,0 L0,0 Z" fill="#ececec"/>
+              <line x1="0" y1="50" x2="100" y2="50" stroke="#8a8a8a" stroke-width=".6" stroke-dasharray="2 2"/>
+              <line x1="40" y1="0" x2="40" y2="100" stroke="#c05621" stroke-width=".8"/>
+            </svg>
+            <span class="marker mistake" style="left:40%;top:30%">?</span>
+            <span class="marker blunder" style="left:64%;top:62%">??</span>
+            <span class="marker inaccuracy" style="left:88%;top:78%">?!</span>
+          </div>
+          <p class="muted">Vos erreurs : 3 <code>?!</code> · 1 <code>?</code> · 2 <code>??</code></p>
+          <ol class="moves" aria-label="moves">
+            <li><button type="button">e4</button><span class="ev">+0.2</span></li>
+            <li><button type="button">e5</button><span class="ev">+0.1</span></li>
+            <li><button type="button">Bc4</button><span class="ev">+0.3</span></li>
+            <li><button type="button">Nf6</button><span class="glyph inaccuracy">?!</span><span class="ev">+0.9</span></li>
+            <li><button type="button" aria-current="true">Nf3</button><span class="glyph mistake">?</span><span class="ev">+0.3</span></li>
+            <li><button type="button">d6</button><span class="ev">−0.4</span></li>
+            <li><button type="button">Ng5</button><span class="glyph blunder">??</span><span class="ev">−2.8</span></li>
+            <li><button type="button">Qxg5</button><span class="ev">−3.1</span></li>
+          </ol>
+        </div>
+      </div>
+    </section></main>
+  </div>
+</figure>
+
+<figure>
+  <figcaption>/analyse/:id · sombre</figcaption>
+  <div class="app" data-theme="dark">
+    <header>
+      <h1>chess-analyst</h1>
+      <nav aria-label="main"><ul>
+        <li><a href="#">Mes parties</a></li><li><a href="#">Explorateur</a></li>
+        <li><a href="#">Ouvertures</a></li><li><a href="#">Positions dangereuses</a></li>
+        <li><a href="#">Stats</a></li>
+      </ul></nav>
+    </header>
+    <main><section class="is-wide" aria-label="partie">
+      <div class="game-head">
+        <p data-player="true">Blancs : DudulSmash (vous — Défaite)</p>
+        <p>Noirs : petitcheval</p>
+        <p class="muted">2026-06-13 · blitz · C50 — Italian Game</p>
+      </div>
+      <div style="display:flex;gap:var(--space-2);margin-block-end:var(--space-3)">
+        <button type="button" disabled>Précédent</button><button type="button">Suivant</button>
+      </div>
+      <div class="analysis">
+        <div class="board-col stack-tight">
+          <div class="readout"><span>12. Nf3</span><span class="eval">+0.3</span></div>
+          <div class="chances" role="img" aria-label="chances de gain : Blancs 55 %"><div class="w" style="width:55%"></div><div class="b" style="width:45%"></div></div>
+          <div class="board" role="img" aria-label="position" data-nontext="true">
+            <div class="lt"><span class="bp">♜</span></div><div class="dk"></span></div><div class="lt"><span class="bp">♝</span></div><div class="dk"><span class="bp">♛</span></span></div><div class="lt"><span class="bp">♚</span></div><div class="dk"><span class="bp">♝</span></div><div class="lt"></div><div class="dk"><span class="bp">♜</span></div>
+            <div class="dk"><span class="bp">♟</span></span></div><div class="lt"><span class="bp">♟</span></div><div class="dk"><span class="bp">♟</span></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="bp">♟</span></div><div class="dk"><span class="bp">♟</span></span></div><div class="lt"><span class="bp">♟</span></div>
+            <div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="bp">♞</span></div><div class="dk"></div><div class="lt"></div><div class="dk"><span class="bp">♞</span></div><div class="lt"></div><div class="dk"></div>
+            <div class="dk"></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="bp">♟</span></div><div class="hit"><span class="bp">♟</span></div><div class="lt"></div><div class="dk"></div><div class="lt"></div>
+            <div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="wp">♝</span></div><div class="dk"><span class="wp">♟</span></span></div><div class="lt"><span class="wp">♟</span></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+            <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="wp">♞</span></div><div class="dk"></div><div class="lt"></div>
+            <div class="lt"><span class="wp">♟</span></div><div class="dk"><span class="wp">♟</span></span></div><div class="lt"><span class="wp">♟</span></div><div class="dk"></div><div class="lt"></div><div class="dk"><span class="wp">♟</span></span></div><div class="lt"><span class="wp">♟</span></div><div class="dk"><span class="wp">♟</span></div>
+            <div class="dk"><span class="wp">♜</span></span></div><div class="lt"><span class="wp">♞</span></div><div class="dk"><span class="wp">♝</span></span></div><div class="lt"><span class="wp">♛</span></div><div class="dk"><span class="wp">♚</span></div><div class="lt"></div><div class="dk"></span></div><div class="lt"><span class="wp">♜</span></div>
+          </div>
+        </div>
+        <div class="graph-col">
+          <div class="curve">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,50 L8,48 L16,52 L24,45 L32,47 L40,30 L48,33 L56,35 L64,62 L72,58 L80,60 L88,78 L96,80 L100,82 L100,0 L0,0 Z" fill="#ececec"/>
+              <line x1="0" y1="50" x2="100" y2="50" stroke="#8a8a8a" stroke-width=".6" stroke-dasharray="2 2"/>
+              <line x1="40" y1="0" x2="40" y2="100" stroke="#c05621" stroke-width=".8"/>
+            </svg>
+            <span class="marker mistake" style="left:40%;top:30%">?</span>
+            <span class="marker blunder" style="left:64%;top:62%">??</span>
+            <span class="marker inaccuracy" style="left:88%;top:78%">?!</span>
+          </div>
+          <p class="muted">Vos erreurs : 3 <code>?!</code> · 1 <code>?</code> · 2 <code>??</code></p>
+          <ol class="moves" aria-label="moves">
+            <li><button type="button">e4</button><span class="ev">+0.2</span></li>
+            <li><button type="button">e5</button><span class="ev">+0.1</span></li>
+            <li><button type="button">Bc4</button><span class="ev">+0.3</span></li>
+            <li><button type="button">Nf6</button><span class="glyph inaccuracy">?!</span><span class="ev">+0.9</span></li>
+            <li><button type="button" aria-current="true">Nf3</button><span class="glyph mistake">?</span><span class="ev">+0.3</span></li>
+            <li><button type="button">d6</button><span class="ev">−0.4</span></li>
+            <li><button type="button">Ng5</button><span class="glyph blunder">??</span><span class="ev">−2.8</span></li>
+            <li><button type="button">Qxg5</button><span class="ev">−3.1</span></li>
+          </ol>
+        </div>
+      </div>
+    </section></main>
+  </div>
+</figure>
+</div>
+
+</body>
+</html>

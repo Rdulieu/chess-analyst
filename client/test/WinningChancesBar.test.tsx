@@ -17,4 +17,15 @@ describe("WinningChancesBar", () => {
     expect((whiteFill as HTMLElement).style.width).toBe("70%");
     expect((blackFill as HTMLElement).style.width).toBe("30%");
   });
+
+  it("paints each share with its player's own token, which no theme touches", () => {
+    // A colour that says "White" does not say "background" (ADR-0013): the two
+    // shares must look identical in both themes, or the picture lies about which
+    // side is which. They are declared once, outside the dark block.
+    render(<WinningChancesBar whiteWinChances={70} />);
+
+    const [whiteFill, blackFill] = screen.getByRole("img").children;
+    expect((whiteFill as HTMLElement).style.backgroundColor).toBe("var(--white-share)");
+    expect((blackFill as HTMLElement).style.backgroundColor).toBe("var(--black-share)");
+  });
 });

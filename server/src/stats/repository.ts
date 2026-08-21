@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { games } from "../db/schema";
 import type { TimeControlCategory } from "../chesscom";
@@ -12,9 +13,13 @@ export interface StatsSummary {
   bySide: Record<"white" | "black", Bucket>;
 }
 
-/** Aggregates the retained Games on the fly into a history-wide summary. */
-export function getStats(db: Db): StatsSummary {
-  const rows = db.select().from(games).all();
+/**
+ * Aggregates **one `Profile`'s** Games on the fly into that player's summary
+ * (ADR-0014). The `Win rate` this returns is one player's win rate; averaging
+ * two histories into it would produce a figure that is nobody's.
+ */
+export function getStats(db: Db, profileId: number): StatsSummary {
+  const rows = db.select().from(games).where(eq(games.profileId, profileId)).all();
   return {
     total: bucket(rows),
     byCategory: Object.fromEntries(

@@ -1,0 +1,132 @@
+// =============================================================================
+// The token set — frozen in ADR-0013, validated on the pilot before any slice.
+//
+// Tokens are CUSTOM PROPERTIES, not `$variables`: several colours are consumed
+// from TypeScript (react-chessboard's squareStyles, the evaluation graph's SVG
+// attributes), where a `$variable` has long since vanished. `$variables` are
+// reserved here for what is structurally compile-time.
+//
+// Three families, and the rule that separates them is not a convention:
+//   1. theme roles     — invert with the theme;
+//   2. semantic tints  — per-theme value AND their own ink, so their contrast
+//                        never depends on inherited --ink;
+//   3. player & board  — never react to the theme at all, because a colour that
+//                        says "White" does not say "background". They carry a
+//                        border instead, to stay detachable from a dark ground.
+// =============================================================================
+
+:root {
+  // --- 1. theme roles -------------------------------------------------------
+  --ground: #ffffff;
+  --ground-sunk: #f4f5f7;
+  --ink: #14171a;
+  --ink-muted: #5a6169;
+  --border: #d7dbe0;
+  --accent: #1f5c8c;
+  --accent-ink: #ffffff;
+
+  // --- 2. semantic tints (declared here, consumed from slice 03 on) ---------
+  --tint-review: #fbe0e0;
+  --tint-review-ink: #6e1414;
+  --tint-ok: #e8f5e9;
+  --tint-ok-ink: #17501c;
+  --tint-fail: #fde8e6;
+  --tint-fail-ink: #8a1b12;
+  --tint-inaccuracy: #fff3b0;
+  --tint-inaccuracy-ink: #4a3c00;
+  --tint-mistake: #ffcc80;
+  --tint-mistake-ink: #4d2f00;
+  --tint-blunder: #ff8a80;
+  --tint-blunder-ink: #5c0f08;
+
+  // --- 3. player and board colours — constant in both themes ---------------
+  --white-share: #ececec;
+  --black-share: #2f2f2f;
+  --square-light: #e9e2cf;
+  --square-dark: #9a8467;
+  // A severity laid ON A SQUARE belongs to this family: the piece painted on
+  // top of it keeps its ink in both themes. Measured on the pilot, a
+  // theme-varying tint there rendered its piece at 1.49:1 in dark.
+  --square-inaccuracy: #f2e08a;
+  --square-mistake: #edb463;
+  --square-blunder: #e8837a;
+  // The board's coordinate labels. One constant ink for BOTH squares rather than
+  // react-chessboard's alternation (each label in the other square's colour),
+  // which measured 2.29:1 — text, on a board, below any threshold. Against the
+  // two squares above this reads 12.89:1 and 4.66:1.
+  --square-notation: #241d13;
+  // The `Evaluation curve`'s equality line and current-Move cursor: two marks the
+  // Player reads ON a drawing, so the same rule that sends the board's severity
+  // tints here sends them here. Both clear 3:1 against BOTH player grounds at
+  // once (equality 3.44 / 3.30, cursor 3.36 / 3.37) — a luminance window of about
+  // 0.19–0.23, which no eyeballed value hits by chance.
+  --curve-equality: #7e7e7e;
+  --curve-cursor: #d45a25;
+
+  // --- scales ---------------------------------------------------------------
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+
+  --text-s: 0.8125rem;
+  --text-m: 1rem;
+  --text-l: 1.125rem;
+  --text-xl: 1.5rem;
+
+  // The winning-chances bar's height, a token for one reason: the Analyse row
+  // reserves exactly this much when the bar is not there, so the board cannot
+  // jump when the annotations are toggled. Two places, one value.
+  --bar-height: 0.5rem;
+
+  --radius: 6px;
+  --radius-pill: 999px;
+
+  // The reading column, in `ch` so it tracks the text rather than the screen.
+  --measure: 72ch;
+  // The wide variant the dense screens are allowed: /danger, /analyse, /explorer,
+  // /openings and — since a second Profile made its five constant tracks
+  // overflow the reading column — /profiles.
+  --measure-wide: 100rem;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  // Not a token: the one declaration that tells the BROWSER the app has two
+  // themes. A `prefers-color-scheme` block restyles what this sheet paints and
+  // says nothing about what the browser paints for itself — which is why the
+  // checkboxes stayed bright white squares at night, and why the scrollbars and
+  // the caret did too. It belongs beside the themes rather than in a rule,
+  // because it is the same statement they are.
+  color-scheme: light dark;
+}
+
+// The dark theme is a REDEFINITION OF TOKENS and nothing else: not one rule is
+// written twice, and a `[data-theme]` toggle can be grafted later without
+// touching a single selector. The system preference is the only input (no
+// control, no state, no persistence — US-13 scope).
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #16181a;
+    --ground-sunk: #1e2124;
+    --ink: #e6e8ea;
+    --ink-muted: #a2a9b0;
+    --border: #343b41;
+    --accent: #8cbde8;
+    --accent-ink: #10222f;
+
+    --tint-review: #4a2020;
+    --tint-review-ink: #ffcaca;
+    --tint-ok: #1c3a20;
+    --tint-ok-ink: #b7e7bd;
+    --tint-fail: #4d1d18;
+    --tint-fail-ink: #ffc3ba;
+    --tint-inaccuracy: #4a4218;
+    --tint-inaccuracy-ink: #ffec9e;
+    --tint-mistake: #543417;
+    --tint-mistake-ink: #ffd7a8;
+    --tint-blunder: #5a201c;
+    --tint-blunder-ink: #ffbcb5;
+  }
+}

@@ -4,6 +4,12 @@ export type TimeControlCategory = "bullet" | "blitz" | "rapid" | "daily";
 /** The `Game` glossary term as delivered by the local API (Player-relative). */
 export interface Game {
   id: number;
+  /**
+   * The `Profile` this Game belongs to (ADR-0014). Carried by the Game itself,
+   * which is what lets a screen reached by direct URL — the Analyse page — start
+   * an `Analysis pass` for the right Player without a current Profile to lean on.
+   */
+  profileId: number;
   gameUrl: string;
   pgn: string;
   opponent: string;
