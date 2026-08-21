@@ -186,13 +186,21 @@ here as the value HP-01's switch step asserts against.
 
 | Figure | Value |
 | --- | --- |
-| Games fetched over the span | _measured on the run_ |
-| Games imported | _measured on the run_ |
-| of which `classical` | _measured on the run_ |
-| of which `correspondence` | _measured on the run_ |
+| Games fetched over the span | 403 |
+| Games imported | 351 |
+| of which `classical` | 38 |
+| of which `correspondence` | 37 |
 | Months in the span | 71 |
 | Populated months | 20 |
 | Months listed at zero | 51 |
+
+**Reconciling with the grill's figures.** US-12's grilling recorded the *account*: 403 games, of
+which 38 `classical` and **64** `correspondence`. The imported corpus holds 38 and **37**. The
+`classical` figure carries over untouched and the `correspondence` one does not, which is the
+expected shape rather than a discrepancy: **52 games are dropped at import** (variants, games from
+an arbitrary position, games against the computer), and correspondence is where the computer
+opponents concentrate. The account figure is what Lichess holds; the table below is what *our*
+corpus keeps, and only the latter is assertable on screen.
 
 > Filled from the run that builds the snapshot. Every month of the span is immutable, so these do
 > not drift; if they ever do, the account changed and the table is re-read, not patched.
