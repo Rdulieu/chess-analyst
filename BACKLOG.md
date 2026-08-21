@@ -32,13 +32,12 @@
   > - Méthode : **dorsale sans motifs** (axes dérivés du moteur et du FEN — phase, matériel,
   >   tactique manquée vs dérive, pression du temps, position calme/tranchante), puis **détection par
   >   règles greffée un motif à la fois**. **Pas de LLM** (décision du demandeur).
-  > - **Premier chantier identifié** : le moteur calcule `bestmove` et on le **jette**
-  >   (`engine/uci-driver.ts:68` le renvoie, `evaluations` n'a pas la colonne), et aucune **PV** n'est
-  >   conservée (mono-PV, profondeur 16). Tout motif est une affirmation sur l'écart entre le coup
-  >   joué et le meilleur coup — sans lui, rien n'est possible. C'est le seul manque dont la
-  >   réparation est **coûteuse** (ré-analyse moteur, non rejouable depuis le PGN, contrairement au
-  >   FEN d'ADR-0012) : il passe donc **en premier**.
-  >
+  > - **Premier chantier** : le moteur calcule `bestmove` **et la variante**, et on les **jette** —
+  >   `uci-driver.ts` collecte toutes les lignes `info` puis n'en garde que le score et `bestmove`.
+  >   Tout motif est une affirmation sur l'écart entre le coup joué et le meilleur coup, donc sans
+  >   elles rien n'est possible. **Les stocker ne coûte aucun temps moteur** (un changement de parsing
+  >   et deux colonnes) ; seule la ré-analyse des parties déjà faites se paie. MultiPV=2, lui, se paie
+  >   vraiment — d'où la mesure due en 15a.
   > - **Méthodologie auditable** (exigence structurante du demandeur) : le joueur doit pouvoir
   >   **comprendre et évaluer** la méthode, donc la vue par partie et le verdict global sont **le même
   >   calcul**, et une partie porte **tout** ce que l'agrégat consomme — y compris **pourquoi un coup
