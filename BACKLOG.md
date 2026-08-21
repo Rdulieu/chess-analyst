@@ -4,9 +4,21 @@
 
 - **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
   seulement par ouverture ou par position.
-  > **Recadrage de l'objectif du produit** (2026-08-19). **Grilling commencé puis interrompu** — à
-  > reprendre : `.scratch/weakness-profile/GRILL-NOTES.md` (état complet, décisions prises,
-  > questions ouvertes Q3-bis à Q10). Branche `integration/US-15-weakness-profile`.
+  > **Recadrage de l'objectif du produit** (2026-08-19). **Grillée** (2026-08-21) — état complet et
+  > raisonnement : `.scratch/weakness-profile/GRILL-NOTES.md` (décisions D1→D12). `CONTEXT.md` :
+  > cinq termes ajoutés (**Best line**, **Phase**, **Counted Move**, **Drift**, **Search regime**),
+  > et `Analysis pass` amendée. Branche `integration/US-15-weakness-profile`.
+  >
+  > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
+  > - **US-15a** — Comprendre l'analyse sur **une** partie (aucun agrégat) : stocker la `Best line` +
+  >   le 2e score + le `Search regime`, MultiPV=2 mesuré, ré-analyse, dérivation (`Phase`,
+  >   `Counted Move`, `Drift`), et la visualisation auditable sur la page Analyse. **La prochaine.**
+  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
+  > - **US-15c** — L'agrégat sur tout l'historique ; c'est là que se tranche « taux marginaux vs
+  >   conditionnels », avec de vraies données sous les yeux.
+  > - **US-15d** — Le verdict « sur quoi travailler » (et le sort de `/openings` et `/danger`).
+  > - **US-15e+** — Les motifs, un par un.
+  > - Non planifié : le suivi dans le temps (est-ce que ça s'améliore ?).
   >
   > Ce n'est **pas une US mais une EPIC** : elle se découpera en plusieurs US grillées séparément.
   > Les briques existantes (`/openings`, `/danger`, annotations `?!`/`?`/`??`) ont été construites
@@ -27,15 +39,22 @@
   >   réparation est **coûteuse** (ré-analyse moteur, non rejouable depuis le PGN, contrairement au
   >   FEN d'ADR-0012) : il passe donc **en premier**.
   >
-  > Non tranché, bloquant pour la première US : comment un « bucket » devient une faiblesse. Le
-  > problème du dénominateur est réglé (taux dans le bucket, comparé à sa propre moyenne), mais six
-  > problèmes ont été trouvés dans cette approche — dont un **non réparable** par des taux marginaux
-  > (les axes sont **corrélés** : en blitz les coups de finale *sont* les coups à faible horloge,
-  > donc l'outil risque de dire « travaille tes finales » quand la vraie cause est l'horloge). Voir
-  > les notes.
+  > - **Méthodologie auditable** (exigence structurante du demandeur) : le joueur doit pouvoir
+  >   **comprendre et évaluer** la méthode, donc la vue par partie et le verdict global sont **le même
+  >   calcul**, et une partie porte **tout** ce que l'agrégat consomme — y compris **pourquoi un coup
+  >   ne compte pas**. C'est pourquoi la première story ne porte que sur **une** partie.
+  > - La **donnée et sa présentation sont deux contraintes distinctes** : l'UI ne décide pas du
+  >   modèle.
+  > - Pas d'étiquette « erreur tactique / positionnelle » à l'étape 1 : on **montre la variante**
+  >   (déjà calculée et jetée aujourd'hui) plutôt que d'affirmer une catégorie qu'on classerait mal.
   >
-  > Dépendance : **US-11 (Profils)** — tous les constats de cette EPIC sont des agrégats, ils doivent
-  > naître **déjà cloisonnés par profil**.
+  > Reste ouvert, à trancher en **15c** avec les données en main : taux marginaux ou conditionnels.
+  > Les axes sont **corrélés** (en blitz les coups de finale *sont* les coups à faible horloge), donc
+  > un classement par axe risque de dire « travaille tes finales » quand la vraie cause est
+  > l'horloge — d'où 15b avant 15c.
+  >
+  > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
+  > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
 
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
