@@ -451,3 +451,76 @@ faits sur la position et non des interprétations de l'erreur.
 
 Les étiquettes arrivent **plus tard**, avec le chantier (i), un motif à la fois, chacune étant un
 prédicat nommé et vérifiable sur les parties qu'on a justement passé du temps à lire.
+
+### D9 — Provenance **portée par le pass**, et la relation manquante est réparée
+
+Ce qu'un `evaluations` row portera en plus (décidé) :
+
+- **`pv`** — la variante principale **entière**, en **UCI**, telle que le moteur la sort. **Une seule
+  colonne, pas de `bestmove` séparé** : le meilleur coup est la tête de la PV, deux colonnes
+  pourraient divergerpour rien. *(Nuance assumée : la ligne UCI `bestmove` peut, rarement, différer de
+  la tête de la dernière `info … pv` ; on adopte la tête de la PV.)* Entière et non tronquée, parce
+  que tronquer « à ce qu'on affiche » ferait entrer une décision de présentation dans la donnée —
+  l'erreur qu'ADR-0009 existe pour empêcher, et que D6 interdit. UCI et non SAN : c'est l'artefact
+  brut, la conversion pour l'affichage est un rejeu de plateau, bon marché pour **une** partie à la
+  demande (la leçon d'ADR-0012 portait sur le rejeu de **toutes** les parties à **chaque** requête).
+  Coût : ~120 o/ligne, ~5 Mo pour une année — même ordre que les 3 Mo acceptés par ADR-0012.
+- **`cp2` / `mate2`** — le score de la **deuxième** ligne seulement, **pas** sa PV : l'écart
+  `eval(best) − eval(2e)` est tout ce dont les deux usages de D7 ont besoin.
+
+**Provenance : sur le pass** (choix du demandeur), donc :
+
+- **`evaluations.pass_id`** — la relation qui **manque aujourd'hui** : `analysis_passes.gameIds` est
+  un tableau JSON, il n'existe **aucune** jointure d'une évaluation vers le pass qui l'a écrite. Les
+  réglages (`depth`, `multipv`) vivent sur `analysis_passes`, une ligne par pass, au lieu d'être
+  répétés 40 000 fois.
+- **Le point à vérifier l'a été, et le piège est réel mais contourné.** `analyzeGame`
+  (`server/src/analysis/service.ts`) **reprend volontairement en milieu de partie** : il compte les
+  lignes déjà stockées et redémarre au premier ply manquant, pour ne jamais dépenser deux fois du
+  temps moteur. Donc **les lignes d'une même partie peuvent venir de deux passes différentes** — par
+  conception. La provenance **par pass** n'est donc pas bien définie *par partie*, mais elle l'est
+  parfaitement **par ligne** : la jointure est `row → pass`, pas `game → pass`.
+
+**Pourquoi la provenance est nécessaire** (par force décroissante) :
+
+1. **Elle rend la méthodologie auto-descriptive — l'exigence même de D4.** « Meilleur : Bxh7+, ligne
+   …, +1.9 » est une **affirmation** ; « à profondeur 16, deux lignes explorées » en est la
+   **justification**. Profondeur 16 dans un milieu de partie tranchant et profondeur 16 dans une
+   finale de tours ne méritent pas la même confiance. Aujourd'hui la profondeur vit dans une
+   constante de code et n'apparaît **nulle part** dans la donnée : rien d'affiché ne peut l'énoncer
+   sans l'affirmer hors-bande.
+2. **L'ambiguïté de `cp2` null produit des agrégats silencieusement faux.** Pendant la mesure de D7,
+   deux régimes cohabiteront **volontairement** (~50 parties avec deuxième ligne, ~221 sans).
+   L'exclusion des coups forcés lit « pas de deuxième ligne » comme « position forcée » et sort le
+   coup du **dénominateur** — donc 221 parties de coups exclus à tort, exactement là où vivent les
+   taux de D3. Chiffres faux, aucune exception, invisible à l'œil.
+3. **La promesse centrale d'ADR-0009 n'est vraie que si les lignes disent ce qu'elles sont.** « Retuner
+   sans relancer le moteur » et « profondeur 16 fixée pour la reproductibilité » ne sont tenus
+   aujourd'hui que par une constante. Le jour où elle change — et le problème 5 (bruit de profondeur
+   sur la dérive) peut l'imposer — la table devient hétérogène sans moyen de le détecter *après coup*.
+   Aggravant pour cette EPIC : la **dérive est une somme de petits deltas**, la grandeur la plus
+   sensible à la profondeur. Mélanger 14 et 16 et « ma dérive s'améliore » devient un artefact de la
+   **date d'analyse**. Q8 (suivi dans le temps) est bâtie juste au-dessus de ce piège.
+4. **« Quelles lignes refaire » devient une requête au lieu d'une heuristique.** ADR-0012 a eu besoin
+   de `repairMissingFens`, qui devait *détecter* les lignes périmées par leur sentinelle, faute de
+   pouvoir les interroger. Coût déjà payé une fois.
+
+*(Honnêteté : 2 est évitable par discipline — ne jamais mélanger les régimes — et 4 est du confort.
+**1 et 3 sont les raisons durables** : l'homogénéité est une propriété qu'il faut **penser** à
+maintenir, la provenance une propriété qu'on peut **lire**.)*
+
+**Deux conséquences, dont une vraie modification de comportement :**
+
+1. `pass_id` répare plus que la provenance : la sémantique interrompu/échoué d'ADR-0011 ne sait pas
+   aujourd'hui distinguer les lignes d'un pass partiel de celles d'un pass complet, et
+   `evaluatedPositions` compte **toutes** les lignes des parties visées — y compris celles écrites
+   par un pass interrompu antérieur — donc **un pass repris affiche du travail hérité comme sa propre
+   progression**. Les deux deviennent répondables.
+2. **La reprise doit désormais vérifier la provenance.** Si une partie porte des lignes
+   profondeur-16/MultiPV-1 et que le pass courant tourne en MultiPV-2, reprendre au ply *n*
+   laisserait cette partie avec des lignes de **régimes mélangés** — et la dérive, somme sur tous les
+   plys d'une partie, mélangerait silencieusement deux profondeurs **à l'intérieur d'un seul
+   nombre**. Donc : **reprendre seulement si le régime correspond, sinon jeter les lignes et
+   réévaluer la partie entière.** C'est plus strict que le « les Evaluations sont conservées et jamais
+   recalculées » de `CONTEXT.md` : un **rétrécissement délibéré** d'une règle du glossaire, à assumer
+   explicitement et non à glisser en silence.
