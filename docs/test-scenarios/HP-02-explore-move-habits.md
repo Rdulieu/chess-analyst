@@ -37,8 +37,11 @@ surfacing the Player's own habits across their whole imported history.
 - **Clean data state, restored not imported**: [path 0](./path-0-bootstrap.md)'s **imported
   snapshot** copied into this scenario's database file, with the server stopped. It holds the
   `DudulSmash` `Profile` and its whole reference range — **82** Games over 2026-05 → 2026-06 (72
-  blitz / 10 bullet, all standard chess), none analysed — **and a second Profile, `Nonomoho`, owning
-  nothing**. The copy is a pristine state: this scenario never reads what another left behind.
+  blitz / 10 bullet, all standard chess), none analysed — **a second Profile, `Nonomoho`, owning
+  nothing**, and a **third on lichess.org, `Metalyst`, carrying its own imported history** (US-12).
+  This scenario is about `DudulSmash`, and every figure it asserts is `DudulSmash`'s: `Metalyst`
+  is present so that a figure which silently aggregated across Profiles — or across Platforms —
+  would be wrong here rather than plausible. The copy is a pristine state: this scenario never reads what another left behind.
 - **Nothing is selected on arrival.** The current `Profile` is held client-side, not in the
   database (ADR-0014), so restoring the snapshot restores the Games and no selection — step 1
   selects the Profile, which is what this scenario must show anyway.

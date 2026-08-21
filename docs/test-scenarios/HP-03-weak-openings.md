@@ -34,8 +34,11 @@ read.
 - **Clean data state, restored not imported**: [path 0](./path-0-bootstrap.md)'s **imported
   snapshot** copied into this scenario's database file, with the server stopped. It holds the
   `DudulSmash` `Profile` and its whole reference range — **82** Games over 2026-05 → 2026-06 (72
-  blitz / 10 bullet, all standard chess), none analysed — **and a second Profile, `Nonomoho`, owning
-  nothing**. The copy is a pristine state: this scenario never reads what another left behind.
+  blitz / 10 bullet, all standard chess), none analysed — **a second Profile, `Nonomoho`, owning
+  nothing**, and a **third on lichess.org, `Metalyst`, carrying its own imported history** (US-12).
+  This scenario is about `DudulSmash`, and every figure it asserts is `DudulSmash`'s: `Metalyst`
+  is present so that a figure which silently aggregated across Profiles — or across Platforms —
+  would be wrong here rather than plausible. The copy is a pristine state: this scenario never reads what another left behind.
 - **Nothing is selected on arrival**: the current `Profile` lives client-side, not in the database
   (ADR-0014), so step 1 selects it — which is also what this scenario must show.
 
@@ -80,9 +83,10 @@ read.
   sideways, every meaning-bearing tint still carries its non-chromatic cue, and `--white-share`,
   `--black-share` and the board's square tokens are **identical** between the two themes. Full rule
   list, tooling and known-open exceptions: [`theme-pass.md`](./theme-pass.md). The two profiles
-  screens are audited here in a state holding **two** Profiles, one of them current — the pairing
-  that overflowed the row until 2026-08-21, and the reason the suite carries a second Profile at
-  all. On `/openings` in particular, the **highlighted rows stay legible at night** — text on the review tint, not the
+  screens are audited here in a state holding **three** Profiles, one of them current and one on
+  **lichess.org** — the pairing that overflowed the row until 2026-08-21 is still the reason the
+  suite carries more than one Profile, and the third row makes the list taller still while adding a
+  second `Platform` label to keep legible. On `/openings` in particular, the **highlighted rows stay legible at night** — text on the review tint, not the
   page's ink on it — and the ⚠ marker is present in both themes. Stats is read as a table here too:
   its Total, cadence and side **row groups** each keep their header row and its accessible name.
   Nothing is imported and nothing is analysed by this step; a contrast failure outside the
