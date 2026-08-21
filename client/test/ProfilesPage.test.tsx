@@ -126,7 +126,33 @@ describe("ProfilesPage — the current Profile", () => {
     expect(within(rowFor("Hikaru")).queryByRole("button", { name: /sélectionner/i })).toBeNull();
   });
 
-  it("still points at the same Profile after a reload", async () => {
+  it("offers one Import button that leads straight to the current Profile's import", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("list", { name: /profils/i });
+
+    await user.click(within(rowFor("Hikaru")).getByRole("button", { name: /sélectionner/i }));
+
+    // ONE button, not one per row: the Import acts on the current Profile, and
+    // the Player reached this screen to say which that is.
+    const imports = screen.getAllByRole("link", { name: /importer/i });
+    expect(imports).toHaveLength(1);
+    // It goes where the Import lives, and asks for it rather than merely
+    // landing on the page.
+    expect(imports[0].getAttribute("href")).toBe("/profiles/2#import");
+  });
+
+  it("does not offer the Import while no Profile is current — there is nobody to import for", async () => {
+    renderPage();
+    await screen.findByRole("list", { name: /profils/i });
+
+    // Nothing selected yet: an Import button here could only act on nobody, and
+    // the rows already offer the step that comes first.
+    expect(screen.queryByRole("link", { name: /importer/i })).toBeNull();
+    expect(within(rowFor("DudulSmash")).getByRole("button", { name: /sélectionner/i })).toBeTruthy();
+  });
+
+  it("still points at the same Profile after a reload", async () =>{
     const user = userEvent.setup();
     const first = renderPage();
     await screen.findByRole("list", { name: /profils/i });

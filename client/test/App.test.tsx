@@ -118,7 +118,9 @@ describe("App — routing & navigation", () => {
     const user = userEvent.setup();
     renderApp(["/profiles"]);
 
-    await user.click(await screen.findByRole("link", { name: /DudulSmash/i }));
+    // The row's identity link, named exactly: the screen now also holds an
+    // Import button that names the same Profile.
+    await user.click(await screen.findByRole("link", { name: "DudulSmash" }));
 
     expect(await screen.findByRole("heading", { level: 2, name: /DudulSmash/i })).toBeTruthy();
     expect(screen.getByRole("form", { name: /import/i })).toBeTruthy();

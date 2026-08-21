@@ -19,6 +19,10 @@ export function ProfilesPage() {
 
   const [doomed, setDoomed] = useState<Profile | null>(null);
 
+  // The current Profile itself, not just its id: the Import button names it, and
+  // a selection pointing at a Profile the list no longer holds is no selection.
+  const current = profiles?.find((p) => p.id === currentId) ?? null;
+
   function select(id: number) {
     saveCurrentProfileId(id);
     setCurrentId(id);
@@ -67,6 +71,28 @@ export function ProfilesPage() {
   return (
     <section aria-labelledby="profiles-heading" className="card">
       <h2 id="profiles-heading">Profils</h2>
+
+      {/* The Import's way in. It lived only behind the Profile's name, which
+          does not say where it leads, so the feature was there and unreachable.
+          ONE button, not one per row: the Import acts on the **current**
+          Profile, and naming it is the whole business of this screen. The
+          `#import` fragment asks the Profile's page to open on its form rather
+          than merely to render it somewhere below. */}
+      {current === null ? null : (
+        <p data-part="actions">
+          <Link
+            to={`/profiles/${current.id}#import`}
+            data-action="primary"
+            // The accessible name CONTAINS the visible label, then names the
+            // Profile: a voice-control Player must be able to say what they
+            // read (WCAG 2.5.3), and the action must still be unambiguous
+            // about whose parties it fetches.
+            aria-label={`Importer mes parties — ${current.username} (chess.com)`}
+          >
+            Importer mes parties
+          </Link>
+        </p>
+      )}
 
       {profiles === null ? null : profiles.length === 0 ? (
         <p>Aucun profil — créez-en un à partir d’un compte chess.com pour commencer.</p>

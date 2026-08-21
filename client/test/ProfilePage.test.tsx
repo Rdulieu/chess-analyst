@@ -28,6 +28,40 @@ function renderPage(id = 7) {
   );
 }
 
+/** Renders the page as the Import button links to it: with the `#import` hash. */
+function renderPageAskingForImport(id = 7) {
+  return render(
+    <MemoryRouter initialEntries={[`/profiles/${id}#import`]}>
+      <Routes>
+        <Route path="/profiles/:id" element={<ProfilePage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("ProfilePage — arriving to import", () => {
+  it("opens on the import form when asked for it, rather than leaving it to be found", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json(PROFILE)));
+
+    renderPageAskingForImport();
+
+    const form = await screen.findByRole("form", { name: /^import$/i });
+    // The Player asked for the Import: the form takes the focus, so the next
+    // keystroke lands in it and a long page cannot hide it below the fold.
+    expect(form.contains(document.activeElement)).toBe(true);
+  });
+
+  it("leaves the focus alone when the Player merely opened the Profile", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json(PROFILE)));
+
+    renderPage();
+
+    const form = await screen.findByRole("form", { name: /^import$/i });
+    // No hash, no claim on the focus — the page is about more than its Import.
+    expect(form.contains(document.activeElement)).toBe(false);
+  });
+});
+
 describe("ProfilePage — one Profile's own page", () => {
   it("names the Profile the URL points at and shows what it holds", async () => {
     vi.stubGlobal(
