@@ -276,3 +276,117 @@ le travail. À confirmer au moment de l'ordonnancement.
 - Sévérités et `Danger position` dérivées à la lecture depuis `analysis/derivation.ts`
   (`gamePlies()` est le point d'entrée partagé).
 - Pages clientes existantes : `Analyse`, `Danger`, `Explorer`, `Games`, `Openings`, `Stats`.
+
+---
+
+# Reprise du grilling (2026-08-21)
+
+Branche resynchronisée sur `develop` (US-11 Profils incluse, merge 31abdf6). Conflit `BACKLOG.md`
+résolu en autonomie : `develop` avait déplacé US-11 en `Done`, notre côté ajoutait US-15 en `To do`
+— les deux intentions **composent**, aucune décision opposée (cf. skill `git-flow`).
+
+## Faits vérifiés à la reprise (ne pas re-mesurer)
+
+- **`[%clk]` est bien présent** dans les PGN stockés, à chaque demi-coup
+  (`1. e4 {[%clk 0:04:58.7]}`). G4 (pression du temps) est donc récupérable **sans ré-import ni
+  ré-analyse**. Loose end fermé.
+- **US-11 est mergée** : `games` et `analysis_passes` portent `profile_id` (ADR-0014). **Q10 est
+  répondue par les faits** : tout agrégat de cette EPIC est cloisonné par profil par construction.
+- **Coût moteur mesuré** (dernier `Analysis pass` en base) : **1199 positions en 11 min 06 s, soit
+  ~0,56 s/position** à profondeur 16. **271 parties importées, 20 analysées.** Analyser l'existant
+  ≈ 16 000 positions ≈ **2 h 30** ; une année (~650 parties) ≈ **6 h**. Le pass moteur est déjà, et
+  de loin, le coût dominant de l'app.
+- **G1 et G2 sont quasi gratuits** — correction de l'analyse d'écart du 2026-08-19, qui était trop
+  pessimiste. `uci-driver.ts` collecte **toutes** les lignes `info` de la recherche et
+  `parseEvaluation` lit `score` + `bestmove` puis **jette le reste**, dont ` pv e2e4 e7e5 …` : la
+  variante principale est déjà là. Stocker le meilleur coup **et** la PV en MultiPV=1 coûte donc
+  **zéro temps moteur supplémentaire** (un changement de parsing et deux colonnes). Le seul coût est
+  la ré-analyse des 20 parties déjà faites (~11 min) ; les parties futures ne paient rien.
+
+## Décisions prises à la reprise
+
+### D3 — La méthode révisée de Q3 est **validée** par le demandeur
+
+Donc : taux dans le bucket comparé à sa propre moyenne, **deux métriques co-égales** (erreurs
+graves seuillées **et** winning chances perdues par Move), plus les trois garde-fous —
+**restriction aux positions encore compétitives**, **verdict de dispersion avant tout classement**,
+**intervalle affiché et classement sur sa borne conservatrice** (pas de lissage caché).
+
+### D4 — Exigence de **méthodologie auditable** (ajout du demandeur, structurante)
+
+> « Je veux être capable de comprendre et évaluer la méthodologie d'analyse. Le joueur doit pouvoir
+> visualiser les analyses sur chaque partie pour comprendre comment l'analyse globale est calculée. »
+
+Conséquences :
+
+- **La première US de l'EPIC porte sur UNE partie**, pas sur l'agrégat : stocker meilleur coup + PV,
+  classer chaque Move du joueur, et **rendre ce classement visible** sur la page Analyse. **Aucune
+  page d'agrégat à l'étape 1.**
+- Précédent invoqué : US-14 n'avait été acceptée qu'à la condition que la courbe porte *exactement*
+  la même information que la barre et les valeurs par coup, « aucune divergence possible entre les
+  trois vues ». D4 est la même discipline **un niveau plus haut** : le verdict global et la vue par
+  partie doivent être **le même calcul**, pas deux implémentations qui s'accordent par chance.
+- **Bénéfice d'ordonnancement** : Q3-bis (taux marginaux vs conditionnels) est **repoussée** jusqu'à
+  ce qu'on ait de vraies données par coup sous les yeux — bien meilleure position pour trancher que
+  celle où on était bloqué.
+
+### D5 — Réconciliation exacte : option **(c)** retenue
+
+Une partie doit porter **tout** ce que l'agrégat consomme :
+
+- par Move du joueur : delta de winning chances, sévérité, **meilleur coup + PV**, les étiquettes
+  d'axes, et — décisif — **si ce Move compte, et sinon pourquoi pas** (« position déjà décidée »,
+  « coup forcé ») ;
+- un **récapitulatif par partie** : combien de Moves comptés, combien d'erreurs comptées, quel
+  pourcentage de chances perdues. Sommer ce récapitulatif sur les parties **donne** l'agrégat, par
+  construction ;
+- une **représentation de la dérive** : le tracé cumulé des chances perdues, sur le même axe que
+  l'`Evaluation curve` d'US-14, pour qu'un saignement lent soit **visible comme une pente** plutôt
+  que déduit d'une colonne de petits nombres.
+
+Pourquoi la dérive n'est pas optionnelle : c'est la seule chose que cette EPIC peut révéler qu'aucune
+vue existante ne montre, c'est la métrique la plus vulnérable au bruit de profondeur 16 (problème 5),
+et c'est celle qu'il faut pouvoir **vérifier à l'œil sur une partie réelle** avant de croire un
+agrégat bâti dessus. Sans ça, aucune base pour croire une page qui annonce « ta faiblesse est la
+dérive » — soit exactement la confiance que D4 demande de pouvoir évaluer.
+
+Sans D5, le scénario qui casse tout : une partie où le joueur a joué quatre `??` peut contribuer
+**zéro** erreur au profil, parce que les quatre sont arrivés après que la partie était perdue. La
+page afficherait « 4 gaffes » et l'agrégat n'en compterait aucune — l'écart est précisément ce qu'il
+faut expliquer.
+
+### D6 — **La donnée et sa présentation sont deux contraintes distinctes** (cadrage du demandeur)
+
+> « Une partie doit porter toutes ces informations. Cependant l'UI ne doit pas forcément tout
+> rassembler en une seule page. Je ne veux pas que l'UI décide de ma représentation des données. »
+
+**Contrainte permanente de l'EPIC** : le modèle (ce qu'une partie porte) est décidé **sans égard**
+pour la mise en page. Le découpage UI (une page, un panneau, une seconde route) est une question
+**aval, décidable séparément** — la densité de la page Analyse (plateau + liste de coups + barre +
+courbe) est un vrai problème de mise en page, mais elle **n'a pas le droit d'amputer le modèle**.
+
+### D7 — Moteur : **MultiPV=2 voulu**, sous condition de mesure
+
+Deux des garde-fous de D3 dépendent du **deuxième meilleur** coup, pas seulement du meilleur, et les
+deux découlent du même nombre `eval(best) − eval(2e best)` :
+
+- **coups quasi forcés exclus du dénominateur** (problème 6) — « un seul coup légal » est gratuit
+  (`chess.js` compte les coups légaux, aucun moteur), mais le cas qui compte vraiment est « un seul
+  coup **raisonnable** » : on a joué le seul coup non perdant, ni mérite ni faute ;
+- **caractère tranchant** (calme vs tranchant), axe candidat.
+
+MultiPV=2 suffit (pas besoin d'un top-5). Attente honnête de surcoût : **1,3–1,8×** (l'arbre est
+partagé, mais des élagages deviennent interdits).
+
+**Décision du demandeur** : MultiPV=2 est **l'intention**, mais on **mesure** sur ~50 parties, comme
+US-10b avait mesuré `/danger` avant de décider :
+
+- **< 1,5×** → gardé sans discussion ;
+- **1,5× – 2×** → on **revient au demandeur** (« question it »), ce n'est pas un arbitrage d'agent ;
+- **> 2×** → ce n'est plus un réglage mais une refonte de la méthode.
+
+**La profondeur n'est pas la variable d'ajustement** : passer de 16 à 14 halverait le coût et
+paierait MultiPV=2, mais ADR-0009 a fixé 16 pour la **reproductibilité**, et baisser la profondeur
+aggrave le bruit (problème 5) **exactement** sur la métrique de dérive que D5 impose de pouvoir
+regarder. Une analyse moins chère d'un signal plus bruité est un mauvais échange pour un outil dont
+le produit est la confiance.
