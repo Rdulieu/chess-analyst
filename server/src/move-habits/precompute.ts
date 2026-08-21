@@ -1,4 +1,4 @@
-import { Chess } from "cm-chess";
+import { loadGame } from "../chess/positions";
 import { eq, sql } from "drizzle-orm";
 import type { Db } from "../db";
 import { games, moveHabits, type Game } from "../db/schema";
@@ -39,8 +39,7 @@ export function recordMoveHabits(db: Db, game: Game): void {
     .get()?.computed;
   if (done) return;
 
-  const chess = new Chess();
-  chess.loadPgn(game.pgn.trim());
+  const chess = loadGame(game.pgn);
   const plies = chess.history();
 
   let fenBefore = positionKey(chess.setUpFen());

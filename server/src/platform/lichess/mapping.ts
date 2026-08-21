@@ -49,13 +49,35 @@ export function monthWindow(year: number, month: number): { since: number; until
 }
 
 /**
- * Whether this game is one we study at all. Slice 04 keeps to what the port's
- * nominal path needs: **standard chess**, at a pace we have a word for. The
- * other exclusions (an arbitrary starting position, a game against the computer)
- * are their own slice.
+ * Whether this game is one we study at all. Lichess answers more kinds of game
+ * than chess.com does, and three of them must never become a `Game`
+ * (CONTEXT.md) — each for its own reason, none of them a defensive check
+ * against something rare:
+ *
+ * - a **variant**: a game that is not the game is worth nothing to these
+ *   aggregates (already true for chess.com);
+ * - a game from an **arbitrary position**: normal rules, but every aggregate
+ *   here is keyed by FEN or ECO and assumes the initial position. 5% of the
+ *   reference account, so this is a real population;
+ * - a game **against the computer**: the opponent is not an account, so there is
+ *   no name to record, and every aggregate asks a question about play against
+ *   people. Decisively, chess.com never exposes these at all, so importing
+ *   Lichess's would make two Profiles silently incomparable.
+ *
+ * An **aborted** game is kept, which is the mirror image of the same principle:
+ * both Platforms send them, so keeping them on both is what keeps the corpus the
+ * same kind of thing. With no classifiable opening it lands in `Other`.
+ *
+ * A pace we have no word for is excluded too — storing it would mean picking a
+ * category at random, and every per-pace breakdown would carry the guess.
  */
 export function isInScope(game: LichessGame): boolean {
-  return (game.variant ?? "standard") === "standard" && pace(game.speed) !== undefined;
+  if ((game.variant ?? "standard") !== "standard") return false;
+  if (game.initialFen !== undefined) return false;
+  if (game.players.white.aiLevel !== undefined || game.players.black.aiLevel !== undefined) {
+    return false;
+  }
+  return pace(game.speed) !== undefined;
 }
 
 /**

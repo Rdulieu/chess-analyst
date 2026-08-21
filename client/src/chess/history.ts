@@ -1,5 +1,29 @@
 import { Chess } from "cm-chess";
 
+/**
+ * Loads a PGN into a board, **tolerating a Game with no moves**. An aborted Game
+ * is one we keep on purpose (CONTEXT.md, US-12): its PGN carries headers, no
+ * move, and `*` as the result — and the parser rejects that bare `*` where it
+ * expects a move. The tolerance lives here, in the one place every reader of a
+ * PGN goes through; the headers are still loaded, so such a Game names its
+ * players like any other.
+ *
+ * Trimmed first: the parser rejects trailing whitespace, and both Platforms
+ * serve PGNs with a trailing newline.
+ */
+function loadGame(pgn: string): Chess {
+  const chess = new Chess();
+  const text = pgn.trim();
+  const lines = text.split("\n");
+  const movetext = lines
+    .filter((line) => !line.startsWith("["))
+    .join(" ")
+    .trim();
+  const hasNoMove = /^(\*|1-0|0-1|1\/2-1\/2)?$/.test(movetext);
+  chess.loadPgn(hasNoMove ? lines.filter((line) => line.startsWith("[")).join("\n") : text);
+  return chess;
+}
+
 /** A half-move: its standard notation, destination square, and the Position (FEN) it leads to. */
 export interface Ply {
   san: string;
@@ -45,9 +69,7 @@ export interface GamePlayers {
  * `null` rather than something to display.
  */
 export function gameHeaders(pgn: string): GamePlayers {
-  const chess = new Chess();
-  chess.loadPgn(pgn.trim());
-  const tags = chess.header();
+  const tags = loadGame(pgn).header();
   const named = (tag: string) => {
     const value = tags[tag]?.trim();
     return value && value !== "?" ? value : null;
@@ -59,13 +81,11 @@ export function gameHeaders(pgn: string): GamePlayers {
  * Parses a Game's PGN into a navigable history. Each ply carries the Position
  * that results from it (cm-chess computes these with its rule engine, so
  * castling, en passant and promotion are handled for us). Throws on an
- * unparseable PGN.
+ * unparseable PGN. An **aborted** Game has no ply and opens on the initial
+ * Position — it is a Game we keep on purpose (US-12), so it must also replay.
  */
 export function parseGame(pgn: string): GameHistory {
-  const chess = new Chess();
-  // Trim first: cm-chess's PGN parser rejects trailing whitespace, and chess.com
-  // serves every PGN with a trailing newline.
-  chess.loadPgn(pgn.trim());
+  const chess = loadGame(pgn);
   return {
     startFen: chess.setUpFen(),
     // `to` is typed optional (chess.js also models variants with drop moves), but every

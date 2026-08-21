@@ -108,3 +108,21 @@ describe("gameHeaders", () => {
     expect(gameHeaders(pgn)).toEqual({ white: null, black: "Bob" });
   });
 });
+
+describe("an aborted Game", () => {
+  // A Game we keep on purpose (US-12): both Platforms send them, so both must
+  // replay. Its PGN has headers, no move, and `*` — the shape the parser used to
+  // reject outright.
+  const ABORTED = ['[White "someone"]', '[Black "opponent"]', '[Result "*"]', "", "*"].join("\n");
+
+  it("opens on the initial Position with no ply to walk, rather than failing to load", () => {
+    const history = parseGame(ABORTED);
+
+    expect(history.plies).toEqual([]);
+    expect(history.startFen).toBe("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  });
+
+  it("still names both players, so the header reads like any other Game's", () => {
+    expect(gameHeaders(ABORTED)).toEqual({ white: "someone", black: "opponent" });
+  });
+});

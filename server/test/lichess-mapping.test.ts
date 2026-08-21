@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toImportedGame, monthWindow } from "../src/platform/lichess/mapping";
+import { toImportedGame, monthWindow, isInScope } from "../src/platform/lichess/mapping";
 import type { LichessGame } from "../src/platform/lichess/payload";
 
 /**
@@ -109,6 +109,59 @@ describe("a month as Lichess is asked for it", () => {
     expect(monthWindow(2024, 12)).toEqual({
       since: Date.UTC(2024, 11, 1, 0, 0, 0, 0),
       until: Date.UTC(2025, 0, 1, 0, 0, 0, 0) - 1,
+    });
+  });
+});
+
+/**
+ * What Lichess sends that must never become a `Game` (CONTEXT.md). Lichess
+ * answers more kinds of game than chess.com does, and each exclusion below has
+ * its own reason — none of them is a defensive check against something rare.
+ */
+describe("what we do not keep", () => {
+  it("keeps a standard game from the initial position, played against a person", () => {
+    expect(isInScope(lichessGame())).toBe(true);
+  });
+
+  it("excludes a variant — a game that is not the game is worth nothing to these aggregates", () => {
+    for (const variant of ["chess960", "atomic", "horde", "crazyhouse"]) {
+      expect(isInScope(lichessGame({ variant }))).toBe(false);
+    }
+  });
+
+  it("excludes a game started from an arbitrary position, which our FEN- and ECO-keyed aggregates cannot key", () => {
+    // Not rare: 5% of the reference account. Normal rules, but every aggregate
+    // here assumes the initial position.
+    expect(
+      isInScope(
+        lichessGame({
+          initialFen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("excludes a game against the computer, and never invents an opponent name for one", () => {
+    // Decisive reason: chess.com never exposes these at all, so importing
+    // Lichess's would make two Profiles silently incomparable. The side carries
+    // an AI level instead of an account — there is no name to record.
+    const versusAi = lichessGame({
+      players: { white: { user: { name: "Metalyst" } }, black: { aiLevel: 5 } },
+    });
+
+    expect(isInScope(versusAi)).toBe(false);
+  });
+
+  it("keeps an aborted game — both Platforms send them, so keeping them keeps the corpus one thing", () => {
+    // The mirror image of the same principle. With no classifiable opening it
+    // lands in the `Other` bucket rather than being dropped.
+    const aborted = lichessGame({ opening: undefined, winner: undefined, pgn: "" });
+
+    expect(isInScope(aborted)).toBe(true);
+    expect(toImportedGame(aborted, "Metalyst")).toMatchObject({
+      eco: "other",
+      openingName: "Autre / non classée",
+      result: "draw",
     });
   });
 });

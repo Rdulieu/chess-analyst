@@ -39,6 +39,20 @@ beforeAll(async () => {
     else if (asked === "closed") res.json({ id: "closed", username: "Closed", disabled: true });
     else res.status(404).json({ error: "Not found" });
   });
+  // A month whose every game is out of scope: a variant, a game from an
+  // arbitrary position, and a game against the computer.
+  app.get("/api/games/user/excluded", (_req, res) => {
+    const lines = [
+      game({ id: "wild01", variant: "atomic" }),
+      game({ id: "fen001", initialFen: "8/8/8/8/8/8/8/K6k w - - 0 1" }),
+      game({
+        id: "stock1",
+        players: { white: { user: { name: "Metalyst" } }, black: { aiLevel: 6 } },
+      }),
+    ];
+    res.type("application/x-ndjson");
+    res.send(lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  });
   app.get("/api/games/user/:username", (req, res) => {
     exportCalls.push({ username: req.params.username, query: req.query });
     // ndjson: one JSON document per line, which is exactly why the body cannot
@@ -137,5 +151,19 @@ describe("the Lichess adapter's month fetch", () => {
     // somewhere else — a second request, or a classification of our own.
     expect(query.pgnInJson).toBe("true");
     expect(query.opening).toBe("true");
+  });
+});
+
+describe("a month Lichess answered, of which we keep nothing", () => {
+  it("is covered with zero games kept, while still reporting what was fetched", async () => {
+    // Not a failure and not an empty month: the Platform DID send games, they
+    // are just not the ones we study. The summary showing fetched > imported is
+    // what tells the Player that, instead of quietly narrowing the number.
+    const client = createHttpLichessClient(baseUrl);
+
+    const month = await client.fetchMonth("excluded", 2024, 1);
+
+    expect(month.totalFetched).toBe(3);
+    expect(month.games).toEqual([]);
   });
 });
