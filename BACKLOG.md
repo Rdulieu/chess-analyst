@@ -38,7 +38,32 @@
   > - Résultat : pas de code par joueur comme chess.com, mais `winner` (`white`/`black`, absent si
   >   nulle) + `status` (`mate`, `resign`, `outoftime`, `draw`, …).
   >
-  > Points à trancher au grilling :
+  > **Grillée** (2026-08-21) — branche `integration/US-12-lichess-import`. Les onze points ci-dessous
+  > sont tranchés ; doc : `CONTEXT.md` (`Platform`, `Time control category`, `Game`,
+  > `Monthly import`, `Import`), **ADR-0016** (les adaptateurs traduisent vers notre vocabulaire),
+  > amendement d'**ADR-0007** (l'autorité de classification est la plateforme d'origine).
+  > Décisions : la plateforme est un attribut du `Profile`, jamais un paramètre d'import (mais l'écran
+  > d'import la **nomme**) ; le **mois** reste l'unité du port, évolutif plus tard ; ndjson lu en flux
+  > mais résolu par mois, filtrage des catégories en local ; **cinq** `Time control category` —
+  > `ultraBullet`→`bullet`, `daily` **renommée** `correspondence`, `classical` ajoutée ; le port parle
+  > le domaine (`PlatformClient` + `ImportedGame`) et chaque adaptateur possède sa traduction, câblage
+  > par registre `Record<Platform, PlatformClient>` ; pas de token ; hors périmètre : variantes,
+  > `fromPosition`, **parties contre l'ordinateur** ; parties abandonnées importées (symétrie) ;
+  > `Game.date` = la date sous laquelle la plateforme classe la partie (`createdAt` chez Lichess).
+  > **Vérifié contre l'API réelle** (compte de référence retenu : **`Metalyst`**, 403 parties, 20 mois
+  > peuplés sur 71, dont 38 `classical` et 64 `correspondence` — les deux traductions neuves sont donc
+  > exercées pour de vrai) : `since`/`until` filtrent sur `createdAt` ; le débit anonyme mesuré est de
+  > ~24 parties/s ; et **l'endpoint d'export refuse l'IPv6** depuis cette machine (429 instantané,
+  > insensible à l'attente) alors qu'il répond 200 en IPv4 — piège à neutraliser dans l'adaptateur,
+  > sans quoi le message d'erreur invite précisément au mauvais correctif.
+  > Validation : pas de 4ᵉ HP (le parcours ne change pas) — path 0 accueille le profil Lichess de
+  > référence contre l'API réelle, HP-01 gagne une étape de bascule inter-plateformes, les FP portent
+  > les cas précis sur fixture (`LICHESS_BASE_URL` en miroir de `CHESSCOM_BASE_URL`).
+  > Dette signalée hors périmètre : la table `settings` (username chess.com mémorisé) est caduque
+  > depuis US-11 et ne doit **pas** être étendue à Lichess.
+  > Reste à faire : `/to-prd` puis `/to-issues`.
+  >
+  > Points tranchés au grilling (énoncé d'origine) :
   > - Forme du port : `since`/`until` en millisecondes couvre nativement la plage introduite par
   >   US-9, alors que chess.com impose le découpage mensuel. Le port expose-t-il une **plage de
   >   dates** (chess.com la découpe en mois en interne, Lichess la passe telle quelle), ou garde-t-on

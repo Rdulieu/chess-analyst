@@ -50,3 +50,30 @@ every read, a cost that does not exist here.
   rather than widening a shared type — reuse of one domain concept, not coupling of two features.
 - **Aggregation stays on the fly** (like US-6, unlike ADR-0005): no weak-opening counter table, no
   precompute flag, nothing to keep in sync.
+
+## Amendment (US-12, 2026-08-21): the Platform is the authority, not chess.com
+
+With Lichess as a second `Platform`, "chess.com's classification" becomes "**the classification of
+the `Platform` the Game was played on**, never recomputed". Lichess answers its own `{ eco, name }`
+(when the export is asked for `opening=true`), and the two Platforms do **not** agree: they detect
+at different plies and name lines differently, so the same moves can carry a different ECO on each
+side.
+
+We accept that, and the reason is that **the two classifications can never meet in one figure**.
+ADR-0014 makes the `Profile` partition every aggregate, and a Profile is *one account on one
+Platform* — so `/openings`' `GROUP BY (eco, player_color, time_control_category)` always runs over a
+single Platform's Games. There is nothing to reconcile because there is nothing to mix.
+
+- **Consequence to state plainly:** comparing a chess.com Profile's openings with a Lichess
+  Profile's is meaningless in this tool. That is not a new limitation, it is ADR-0014's partition
+  applied to one more field.
+- **Option (B) is rejected again, and harder.** Computing the ECO ourselves would be the only way
+  to make the two Platforms agree — the very reason to reject it stands: the classification a Player
+  should see is the one their own Platform shows them, and two Platforms showing two answers is a
+  fact about the Platforms, not a defect to paper over.
+- **Reading it is per-Platform.** `parseOpening` stays the **chess.com** adapter's PGN-header
+  parser; the Lichess adapter reads the structured `opening` field of the JSON instead of
+  re-parsing a PGN. Neither becomes a shared utility — the shared thing is the `Opening` concept
+  and the `other` sentinel, not the extraction.
+- **The `other` sentinel is unchanged and still earns its keep**: Lichess likewise omits `opening`
+  on games too short to classify.
