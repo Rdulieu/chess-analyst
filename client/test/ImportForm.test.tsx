@@ -19,6 +19,16 @@ const emptyResult = {
   ],
 };
 
+/** The `Profile` these tests import under — a chess.com account, as before. */
+const PROFILE = {
+  id: 7,
+  platform: "chesscom" as const,
+  username: "DudulSmash",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  games: 0,
+  analyzed: 0,
+};
+
 /** The current month as an <input type="month"> value, as the form defaults to it. */
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -44,7 +54,7 @@ function stubRelay(polls: unknown[], total = polls.length) {
 describe("ImportForm", () => {
   it("labels each field beside its own control, and marks one action as the primary one", async () => {
     stubRelay([]);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     // Each text field is a labelled control of its own, not a control buried in
     // the label's text — which is what lets the label sit above the field.
@@ -68,7 +78,7 @@ describe("ImportForm", () => {
     // The field's disappearance IS the guarantee: it was the only way one
     // account's Games could ever be imported under another's Profile (US-11).
     stubRelay([]);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await screen.findByLabelText(/^du$/i);
     expect(screen.queryByLabelText(/username|compte/i)).toBeNull();
@@ -76,7 +86,7 @@ describe("ImportForm", () => {
 
   it("offers a first and a last month, both defaulting to the current month", async () => {
     stubRelay([]);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     const from = await screen.findByLabelText(/^du$/i);
     const to = screen.getByLabelText(/^au$/i);
@@ -86,7 +96,7 @@ describe("ImportForm", () => {
 
   it("submits the range the Player chose and reports progress in months", async () => {
     const posted = stubRelay([{ running: false, total: 3, done: 3, result: emptyResult }], 3);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText(/^du$/i));
     await userEvent.type(screen.getByLabelText(/^du$/i), "2024-01");
@@ -120,7 +130,7 @@ describe("ImportForm", () => {
     const posted = stubRelay([{ running: false, total: 36, done: 36, result: emptyResult }], 36);
     const confirm = vi.fn((message: string) => Boolean(message));
     vi.stubGlobal("confirm", confirm);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await chooseRange("2021-01", "2023-12"); // 36 months
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
@@ -133,7 +143,7 @@ describe("ImportForm", () => {
   it("starts nothing and keeps the entry intact when the Player declines", async () => {
     const posted = stubRelay([]);
     vi.stubGlobal("confirm", vi.fn(() => false));
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await chooseRange("2021-01", "2023-12");
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
@@ -147,12 +157,24 @@ describe("ImportForm", () => {
     const posted = stubRelay([{ running: false, total: 24, done: 24, result: emptyResult }], 24);
     const confirm = vi.fn((message: string) => Boolean(message));
     vi.stubGlobal("confirm", confirm);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await chooseRange("2022-01", "2023-12"); // exactly 24 months
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
 
     expect(confirm).not.toHaveBeenCalled();
     await waitFor(() => expect(posted).toHaveLength(1));
+  });
+
+  it("names the Platform it will fetch from, read off the Profile", async () => {
+    // Nobody should be one click away from importing from the wrong site: the
+    // form says which, and says it from the Profile rather than from fixed text.
+    stubRelay([]);
+    render(<ImportForm profile={{ ...PROFILE, platform: "lichess", username: "Metalyst" }} onImported={() => {}} />);
+
+    const text = screen.getByRole("form", { name: "import" }).textContent ?? "";
+    expect(text).toMatch(/Lichess/);
+    expect(text).toMatch(/Metalyst/);
+    expect(text).not.toMatch(/chess\.com/);
   });
 });

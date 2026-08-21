@@ -1,3 +1,5 @@
+import type { Platform } from "./platform";
+
 /**
  * A `Profile` (CONTEXT.md, ADR-0014): one account on one platform, the pair
  * (`platform`, `username`), and the thing every view will be about. `username`
@@ -5,7 +7,7 @@
  */
 export interface Profile {
   id: number;
-  platform: "chesscom";
+  platform: Platform;
   username: string;
   createdAt: string;
   /** How many Games were imported under this Profile. */

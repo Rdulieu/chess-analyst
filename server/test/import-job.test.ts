@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { openDb } from "../src/db";
 import { listGames } from "../src/repository";
 import { createImportJob } from "../src/import";
-import { chessComGame, fakeClient, seedProfile } from "./fixtures";
+import { importedGame, fakeClient, seedProfile } from "./fixtures";
 import type { ImportRangeParams } from "../src/import";
 
 /** A fresh database with the one `Profile` these tests import under. */
@@ -16,6 +16,7 @@ afterEach(() => vi.restoreAllMocks());
 const rangeFor = (profileId: number): ImportRangeParams => ({
   profileId,
   username: "me",
+  platform: "chesscom",
   from: { year: 2024, month: 1 },
   to: { year: 2024, month: 3 },
   categories: ["blitz"],
@@ -26,7 +27,7 @@ describe("createImportJob", () => {
     const { db, profileId } = testDb();
     let release!: () => void;
     const secondMonth = new Promise<void>((r) => (release = r));
-    const client = fakeClient({ "2024-01": [chessComGame()], "2024-02": [chessComGame()] });
+    const client = fakeClient({ "2024-01": [importedGame()], "2024-02": [importedGame()] });
     const slow = {
       ...client,
       fetchMonth: async (u: string, y: number, m: number) => {
@@ -34,7 +35,7 @@ describe("createImportJob", () => {
         return client.fetchMonth(u, y, m);
       },
     };
-    const job = createImportJob(db, slow);
+    const job = createImportJob(db, { chesscom: slow });
 
     job.start({ ...rangeFor(profileId), to: { year: 2024, month: 2 } });
     // Wait for January to land while February is still held.
@@ -43,7 +44,10 @@ describe("createImportJob", () => {
     const midway = job.status();
     expect(midway.running).toBe(true);
     expect(midway.result?.months).toHaveLength(1);
-    expect(midway.result?.months[0]).toMatchObject({ month: { year: 2024, month: 1 }, imported: 1 });
+    expect(midway.result?.months[0]).toMatchObject({
+      month: { year: 2024, month: 1 },
+      imported: 1,
+    });
 
     release();
     await job.idle();
@@ -52,7 +56,7 @@ describe("createImportJob", () => {
 
   it("reports the rangeFor(profileId)'s months as the total and returns before the pass has run", async () => {
     const { db, profileId } = testDb();
-    const job = createImportJob(db, fakeClient({ "2024-01": [chessComGame()] }));
+    const job = createImportJob(db, { chesscom: fakeClient({ "2024-01": [importedGame()] }) });
 
     const started = job.start(rangeFor(profileId));
 
@@ -66,10 +70,9 @@ describe("createImportJob", () => {
 
   it("advances to done === total and carries the consolidated summary once finished", async () => {
     const { db, profileId } = testDb();
-    const job = createImportJob(
-      db,
-      fakeClient({ "2024-01": [chessComGame()], "2024-03": [chessComGame()] }),
-    );
+    const job = createImportJob(db, {
+      chesscom: fakeClient({ "2024-01": [importedGame()], "2024-03": [importedGame()] }),
+    });
 
     job.start(rangeFor(profileId));
     await job.idle();
@@ -84,7 +87,7 @@ describe("createImportJob", () => {
 
   it("ignores a start while an Import is already running and keeps the running status", async () => {
     const { db, profileId } = testDb();
-    const job = createImportJob(db, fakeClient({ "2024-01": [chessComGame()] }));
+    const job = createImportJob(db, { chesscom: fakeClient({ "2024-01": [importedGame()] }) });
 
     const first = job.start(rangeFor(profileId));
     const second = job.start({ ...rangeFor(profileId), to: { year: 2024, month: 12 } });
@@ -101,7 +104,7 @@ describe("createImportJob", () => {
     client.fetchMonth = async () => {
       throw new Error("chess.com unreachable");
     };
-    const job = createImportJob(db, client);
+    const job = createImportJob(db, { chesscom: client });
 
     job.start(rangeFor(profileId));
     await expect(job.idle()).resolves.toBeUndefined();

@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import type { Db } from "./db";
-import type { ChessComClient } from "./chesscom";
+import type { PlatformRegistry } from "./platform";
 import { type Engine, createFixtureEngine } from "./engine";
 import { createAnalysisJob } from "./analysis/job";
 import { createImportJob } from "./import";
@@ -15,24 +15,26 @@ import { createOpeningsRouter } from "./routes/openings";
 import { createDangerRouter } from "./routes/danger";
 
 /**
- * Builds the local API server over an already-open database and a chess.com
- * client (ADR-0002: this relay is the only thing that talks to chess.com). The
- * client is injected so tests and the agentic Feature Path can drive imports
- * against a fixture archive instead of the live API. The `Engine` is injected
- * the same way (ADR-0008) — a fixture fake by default, so tests and the Feature
+ * Builds the local API server over an already-open database and a **registry of
+ * `PlatformClient`s**, one per supported Platform (ADR-0002: this relay is the
+ * only thing that talks to the outside; ADR-0016: each adapter answers in our
+ * vocabulary). The clients are injected so tests and the agentic Feature Path
+ * can drive imports against a fixture archive instead of the live API, and the
+ * one an Import uses is resolved from its `Profile`'s Platform. The `Engine` is
+ * injected the same way (ADR-0008) — a fixture fake by default, so tests and the Feature
  * Path never invoke the real Stockfish. Routes live per feature under ./routes;
  * this file just wires them.
  */
 export function createApp(
   db: Db,
-  chessCom: ChessComClient,
+  clients: PlatformRegistry,
   engine: Engine = createFixtureEngine(),
 ): Express {
   const analysisJob = createAnalysisJob(db, engine);
-  const importJob = createImportJob(db, chessCom);
+  const importJob = createImportJob(db, clients);
   const app = express();
   app.use(express.json());
-  app.use("/api/profiles", createProfilesRouter(db, chessCom));
+  app.use("/api/profiles", createProfilesRouter(db, clients));
   app.use("/api/games", createGamesRouter(db));
   app.use("/api/import", createImportRouter(db, importJob));
   app.use("/api/analyze", createAnalyzeRouter(db, analysisJob));

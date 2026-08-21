@@ -2,8 +2,7 @@ import type { Db } from "../db";
 import { games } from "../db/schema";
 import { gameExistsByUrl } from "../repository";
 import { recordMoveHabits } from "../move-habits/precompute";
-import type { ChessComClient, TimeControlCategory } from "../chesscom";
-import { toGame } from "./mapping";
+import type { PlatformClient, TimeControlCategory } from "../platform";
 
 export interface ImportParams {
   /** The `Profile` the imported Games belong to — never another's (ADR-0014). */
@@ -17,7 +16,7 @@ export interface ImportParams {
 /**
  * One month's slice of an Import — the unit the Player is shown progress and
  * outcome by (CONTEXT.md, "Monthly import"). A month with no entry in the
- * Player's history is reported at zero like any other; only a month chess.com
+ * Player's history is reported at zero like any other; only a month the Platform
  * could not answer for carries a `failure`, so a gap in the history stays
  * distinguishable from a gap in the fetching.
  */
@@ -31,7 +30,7 @@ export interface MonthlyImport {
 
 /** The figures an Import reports, whether over one month or a whole range. */
 export interface ImportFigures {
-  /** Total games chess.com returned (all categories/variants). */
+  /** Total games the Platform returned (all categories, out-of-scope included). */
   totalFetched: number;
   imported: number;
   alreadyPresent: number;
@@ -53,30 +52,35 @@ export interface ImportResult extends ImportFigures {
 }
 
 /**
- * Imports the Player's games for one month from chess.com, mapping each to the
- * Player-relative Game shape and persisting it (incrementally, deduped by URL).
+ * Imports the Player's games for one month from the Profile's `Platform`, filing
+ * each under the Profile and persisting it (incrementally, deduped by URL).
  *
  * The username is **not** validated here: an Import spans a range of months and
  * the check is made once by the route, before any month is fetched (ADR-0010).
  */
 export async function importMonth(
   db: Db,
-  client: ChessComClient,
+  client: PlatformClient,
   params: ImportParams,
 ): Promise<ImportFigures> {
-  const monthGames = await client.fetchMonth(params.username, params.year, params.month);
+  const { totalFetched, games: monthGames } = await client.fetchMonth(
+    params.username,
+    params.year,
+    params.month,
+  );
   const wanted = new Set(params.categories);
   let imported = 0;
   let alreadyPresent = 0;
   const byCategory: Record<TimeControlCategory, number> = { bullet: 0, blitz: 0, rapid: 0, daily: 0 };
   const results = { win: 0, loss: 0, draw: 0 };
   for (const game of monthGames) {
-    if (game.rules !== "chess") continue;
-    if (!wanted.has(game.time_class)) continue;
-    const mapped = toGame(game, params.username, params.profileId);
+    // Which paces to keep is the PLAYER's choice, not a Platform fact — so it
+    // stays here while the variant filter went into the adapter (ADR-0016).
+    if (!wanted.has(game.timeControlCategory)) continue;
+    const mapped = { ...game, profileId: params.profileId };
     byCategory[mapped.timeControlCategory]++;
     results[mapped.result]++;
-    if (gameExistsByUrl(db, params.profileId, game.url)) {
+    if (gameExistsByUrl(db, params.profileId, game.gameUrl)) {
       alreadyPresent++;
       continue;
     }
@@ -85,7 +89,7 @@ export async function importMonth(
     imported++;
   }
   const summary: ImportFigures = {
-    totalFetched: monthGames.length,
+    totalFetched,
     imported,
     alreadyPresent,
     byCategory,

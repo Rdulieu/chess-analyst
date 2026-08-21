@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { createProfile, deleteProfile, fetchProfiles } from "../api";
-import type { Profile } from "../types";
+import { platformLabel, type Profile } from "../types";
 import { clearCurrentProfileId, loadCurrentProfileId, saveCurrentProfileId } from "../features/profiles/currentProfile";
 
 /**
@@ -94,7 +94,7 @@ export function ProfilesPage() {
             // Profile: a voice-control Player must be able to say what they
             // read (WCAG 2.5.3), and the action must still be unambiguous
             // about whose parties it fetches.
-            aria-label={`Importer mes parties — ${current.username} (chess.com)`}
+            aria-label={`Importer mes parties — ${current.username} (${platformLabel(current.platform)})`}
           >
             Importer mes parties
           </Link>
@@ -117,7 +117,7 @@ export function ProfilesPage() {
                 <span data-part="identity">
                   <Link to={`/profiles/${profile.id}`}>{profile.username}</Link>
                 </span>
-                <span data-part="platform">chess.com</span>
+                <span data-part="platform">{platformLabel(profile.platform)}</span>
                 {/* The size of the history, in words rather than bare figures:
                     which Profile is worth opening is the question this row
                     answers. */}
@@ -150,8 +150,8 @@ export function ProfilesPage() {
         // is the risk this step exists against.
         <div role="alertdialog" aria-label="confirmer la suppression" className="card">
           <p>
-            Supprimer le profil <strong>{doomed.username}</strong> (chess.com) ? Cette action est
-            définitive.
+            Supprimer le profil <strong>{doomed.username}</strong> (
+            {platformLabel(doomed.platform)}) ? Cette action est définitive.
           </p>
           <p data-part="actions">
             <button type="button" onClick={() => void confirmDeletion(doomed)}>

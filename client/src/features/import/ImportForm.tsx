@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { runImport } from "./runImport";
 import { ImportSummary } from "./ImportSummary";
-import type { ImportResult, ImportStatus, MonthRef, TimeControlCategory } from "../../types";
+import {
+  platformLabel,
+  type ImportResult,
+  type ImportStatus,
+  type MonthRef,
+  type Profile,
+  type TimeControlCategory,
+} from "../../types";
 
 const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
 
@@ -32,17 +39,23 @@ const monthSpan = (from: MonthRef, to: MonthRef) =>
  * page refresh its counters once it finishes.
  *
  * There is **no username field**: the account to fetch is the Profile's own,
- * already validated against chess.com when the Profile was created. Typing it
- * was the only way one account's Games could ever land under another's Profile
- * (US-11), so the guarantee is the field's absence, not a check.
+ * already validated against its `Platform` when the Profile was created. Typing
+ * it was the only way one account's Games could ever land under another's
+ * Profile (US-11), so the guarantee is the field's absence, not a check.
+ *
+ * The form **names the site** it will fetch from, read off the Profile: no
+ * Player should ever be one click away from importing from the wrong one
+ * (US-12). There is no source to choose here — the Platform belongs to the
+ * Profile and was settled at its creation (ADR-0014).
  */
 export function ImportForm({
-  profileId,
+  profile,
   onImported,
 }: {
-  profileId: number;
+  profile: Profile;
   onImported: () => void | Promise<void>;
 }) {
+  const profileId = profile.id;
   const [from, setFrom] = useState(thisMonth);
   const [to, setTo] = useState(thisMonth);
   const [categories, setCategories] = useState<Set<TimeControlCategory>>(new Set(CATEGORIES));
@@ -96,6 +109,12 @@ export function ImportForm({
   return (
     <>
       <form aria-label="import" onSubmit={submit}>
+        {/* Which site this Import will ask, in words: the Platform of the
+            Profile, never a choice made here. */}
+        <p data-part="platform">
+          Import depuis <strong>{platformLabel(profile.platform)}</strong> — compte{" "}
+          <strong>{profile.username}</strong>
+        </p>
         {/* Label and field are siblings, the label associated by `for`: that is
             what lets the label sit above its field and every field share one
             height, instead of the text and the control being one inline run. */}

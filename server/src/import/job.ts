@@ -1,5 +1,5 @@
 import type { Db } from "../db";
-import type { ChessComClient } from "../chesscom";
+import { clientFor, type PlatformRegistry } from "../platform";
 import { importRange, type ImportRangeParams } from "./range";
 import { monthsInRange } from "./months";
 import type { ImportResult } from "./service";
@@ -39,10 +39,13 @@ export interface ImportJob {
  * awaiting; the client polls `status()` via `GET /api/import/status` for
  * progress counted in months, then reads `result` once `running` is false.
  *
+ * The client is resolved per Import from the Profile's `Platform`, out of the
+ * registry the app was wired with — the job knows no Platform by name.
+ *
  * The Player's username is **not** checked here: it is verified once by the
  * route, before any job starts, so an unknown username fails synchronously.
  */
-export function createImportJob(db: Db, client: ChessComClient): ImportJob {
+export function createImportJob(db: Db, clients: PlatformRegistry): ImportJob {
   let status: ImportStatus = { running: false, total: 0, done: 0, result: null };
   let current: Promise<void> = Promise.resolve();
 
@@ -51,6 +54,10 @@ export function createImportJob(db: Db, client: ChessComClient): ImportJob {
 
     start(params) {
       if (status.running) return { ...status };
+
+      // The client is resolved from the Profile's own `Platform` (ADR-0014/0016):
+      // the site is a property of the Profile, never a parameter of an Import.
+      const client = clientFor(clients, params.platform);
 
       status = {
         running: true,

@@ -3,7 +3,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { fetchProfile } from "../api";
 import { ImportForm } from "../features/import/ImportForm";
 import { ProfileAnalysisPass } from "../features/analysis/ProfileAnalysisPass";
-import type { Profile } from "../types";
+import { platformLabel, type Profile } from "../types";
 
 /**
  * One `Profile`'s own page (`/profiles/:id`): its identity, the size of the
@@ -69,7 +69,7 @@ export function ProfilePage() {
     // counters have no claim on the width US-13 reserves for the dense screens.
     <section aria-labelledby="profile-heading" className="card">
       <h2 id="profile-heading">{profile.username}</h2>
-      <p data-part="identity">chess.com</p>
+      <p data-part="identity">{platformLabel(profile.platform)}</p>
       {/* The counters in words rather than bare figures — the same pair the
           list shows, read from the same query, so the two cannot disagree. */}
       <p data-part="counts">
@@ -84,7 +84,7 @@ export function ProfilePage() {
 
       <div ref={importRef}>
         <h3 id="import">Importer des parties</h3>
-        <ImportForm profileId={profile.id} onImported={refresh} />
+        <ImportForm profile={profile} onImported={refresh} />
       </div>
     </section>
   );

@@ -1,11 +1,12 @@
 import { sqliteTable, integer, text, primaryKey, unique } from "drizzle-orm/sqlite-core";
+import type { Platform, TimeControlCategory } from "../platform";
 
 /**
  * The `Profile` (CONTEXT.md, ADR-0014): **one account on one platform**, the
  * pair (`platform`, `username`) — and the unit by which every view is
- * partitioned. `platform` carries `chesscom` alone for now; it exists from the
- * start so that Lichess (US-12) is a new *value* and an import client, not a new
- * concept. `username` holds the **canonical casing the platform itself answers**,
+ * partitioned. `platform` carries `chesscom` or `lichess` — a widening of the
+ * type alone, no stored value changes, so nothing is owed a migration (US-12).
+ * `username` holds the **canonical casing the platform itself answers**,
  * which is what stops `RDulieu` and `rdulieu` from becoming two Profiles
  * splitting one history in half — the pair being unique enforces the rest.
  */
@@ -13,7 +14,7 @@ export const profiles = sqliteTable(
   "profiles",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    platform: text("platform").notNull().$type<"chesscom">(),
+    platform: text("platform").notNull().$type<Platform>(),
     username: text("username").notNull(),
     createdAt: text("created_at").notNull(),
   },
@@ -47,9 +48,7 @@ export const games = sqliteTable(
     playerColor: text("player_color").notNull().$type<"white" | "black">(),
     result: text("result").notNull().$type<"win" | "loss" | "draw">(),
     date: text("date").notNull(),
-    timeControlCategory: text("time_control_category")
-      .notNull()
-      .$type<"bullet" | "blitz" | "rapid" | "daily">(),
+    timeControlCategory: text("time_control_category").notNull().$type<TimeControlCategory>(),
     // The Game's `Opening` per chess.com's own classification, resolved once at
     // import from the PGN's [ECO]/[ECOUrl] headers (ADR-0007). `eco` is the
     // identity (the sentinel "other" when chess.com did not classify the Game);

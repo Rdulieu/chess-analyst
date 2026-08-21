@@ -1,5 +1,5 @@
 import type { Db } from "../db";
-import type { ChessComClient, TimeControlCategory } from "../chesscom";
+import type { Platform, PlatformClient, TimeControlCategory } from "../platform";
 import { importMonth, type ImportResult } from "./service";
 import { monthsInRange, type MonthRef } from "./months";
 
@@ -8,6 +8,8 @@ export interface ImportRangeParams {
   /** The `Profile` the imported Games belong to (ADR-0014). */
   profileId: number;
   username: string;
+  /** The Profile's `Platform` — which adapter this Import fetches through. */
+  platform: Platform;
   from: MonthRef;
   to: MonthRef;
   categories: TimeControlCategory[];
@@ -28,7 +30,7 @@ export interface ImportRangeParams {
  */
 export async function importRange(
   db: Db,
-  client: ChessComClient,
+  client: PlatformClient,
   params: ImportRangeParams,
   onMonthDone?: (soFar: ImportResult) => void,
 ): Promise<ImportResult> {

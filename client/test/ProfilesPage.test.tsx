@@ -14,6 +14,8 @@ const DUDUL: Profile = {
   analyzed: 20,
 };
 const HIKARU: Profile = { ...DUDUL, id: 2, username: "Hikaru" };
+/** The same account name on another Platform — two Profiles, never one. */
+const METALYST: Profile = { ...DUDUL, id: 3, platform: "lichess", username: "Metalyst" };
 
 const json = (body: unknown, status = 200) =>
   ({ ok: status < 300, status, json: async () => body }) as Response;
@@ -62,6 +64,20 @@ describe("ProfilesPage — the Profiles it knows", () => {
       "/profiles/1",
     );
     expect(screen.queryByText(/aucun profil/i)).toBeNull();
+  });
+
+  it("names each Profile's own Platform, so two same-named ones are told apart before selecting", async () => {
+    // The list is where a Player picks; picking the wrong site's Profile is the
+    // mistake this naming exists against (US-12).
+    vi.stubGlobal("fetch", vi.fn(async () => json([DUDUL, METALYST])));
+
+    renderPage();
+
+    const list = await screen.findByRole("list", { name: /profils/i });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows[0].textContent).toMatch(/chess\.com/i);
+    expect(rows[1].textContent).toMatch(/Lichess/);
+    expect(rows[1].textContent).not.toMatch(/chess\.com/i);
   });
 
   it("says how big each Profile's history is, and how much of it is analyzed", async () => {
