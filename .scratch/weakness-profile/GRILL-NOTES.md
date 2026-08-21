@@ -524,3 +524,52 @@ maintenir, la provenance une propriété qu'on peut **lire**.)*
    réévaluer la partie entière.** C'est plus strict que le « les Evaluations sont conservées et jamais
    recalculées » de `CONTEXT.md` : un **rétrécissement délibéré** d'une règle du glossaire, à assumer
    explicitement et non à glisser en silence.
+
+### D10 — Terminologie écrite dans `CONTEXT.md`, et les seuils de **Phase**
+
+Cinq termes ajoutés au glossaire : **Best line**, **Phase**, **Counted Move**, **Drift**,
+**Search regime**. Délibérément **pas** de terme pour l'agrégat ni pour la « faiblesse » elle-même :
+l'étape 1 ne les construit pas, et un glossaire ne porte pas le vocabulaire de ce qui n'existe pas.
+La réservation de `Weak opening` sur *Weakness / Weak spot* (Q4) reste donc **intacte pour
+l'instant** — elle ne se pose qu'à l'US de l'agrégat.
+
+**Collision réglée : `Opening` était déjà pris** (la ligne classée ECO de chess.com, ADR-0007). Un
+axe dont une valeur s'appellerait « opening » rendrait « tes erreurs sont dans l'ouverture » ambigu
+entre *la phase* et *la ligne jouée* — deux affirmations différentes que cette EPIC fera côte à côte,
+et qui peuvent se contredire (une partie quitte son `Opening` au coup 6 et est encore en début de
+partie au coup 12). Option retenue : **(a) renommer les valeurs de phase** — *Early game /
+Middlegame / Endgame* — ce qui rend l'ambiguïté **structurellement impossible** au lieu de
+simplement déconseillée. (b) « phase d'ouverture » comptait sur un qualificatif qui saute dès que la
+place manque, exactement là où la discipline échoue. (c) renommer le terme existant était le plus
+propre sémantiquement mais payait du churn (`CONTEXT.md`, ADR-0007, une page, une route, deux
+colonnes) pour un terme qui n'est pas faux, juste populaire.
+
+**Seuils de Phase — point de départ assumé, à ajuster en regardant de vraies parties** (décision du
+demandeur). Il n'y a **pas de fait** en la matière : c'est une heuristique, et c'est précisément
+pourquoi D4 exige de l'afficher.
+
+- La **phase est dérivée, jamais stockée** (esprit d'ADR-0009) : calculable depuis le FEN déjà
+  stocké par ply (ADR-0012), donc gratuite et **retunable sans relancer le moteur** — ce qu'on va
+  vouloir faire dès les premières parties regardées.
+- **Le matériel ne peut pas décider la frontière du début de partie** (il ne bouge presque pas avant
+  le coup 15) : les deux frontières demandent **des règles différentes**. C'est la part qu'on rate en
+  cherchant un critère unique et élégant.
+- **Early game** finit au plus tôt de : **développement terminé** (les quatre pièces mineures ont
+  quitté leur case d'origine et le roi a castlé ou perdu le droit) ou **plafond dur au coup 15**.
+- **Endgame** commence quand les pièces majeures et mineures sur l'échiquier, **les deux camps
+  confondus**, tombent à **six ou moins**.
+- **Middlegame** = le reste, par exclusion (même discipline que `Drift`).
+- **Latching obligatoire** : le matériel est monotone **sauf promotion** — une dame promue peut
+  repasser au-dessus du seuil et faire *sortir* la partie de la finale puis y rentrer. Donc une fois
+  en Endgame, on y reste. La phase est une propriété de **l'avancement de la partie**, pas un verdict
+  indépendant sur chaque position (d'où : deux FEN identiques atteints dans deux parties peuvent en
+  principe être dans des phases différentes — énoncé dans le glossaire pour que ce ne soit pas lu
+  comme une fonction pure du FEN).
+- Familles écartées : **numéro de coup seul** (une position à quatre pièces au coup 14 est une finale
+  pour n'importe quel lecteur raisonnable) ; **prédicats structurels complets** (les plus proches du
+  jugement humain, les plus laborieux — gardés en réserve pour l'ajustement).
+
+**Conséquence sur un terme existant** : `Analysis pass` disait « les Evaluations ne sont jamais
+recalculées ». Avec D9 (conséquence 2), c'est faux dans un cas. L'entrée du glossaire a été
+**amendée** plutôt que laissée en contradiction : exception explicite pour un changement de
+`Search regime`.

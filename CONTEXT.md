@@ -174,7 +174,10 @@ _Avoid_: Opponent move (too vague), Threat
 The act of running the chess engine over a chosen set of **one `Profile`'s** Games to produce and retain their
 `Evaluation`s — one per `Position` of each Game. Triggered **manually** by the Player (from the
 Game list, or for a single Game while reviewing it) and **never automatic**, like `Import`.
-**Incremental**: a Game already analyzed is skipped, and its Evaluations are never recomputed.
+**Incremental**: a Game already analyzed is skipped, and its Evaluations are never recomputed — with
+one deliberate exception: a Game whose stored Evaluations came from a different `Search regime` is
+re-evaluated **whole** rather than resumed, since mixing regimes inside one Game would corrupt its
+figures (see `Search regime`).
 A pass advances in **Positions evaluated**, and always ends in one of three **outcomes**, which
 the Player is told explicitly rather than left to infer: **completed** (every Position of every
 Game in the pass was evaluated), **interrupted** (the pass stopped before the end without
@@ -209,3 +212,73 @@ months mostly succeeded is not a failed Import. A month the Player was simply in
 reported the same way as any other, at zero, which is why the per-month lines exist at all: a gap
 in the history must be distinguishable from a gap in the fetching.
 _Avoid_: Import batch, Chunk, Archive (chess.com's own word for the underlying endpoint)
+
+**Best line**:
+The engine's best continuation from a Position — the **whole line**, not just its first move. It is
+what turns an `Evaluation` from a number into something a Player can check: the line says what the
+engine thinks should happen, move by move. It does double duty and needs no companion term: the
+**refutation** of a Move the Player played is simply the Best line of the Position **after** that
+Move (it starts with the opponent's best reply, and shows how the Move is punished), while the Best
+line of the Position **before** it is what the Player should have played instead. Both come out of
+the same search the `Analysis pass` already runs.
+_Avoid_: PV, Principal variation (implementation vocabulary), Solution, Best move (it is a line, not
+a move)
+
+**Phase**:
+How far a Game has got: **Early game**, **Middlegame**, or **Endgame**. Deliberately *not* called
+"opening" — `Opening` already names the ECO-classified line the Game followed, which is a different
+claim: a Game can leave its `Opening` at move 6 and still be in the Early game at move 12.
+
+- **Early game** ends at the earlier of **development complete** (all four minors off their home
+  squares and the king castled or having lost the right) or a hard cap at **move 15**, so a passive
+  Game cannot claim to still be starting after forty moves.
+- **Endgame** begins when the majors and minors on the board — both sides combined — drop to **six
+  or fewer**.
+- **Middlegame** is everything in between, defined by exclusion on purpose (same discipline as
+  `Drift`).
+
+A Phase is a property of a Position **in its Game's sequence**, not of the Position alone: it
+**latches**, so a Game that has reached the Endgame stays there. Without latching a promotion —
+the one thing that *adds* material — would flip a Game out of the Endgame and back in. These
+boundaries are heuristics, not facts, which is why the Phase is shown on every Move of a reviewed
+Game: the Player can see where the boundaries fell in a real Game of theirs and disagree.
+_Avoid_: Opening (taken, and means something else), Stage, Game stage
+
+**Counted Move**:
+One of the Player's Moves that the analysis actually **counts** — the denominator of everything this
+tool concludes about where the Player goes wrong. A Move is **not** counted when it could say
+nothing about the Player's play:
+
+- its Position was **already decided** — one side's winning chances were past the competitive band,
+  so `winningChances` had nothing left to lose and a weak Move there costs nothing measurable;
+- it was **forced** — there was no real alternative, so playing it earns neither credit nor blame.
+
+The distinction exists because a Game where the Player played four `Blunder`s can legitimately
+contribute **zero** counted errors (all four came after the Game was lost). That gap between what a
+Game shows and what it contributes is exactly what a Player must be able to see, so a reviewed Game
+states, for each of the Player's Moves, whether it is counted and — when it is not — which of the
+two reasons applies.
+_Avoid_: Valid move, Eligible move, Scored move
+
+**Drift**:
+The share of the winning chances a Player lost across a Game that **no flagged Move accounts for**:
+everything lost, minus what the `Inaccuracy`/`Mistake`/`Blunder` Moves lost. A **residual**, not an
+object — there is no "drift Move" and no drift episode with a start and an end. The two parts add up
+to the total by construction, which is what lets a Game's figures be summed without counting the
+same lost chances twice.
+Drift is what a threshold-based reading of a Game is structurally blind to: bleeding 5% a Move for
+fifteen Moves never trips the `Inaccuracy` floor, yet loses the Game as surely as one `Blunder`. On
+a Game's `Evaluation curve` the flagged Moves are the cliffs and the Drift is the slope between
+them.
+_Avoid_: Slow loss, Positional error, Accumulation
+
+**Search regime**:
+What an `Analysis pass` ran the engine under — its **depth** and how many **lines** it searched.
+Carried by the pass, so every `Evaluation` can be read back to the conditions that produced it. It
+is what makes an `Evaluation` a claim rather than a bare number: depth 16 in a sharp middlegame and
+depth 16 in a rook endgame do not deserve equal confidence, and a `Drift` figure — a sum of many
+small `Evaluation` differences — is only comparable across Games analyzed under the **same** regime.
+Because of that, a pass resuming a Game whose stored `Evaluation`s came from a different regime
+**re-evaluates the Game whole** rather than continuing it, so that no single Game's figures ever mix
+regimes.
+_Avoid_: Settings, Config, Engine params
