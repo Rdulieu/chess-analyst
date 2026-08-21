@@ -573,3 +573,51 @@ pourquoi D4 exige de l'afficher.
 recalculées ». Avec D9 (conséquence 2), c'est faux dans un cas. L'entrée du glossaire a été
 **amendée** plutôt que laissée en contradiction : exception explicite pour un changement de
 `Search regime`.
+
+### D11 — Les deux seuils d'exclusion de `Counted Move`
+
+**(a) « Déjà décidée » est ASYMÉTRIQUE — la bande 85/15 de Q3 était fausse.** Une bande symétrique
+exclurait un Move joué à 88 % aussi bien qu'à 12 %, alors que les deux cas n'ont rien en commun :
+
+- à **12 %**, il n'y a **plus rien à perdre** : le maximum qu'un Move peut coûter est 12 points de
+  winning chances, à peine au-dessus du plancher `Inaccuracy` — la métrique **ne peut
+  structurellement pas** enregistrer une vraie erreur. Ces Moves ne font que **gonfler le
+  dénominateur**.
+- à **88 %**, il y a **énormément** à perdre : une gaffe peut faire passer de 88 % à 30 %, soit une
+  chute de 58 points, largement un `Blunder` — et c'est **l'incapacité à convertir une position
+  gagnante**, une des faiblesses les plus réelles et les plus répandues. Une bande symétrique
+  **supprimerait purement et simplement ce constat** de l'outil. Pour un produit dont le but est de
+  dire sur quoi travailler, cacher « tu laisses filer tes parties gagnées » est un très mauvais
+  échange.
+
+**Règle retenue** : ce n'est pas une bande autour de l'équilibre, mais « **une erreur signalable
+pourrait-elle même se produire ici ?** ». Un Move est exclu quand les winning chances du joueur
+**avant** ce Move sont **sous le plancher `Inaccuracy` (10 %)**, puisque la chute maximale possible
+est alors plus petite que la plus petite chose qu'on signale. **Aucun nouveau réglage** : on réutilise
+un seuil déjà publié dans `CONTEXT.md`. Et **toute position gagnante reste comptée**, donc le défaut
+de conversion reste visible.
+
+**(b) L'exclusion des coups forcés est juste, mais sa justification MultiPV de D7 était fausse — et
+un peu dangereuse.** « Un seul coup *raisonnable* », détecté par l'écart meilleur/deuxième : en
+déroulant, une position où le deuxième coup est 20 points moins bon est une position où **un seul coup
+évite une erreur grave**. Or ce ne sont pas des coups peu instructifs : ce sont **les décisions les
+plus tranchantes et les plus instructives de la partie**. Les exclure retirerait les coups les plus
+difficiles du dénominateur — et, quand on s'est trompé, l'erreur du numérateur — donc on
+supprimerait systématiquement les coups les plus informatifs de l'historique, **dans les deux sens**,
+sans signe net.
+
+La motivation d'origine (problème 6) était plus étroite et reste valable : **un coup forcé ne peut
+jamais être une erreur, c'est donc du pur remplissage de dénominateur**, et sa part varie selon le
+bucket. Elle est satisfaite par la définition **gratuite** : **un seul coup légal**, compté par
+`chess.js`, sans moteur.
+
+**Conséquence sur D7, signalée au demandeur** : MultiPV=2 **perd une de ses deux justifications** et
+ne repose plus que sur l'axe « tranchant » — par notre propre évaluation de Q5 le plus faible du lot
+(le plus confondu, puisque les positions tranchantes sont celles où l'on brûle l'horloge → problème
+1 ; et le moins actionnable).
+
+**Décision du demandeur, réaffirmée après ce signalement : on garde MultiPV=2.** L'argument qui la
+soutient : la ré-analyse est le coût cher et **une fois par partie** — si MultiPV=2 est un jour
+voulu, le payer *pendant* la ré-analyse qu'on fait de toute façon est bien moins cher qu'un troisième
+pass plus tard. La mesure de D7 (garder < 1,5×, revenir au demandeur entre 1,5× et 2×, refonte
+au-delà de 2×) **reste due**.
