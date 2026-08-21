@@ -700,3 +700,26 @@ les deux corollaires (donnée ≠ présentation ; la vue par partie d'abord), et
 retunables sans relancer le moteur, et déjà énoncés dans `CONTEXT.md` — les défaire ne coûte rien,
 donc ils échouent au premier test. L'absence d'étiquette de nature est un « pas encore » que 15e
 renverse par construction.
+
+### D14 — US-15a est **isolée sur sa propre branche d'intégration**
+
+Décision du demandeur (2026-08-21) : il compte développer **une autre feature** avant d'attaquer le
+reste de l'EPIC, donc **US-15a ne doit pas attendre l'EPIC pour être mergée**. Elle a sa propre
+branche d'intégration, `integration/US-15a-per-game-analysis`, et part vers `develop` **dès la fin de
+15a** — pour bénéficier de l'analyse partie par partie tout de suite.
+
+Conséquences d'organisation :
+
+- La branche `integration/US-15-weakness-profile` **ne porte plus que le grilling** (glossaire, ADR,
+  notes) et n'accumulera **pas** les sous-issues. Elle n'est pas la branche d'intégration d'une story
+  mais le lieu où le grilling de l'EPIC a été écrit.
+- **La branche de 15a part de la branche d'EPIC**, pas de `develop` : 15a implémente exactement les
+  termes et les ADR écrits pendant le grilling, donc elle a besoin de les porter. La sortie du
+  grilling **voyage avec la première story qui la consomme**, et arrive dans `develop` avec elle.
+- **15b→15e repartiront de `develop`** (à jour, donc contenant le glossaire et les ADR), chacune avec
+  sa propre branche d'intégration si le même besoin d'isolement se présente. L'EPIC reste un
+  regroupement de backlog, plus une branche vivante.
+- Risque à surveiller : la « autre feature » développée en parallèle touchera probablement
+  `BACKLOG.md` et peut-être `CONTEXT.md` — les deux fichiers que le skill `git-flow` désigne comme
+  structurellement conflictuels. Conflit attendu, pas surprenant ; il opposera des insertions qui
+  **composent** (deux stories dans des sections différentes), donc résoluble en autonomie.
