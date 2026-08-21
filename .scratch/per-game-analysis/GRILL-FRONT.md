@@ -127,3 +127,40 @@ après la sortie de 15a, le demandeur regarde **dix parties réelles** et décid
 C'est la chose la moins chère à supprimer de tout le projet — dérivée côté client depuis des données
 déjà chargées, ni schéma, ni migration, ni temps moteur — donc **pas d'ADR** : une décision qui ne
 coûte rien à défaire échoue au premier test.
+
+## F5 — La `Best line` : flèche sur le plateau + **aperçu au survol**, la navigation reste à US-16
+
+Options : **(a) texte seul** (`Bxh7+ Kxh7 Ng5+ Kg8 Qh5`) — bon marché et quasi inutile pour son objet :
+lire une ligne de cinq plys demande de visualiser cinq positions, c'est-à-dire exactement la
+compétence que le joueur n'a pas encore — **c'est pour ça qu'il a besoin de l'outil**. **(c) jouable**,
+en parcourant la ligne sur le plateau : le plus instructif, mais il faut une vraie **branche** dans
+l'historique (`history.ts` aplatit le PGN ; `cm-chess` sait le faire, ADR-0004 l'a choisi pour ça).
+
+**Retenu (b) + (d)**, et **(c) explicitement hors de cette story** (confirmé par le demandeur) :
+
+- **(b)** le texte **plus une flèche sur le plateau** pour le premier coup de chaque ligne (le coup
+  qu'il fallait jouer, et le premier coup de la réfutation). `arrows.ts` + la prop `arrows` de
+  `react-chessboard` existent déjà et sont utilisées sur la page Explorer — donc précédent et bon
+  marché.
+- **(d) aperçu** : pointer un coup **à l'intérieur** de la ligne affiche cette Position sur le
+  plateau, temporairement. Bien moins cher qu'il n'y paraît : prévisualiser le ply *k* ne demande que
+  de rejouer les *k* premiers coups UCI depuis la Position affichée — **aucun arbre, aucune branche,
+  aucune variante stockée**, juste un FEN calculé à la volée, exactement ce que fait déjà `arrows.ts`
+  pour trouver ses cases. La ligne cesse d'être cinq positions à imaginer pour devenir cinq positions
+  à regarder.
+
+**Pourquoi (c) est refusée ici, et ce n'est pas une question d'effort mais de propriété** : explorer
+des variations **est** la feature d'US-16. En construire une version jetable ici, c'est soit la jeter,
+soit — pire — **contraindre la conception d'US-16 par une décision prise en passant** en faisant autre
+chose. Le rôle de 15a est d'auditer la méthode ; « ce qu'il fallait jouer, sur le plateau, avec la
+suite lisible » y suffit.
+
+Deux garde-fous :
+
+- **L'aperçu doit être indubitablement temporaire** : il se retire quand on cesse de pointer, et il ne
+  touche **jamais** `index`. `Board.tsx` est catégorique — `index` est la source unique de « où est le
+  joueur » ; un aperçu qui fuiterait dedans casserait d'un coup le readout, la barre, la teinte de
+  case et le curseur de la courbe.
+- **Plafonner la ligne AFFICHÉE, pas la ligne stockée.** Une PV à profondeur 16 peut faire 15+ plys, et
+  la queue est plus du bruit moteur que de l'instruction. On en montre les premiers (≈6 plys), le reste
+  atteignable — **plafond d'affichage, jamais de stockage** (D6, ADR-0016).
