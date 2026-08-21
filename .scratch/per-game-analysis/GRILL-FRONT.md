@@ -164,3 +164,39 @@ Deux garde-fous :
 - **Plafonner la ligne AFFICHÉE, pas la ligne stockée.** Une PV à profondeur 16 peut faire 15+ plys, et
   la queue est plus du bruit moteur que de l'instruction. On en montre les premiers (≈6 plys), le reste
   atteignable — **plafond d'affichage, jamais de stockage** (D6, ADR-0016).
+
+## F6 — Marquer « ne compte pas » : **seulement là où c'est surprenant**
+
+**Contradiction trouvée en chemin, et corrigée dans `CONTEXT.md`.** L'exemple d'accroche de l'entrée
+`Counted Move` — « une partie où le joueur a joué quatre `Blunder`s peut légitimement contribuer
+**zéro** erreur comptée » — était vrai sous la bande **symétrique** 85/15 de Q3. **D11 l'a remplacée
+par la règle asymétrique** (exclure seulement sous le plancher `Inaccuracy`, 10 %), et les deux seuils
+s'imbriquent : signaler demande une chute de **≥10 %**, donc au moins 10 % à perdre. **Une position
+déjà décidée ne peut donc produire aucun Move signalé** — les deux ensembles sont disjoints par
+construction, et un `Blunder` (30 % de chute) ne peut venir que d'au moins 30 %, jamais exclu.
+
+Conséquence : **l'exclusion « déjà décidée » ne cache jamais une erreur, elle ne rétrécit que le
+dénominateur** (ce qui reste son but — le biais du problème 2). En revanche **un coup forcé peut être
+signalé** : un unique coup légal qui se trouve être une reprise catastrophique fait chuter les chances
+comme n'importe quelle gaffe, et n'est la faute de personne. « Signalé mais non compté » survit donc,
+**par la forcedness seule** — rare, réel, et incompréhensible sans explication.
+
+**Retenu (b)** : marquer dans la liste **uniquement** les Moves qui portent une sévérité **et** ne
+comptent pas. Rejeté **(a)** (un marqueur sur chaque ligne exclue) : dans une partie perdue au coup 25,
+**tous** les Moves suivants sont exclus — dix-huit lignes, aucune surprenante, aucune ne cachant quoi
+que ce soit, et dix-huit marqueurs qui concurrencent les trois qui comptent. Rejeté **(c)** (rien dans
+la liste) : il faudrait parcourir 60 Moves pour découvrir un motif. `Board.tsx` dit explicitement que
+ce panneau existe pour que la liste ne soit pas sous la ligne de flottaison : **la liste est la surface
+de scan**, et le scan survit à trois marqueurs, pas à vingt-et-un.
+
+Les exclusions « déjà décidée » sont donc dites **en agrégat** dans le récapitulatif (« 40 de vos 60
+Moves comptés ; 18 exclus car la partie était jouée, 2 forcés ») et **individuellement** dans le
+panneau de détail quand on tombe dessus.
+
+**Non chromatique** : marqueur **textuel avec son propre `aria-label`**, à côté du glyphe de sévérité,
+exactement comme `data-severity` aujourd'hui — le glyphe porte, la teinte renforce.
+
+**Choix de modèle caché dans cette question d'affichage, tranché oui** : les deux motifs sont **nommés
+distinctement** partout (« position déjà décidée » / « coup forcé »), jamais fondus en « non compté ».
+Ils disent deux choses différentes — l'un que la position n'avait plus rien à perdre, l'autre qu'il n'y
+avait pas le choix — et un joueur qui ne peut pas les distinguer ne peut auditer ni l'un ni l'autre.

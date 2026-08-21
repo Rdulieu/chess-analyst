@@ -253,11 +253,14 @@ nothing about the Player's play:
   so `winningChances` had nothing left to lose and a weak Move there costs nothing measurable;
 - it was **forced** — there was no real alternative, so playing it earns neither credit nor blame.
 
-The distinction exists because a Game where the Player played four `Blunder`s can legitimately
-contribute **zero** counted errors (all four came after the Game was lost). That gap between what a
-Game shows and what it contributes is exactly what a Player must be able to see, so a reviewed Game
-states, for each of the Player's Moves, whether it is counted and — when it is not — which of the
-two reasons applies.
+The two reasons behave differently, and the difference matters. **Already decided** can never hide a
+flawed Move: flagging one requires a 10% drop, so it requires 10% left to lose, and a Position under
+that floor cannot produce an `Inaccuracy` at all. That exclusion only ever shrinks the **denominator**
+— which is its purpose. **Forced**, on the other hand, can exclude a Move that *is* flagged: a sole
+legal move that happens to be a catastrophic recapture drops the chances like any `Blunder`, and is
+still nobody's mistake. That is the case where what a Game shows and what it contributes visibly
+disagree, so a reviewed Game states, for each of the Player's Moves, whether it is counted and —
+when it is not — which of the two reasons applies.
 _Avoid_: Valid move, Eligible move, Scored move
 
 **Drift**:
