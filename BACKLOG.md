@@ -63,6 +63,8 @@
 
 ## In review
 
+## Done
+
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > **Grillée** (2026-08-17) — branche `integration/US-11-profiles`.
   > Un **`Profile`** = **un compte sur une plateforme** (plateforme + username), validé chez
@@ -90,12 +92,22 @@
   >   - `04-every-view-speaks-of-the-current-profile.md` — scoping de toutes les vues + bandeau (AFK)
   >   - `05-the-analysis-pass-belongs-to-a-profile.md` — la passe d'analyse est scopée (AFK)
   >   - `06-path-zero-and-the-hp-rework.md` — path 0 + reprise des 3 HP et du pass de thème (**HITL**)
-  > **Livrée** (2026-08-19) — les six tranches sont mergées sur `integration/US-11-profiles`.
-  > Suite agentique rejouée sur la story : **path 0 + HP-01 + HP-02 + HP-03 tous verts**, 599 tests
-  > et le build verts. Path 0 est un nouveau **prérequis hors plafond des 3 HP** : il crée le profil
-  > de référence, importe la plage contre l'API chess.com réelle et laisse deux snapshots que les
-  > trois journeys restaurent. PR `integration -> develop` ouverte, **le merge reste une décision
-  > humaine**.
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #51, mergée le
+  > 2026-08-21). Trace de la revue : les six tranches mergées sur `integration/US-11-profiles`,
+  > **path 0 + HP-01 + HP-02 + HP-03 tous verts**, build et tests verts. Path 0 est un nouveau
+  > **prérequis hors plafond des 3 HP** : il crée les profils de référence, importe la plage contre
+  > l'API chess.com réelle et laisse deux snapshots que les trois journeys restaurent.
+  >
+  > **Trois retours d'usage traités après la livraison, avant le merge** (2026-08-21) : l'import
+  > était livré mais **introuvable** (un seul bouton sur `/profiles` l'ouvre désormais, focus dans le
+  > formulaire) ; la liste des profils **débordait de sa carte dès le second profil** (colonne large,
+  > comme les autres écrans denses) ; et surtout la suite HP **ne tenait qu'un seul profil**, si bien
+  > que huit écrans dans deux thèmes déclaraient propre un écran cassé — path 0 crée maintenant un
+  > second profil vide et HP-03 bascule de l'un à l'autre, ce qui rend ADR-0014 observable au lieu
+  > de supposée. Leçon transférable : *une fixture dont la cardinalité est toujours un ne prouve
+  > rien sur la cardinalité.*
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,
@@ -194,7 +206,8 @@
   > PRD : présence, sens de l'axe, synchronisation du curseur, position des marqueurs, cohérence du
   > décompte — jamais l'esthétique.
   >
-  > **En revue** — PR `integration/US-14-evaluation-graph` → `develop`, **étape 9 d'HP-01 rejouée**
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #35, mergée le 2026-08-14).
+  > Trace de la revue : PR `integration/US-14-evaluation-graph` → `develop`, **étape 9 d'HP-01 rejouée**
   > (greffe incluse) contre le vrai chess.com et le vrai Stockfish, base repartie de zéro.
   > PRD : `.scratch/evaluation-curve/PRD.md`. Découpée en **2 issues**, sur
   > `integration/US-14-evaluation-graph` :
@@ -217,9 +230,12 @@
   > d'HP-01, qui analyse déjà deux parties pour de vrai. Le demandeur se contente de **cette seule
   > étape 9** pour la PR `integration → develop` (HP-02 et HP-03 ne passent pas par Analyse) — à
   > reconfirmer au moment de la PR.
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-10b**: Ne pas attendre dans le vide sur "Positions dangereuses".
-  > **En revue** — PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #34, mergée le 2026-08-14).
+  > Trace de la revue : PR `integration/US-10b-danger-page-waiting` → `develop`, suite HP rejouée en
   > entier (3/3 vertes), les 3 issues livrées et auto-mergées (PR #31, #32, #33). Issue de la
   > scission d'US-10 (les deux préoccupations qui y étaient réunies n'ont rien en commun). `GET /api/danger` (`server/src/routes/danger.ts:13`) est synchrone — pas
   > de job de fond comme l'`Analysis pass` — et `DangerPage.tsx:21,33` rend `null` tant que la
@@ -255,9 +271,12 @@
   > 55 ms**, et l'agrégat passe de 3736 entrées à 109. La page ne rend plus jamais d'écran muet :
   > quatre états distincts, dont l'échec serveur qui ne renvoie plus le joueur analyser ce qu'il
   > vient d'analyser.
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-10a**: Savoir dans quel sens lire un échiquier et qui joue quoi.
-  > **En revue** — PR `integration/US-10a-players-on-the-board` → `develop`, suite HP rejouée en
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #29, mergée le 2026-08-14).
+  > Trace de la revue : PR `integration/US-10a-players-on-the-board` → `develop`, suite HP rejouée en
   > entier (3/3 vertes). Issue de la scission d'US-10 (voir US-10b pour l'autre moitié). **Grillée** — pas d'ADR : rien
   > n'est coûteux à défaire ici. `CONTEXT.md` : nouveau terme **`Board orientation`**.
   > Branche : `integration/US-10a-players-on-the-board`.
@@ -326,9 +345,12 @@
   > l'Explorateur le libellé du trait est loin de la liste des candidats ; `react-chessboard` injecte
   > ses instructions de glisser-déposer dans chacun des 119 diagrammes de `/danger` (tierce partie) ;
   > cette même page rend tous ses diagrammes d'un coup, ce qui **se combine avec US-10b**.
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-9**: Importer plusieurs mois de mon historique chess.com en une seule fois.
-  > **En revue** — PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #19, mergée le 2026-08-12).
+  > Trace de la revue : PR `integration/US-9-multi-month-import` → `develop`, suite HP jouée (3/3 vertes).
   > Grillée. Décision : une **plage contiguë** de mois (pas une sélection de mois arbitraires),
   > exécutée en **job de fond** avec progression comptée en mois, **séquentielle**, **tolérante à
   > l'échec d'un mois** (rejeu idempotent de la plage plutôt que retry), **sans plafond serveur**
@@ -351,8 +373,8 @@
   > absorbée dans le scénario d'import existant.
   >
   > Reporté hors US-9 : le raccourci « tout mon historique » via `/pub/player/{u}/games/archives`.
-
-## Done
+  >
+  > Reste `develop → main` (pré-prod, non décidé).
 
 - **US-13**: Doter l'application d'une feuille de style, pour qu'elle soit présentable — sans maquette en entrée.
   > **Grillée** (2026-08-17) — **ADR-0013**. `CONTEXT.md` **inchangé, et c'est un constat** : une
