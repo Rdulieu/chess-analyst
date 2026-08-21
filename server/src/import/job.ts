@@ -10,6 +10,13 @@ export interface ImportStatus {
   total: number;
   done: number;
   /**
+   * Set while the Platform has asked the Import to **wait** rather than
+   * answering — its own state, neither progress nor failure. Null the rest of
+   * the time, including once the wait is over: a stale notice would claim the
+   * Import is still held when it has moved on.
+   */
+  waiting: string | null;
+  /**
    * The range's consolidated summary. It **fills in as the Import goes** — a
    * month's line appears as soon as that month is covered — so `running` is
    * what tells you whether it is final, not its presence. Null only before any
@@ -46,7 +53,7 @@ export interface ImportJob {
  * route, before any job starts, so an unknown username fails synchronously.
  */
 export function createImportJob(db: Db, clients: PlatformRegistry): ImportJob {
-  let status: ImportStatus = { running: false, total: 0, done: 0, result: null };
+  let status: ImportStatus = { running: false, total: 0, done: 0, waiting: null, result: null };
   let current: Promise<void> = Promise.resolve();
 
   return {
@@ -63,21 +70,33 @@ export function createImportJob(db: Db, clients: PlatformRegistry): ImportJob {
         running: true,
         total: monthsInRange(params.from, params.to).length,
         done: 0,
+        waiting: null,
         result: emptySummary(),
       };
 
       current = (async () => {
         try {
-          const result = await importRange(db, client, params, (soFar) => {
-            status = { ...status, done: status.done + 1, result: soFar };
-          });
+          const result = await importRange(
+            db,
+            client,
+            {
+              ...params,
+              // A month that got through stops the notice: the wait is over.
+              onWaiting: (message) => {
+                status = { ...status, waiting: message };
+              },
+            },
+            (soFar) => {
+              status = { ...status, done: status.done + 1, waiting: null, result: soFar };
+            },
+          );
           status = { ...status, result };
         } catch (err) {
           // An unforeseen failure must not take the relay down — end the pass
           // cleanly, as the analysis job does.
           console.error("Import failed:", err instanceof Error ? err.message : err);
         } finally {
-          status = { ...status, running: false };
+          status = { ...status, running: false, waiting: null };
         }
       })();
 

@@ -112,3 +112,41 @@ describe("createImportJob", () => {
     expect(job.status().running).toBe(false);
   });
 });
+
+describe("an Import waiting on the Platform", () => {
+  it("says it is waiting, distinctly from progress and from failure", async () => {
+    // A Platform can ask us to wait (a 429 is an instruction, not a failure).
+    // A minute of silence reads as a freeze, so the wait is reported as its own
+    // thing: not a month done, not a month failed.
+    const { db, profileId } = testDb();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const client = fakeClient({ "2024-01": [importedGame()] });
+    const waiting = {
+      ...client,
+      fetchMonth: async (u: string, y: number, m: number, hooks?: { onWaiting?: (s: string) => void }) => {
+        if (m === 1) {
+          hooks?.onWaiting?.("lichess.org demande d'attendre.");
+          await held;
+        }
+        return client.fetchMonth(u, y, m);
+      },
+    };
+    const job = createImportJob(db, { chesscom: waiting });
+
+    job.start(rangeFor(profileId));
+    while (job.status().waiting === null) await new Promise((r) => setTimeout(r, 5));
+
+    const midway = job.status();
+    expect(midway.waiting).toMatch(/attendre/i);
+    expect(midway.running).toBe(true);
+    expect(midway.done).toBe(0); // waiting is not progress
+    expect(midway.result?.months).toEqual([]); // and it is not a failed month
+
+    release();
+    await job.idle();
+    // Once the wait is over it stops being said — a stale notice would claim the
+    // Import is still held when it is finished.
+    expect(job.status().waiting).toBeNull();
+  });
+});

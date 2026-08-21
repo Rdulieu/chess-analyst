@@ -6,6 +6,7 @@ export {
   UnsupportedPlatformError,
   type Platform,
   type TimeControlCategory,
+  type FetchHooks,
   type PlatformAccount,
   type ImportedGame,
   type MonthFetch,

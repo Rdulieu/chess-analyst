@@ -18,6 +18,8 @@ export interface ImportRangeParams {
   from: MonthRef;
   to: MonthRef;
   categories: TimeControlCategory[];
+  /** Told when the Platform asks the Import to wait (see ImportParams). */
+  onWaiting?: (message: string) => void;
 }
 
 /**
@@ -57,6 +59,7 @@ export async function importRange(
         year: month.year,
         month: month.month,
         categories: params.categories,
+        onWaiting: params.onWaiting,
       });
     } catch (err) {
       // One unanswerable month does not abort the Import (ADR-0010): the failure

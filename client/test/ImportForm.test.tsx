@@ -177,4 +177,47 @@ describe("ImportForm", () => {
     expect(text).toMatch(/Metalyst/);
     expect(text).not.toMatch(/chess\.com/);
   });
+
+  it("says the Import is waiting on the Platform, distinctly from progress and failure", async () => {
+    // A Platform can ask us to wait (a 429 is an instruction, not a failure). A
+    // minute of silence reads as a freeze, so the wait gets said — and it is not
+    // dressed as a failed month, which would be a different claim entirely.
+    //
+    // The stub holds the wait until this test has SEEN it, and only then lets the
+    // Import finish: nothing here depends on how fast the machine polls.
+    let released = false;
+    const held = {
+      running: true,
+      total: 2,
+      done: 0,
+      waiting: "lichess.org demande d'attendre.",
+      result: null,
+    };
+    const finished = { running: false, total: 2, done: 2, waiting: null, result: emptyResult };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url === "/api/import" && opts?.method === "POST") return json(held, 202);
+        if (url === "/api/import/status") return json(released ? finished : held);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
+
+    await user.click(screen.getByRole("button", { name: /^import$/i }));
+
+    const waiting = await screen.findByRole("status", { name: /attente de la plateforme/i });
+    expect(waiting.textContent).toMatch(/attendre/i);
+    // No month is presented as failed while the Import is merely held.
+    expect(screen.queryByText(/échec/i)).toBeNull();
+
+    // And the notice goes away once the Platform answers again: a stale one would
+    // claim the Import is still held when it has finished.
+    released = true;
+    await waitFor(
+      () => expect(screen.queryByRole("status", { name: /attente de la plateforme/i })).toBeNull(),
+      { timeout: 5000 },
+    );
+  });
 });

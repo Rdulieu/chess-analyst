@@ -81,6 +81,16 @@ export interface MonthFetch {
   games: ImportedGame[];
 }
 
+/**
+ * What a fetch can tell its caller **while it is still running**. Today that is
+ * one thing: it is waiting on the Platform rather than working. A minute of
+ * silence reads as a freeze, so the wait has to be sayable — and it is the
+ * adapter, the only thing that knows a Platform asked us to wait, that says it.
+ */
+export interface FetchHooks {
+  onWaiting?(message: string): void;
+}
+
 export interface PlatformClient {
   /**
    * The account behind this username, or `null` when the Platform does not know
@@ -90,7 +100,12 @@ export interface PlatformClient {
    */
   fetchPlayer(username: string): Promise<PlatformAccount | null>;
   /** The account's games for the given year/month (empty when none). */
-  fetchMonth(username: string, year: number, month: number): Promise<MonthFetch>;
+  fetchMonth(
+    username: string,
+    year: number,
+    month: number,
+    hooks?: FetchHooks,
+  ): Promise<MonthFetch>;
 }
 
 /**

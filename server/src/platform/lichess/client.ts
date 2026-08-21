@@ -1,4 +1,4 @@
-import type { MonthFetch, PlatformAccount, PlatformClient } from "../types";
+import { platformLabel, type FetchHooks, type MonthFetch, type PlatformAccount, type PlatformClient } from "../types";
 import { discard, lichessGet, readNdjson, readText } from "./request";
 import { isInScope, monthWindow, toImportedGame } from "./mapping";
 import type { LichessGame } from "./payload";
@@ -16,6 +16,24 @@ import type { LichessGame } from "./payload";
 
 const DEFAULT_BASE_URL = "https://lichess.org";
 
+/**
+ * How long to wait after a `429` before replaying the month, **once**.
+ *
+ * A `429` from Lichess is an *instruction*, not a failure, which is why
+ * ADR-0010's deliberate no-retry rule does not apply to it: treated as a month
+ * failure it would cascade — month 3 failing, then 4 to 60 too, each on its own
+ * line — while we keep hammering an API that just said no. One wait, one replay;
+ * a second `429` is an ordinary month failure and the existing per-month
+ * tolerance takes over.
+ *
+ * The minute comes from Lichess's documentation, not from measurement: every
+ * `429` we could actually produce was the IPv6 refusal (see ./request.ts), not a
+ * genuine throttle. A real one should be used to revisit this.
+ */
+const RETRY_AFTER_MS = 60_000;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 /** What Lichess answers about an account (the fields we read). */
 interface LichessUser {
   username?: string;
@@ -25,6 +43,9 @@ interface LichessUser {
 
 export function createHttpLichessClient(
   baseUrl: string = process.env.LICHESS_BASE_URL ?? DEFAULT_BASE_URL,
+  // Configurable for the same reason the base URL is: a Feature Path has to be
+  // able to WATCH the wait, and a minute of it is not watchable.
+  retryAfterMs: number = Number(process.env.LICHESS_RETRY_MS ?? RETRY_AFTER_MS),
 ): PlatformClient {
   const root = baseUrl.replace(/\/$/, "");
   return {
@@ -50,7 +71,7 @@ export function createHttpLichessClient(
       return { username: user.username ?? username };
     },
 
-    async fetchMonth(username, year, month): Promise<MonthFetch> {
+    async fetchMonth(username, year, month, hooks): Promise<MonthFetch> {
       // The month is OUR unit (ADR-0016). Lichess could stream a whole range in
       // one request; we deliberately ask month by month, because the month is
       // what makes progress countable and a failure local. Months are never
@@ -66,9 +87,10 @@ export function createHttpLichessClient(
         opening: "true",
         sort: "dateAsc",
       });
-      const { status, body } = await lichessGet(
+      const { status, body } = await exportMonth(
         `${root}/api/games/user/${encodeURIComponent(username)}?${query}`,
-        { accept: "application/x-ndjson" },
+        retryAfterMs,
+        hooks,
       );
       if (status < 200 || status >= 300) {
         discard(body);
@@ -87,4 +109,26 @@ export function createHttpLichessClient(
       return { totalFetched, games };
     },
   };
+}
+
+/**
+ * The export request, with the one retry a `429` earns. Nothing else is
+ * retried: a 500 is not an instruction to wait, and replaying it would only
+ * double the load on a Platform that is already failing.
+ */
+async function exportMonth(url: string, retryAfterMs: number, hooks?: FetchHooks) {
+  const first = await lichessGet(url, { accept: "application/x-ndjson" });
+  if (first.status !== 429) return first;
+  discard(first.body);
+  // Said out loud, because a silent minute is indistinguishable from a freeze.
+  // The delay is stated from the actual wait rather than spelled "one minute":
+  // it is configurable, and a message that named the wrong duration would be a
+  // small lie in the one place the Player is being asked to trust us and sit.
+  hooks?.onWaiting?.(
+    `${platformLabel("lichess")} demande d'attendre : reprise du mois dans ${Math.round(
+      retryAfterMs / 1000,
+    )} s.`,
+  );
+  await sleep(retryAfterMs);
+  return lichessGet(url, { accept: "application/x-ndjson" });
 }

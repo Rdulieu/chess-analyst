@@ -4,6 +4,7 @@ import { gameExistsByUrl } from "../repository";
 import { recordMoveHabits } from "../move-habits/precompute";
 import {
   TIME_CONTROL_CATEGORIES,
+  type FetchHooks,
   type PlatformClient,
   type TimeControlCategory,
 } from "../platform";
@@ -22,6 +23,12 @@ export interface ImportParams {
   year: number;
   month: number;
   categories: TimeControlCategory[];
+  /**
+   * Told when the Platform asks us to wait rather than answering. It travels
+   * with the Import because only the adapter knows a wait happened, and only the
+   * caller can put it on screen.
+   */
+  onWaiting?: FetchHooks["onWaiting"];
 }
 
 /**
@@ -78,6 +85,7 @@ export async function importMonth(
     params.username,
     params.year,
     params.month,
+    { onWaiting: params.onWaiting },
   );
   const wanted = new Set(params.categories);
   let imported = 0;

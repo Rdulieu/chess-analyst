@@ -155,6 +155,14 @@ export function ImportForm({
         </p>
       )}
 
+      {/* The wait is its own line, in words: a paused Import must never be read
+          as a frozen one, nor as a month that failed. */}
+      {progress?.waiting && (
+        <p role="status" aria-label="attente de la plateforme" data-part="waiting">
+          {progress.waiting}
+        </p>
+      )}
+
       {status && (
         <p role="status" aria-label="import status">
           {status}
