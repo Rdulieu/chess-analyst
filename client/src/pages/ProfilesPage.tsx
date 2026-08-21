@@ -69,7 +69,14 @@ export function ProfilesPage() {
   }
 
   return (
-    <section aria-labelledby="profiles-heading" className="card">
+    // The WIDE column, like every other screen holding a dense list: the row
+    // carries an account, a platform, two counters, a state and an action, and
+    // the five constant tracks plus their gaps do not fit the reading column as
+    // soon as there is more than one Profile — the state track then reserves
+    // room for "Profil actuel" AND "Sélectionner" at once. Measured overflowing
+    // by 24px with two Profiles (2026-08-21); with one, it fitted, which is why
+    // it shipped. No content is truncated to make it fit: a username is data.
+    <section aria-labelledby="profiles-heading" className="card" data-width="wide">
       <h2 id="profiles-heading">Profils</h2>
 
       {/* The Import's way in. It lived only behind the Profile's name, which
