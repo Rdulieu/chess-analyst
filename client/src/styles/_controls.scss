@@ -2,7 +2,12 @@
 // Controls: buttons, form fields, fieldsets, and the focus indicator.
 // =============================================================================
 
-button {
+// A link that carries `data-action` is an **action** the Player takes, and must
+// read as one — even though navigation is what it does, so an anchor is what it
+// stays (middle-click, "open in a new tab", and the status bar all keep working).
+// Marking it on the element is the same contract as the primary action below:
+// the look follows what the element says it is, never its position.
+:is(button, a[data-action]) {
   font: inherit;
   color: var(--ink);
   background: var(--ground);
@@ -12,7 +17,12 @@ button {
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
+a[data-action] {
+  display: inline-block;
+  text-decoration: none;
+}
+
+:is(button, a[data-action]):hover:not(:disabled) {
   border-color: var(--ink-muted);
 }
 
@@ -24,7 +34,7 @@ button:disabled {
 
 // The primary action is named on the element (`data-action="primary"`), not left
 // to whichever button happens to come first in the document.
-button[data-action="primary"] {
+:is(button, a)[data-action="primary"] {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: var(--accent);

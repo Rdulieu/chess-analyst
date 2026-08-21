@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import { fetchProfile } from "../api";
 import { ImportForm } from "../features/import/ImportForm";
 import { ProfileAnalysisPass } from "../features/analysis/ProfileAnalysisPass";
@@ -20,7 +20,9 @@ import type { Profile } from "../types";
  */
 export function ProfilePage() {
   const { id } = useParams();
+  const { hash } = useLocation();
   const profileId = Number(id);
+  const importRef = useRef<HTMLDivElement>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +37,21 @@ export function ProfilePage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Arriving with `#import` is a request for the Import, not merely for the
+  // page: `/profiles` offers one button for it, and a button that lands the
+  // Player next to the form without giving it the focus has only moved the
+  // hunt one screen along. Waits for the Profile, because the form is not
+  // mounted until then.
+  useEffect(() => {
+    if (hash !== "#import" || profile === null) return;
+    const section = importRef.current;
+    section?.querySelector<HTMLElement>("input, select, button")?.focus();
+    // Feature-detected: scrolling is a nicety on top of the focus, and it is
+    // absent outside a real browser — letting it throw here would undo the
+    // focus that is the point of this effect.
+    section?.scrollIntoView?.({ block: "start" });
+  }, [hash, profile]);
 
   if (error !== null) {
     return (
@@ -65,8 +82,10 @@ export function ProfilePage() {
           last attempt at it ended. */}
       <ProfileAnalysisPass profileId={profile.id} />
 
-      <h3>Importer des parties</h3>
-      <ImportForm profileId={profile.id} onImported={refresh} />
+      <div ref={importRef}>
+        <h3 id="import">Importer des parties</h3>
+        <ImportForm profileId={profile.id} onImported={refresh} />
+      </div>
     </section>
   );
 }
