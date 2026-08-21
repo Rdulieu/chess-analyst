@@ -149,4 +149,48 @@ describe("an Import waiting on the Platform", () => {
     // Import is still held when it is finished.
     expect(job.status().waiting).toBeNull();
   });
+
+  it("stops saying it the moment a month gets through, not when the Import ends", async () => {
+    // The assertion above is satisfied by the `finally` that ends the pass, so
+    // it would hold just as well over an Import that said "waiting" for every
+    // month after the first 429. Measured on the 2026-08-21 path 0 run, that is
+    // precisely what a watcher believed they saw over 64 months. The notice is
+    // only worth having if it retracts **mid-run**: a message that outlives its
+    // wait tells the Player the Import is held while it is in fact advancing.
+    const { db, profileId } = testDb();
+    let releaseFirst!: () => void;
+    const held = new Promise<void>((r) => (releaseFirst = r));
+    let holdSecond!: () => void;
+    const secondReached = new Promise<void>((r) => (holdSecond = r));
+    const client = fakeClient({ "2024-01": [importedGame()], "2024-02": [importedGame()] });
+    const waiting = {
+      ...client,
+      fetchMonth: async (u: string, y: number, m: number, hooks?: { onWaiting?: (s: string) => void }) => {
+        if (m === 1) {
+          hooks?.onWaiting?.("lichess.org demande d'attendre.");
+          await held;
+        } else {
+          // Park inside the second month so the status can be read between the
+          // first month completing and the Import finishing — the window the
+          // previous test never looks at.
+          holdSecond();
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        return client.fetchMonth(u, y, m);
+      },
+    };
+    const job = createImportJob(db, { chesscom: waiting });
+
+    job.start({ ...rangeFor(profileId), to: { year: 2024, month: 2 } });
+    while (job.status().waiting === null) await new Promise((r) => setTimeout(r, 5));
+    releaseFirst();
+    await secondReached;
+
+    const midway = job.status();
+    expect(midway.running).toBe(true); // still going: this is not the end-of-pass case
+    expect(midway.done).toBe(1); // the held month got through
+    expect(midway.waiting).toBeNull(); // and the notice went with it
+
+    await job.idle();
+  });
 });
