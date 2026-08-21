@@ -2,8 +2,10 @@
 
 ## To do
 
+## Doing
+
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
-  > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
+  > **En cours d'implémentation** (tranche 01). Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
   > modelé sur chess.com** — `fetchMonth(username, year, month)` (archives mensuelles),
   > `time_class`, `rules` pour écarter les variantes, codes de résultat maison, et l'`Opening` est
@@ -98,8 +100,6 @@
   >   un compte) ou choisi à chaque import ? Voir la dépendance ci-dessus.
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
-
-## Doing
 
 
 ## In review
