@@ -37,8 +37,8 @@ surfacing the Player's own habits across their whole imported history.
 - **Clean data state, restored not imported**: [path 0](./path-0-bootstrap.md)'s **imported
   snapshot** copied into this scenario's database file, with the server stopped. It holds the
   `DudulSmash` `Profile` and its whole reference range — **82** Games over 2026-05 → 2026-06 (72
-  blitz / 10 bullet, all standard chess), none analysed. The copy is a pristine state: this scenario
-  never reads what another left behind.
+  blitz / 10 bullet, all standard chess), none analysed — **and a second Profile, `Nonomoho`, owning
+  nothing**. The copy is a pristine state: this scenario never reads what another left behind.
 - **Nothing is selected on arrival.** The current `Profile` is held client-side, not in the
   database (ADR-0014), so restoring the snapshot restores the Games and no selection — step 1
   selects the Profile, which is what this scenario must show anyway.
@@ -68,7 +68,7 @@ surfacing the Player's own habits across their whole imported history.
 
 ## Checks
 ### UI
-- Step 1: `/profiles` lists `DudulSmash` with **82** Games imported and **0** analyzed; selecting it marks the row "Profil actuel" in words, and every scoped screen afterwards carries the banner naming `DudulSmash`. No screen is read before a Profile is current.
+- Step 1: `/profiles` lists **two** Profiles; `DudulSmash` reads **82** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers "Sélectionner" — and nothing on the list overflows its container, and every scoped screen afterwards carries the banner naming `DudulSmash`. No screen is read before a Profile is current.
 - Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games). Since US-13 the board and the candidates sit side by side while there is room for both and **fold into one column** when there is not — in either case nothing is clipped and the page does not scroll sideways.
 - Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown; the win rate is consistent with standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; the per-cadence counts sum to the candidate's game count; no candidate is hidden for a small sample.
 - Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold. On a Black-oriented board the arrows are mirrored with it — they still start and end on the squares the Moves name.

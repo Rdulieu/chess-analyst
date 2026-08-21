@@ -21,7 +21,9 @@ read.
 - Navigation: reaching the `Weak opening` view as its own page (`/openings`) from the app's navigation.
 - Opening classification from chess.com: each entry carries an ECO code and a readable name, taken from the imported Games (never recomputed locally); Games chess.com did not classify fold into a single **Other** entry.
 - `Profile` scoping (US-11): the breakdown is **the current Profile's** and the chrome's banner names
-  it — a weak opening is only actionable if the Player knows whose it is.
+  it — a weak opening is only actionable if the Player knows whose it is. This scenario is the one
+  that **switches Profile and watches the figures follow**, which is the only way the partitioning of
+  ADR-0014 is observed rather than assumed.
 - Whole-history aggregation: the view reflects all of that Profile's imported Games, computed on the fly (no per-run scope selector, no precomputed table).
 - The stylesheet and the dark theme (US-13): the final step walks all eight screens in both themes.
   This scenario is the one that carries the **weak-opening highlight** into the dark theme — the tint
@@ -32,8 +34,8 @@ read.
 - **Clean data state, restored not imported**: [path 0](./path-0-bootstrap.md)'s **imported
   snapshot** copied into this scenario's database file, with the server stopped. It holds the
   `DudulSmash` `Profile` and its whole reference range — **82** Games over 2026-05 → 2026-06 (72
-  blitz / 10 bullet, all standard chess), none analysed. The copy is a pristine state: this scenario
-  never reads what another left behind.
+  blitz / 10 bullet, all standard chess), none analysed — **and a second Profile, `Nonomoho`, owning
+  nothing**. The copy is a pristine state: this scenario never reads what another left behind.
 - **Nothing is selected on arrival**: the current `Profile` lives client-side, not in the database
   (ADR-0014), so step 1 selects it — which is also what this scenario must show.
 
@@ -43,7 +45,11 @@ read.
 3. Read the table → each row is one (Opening, side, cadence) entry showing the opening name and its ECO code, the side (Blancs/Noirs), the cadence, the game count, the win/draw/loss tally and the `Win rate`; the rows are ordered by game count descending.
 4. Spot the weak openings → rows with a `Win rate` under 50% are visibly highlighted for review; rows at or above 50% are not.
 5. Confirm the breakdown covers the Profile's whole history → the game counts across all entries sum to the **82** Games the Profile holds (each Game contributes to exactly one entry), and any Game chess.com did not classify appears under a single **Other** entry rather than being dropped.
-6. **Theme pass (US-13)** — walk the navigation across **all eight screens** (Mes parties,
+6. Switch the current `Profile` to `Nonomoho` on `/profiles`, then come back to `/openings` → the
+   banner names `Nonomoho`, and the table is **gone**: the screen shows the empty invitation, because
+   that Profile owns no Game and therefore no `Opening`. Not one row of `DudulSmash`'s 46 survives the
+   switch. Then select `DudulSmash` again → the same 46 entries are back, unchanged.
+7. **Theme pass (US-13)** — walk the navigation across **all eight screens** (Mes parties,
    Explorateur, Ouvertures, Positions dangereuses, Stats, Analyse by opening a Game, Profils, and the
    Profile's own page by opening `DudulSmash` from the list), first in the light theme, then again
    with the system's **dark preference emulated** → every screen is painted in the theme the system
@@ -63,13 +69,20 @@ read.
 - Step 3: every row shows a readable opening name **and** an ECO code, a side, a cadence, a game count, a spelled-out win/draw/loss tally, and a `Win rate`; the `Win rate` equals standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; each row's win/draw/loss parts sum to its game count; rows are in non-increasing game-count order.
 - Step 4: at least the highlight rule holds — every row under 50% is highlighted and no row at/above 50% is (a 50% row, if present, is **not** highlighted; the threshold is strict). The highlight is perceivable without relying on colour alone: since US-13 the row carries the review tint **with its own ink** plus a ⚠ marker whose accessible name is "ouverture faible à revoir" — the glyph is what is visible, the words are what a screen reader gets, and either survives if colour is not perceived at all.
 - Step 5: the sum of all entries' game counts equals the **82** Games the Profile holds (the count `/profiles` reports for it); if the account has any unclassified Game in scope, exactly one **Other** entry (per side/cadence) carries it.
-- Step 6: on each of the eight screens, in **both** themes — every colour resolves, text contrast holds
+- Step 6: under `Nonomoho` the `/openings` table is absent and the empty invitation is shown instead
+  — an empty **state**, not an error and not a redirect; the banner reads `Nonomoho`. Coming back to
+  `DudulSmash` restores exactly the 46 entries of step 3, same order and same figures: the two
+  Profiles share nothing, and reading one never disturbed the other (ADR-0014). **This is the step a
+  global aggregate fails**: it would show `DudulSmash`'s openings under `Nonomoho`, or a total of 82
+  games for a Profile that owns none.
+- Step 7: on each of the eight screens, in **both** themes — every colour resolves, text contrast holds
   at 4.5:1 (3:1 for large text) against the ground actually painted behind it, nothing scrolls
   sideways, every meaning-bearing tint still carries its non-chromatic cue, and `--white-share`,
   `--black-share` and the board's square tokens are **identical** between the two themes. Full rule
   list, tooling and known-open exceptions: [`theme-pass.md`](./theme-pass.md). The two profiles
-  screens are audited here too, in a state holding one Profile with a full history and nothing
-  analysed. On `/openings` in particular, the **highlighted rows stay legible at night** — text on the review tint, not the
+  screens are audited here in a state holding **two** Profiles, one of them current — the pairing
+  that overflowed the row until 2026-08-21, and the reason the suite carries a second Profile at
+  all. On `/openings` in particular, the **highlighted rows stay legible at night** — text on the review tint, not the
   page's ink on it — and the ⚠ marker is present in both themes. Stats is read as a table here too:
   its Total, cadence and side **row groups** each keep their header row and its accessible name.
   Nothing is imported and nothing is analysed by this step; a contrast failure outside the

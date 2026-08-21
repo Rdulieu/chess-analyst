@@ -56,6 +56,14 @@ Since US-11 the two profiles screens joined the inventory and **none was removed
 stays, it merely lost the import form, which now lives on screen 8. The two additions cost **four
 more audits per scenario**, two screens in two themes.
 
+**Screens 7 and 8 are audited with TWO Profiles, one of them current.** Not decoration: the row's
+constant tracks have to fit "Profil actuel" on one row and "Sélectionner" on another at the same
+time, and that pairing is what overflowed the list by 10 to 24px until 2026-08-21 — on a screen this
+very pass had been reporting clean, because every scenario had held exactly one Profile. Two rows
+with none selected fits (625 into 625); two rows with one current does not (635 into 625). Path 0
+builds that state for the whole suite, so **do not reduce a scenario to a single Profile** to
+simplify it: the assertion lives in the pairing.
+
 The **banner naming the current `Profile`** rides in the chrome of screens 1 to 6 and is deliberately
 absent from 7 and 8 — there the Profile is what the page is *about*. It is audited as chrome
 wherever it appears: its label is words, never a tint (assertion 4), and its link must hold contrast

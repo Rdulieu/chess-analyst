@@ -7,13 +7,33 @@ covers: [Profile, Import, Monthly import, Game]
 
 ## Goal
 Build, once per suite run, the state the three Happy Paths start from: the reference `Profile`
-**`DudulSmash`** and the reference range of its real chess.com history, captured as a **database
-snapshot** the scenarios restore by file copy. It is the step that exercises the **real chess.com
+**`DudulSmash`** and the reference range of its real chess.com history, **plus a second `Profile`
+that owns nothing**, captured as **database snapshots** the scenarios restore by file copy. It is the step that exercises the **real chess.com
 import contract for the suite**, so the three journeys can be about what they are each for rather
 than each re-importing the same two months.
 
 > Run against the **real chess.com API** (no `CHESSCOM_BASE_URL` override). This is where the
 > network cost of the suite is paid.
+
+## Why a second Profile
+
+Because **one Profile is not the case this story exists for.** US-11 is about studying *other*
+players too, so more than one `Profile` is the normal state of the app, not an edge case — and until
+2026-08-21 no scenario had ever held two. The suite therefore ran, green, over a `/profiles` screen
+that **overflowed its own card by 24px** in ordinary use, the `Supprimer` buttons rendering outside
+the frame. Eight screens in two themes reported clean on a visibly broken screen.
+
+The trigger was measured precisely, and it is worth stating because it dictates the shape of this
+step: **two rows are not enough — one of them must be the current Profile.** With two rows and
+nothing selected the list fits (625 into 625); as soon as one row reads "Profil actuel" while the
+other still offers "Sélectionner", the state track has to hold both and the list overflows (635 into
+625). Every scenario selects a Profile at its step 1, so a second Profile in the snapshot is
+sufficient — and necessary — to exercise it.
+
+It costs **one chess.com validation request**, once per suite run. It imports nothing: an empty
+second Profile is enough to catch a scoping leak, because a partitioned read must show *zero* for it
+while the other holds the whole range — a global aggregate would show 82 and be caught at once. That
+is the cheapest state that makes ADR-0014 observable rather than assumed.
 
 ## Not a Happy Path, and outside the 3-HP cap
 
@@ -38,8 +58,11 @@ imported, 0 already present" against a database that already holds them.
 ## Preconditions
 - App started locally, talking to the **real** chess.com API.
 - A database file this step owns — path 0 writes the snapshots, it does not run beside a scenario.
-- A real chess.com account with games in the range. Reference account for this suite:
-  **`DudulSmash`**, range **2026-05 → 2026-06**, both immutable past months (figures in
+- **Two** real chess.com accounts: the creation validates against the live player endpoint, so a
+  made-up second username is refused and there is no offline substitute. The second one needs no
+  games — nothing is imported into it — but it must exist. Reference accounts for this suite:
+  **`DudulSmash`** (the history) and **`Nonomoho`** (the empty one).
+- Reference range for `DudulSmash`: **2026-05 → 2026-06**, both immutable past months (figures in
   [HP-01](./HP-01-import-and-explore.md)'s Preconditions, which stays the table of record — one
   place, checked against the live API).
 
@@ -48,16 +71,21 @@ imported, 0 already present" against a database that already holds them.
    rather than to a screen about nobody.
 2. Create the `Profile` from the username `DudulSmash` → chess.com validates it, the Profile is
    listed with the **canonical casing chess.com returned**, and its counters read zero Games.
-3. Stop the server and **take the empty-history snapshot** → a copy of the database file holding
-   the Profile and no Games. This is what HP-01 restores.
-4. Restart and open the Profile's page (`/profiles/:id`) — creating the first Profile already made
-   it the current one, so no selection is needed here — and import
-   the reference range (2026-05 → 2026-06, Blitz + Bullet) from **its own import form** → the
-   import completes and the summary reports the range's figures.
-5. Confirm the state is the one claimed → the Profile's counters and the Game list agree with the
-   summary, and the two `Monthly import` lines cover the range in order.
-6. Stop the server and **take the imported snapshot** → a copy of the database file holding the
-   Profile and its whole imported range. This is what HP-02 and HP-03 restore.
+3. Create a **second** `Profile`, `Nonomoho`, and **import nothing into it** → it is listed beside
+   the first, owning zero Games. Creating it makes it current, so **select `DudulSmash` back**: the
+   list then holds **two rows, one of them current**, which is the state the whole suite inherits —
+   see *Why a second Profile* below.
+4. Stop the server and **take the empty-history snapshot** → a copy of the database file holding
+   **both** Profiles and no Games at all. This is what HP-01 restores.
+5. Restart and open `DudulSmash`'s page (`/profiles/:id`) — it is the current Profile, selected at
+   step 3 — and import the reference range (2026-05 → 2026-06, Blitz + Bullet) from **its own import
+   form** → the import completes and the summary reports the range's figures.
+6. Confirm the state is the one claimed → the Profile's counters and the Game list agree with the
+   summary, and the two `Monthly import` lines cover the range in order. **`Nonomoho` still owns
+   zero Games**: the import went to the Profile it was run from and nowhere else (ADR-0014).
+7. Stop the server and **take the imported snapshot** → a copy of the database file holding both
+   Profiles, the range under `DudulSmash` and nothing under `Nonomoho`. This is what HP-02 and HP-03
+   restore.
 
 ## Checks
 ### UI
@@ -67,11 +95,15 @@ imported, 0 already present" against a database that already holds them.
   the row must read `DudulSmash`, which is the whole point of storing what chess.com returns. A typo
   would have been refused here — that assertion belongs to the slice's Feature Path, not to a
   bootstrap step.
-- Step 4: the import form on the Profile's page has **no username field** — the Profile already
+- Step 3: the list holds **two** rows, `DudulSmash` marked "Profil actuel" and `Nonomoho` offering
+  "Sélectionner", and **nothing overflows its container** — that pairing is what the row's constant
+  tracks have to fit. `Nonomoho` reads `0 parties · 0 analysées`.
+- Step 5: the import form on the Profile's page has **no username field** — the Profile already
   names the account — and the import runs against it.
-- Step 5: the consolidated summary reports **82** games fetched and **82** imported over the range,
-  the Profile's counters read **82** Games imported and **0** analyzed, and the Game list holds 82
-  entries. Two `Monthly import` lines, in order: `2026-05` at 28, `2026-06` at 54.
+- Step 6: the consolidated summary reports **82** games fetched and **82** imported over the range,
+  `DudulSmash`'s counters read **82** Games imported and **0** analyzed, and the Game list holds 82
+  entries. Two `Monthly import` lines, in order: `2026-05` at 28, `2026-06` at 54. On `/profiles`,
+  `Nonomoho` still reads **`0 parties · 0 analysées`**.
 
 ### Backing store
 - Both snapshots are copies of the SQLite file taken with the **server stopped**: SQLite keeps
@@ -84,8 +116,9 @@ imported, 0 already present" against a database that already holds them.
   against the file (or copy the `-wal`/`-shm` sidecars alongside it) and **verify the copy by
   reading it back** — a snapshot that restores to an empty database fails every scenario downstream
   with a precondition error that looks like an app defect.
-- The imported snapshot holds 82 `Game` rows, all carrying the `DudulSmash` Profile's id, and no
-  `Evaluation` — the analysis pass belongs to HP-01, which runs it on its own restored state.
+- The imported snapshot holds **two** `profiles` rows and 82 `Game` rows, **all** carrying
+  `DudulSmash`'s id and none carrying `Nonomoho`'s, and no `Evaluation` — the analysis pass belongs
+  to HP-01, which runs it on its own restored state.
 
 ## What the snapshot does *not* carry
 
