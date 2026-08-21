@@ -282,3 +282,26 @@ Because of that, a pass resuming a Game whose stored `Evaluation`s came from a d
 **re-evaluates the Game whole** rather than continuing it, so that no single Game's figures ever mix
 regimes.
 _Avoid_: Settings, Config, Engine params
+
+**Review mode**:
+How much of what the engine found is shown while the Player reviews a Game — the Player's own
+choice, in three levels:
+
+- **Unaided**: nothing from the engine. The board, the Moves and their notation, and nothing else.
+  The Player reads the Game on their own.
+- **Annotated**: the flawed Moves' severities, the `Evaluation`s, the advantage bar and the
+  `Evaluation curve` — what the Game's `Evaluation`s say, Move by Move and as a whole.
+- **Detailed**: also the reviewed Move's own record — its `Best line`, the refutation, what the Move
+  cost, its `Phase`, and whether it is a `Counted Move`.
+
+The default is **Unaided**: a Game is opened to be read, and the engine's verdict is something the
+Player asks for rather than something the app volunteers. The choice is remembered, so it is made
+once and not on every Game. One exception, because it answers a question the Player actually asked:
+completing an `Analysis pass` on the Game being reviewed moves that review to **Annotated** — the
+pass was requested to produce something to look at, and finishing it silently would leave the Player
+unable to tell a completed pass from one that did nothing.
+
+A Review mode governs **display only**. It changes nothing about what was computed or stored, and it
+is not a guarantee about what the Player has already seen — a Player who read the annotations and
+then switched to Unaided has still seen them.
+_Avoid_: Blind mode (describes a restriction this does not enforce), View, Display level, Verbosity
