@@ -3,6 +3,16 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ExplorerPage } from "../src/pages/ExplorerPage";
 
+/** The current `Profile` the page is about — every scoped page takes one. */
+const PROFILE = {
+  id: 7,
+  platform: "chesscom" as const,
+  username: "Alice",
+  createdAt: "",
+  games: 3,
+  analyzed: 0,
+};
+
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
 const WHITE = [
@@ -45,7 +55,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("ExplorerPage", () => {
   it("asks for the wide column: a diagram beside its candidates needs the room", async () => {
     stubHabits();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
 
     // Split inside the 72ch reading column, the diagram was down to 317px on a
     // wide screen — the screen is one of the three dense ones and reads its board
@@ -56,7 +66,7 @@ describe("ExplorerPage", () => {
 
   it("shows the White candidates from the starting Position with frequency, win rate and per-cadence breakdown", async () => {
     stubHabits();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
 
     const list = await screen.findByRole("list", { name: /candidates/i });
     const e4 = within(list).getByRole("listitem").textContent ?? "";
@@ -70,7 +80,7 @@ describe("ExplorerPage", () => {
   it("switches the shown candidates when the side selector changes to Black", async () => {
     stubHabits();
     const user = userEvent.setup();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     await user.click(screen.getByRole("radio", { name: /noirs|black/i }));
@@ -98,7 +108,7 @@ describe("ExplorerPage — drill-down", () => {
   it("descends into a selected candidate, showing the resulting Position's candidates and a breadcrumb", async () => {
     stubDrill();
     const user = userEvent.setup();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     await user.click(screen.getByRole("button", { name: "e4" }));
@@ -116,7 +126,7 @@ describe("ExplorerPage — drill-down", () => {
   it("returns to an earlier level when a breadcrumb entry is selected", async () => {
     stubDrill();
     const user = userEvent.setup();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
     await user.click(await screen.findByRole("button", { name: "e4" }));
     await screen.findByText("e5"); // now one level deep
 
@@ -139,7 +149,7 @@ describe("ExplorerPage — drill-down", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
 
     await user.click(await screen.findByRole("button", { name: "e4" }));
 
@@ -150,7 +160,7 @@ describe("ExplorerPage — drill-down", () => {
   it("renders the board and descends when a candidate's target square is clicked", async () => {
     stubDrill();
     const user = userEvent.setup();
-    const { container } = render(<ExplorerPage />);
+    const { container } = render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     // The interactive board is present at the current Position.
@@ -179,7 +189,7 @@ describe("ExplorerPage — board orientation", () => {
 
   it("shows White at the bottom while exploring as White", async () => {
     stubHabits();
-    const { container } = render(<ExplorerPage />);
+    const { container } = render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     expect(squareOrder(container)[0]).toBe("a8");
@@ -188,7 +198,7 @@ describe("ExplorerPage — board orientation", () => {
   it("flips the board when the side explored changes, with no control but the existing selector", async () => {
     stubHabits();
     const user = userEvent.setup();
-    const { container } = render(<ExplorerPage />);
+    const { container } = render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
     const before = screen.getAllByRole("radio").length + screen.getAllByRole("button").length;
 
@@ -202,7 +212,7 @@ describe("ExplorerPage — board orientation", () => {
   it("does not flip when drilling down to a level where the opponent has the move", async () => {
     stubHabits();
     const user = userEvent.setup();
-    const { container } = render(<ExplorerPage />);
+    const { container } = render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     await user.click(within(screen.getByRole("list", { name: /candidates/i })).getByRole("button"));
@@ -215,7 +225,7 @@ describe("ExplorerPage — board orientation", () => {
   it("does not flip while exploring as Black either, at any level", async () => {
     stubHabits();
     const user = userEvent.setup();
-    const { container } = render(<ExplorerPage />);
+    const { container } = render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     await user.click(screen.getByRole("radio", { name: /noirs/i }));
@@ -228,7 +238,7 @@ describe("ExplorerPage — board orientation", () => {
   it("keeps the orientation when walking back up the breadcrumb", async () => {
     stubHabits();
     const user = userEvent.setup();
-    const { container } = render(<ExplorerPage />);
+    const { container } = render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
     await user.click(screen.getByRole("radio", { name: /noirs/i }));
     await screen.findByText("d4");
@@ -243,7 +253,7 @@ describe("ExplorerPage — board orientation", () => {
   it("states the side to move, and follows it down the line", async () => {
     stubHabits();
     const user = userEvent.setup();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     expect(sideToMoveText()).toMatch(/blancs/i);
@@ -254,10 +264,36 @@ describe("ExplorerPage — board orientation", () => {
 
   it("never attributes a side to the Player through the side-to-move readout", async () => {
     stubHabits();
-    render(<ExplorerPage />);
+    render(<ExplorerPage profile={PROFILE} />);
     await screen.findByText("e4");
 
     // The readout is about the Position, not about who the Player is.
     expect(sideToMoveText()).not.toMatch(/vous|votre/i);
+  });
+});
+
+describe("ExplorerPage — whose repertoire this is", () => {
+  it("aggregates the current Profile's counters: two players' lines never merge into one", async () => {
+    const fetchMock = vi.fn<(url: string | URL) => Promise<Response>>(
+      async () => ({ ok: true, status: 200, json: async () => ({ candidates: WHITE }) }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ExplorerPage profile={PROFILE} />);
+
+    await screen.findByRole("list", { name: /candidates/i });
+    expect(String(fetchMock.mock.calls[0][0])).toContain("profileId=7");
+  });
+
+  it("says the load failed and offers to retry, rather than reading as a line nobody ever played", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }) as Response),
+    );
+
+    render(<ExplorerPage profile={PROFILE} />);
+
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.queryByText(/aucun coup enregistré/i)).toBeNull();
   });
 });

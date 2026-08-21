@@ -200,9 +200,18 @@ function themeAudit() {
       holds: (el) => /échec/i.test(el.textContent || ""),
     },
     {
+      // Targets the badge by its accessible name, NOT by `[data-part='state']`:
+      // since US-11 the profiles list uses that same slot for "Profil actuel",
+      // and the shared selector made this rule fail on `/profiles` — a screen
+      // that carries its cue perfectly well, just a different one.
       cue: "the analysée badge carries a word and a checkmark",
-      subjects: tinted("[data-part='state']").filter((el) => (el.textContent || "").trim() !== ""),
+      subjects: tinted("[aria-label='analysée']"),
       holds: (el) => /analys/i.test(el.textContent || "") && /[✓✔]/.test(el.textContent || ""),
+    },
+    {
+      cue: "the current Profile is named in words, in the list and in the banner",
+      subjects: tinted("[aria-label='profil actuel'], [data-banner='profile'] [data-part='label']"),
+      holds: (el) => /profil (actuel|courant)/i.test(el.textContent || ""),
     },
     {
       cue: "the current tab is marked by more than a colour (aria-current + weight/border)",

@@ -27,14 +27,38 @@ export interface ChessComGame {
   black: ChessComPlayerSide;
 }
 
+/**
+ * A chess.com member, reduced to what a `Profile` needs: the **canonical
+ * username**, spelled the way chess.com spells it. The public endpoint answers
+ * `username` lowercased and keeps the member's own casing in `url`
+ * (`.../member/DudulSmash`), so that segment is the canonical spelling.
+ */
+export interface ChessComPlayer {
+  username: string;
+}
+
 export interface ChessComClient {
-  /** Whether the username exists on chess.com. */
-  playerExists(username: string): Promise<boolean>;
+  /**
+   * The member behind this username, or `null` when chess.com does not know it.
+   * **Throws** when chess.com cannot be reached or answers an error — a caller
+   * must be able to tell "this account does not exist" from "I could not ask",
+   * since only the first is the user's mistake (US-11).
+   */
+  fetchPlayer(username: string): Promise<ChessComPlayer | null>;
   /** The player's games for the given year/month (empty when none). */
   fetchMonth(username: string, year: number, month: number): Promise<ChessComGame[]>;
 }
 
 const DEFAULT_BASE_URL = "https://api.chess.com";
+
+/**
+ * The member's own spelling, read off the profile `url`'s last segment; falls
+ * back to the `username` field when the payload carries no url.
+ */
+function canonicalUsername(body: { username?: string; url?: string }): string | undefined {
+  const fromUrl = body.url?.split("/").filter(Boolean).pop();
+  return fromUrl || body.username;
+}
 
 /**
  * The real chess.com client, talking to the public Published-Data API over
@@ -46,9 +70,12 @@ export function createHttpChessComClient(
 ): ChessComClient {
   const root = baseUrl.replace(/\/$/, "");
   return {
-    async playerExists(username) {
+    async fetchPlayer(username) {
       const res = await fetch(`${root}/pub/player/${encodeURIComponent(username)}`);
-      return res.ok;
+      if (res.status === 404) return null; // chess.com does not know this account
+      if (!res.ok) throw new Error(`chess.com request failed (${res.status})`);
+      const body = (await res.json()) as { username?: string; url?: string };
+      return { username: canonicalUsername(body) ?? username };
     },
     async fetchMonth(username, year, month) {
       const mm = String(month).padStart(2, "0");

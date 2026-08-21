@@ -2,30 +2,6 @@
 
 ## To do
 
-- **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
-  > Pas encore grillée. Aujourd'hui l'app est **mono-joueur implicite** : `settings` mémorise un
-  > seul username chess.com (clé/valeur), et `games` n'a **aucune notion de propriétaire** — même
-  > chose pour les agrégats (`move_habits`, stats `/stats`, `/openings`, `/danger` et les
-  > `evaluations`), calculés sur *toutes* les lignes. Importer un second compte mélangerait donc
-  > silencieusement les historiques et fausserait tous les indicateurs. Le besoin : un **Profil**
-  > sélectionnable, sous lequel on retrouve son propre historique importé **et son état d'analyse**
-  > (parties déjà analysées conservées, pas à re-analyser en changeant de profil).
-  > Points à trancher au grilling :
-  > - Terminologie et périmètre : un `Profile` = un compte chess.com, ou un libellé libre pouvant
-  >   regrouper plusieurs comptes ? Rapport avec le terme `Player` de `CONTEXT.md`.
-  > - Une même `Game` peut-elle appartenir à deux profils (partie entre deux comptes suivis) — et
-  >   `player_color`/`result` sont **relatifs au joueur**, donc dépendants du profil.
-  > - Portée du scoping : import, liste des parties, `move_habits` (précalculés, cf. ADR-0005),
-  >   stats/openings/danger. Les `evaluations` sont-elles partageables (propriété de la position,
-  >   pas du joueur) ?
-  > - Sélection et persistance du profil courant (remplace la mémorisation du username), création /
-  >   suppression d'un profil, et ce qu'on fait des données existantes (règle de phase dev : le
-  >   ré-import est bon marché, un profil par défaut migré ou une DB repartie de zéro sont
-  >   acceptables).
-  >
-  > **À griller avant US-12** (import Lichess) : le `Profile` est le porteur naturel du couple
-  > plateforme + compte, donc c'est ici que la question se tranche.
-
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
@@ -86,6 +62,40 @@
 
 
 ## In review
+
+- **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
+  > **Grillée** (2026-08-17) — branche `integration/US-11-profiles`.
+  > Un **`Profile`** = **un compte sur une plateforme** (plateforme + username), validé chez
+  > chess.com à la création et stocké dans sa casse canonique. Il **partitionne** : chaque `Game` et
+  > chaque agrégat appartient à un seul profil, **rien n'est partagé** — une partie jouée entre deux
+  > profils suivis est stockée deux fois, chacune du point de vue de son `Player`. `Player` est
+  > redéfini comme le **point de vue** (la personne derrière le profil courant, éventuellement un
+  > ami), plus comme une identité. Sélection côté client passée explicitement à chaque appel API,
+  > bandeau permanent qui nomme le profil courant, page dédiée `/profiles` + `/profiles/:id` qui
+  > **accueille désormais l'import** (l'ancien `/import` disparaît).
+  > **Conséquence hors story** : la base locale n'est plus jetable (20 parties analysées, 1199
+  > `evaluations`). La règle « wiper et ré-importer » de `CLAUDE.md` est **retirée** — toute
+  > évolution de schéma doit désormais venir avec sa migration.
+  > **Débloquée** (2026-08-18) : US-13 est mergée dans `develop`, la branche est rebasée dessus. La
+  > feuille de style, le squelette de page et l'audit des tokens deviennent des contraintes des
+  > tranches côté écran ; le pass de thème passe de six à huit écrans (tranche 06) ; et le finding
+  > `games-load-failure` d'US-13 est rapatrié dans la tranche 04.
+  > - Doc : `CONTEXT.md` (`Profile`, `Player`), ADR-0014 (le profil partitionne), ADR-0015 (la base
+  >   porte des données irremplaçables), `CLAUDE.md` (phase dev amendée)
+  > - PRD : `.scratch/profiles/PRD.md`
+  > - Issues techniques : `.scratch/profiles/issues/`
+  >   - `01-profiles-exist.md` — créer / lister / sélectionner / supprimer un profil (AFK)
+  >   - `02-existing-data-belongs-to-dudulsmash.md` — la migration, préserve les 1199 évaluations (AFK)
+  >   - `03-import-from-the-profile-page.md` — l'import déménage sur la page du profil (AFK)
+  >   - `04-every-view-speaks-of-the-current-profile.md` — scoping de toutes les vues + bandeau (AFK)
+  >   - `05-the-analysis-pass-belongs-to-a-profile.md` — la passe d'analyse est scopée (AFK)
+  >   - `06-path-zero-and-the-hp-rework.md` — path 0 + reprise des 3 HP et du pass de thème (**HITL**)
+  > **Livrée** (2026-08-19) — les six tranches sont mergées sur `integration/US-11-profiles`.
+  > Suite agentique rejouée sur la story : **path 0 + HP-01 + HP-02 + HP-03 tous verts**, 599 tests
+  > et le build verts. Path 0 est un nouveau **prérequis hors plafond des 3 HP** : il crée le profil
+  > de référence, importe la plage contre l'API chess.com réelle et laisse deux snapshots que les
+  > trois journeys restaurent. PR `integration -> develop` ouverte, **le merge reste une décision
+  > humaine**.
 
 - **US-14**: Voir d'un coup d'œil l'évolution de l'évaluation Stockfish sur toute la partie, dans un graphique à côté du plateau.
   > **Grillée** (2026-08-14) — **pas d'ADR** : rien n'est coûteux à défaire (composant client isolé,

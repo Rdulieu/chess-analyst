@@ -6,7 +6,7 @@ const json = (body: unknown, status = 200) =>
   ({ ok: status < 300, status, json: async () => body }) as Response;
 
 const params: ImportParams = {
-  username: "me",
+  profileId: 7,
   from: { year: 2024, month: 1 },
   to: { year: 2024, month: 3 },
   categories: ["blitz"],

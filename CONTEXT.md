@@ -1,24 +1,42 @@
 # chess-analyst
 
-Solo tool that imports a player's chess.com game history and helps them find where to improve —
+Solo tool that imports the chess.com game history of one or more `Profile`s — the user's own, and
+those of friends whose play they want to study — and helps find where each can improve —
 which openings, which recurring positions — by combining engine evaluation and personal
 statistics, through an interactive board to navigate the history.
 
 ## Language
 
+**Profile**:
+**One account on one chess platform** — the pair (platform, username), e.g. `Rdulieu` on
+chess.com. It is the **unit of partitioning**: every Game, and every aggregate derived from Games
+(`Move habit`s, `Weak opening`s, `Danger position`s, `Evaluation`s, the stats view), belongs to
+exactly one Profile, and **nothing is ever shared or merged across Profiles**. The tool holds
+several — the person using it, and the friends whose play they want to study — and exactly one is
+**selected** at a time; the selected Profile is what every view is about, and it is named on
+screen wherever it matters.
+The same account on two platforms is two Profiles, and a Profile never groups several accounts:
+if consolidating a person's accounts becomes a need, it would be a grouping *above* Profiles, not
+a change to what a Profile is.
+_Avoid_: Account, User, Owner, Player (a Profile is an identity, not a point of view)
+
 **Player**:
-The single owner of the imported history — the person using this solo tool — identified by their
-chess.com username, entered once and retained across sessions. Everything is relative to the
-Player: a Game's `opponent` is whoever the Player faced, its result is scored from the Player's
-side, and Mistakes, Weak openings, and Danger positions are only ever computed for the Player.
+The person behind the **selected `Profile`** — the one who played the Games under it. Not
+necessarily the person using the tool: a Profile may be a friend's. `Player` carries no identity
+of its own (that is the `Profile`'s job); it is the **point of view** every figure is expressed
+from. A Game's `opponent` is whoever the Player faced, its result is scored from the Player's
+side, and Mistakes, Weak openings and Danger positions are only ever computed for the Player.
+The same Game imported under two Profiles has two Players, so `player_color` and `result` are
+opposite from one to the other.
 _Avoid_: User, Me, Account, Owner
 
 **Game**:
-A complete chess.com match imported for the Player, with its PGN, the opponent, the **side the
+A complete chess.com match imported **under a `Profile`**, with its PGN, the opponent, the **side the
 Player played** (White or Black), the **result from the Player's side** (win, loss, or draw),
 the date, and the **time control category** (bullet, blitz, rapid, or daily — chess.com's own
 classification). Identified across imports by its chess.com game URL, which is unique and
-immutable.
+immutable **within its Profile** — the same match imported under two Profiles is two Games, each
+recorded from its own Player's side.
 _Avoid_: Match, Party
 
 **Opening**:
@@ -119,7 +137,9 @@ is not something the player *arrives at*. Identified by its **4-field FEN** (pie
 en passant; the halfmove/fullmove counters dropped so **transpositions merge**, exactly the Position
 identity `Move habit` uses). **Not scoped by time control category, nor by the side the player
 played** — a Danger position is a property of the Position itself (the FEN's active-colour field
-already separates White-to-move from Black-to-move). Shown with two figures: how many times the
+already separates White-to-move from Black-to-move). It is however, like every aggregate,
+**scoped to one `Profile`**: "a property of the Position" means of the Position *as this Player
+keeps reaching it*, never of the Position across Profiles. Shown with two figures: how many times the
 player has **reached** it, and in what proportion of those reaches a **serious error** — a `Mistake`
 **or** `Blunder` (a winning-chances drop of 20%+); `Inaccuracy`s do not count — occurred within the
 following **10 Moves** (10 half-moves — about five of the player's own moves; `Move` is a half-move
@@ -151,7 +171,7 @@ replies follows from the Position's side to move versus the selected side.
 _Avoid_: Opponent move (too vague), Threat
 
 **Analysis pass**:
-The act of running the chess engine over a chosen set of Games to produce and retain their
+The act of running the chess engine over a chosen set of **one `Profile`'s** Games to produce and retain their
 `Evaluation`s — one per `Position` of each Game. Triggered **manually** by the Player (from the
 Game list, or for a single Game while reviewing it) and **never automatic**, like `Import`.
 **Incremental**: a Game already analyzed is skipped, and its Evaluations are never recomputed.
@@ -164,7 +184,9 @@ the Games still unanalyzed.
 _Avoid_: Analysis (too vague), Scan, Job, Batch
 
 **Import**:
-The act of fetching the Player's Games from the chess.com public API by username. Triggered
+The act of fetching a `Profile`'s Games from its platform's public API. It is always **an
+operation on one Profile** — the account to fetch is the Profile's own, never something chosen at
+import time — and the Games it brings in belong to that Profile alone. Triggered
 **manually** by the Player and **scoped** to a **contiguous range of months** (a first and a last
 month, each matching one chess.com monthly archive — a single month is simply a range of one) and
 a chosen set of **time control categories** (any subset of bullet, blitz, rapid, daily) — never

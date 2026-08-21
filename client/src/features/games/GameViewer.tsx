@@ -25,7 +25,7 @@ export function GameViewer({
 }) {
   const [annotations, setAnnotations] = useState<MoveAnnotation[] | null>(null);
   const [showAnnotations, setShowAnnotations] = useState(true);
-  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass();
+  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(game.profileId);
 
   useEffect(() => {
     if (!game.analyzed) return;

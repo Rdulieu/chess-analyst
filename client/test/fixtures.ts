@@ -22,6 +22,7 @@ export const OPERA_PGN = [
 
 export const OPERA_GAME: Game = {
   id: 1,
+  profileId: 1,
   gameUrl: "https://www.chess.com/game/fixture/opera-1858",
   pgn: OPERA_PGN,
   opponent: "Duke Karl / Count Isouard",

@@ -23,6 +23,9 @@ export function Nav() {
         <li>
           <NavLink to="/stats">Stats</NavLink>
         </li>
+        <li>
+          <NavLink to="/profiles">Profils</NavLink>
+        </li>
       </ul>
     </nav>
   );

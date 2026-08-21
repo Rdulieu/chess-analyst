@@ -46,11 +46,20 @@ merge**, report.
 
 ## 4. HP mode (integration → develop gate, human decision)
 
-1. Read all `docs/test-scenarios/HP-*.md`.
-2. Run each journey **independently** against the app (an HP must run on its own).
-3. Apply the **execution rules** (below).
-4. Produce a per-scenario report (pass/fail) + a consolidated **Findings** section, ready to
-   paste into the integration→develop PR.
+1. Read the inventory in `docs/test-scenarios/README.md` first: it names the scenarios **and any
+   prerequisite step** the suite depends on. Do not glob for `HP-*.md` alone — a prerequisite is
+   deliberately not named `HP-` (it is not a journey and does not count against the 3-HP cap), so a
+   glob silently skips it and every scenario then fails on a precondition it was handed.
+2. Run the prerequisite(s) **first, once for the run** — currently
+   `docs/test-scenarios/path-0-bootstrap.md`, which builds the reference `Profile` and the database
+   snapshots the scenarios restore. A red prerequisite means the suite has **not** run: report it as
+   such rather than reporting three failed scenarios.
+3. Read all `docs/test-scenarios/HP-*.md` and run each journey **independently** against the app (an
+   HP must run on its own — restoring a shared snapshot into its **own** database file is a clean
+   start; inheriting another scenario's live database is not).
+4. Apply the **execution rules** (below).
+5. Produce a per-scenario report (pass/fail) + a consolidated **Findings** section, ready to
+   paste into the integration→develop PR. Report the prerequisite's own result as its own line.
 
 The agent **never merges** into `develop`: it runs, reports, and proposes the HP curation
 (see `git-flow`). HP red → the human decides.

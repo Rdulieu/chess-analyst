@@ -1,0 +1,97 @@
+# 01 — A Profile exists: create, list, select, delete
+
+Status: `done` — merged into `integration/US-11-profiles` (build + tests + FP green, 2026-08-18)
+
+> **Implemented on the business-story integration branch `integration/US-11-profiles`.** Branch
+> from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a green
+> local check (build + tests + green FP, no blocking finding); `integration -> develop` stays human.
+
+> **Sequencing: unblocked.** US-13 landed in `develop` (PR #44/#49, 2026-08-17) and this branch is
+> rebased on it. The stylesheet, the page skeleton and the token audit are now constraints on this
+> slice, not a reason to wait — see the acceptance criteria.
+
+## Parent
+
+`.scratch/profiles/PRD.md` — business story **US-11** (`BACKLOG.md`).
+
+## What to build
+
+The `Profile` as a thing that exists on its own, before it owns anything. A `Profile` is one
+account on one platform — the pair (platform, username), see `CONTEXT.md` and ADR-0014 — and this
+slice makes it creatable, listable, selectable and deletable, end to end.
+
+Creating a Profile takes a chess.com username and **validates it against chess.com's public player
+endpoint**, storing the **canonical casing chess.com returns** rather than what was typed. That is
+what stops `RDulieu` and `rdulieu` from becoming two Profiles quietly splitting one history in
+half. If the platform cannot be reached, creation is **refused** — a Profile that was never
+validated must not blend into the list looking like the others.
+
+The Profile carries its **platform** from the start (`chesscom` is the only value implemented).
+That column is what makes US-12 (Lichess) a new value and an import client rather than a new
+concept.
+
+A dedicated page at `/profiles` lists the Profiles, creates one, selects the **current** one, and
+deletes one. The current selection lives **client-side** and is persisted locally, so it survives a
+reload — the server stays stateless (PRD, *API*). Nothing else in the app is scoped yet: this slice
+adds the notion, later slices attach data to it.
+
+## Acceptance criteria
+
+- [x] A `profiles` table holds id, platform, username (canonical casing) and a creation timestamp,
+      unique on `(platform, username)`.
+- [x] Creating a Profile calls chess.com's public player endpoint and stores the canonical username
+      it returns.
+- [x] Creating a Profile whose username differs only by casing from an existing one **selects the
+      existing Profile** — no duplicate row.
+- [x] Creating a Profile for a username chess.com does not know is refused, with a message naming
+      the problem.
+- [x] Creating a Profile is refused when chess.com is unreachable — no unvalidated Profile is ever
+      persisted.
+- [x] `/profiles` lists every Profile with its platform and username.
+- [x] One Profile can be marked current from `/profiles`, and the selection survives a reload.
+- [x] Deleting a Profile asks for confirmation naming it, then removes it.
+- [x] Deleting the current Profile leaves nothing selected.
+- [x] The server holds no "current profile" state — the selection is client-side only.
+- [x] Server tests at the HTTP seam (`server/test/api.test.ts`) cover creation, canonicalisation,
+      duplicate-by-casing, unknown username, unreachable platform, and deletion.
+- [x] Client tests at the page seam cover the list, the creation error surfacing, and the
+      persistence of the selection.
+
+**Post-US-13 constraints** (the app now has a stylesheet — ADR-0013):
+
+- [x] The profiles page follows the **page skeleton** every screen was restructured to in US-13-01,
+      and uses the existing surfaces (`card`, lists, tables) rather than inventing its own.
+- [x] It passes the **token-consistency audit**: every `var(--…)` it consumes is declared in **both**
+      themes, and the component holds no hex colour.
+- [x] It is correct in the **light and dark** themes, the dark one following the system preference
+      with no control.
+- [x] The navigation gains its entry, marked current the way the others are — **by weight and a
+      border, never by colour alone**.
+- [x] **Centred, and framed on a large screen.** The column is centred and reads as a bounded
+      surface with visible borders (the `card` surface), not as text floating in empty space.
+      Requester's call, 2026-08-18.
+- [x] **The rows are compact enough that the list needs no scrolling for a realistic number of
+      Profiles** — up to ten, at the reference window **1536x742** (US-13-09's).
+      *This is deliberately weaker than the profile page's promise:* the list grows with the number
+      of Profiles, so "never scrolls" is not a promise any layout can keep. Compactness is what can
+      be promised; beyond that the list scrolls, and that is correct behaviour, not a defect.
+- [x] Any height budget uses an **absolute `rem` ceiling**, never viewport units — see US-13-09:
+      `100dvh` is the window, not what the eye gets.
+
+### Feature Path (FP)
+
+1. I open the profiles area with no Profile yet → I am invited to create one, and the list is empty.
+2. I create a Profile from a real chess.com username → it appears in the list, spelled the way
+   chess.com spells it.
+3. I create the same username with different casing → no second entry appears; the existing Profile
+   is the one I end up on.
+4. I try to create a username that does not exist on chess.com → creation is refused and says why;
+   the list is unchanged.
+5. I select a Profile, then reload the app → the same Profile is still the current one.
+6. I delete a Profile after confirming → it is gone from the list.
+
+Verify: UI first. Probe the database only to confirm no duplicate row survived step 3.
+
+## Blocked by
+
+None — can start immediately. US-13 is merged and this branch is rebased on it.

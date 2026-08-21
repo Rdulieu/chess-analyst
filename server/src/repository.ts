@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "./db";
 import { games, settings, type Game } from "./db/schema";
 
@@ -17,9 +17,13 @@ export function setPlayerUsername(db: Db, username: string): void {
     .run();
 }
 
-/** Every retained Game. For US-1 this returns exactly one: the fixture. */
-export function listGames(db: Db): Game[] {
-  return db.select().from(games).all();
+/**
+ * The Games of **one `Profile`** (ADR-0014). There is deliberately no way to
+ * ask for "every Game": a list spanning two Profiles would be one player's
+ * history with another's mixed in, and nothing in the rows would say so.
+ */
+export function listGames(db: Db, profileId: number): Game[] {
+  return db.select().from(games).where(eq(games.profileId, profileId)).all();
 }
 
 /** A single Game's full detail, or undefined when no Game has that id. */
@@ -28,6 +32,12 @@ export function getGame(db: Db, id: number): Game | undefined {
 }
 
 /** Whether a Game with this chess.com URL is already retained (Import dedup). */
-export function gameExistsByUrl(db: Db, gameUrl: string): boolean {
-  return db.select({ id: games.id }).from(games).where(eq(games.gameUrl, gameUrl)).get() !== undefined;
+export function gameExistsByUrl(db: Db, profileId: number, gameUrl: string): boolean {
+  return (
+    db
+      .select({ id: games.id })
+      .from(games)
+      .where(and(eq(games.profileId, profileId), eq(games.gameUrl, gameUrl)))
+      .get() !== undefined
+  );
 }

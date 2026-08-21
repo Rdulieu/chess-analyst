@@ -1,11 +1,13 @@
 import type { Game, GameAnnotations } from "../types";
 
 /**
- * Lists every retained Game from the local API. The list carries each Game's
- * full detail, including its PGN, so opening one needs no separate request.
+ * The Games of **one `Profile`** (ADR-0014) — the Profile is named in the
+ * request, so a list can never be one player's history with another's mixed in.
+ * Each Game carries its full detail, including its PGN, so opening one needs no
+ * separate request.
  */
-export async function fetchGames(): Promise<Game[]> {
-  const res = await fetch("/api/games");
+export async function fetchGames(profileId: number): Promise<Game[]> {
+  const res = await fetch(`/api/games?profileId=${profileId}`);
   if (!res.ok) throw new Error(`Failed to load games (${res.status})`);
   return (await res.json()) as Game[];
 }

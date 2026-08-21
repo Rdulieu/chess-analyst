@@ -7,6 +7,7 @@ import type { Game } from "../src/types";
 function game(over: Partial<Game>): Game {
   return {
     id: 1,
+    profileId: 1,
     gameUrl: "u",
     pgn: "1. e4 e5",
     opponent: "opp",

@@ -45,18 +45,41 @@ function evaluatedPositions(db: Db, gameIds: number[]): number {
   );
 }
 
+/**
+ * A pass was pointed at a Game belonging to **another** `Profile`. Thrown rather
+ * than silently dropped: narrowing the selection would spend engine time on a
+ * subset while the Player believes their whole selection is covered, and the
+ * partition ADR-0014 establishes is only trustworthy if crossing it is loud.
+ */
+export class ForeignGameError extends Error {
+  constructor(readonly gameIds: number[]) {
+    super(
+      `Ces parties n'appartiennent pas au profil analysé : ${gameIds.join(", ")}. Une analyse porte sur les parties d'un seul profil.`,
+    );
+    this.name = "ForeignGameError";
+  }
+}
+
 export interface AnalysisJob {
-  /** Current progress snapshot. */
-  status(): AnalysisStatus;
   /**
-   * Starts a background pass over the **not-yet-analyzed** among `gameIds` and
-   * returns the resulting status immediately (the caller does not await the
-   * pass). Single-flighted: if a pass is already running, this is ignored and
-   * the running status is returned unchanged.
+   * Progress of **one `Profile`'s** own last pass. Scoped, because the readout
+   * is shown on that Profile's screens: reporting "the last pass" whoever ran it
+   * would show one Player their neighbour's engine work as if it were theirs.
    */
-  start(gameIds: number[]): AnalysisStatus & { started: boolean };
-  /** Marks the last pass's summary as seen by the Player. Display only. */
-  acknowledge(): void;
+  status(profileId: number): AnalysisStatus;
+  /**
+   * Starts a background pass **for one `Profile`** over the not-yet-analyzed
+   * among `gameIds`, and returns the resulting status immediately (the caller
+   * does not await the pass). Single-flighted: if a pass is already running,
+   * this is ignored and the running status is returned unchanged.
+   *
+   * The Profile is passed in rather than read off the Games: a pass goes exactly
+   * where it was pointed (ADR-0014), so a `gameId` belonging to someone else is
+   * a caller's mistake to refuse, not a Game to quietly analyze.
+   */
+  start(profileId: number, gameIds: number[]): AnalysisStatus & { started: boolean };
+  /** Marks **this Profile's** last pass's summary as seen. Display only. */
+  acknowledge(profileId: number): void;
   /** Resolves when the current pass (if any) has finished — for tests/shutdown. */
   idle(): Promise<void>;
 }
@@ -68,7 +91,6 @@ export interface AnalysisJob {
  * for determinate progress that advances to `done === total`, then `running:false`.
  */
 export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
-  let running = false;
   let current: Promise<void> = Promise.resolve();
 
   // A pass row with no end was killed by a shutdown: close it as `interrupted`
@@ -83,12 +105,26 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
     .where(isNull(analysisPasses.endedAt))
     .run();
 
-  /** The pass this job reports on: the most recent row, or none yet. */
-  const lastPass = () =>
-    db.select().from(analysisPasses).orderBy(desc(analysisPasses.id)).limit(1).get();
+  /** The pass a `Profile`'s screens report on: **its** most recent row, or none yet. */
+  const lastPass = (profileId: number) =>
+    db
+      .select()
+      .from(analysisPasses)
+      .where(eq(analysisPasses.profileId, profileId))
+      .orderBy(desc(analysisPasses.id))
+      .limit(1)
+      .get();
 
-  const snapshot = (): AnalysisStatus => {
-    const pass = lastPass();
+  /**
+   * The pass currently burning engine time, if any. One engine, so one pass at a
+   * time app-wide — but `running` is reported only to the Profile it runs for:
+   * another Profile's page must not show a progress bar for work that will not
+   * change a single one of its figures.
+   */
+  let runningPassId: number | null = null;
+
+  const snapshot = (profileId: number): AnalysisStatus => {
+    const pass = lastPass(profileId);
     if (!pass)
       return {
         running: false,
@@ -99,6 +135,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
         outcome: null,
         error: null,
       };
+    const running = runningPassId === pass.id;
     return {
       running,
       total: pass.total,
@@ -113,20 +150,31 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
   return {
     status: snapshot,
 
-    start(gameIds) {
-      if (running) return { ...snapshot(), started: false };
+    start(profileId, gameIds) {
+      // One engine, so one pass at a time — whichever Profile asked.
+      if (runningPassId !== null) return { ...snapshot(profileId), started: false };
 
-      const pending = gameIds
+      const selected = gameIds
         .map((id) => getGame(db, id))
-        .filter((game): game is Game => game !== undefined && !game.analyzed);
+        .filter((game): game is Game => game !== undefined);
+
+      // The partition, enforced where the engine time is actually committed: a
+      // pass goes exactly where it was pointed (ADR-0014). Checked before the
+      // `analyzed` filter, so a foreign Game that happens to be analyzed already
+      // is still refused rather than passing unnoticed.
+      const foreign = selected.filter((game) => game.profileId !== profileId);
+      if (foreign.length > 0) throw new ForeignGameError(foreign.map((game) => game.id));
+
+      const pending = selected.filter((game) => !game.analyzed);
 
       // Nothing to analyze: no pass is opened at all — an empty pass is not a
       // pass, and must not overwrite the one the Player last ran.
-      if (pending.length === 0) return { ...snapshot(), started: false };
+      if (pending.length === 0) return { ...snapshot(profileId), started: false };
 
       const pass = db
         .insert(analysisPasses)
         .values({
+          profileId,
           gameIds: pending.map((game) => game.id),
           // Every Position of every pending Game — the initial Position
           // included, which is what the engine actually evaluates.
@@ -135,7 +183,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
         })
         .returning()
         .get();
-      running = true;
+      runningPassId = pass.id;
       let failure: string | null = null;
       current = (async () => {
         try {
@@ -148,7 +196,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
           // Player is told, on screen, that the pass failed and why (US-8).
           failure = err instanceof Error ? err.message : String(err);
         } finally {
-          running = false;
+          runningPassId = null;
           db.update(analysisPasses)
             .set({
               endedAt: new Date().toISOString(),
@@ -159,11 +207,11 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
             .run();
         }
       })();
-      return { ...snapshot(), started: true };
+      return { ...snapshot(profileId), started: true };
     },
 
-    acknowledge() {
-      const pass = lastPass();
+    acknowledge(profileId) {
+      const pass = lastPass(profileId);
       if (pass) {
         db.update(analysisPasses)
           .set({ acknowledgedAt: new Date().toISOString() })
