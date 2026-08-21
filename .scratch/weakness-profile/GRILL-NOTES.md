@@ -662,3 +662,41 @@ lettrées.
   et **toujours aucune idée** de ses faiblesses. Le gain, c'est qu'à l'arrivée de 15c on pourra la
   **croire**. La valeur de 15a se juge donc à « je peux évaluer la méthode », pas à « je sais sur quoi
   travailler ».
+
+### D13 — ADR-0016 et ADR-0017 écrites — et **correction de D9** par ADR-0015
+
+**ADR-0015 (« the local database now holds irreplaceable data »), prise entre les deux sessions de
+grilling, invalide une recommandation de D9.** Elle retire explicitement la licence « wipe and
+re-import », qu'elle **nomme perte de données** : rien ne reconstruit une `Evaluation` sinon du temps
+moteur, il n'y a pas d'amont où la refetcher. La liberté conservée est celle de **changer le modèle**,
+pas celle de **perdre la donnée** — donc tout changement de schéma **doit** embarquer sa migration.
+
+Conséquences sur ce qui avait été décidé :
+
+- **« Wipe et ré-analyse pour la transition » (D9) est retiré.** À la place, la migration crée un
+  **pass synthétique** portant le régime réellement utilisé (profondeur 16, une ligne) et y rattache
+  les 1199 `Evaluation`s existantes. Elles gardent un `pv` null, ce qui est **honnête** : la ligne n'a
+  jamais été stockée et **aucun rejeu ne peut la retrouver** — contrairement aux FEN d'ADR-0012,
+  récupérables depuis le PGN, ce qui est précisément pourquoi cette réparation-là pouvait être
+  automatique et pas celle-ci. Ré-analyser ces 20 parties pour remplir leurs lignes devient un
+  **choix du joueur à ~11 minutes**, pas une exigence de migration.
+- **La conséquence 2 de D9 (reprise : jeter les lignes et réévaluer la partie entière) est
+  maintenue, mais nommée.** C'est une vraie perte de données calculées, acceptée uniquement parce
+  qu'une partie dont les chiffres mélangent silencieusement deux régimes est **pire** qu'une partie
+  réévaluée : la première est fausse sans le dire. Elle reste bornée par le fait de rester
+  **déclenchée par le joueur**, comme tout run moteur de l'app.
+
+**ADR-0016 — « An `Analysis pass` records what it searched under »** : `pv` entière en UCI (une seule
+colonne), `cp2`/`mate2`, `evaluations.pass_id`, `Search regime` sur le pass, l'exception au « jamais
+recalculées », la migration ci-dessus, et la mesure MultiPV due en 15a.
+
+**ADR-0017 — « The verdict is a fold over per-Game records »** : une partie porte tout ce que
+l'agrégat consomme (y compris **pourquoi** un Move ne compte pas), l'agrégat est ce récapitulatif
+**sommé**, donc la réconciliation est la **définition** et non un test qu'on espère vert. Porte aussi
+les deux corollaires (donnée ≠ présentation ; la vue par partie d'abord), et les conséquences
+`Drift`-résidu, seuils ancrés sur des nombres déjà publiés, et pas d'étiquette avant validation.
+
+**Pas d'ADR, délibérément** : les seuils de `Phase` et `Drift`-comme-résidu sont **dérivés**,
+retunables sans relancer le moteur, et déjà énoncés dans `CONTEXT.md` — les défaire ne coûte rien,
+donc ils échouent au premier test. L'absence d'étiquette de nature est un « pas encore » que 15e
+renverse par construction.
