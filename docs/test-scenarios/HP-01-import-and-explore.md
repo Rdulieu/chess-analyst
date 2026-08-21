@@ -51,8 +51,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   file, talking to the **real** chess.com API (no `CHESSCOM_BASE_URL` override).
 - **Clean data state, restored**: [path 0](./path-0-bootstrap.md)'s **empty-history snapshot**
   copied into this scenario's database file, with the server stopped. It holds the reference
-  `Profile` and **no Games**, so the empty-state invitation shows and the import counts are
-  predictable. The Profile's creation and its chess.com validation belong to path 0; this scenario
+  `Profile`, a **second Profile (`Nonomoho`) owning nothing**, and **no Games at all**, so the
+  empty-state invitation shows and the import counts are predictable. Two Profiles is the suite's
+  standing state — see [`theme-pass.md`](./theme-pass.md) for why — so step 1 selects one **among
+  two** rather than confirming the only one. The Profile's creation and its chess.com validation belong to path 0; this scenario
   starts from the Profile and imports onto it.
 - **Nothing is selected on arrival**: the current `Profile` lives client-side, not in the database
   (ADR-0014), so step 1 selects it.
@@ -144,10 +146,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 
 ## Checks
 ### UI
-- Step 1: `/profiles` lists `DudulSmash` with **0** Games imported and **0** analyzed; selecting it marks the row "Profil actuel" in words, and every scoped screen afterwards carries the banner naming `DudulSmash`.
+- Step 1: `/profiles` lists **two** Profiles; `DudulSmash` reads **0** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers "Sélectionner". Every scoped screen afterwards carries the banner naming `DudulSmash`. Nothing on the list overflows its container — the pairing of those two states in one column is what used to.
 - Step 2: "Mes parties" carries its own heading, shows an invitation to import and **no import form** — the form is not on this screen since US-11, and the invitation leads to the Profile's page. With the restored empty history no Games are listed.
 - Step 3: the Profile's page (`/profiles/:id`) names the Profile and carries the import form: a first and a last month, category checkboxes and an Import button, and **no username field** at all. Both month fields default to the current month; each field is labelled above it (US-13's skeleton) and the Import button is the form's primary action, visibly distinguished from the secondary controls. The progress readout is visible during the run, is **determinate** (n/N, counted in months, N = 2 for this range), advances to N/N, and is gone once the Import completes.
-- Step 4: on a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
+- Step 4: the import landed on `DudulSmash` and nowhere else — `Nonomoho` still reads `0 parties · 0 analysées` on `/profiles` (ADR-0014). On a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
 - Step 5: exactly two lines, in range order — **`2026-05` at 28 imported** and **`2026-06` at 54 imported**, summing to the consolidated 82. Neither is marked in échec.
 - Step 6: the number of listed Games matches the imported count from the summary (82 on a clean run). It is still a **list**, not a table, and each entry reads as a row of three parts — the selection checkbox, the description, the analysed state — with every badge landing on the same left edge across rows so the column can be scanned.
 - Step 7: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The **second pane beside the board is the annotations pane, and it only exists once the Game is analysed** — on the unanalysed Game this step opens, the board row holds the board alone and the move list runs below it. The row proper is asserted at step 10.

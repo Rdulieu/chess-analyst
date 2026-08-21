@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { ProfilePage } from "../src/pages/ProfilePage";
@@ -48,7 +48,10 @@ describe("ProfilePage — arriving to import", () => {
     const form = await screen.findByRole("form", { name: /^import$/i });
     // The Player asked for the Import: the form takes the focus, so the next
     // keystroke lands in it and a long page cannot hide it below the fold.
-    expect(form.contains(document.activeElement)).toBe(true);
+    // `waitFor`, because the focus lands in an effect: the form is on screen one
+    // commit before it is focused, and asserting on sight raced the effect and
+    // failed only under a parallel run.
+    await waitFor(() => expect(form.contains(document.activeElement)).toBe(true));
   });
 
   it("leaves the focus alone when the Player merely opened the Profile", async () => {
