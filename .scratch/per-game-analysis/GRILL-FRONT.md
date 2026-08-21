@@ -79,3 +79,51 @@ est exactement ce qui échoue ici. Retenu : **terminer un `Analysis pass` sur la
 revue promeut cette revue en `Annotated`** — le joueur a demandé l'analyse, lui montrer ce qu'elle a
 produit est une réponse, pas un passage en force. Le défaut persistant des autres parties reste
 `Unaided`.
+
+## F4 — La dérive : **un second graphique aligné**, étiqueté, et **à évaluer sur pièces**
+
+Options : **(a) superposer** sur la courbe existante — deux grandeurs différentes sur un même axe
+0–100 : exactement ce que la condition d'acceptation d'US-14 interdisait (« aucune divergence entre
+les vues »), un lecteur prendrait la nouvelle ligne pour commensurable avec les aires. **Rejeté.**
+**(c) texte seul dans le récapitulatif** — le moins cher, mais D5 exigeait que la dérive soit
+**visible comme une pente**, justement parce que c'est le chiffre qu'il faut pouvoir regarder avant de
+croire un agrégat bâti dessus. **(d) des bandes sur la courbe** marquant les épisodes de dérive :
+**impossible par construction**, D8 a supprimé les spans — il n'y a pas d'épisodes. (Noté parce que
+c'est l'option la plus séduisante et qu'elle est déjà écartée par une décision prise.)
+
+**Retenu (b) : son propre petit graphique, partageant l'axe des x** et aligné verticalement avec la
+courbe, pour que le même ply soit à la même abscisse dans les deux — on compare **en regardant vers
+le bas**, pas en démêlant deux séries. **Chaque graphique porte une étiquette visible** pour les
+distinguer (exigence du demandeur) — ce qui touche légèrement US-14 : la courbe n'a **aucun titre
+visible** aujourd'hui, elle en gagne un. Petit, et une amélioration.
+
+**Précision qui dissout l'inquiétude « deux grandeurs »** : le tracé porte **une seule** grandeur, le
+**cumul des winning chances perdues par le joueur**. La dérive n'est pas une seconde série dessus,
+elle s'y **lit** : les Moves signalés sont les **falaises**, la dérive est la **pente entre elles**.
+C'est mot pour mot la formulation de D5, et le dessin reste univoque.
+
+**Question posée par le demandeur — est-ce vraiment utile, les deux graphiques ne disent-ils pas la
+même chose ?** Réponse honnête :
+
+- **La courbe oublie, le tracé se souvient.** La courbe est un **niveau**, donc elle se rétablit : on
+  gaffe 40 points, l'adversaire les rend, la courbe revient à l'équilibre et la partie a l'air
+  propre. Le tracé est monotone : ces 40 points y restent pour toujours. Un joueur qui se trompe sans
+  cesse et s'en sort sans cesse se lit **correct** sur la courbe et **mauvais** sur le tracé. C'est
+  précisément la question « est-ce que je joue bien, ou est-ce que je m'en sors ? », à laquelle la
+  courbe est structurellement incapable de répondre.
+- **La courbe mêle les deux joueurs, le tracé n'est que le vôtre.** Une baisse de la courbe peut être
+  votre erreur **ou** un bon coup adverse ; la forme ne le dit pas. La pente du tracé parle toujours
+  de vous.
+- **La dérive est invisible sur la courbe à la résolution de lecture** : quinze Moves à −5 % font une
+  pente douce indiscernable du frémissement ordinaire. Sur un cumul, c'est une montée régulière et
+  chiffrable. C'est le cas que l'EPIC doit le plus voir, et celui que la courbe cache le mieux.
+- **Redondance réelle, assumée** : sur une partie à une seule grosse gaffe sans rétablissement, la
+  falaise de la courbe et celle du tracé sont **le même événement dessiné deux fois**. Le second
+  graphique ne gagne sa place que dans les parties compliquées (rétablissement, erreurs mutuelles,
+  saignement lent).
+
+**Point de contrôle nommé, et non une intention vague** (« I want to build it to see it by myself ») :
+après la sortie de 15a, le demandeur regarde **dix parties réelles** et décide si le tracé survit.
+C'est la chose la moins chère à supprimer de tout le projet — dérivée côté client depuis des données
+déjà chargées, ni schéma, ni migration, ni temps moteur — donc **pas d'ADR** : une décision qui ne
+coûte rien à défaire échoue au premier test.
