@@ -621,3 +621,44 @@ soutient : la ré-analyse est le coût cher et **une fois par partie** — si Mu
 voulu, le payer *pendant* la ré-analyse qu'on fait de toute façon est bien moins cher qu'un troisième
 pass plus tard. La mesure de D7 (garder < 1,5×, revenir au demandeur entre 1,5× et 2×, refonte
 au-delà de 2×) **reste due**.
+
+### D12 — La roadmap de l'EPIC (validée)
+
+Nommage suivant le précédent `US-10a`/`US-10b` du backlog : l'EPIC est US-15, ses stories sont
+lettrées.
+
+- **US-15a — Comprendre l'analyse sur une partie.** Tout D4/D5, **une** partie, **aucun agrégat**.
+  Porte le travail cher et irréversible, puisque tout l'aval le lit : `evaluations` gagne `pv`,
+  `cp2`/`mate2`, `pass_id` ; `analysis_passes` gagne le `Search regime` ; MultiPV=2 dans le driver UCI
+  **avec la mesure de D7 rendue dans la story** ; ré-analyse de la bibliothèque et reprise restreinte
+  au même régime ; dérivation de `Phase`, `Counted Move` + motif, `Drift` en résidu, et le
+  récapitulatif par partie qui somme vers le futur agrégat ; sur la page Analyse (mise en page libre,
+  D6) le relevé par Move avec `Best line` + réfutation, et le tracé cumulé de la dérive.
+- **US-15b — La pression du temps.** Parser `[%clk]`, ajouter le temps par Move au relevé. Bon marché
+  (ni ré-analyse ni ré-import), et c'est l'axe le plus susceptible d'**expliquer** ce qu'on impute à
+  la phase — l'assaut direct sur le problème 1. **Story séparée (choix du demandeur)** pour que 15a
+  puisse sortir.
+- **US-15c — L'agrégat sur tout l'historique.** Taux par bucket, intervalles, verdict de dispersion
+  capable de dire « rien ne ressort ». **C'est là que Q3-bis est enfin tranchée** — marginal vs
+  conditionnel — avec de vraies données par Move sous les yeux plutôt que dans l'abstrait. La
+  réconciliation avec le récapitulatif de 15a est un **critère d'acceptation**.
+- **US-15d — Le verdict : sur quoi travailler.** La sortie classée et la page d'entrée. C'est là que
+  la réservation sur `Weakness` est levée, et que se règle le sort de `/openings` et `/danger`
+  (preuves vers lesquelles on descend, ou vues autonomes).
+- **US-15e+ — Les motifs, un par un.** Le chantier (i) : chaque motif un prédicat nommé, validé sur
+  ses propres parties — qu'on aura alors passé des mois à lire via les `Best line`.
+- **Plus tard, non planifié — le suivi dans le temps** (G6/Q8) : est-ce que ça s'améliore ? Laissé
+  non planifié exprès : demande la comparabilité par `Search regime` pour avoir un sens, et c'est la
+  pièce que 15c et 15d ont le plus de chances de remodeler.
+
+**Deux avertissements assumés :**
+
+- **15a est grosse pour une story** (migration de schéma + changement moteur + une mesure +
+  ré-analyse + nouvelle dérivation + nouvelle visualisation). Elle voudra des tranches internes
+  (`/to-issues`) ; balle traçante probable : schéma + régime + PV stockée → le relevé par Move à
+  l'écran pour une partie → le tracé de dérive → le récapitulatif.
+- **15a ne prouve rien de la thèse de l'EPIC**, puisqu'elle n'a pas d'agrégat. C'est un **coût
+  délibéré** de l'exigence de méthodologie : après 15a on aura une vue par partie belle et auditable
+  et **toujours aucune idée** de ses faiblesses. Le gain, c'est qu'à l'arrivée de 15c on pourra la
+  **croire**. La valeur de 15a se juge donc à « je peux évaluer la méthode », pas à « je sais sur quoi
+  travailler ».
