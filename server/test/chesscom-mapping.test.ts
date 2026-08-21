@@ -104,3 +104,19 @@ describe("toMonthFetch", () => {
     expect(month.games).toHaveLength(1);
   });
 });
+
+describe("the pace translation", () => {
+  it("answers chess.com's `daily` as `correspondence` — the game's own word for it", () => {
+    // chess.com's four words are ITS vocabulary; ours has five, and the adapter
+    // is where the two meet (ADR-0016). Nothing above it should ever see "daily".
+    expect(toImportedGame(chessComGame({ time_class: "daily" }), "me").timeControlCategory).toBe(
+      "correspondence",
+    );
+  });
+
+  it("passes the three paces the two vocabularies already agree on through unchanged", () => {
+    for (const pace of ["bullet", "blitz", "rapid"] as const) {
+      expect(toImportedGame(chessComGame({ time_class: pace }), "me").timeControlCategory).toBe(pace);
+    }
+  });
+});

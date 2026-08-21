@@ -154,7 +154,8 @@ export type AnalysisPass = typeof analysisPasses.$inferSelect;
  * to the depth cap: the Player's own Moves and the opponent's replies alike.
  * `count` = games in which that Move was played from that Position (for that
  * side); `win`/`draw`/`loss` are Player-relative (for standard-scoring win
- * rate); `bullet`/`blitz`/`rapid`/`daily` break `count` down by time control.
+ * rate); `bullet`/`blitz`/`rapid`/`classical`/`correspondence` break `count` down by
+ * time control.
  */
 export const moveHabits = sqliteTable(
   "move_habits",
@@ -175,7 +176,8 @@ export const moveHabits = sqliteTable(
     bullet: integer("bullet").notNull().default(0),
     blitz: integer("blitz").notNull().default(0),
     rapid: integer("rapid").notNull().default(0),
-    daily: integer("daily").notNull().default(0),
+    classical: integer("classical").notNull().default(0),
+    correspondence: integer("correspondence").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.profileId, t.fen, t.side, t.san] })],
 );

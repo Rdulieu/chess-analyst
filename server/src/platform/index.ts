@@ -1,5 +1,6 @@
 // Public surface of the Platform port (ADR-0016).
 export {
+  TIME_CONTROL_CATEGORIES,
   platformLabel,
   clientFor,
   UnsupportedPlatformError,

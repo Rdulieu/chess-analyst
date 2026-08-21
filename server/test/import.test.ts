@@ -183,13 +183,19 @@ describe("importMonth", () => {
       username: "me",
       year: 2024,
       month: 1,
-      categories: ["bullet", "blitz", "rapid", "daily"],
+      categories: ["bullet", "blitz", "rapid", "classical", "correspondence"],
     });
 
     expect(result.totalFetched).toBe(5);
     expect(result.imported).toBe(4);
     expect(result.alreadyPresent).toBe(0);
-    expect(result.byCategory).toEqual({ bullet: 1, blitz: 2, rapid: 1, daily: 0 });
+    expect(result.byCategory).toEqual({
+      bullet: 1,
+      blitz: 2,
+      rapid: 1,
+      classical: 0,
+      correspondence: 0,
+    });
     expect(result.results).toEqual({ win: 2, draw: 1, loss: 1 });
   });
 

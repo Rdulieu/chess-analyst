@@ -10,7 +10,7 @@ function cand(san: string, count: number, winRate: number): MoveHabitCandidate {
     draw: 0,
     loss: 0,
     winRate,
-    byCategory: { bullet: 0, blitz: count, rapid: 0, daily: 0 },
+    byCategory: { bullet: 0, blitz: count, rapid: 0, classical: 0, correspondence: 0 },
   };
 }
 

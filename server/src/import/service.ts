@@ -2,7 +2,18 @@ import type { Db } from "../db";
 import { games } from "../db/schema";
 import { gameExistsByUrl } from "../repository";
 import { recordMoveHabits } from "../move-habits/precompute";
-import type { PlatformClient, TimeControlCategory } from "../platform";
+import {
+  TIME_CONTROL_CATEGORIES,
+  type PlatformClient,
+  type TimeControlCategory,
+} from "../platform";
+
+/** A per-category tally at zero — one entry per category, never a subset. */
+export const emptyTally = (): Record<TimeControlCategory, number> =>
+  Object.fromEntries(TIME_CONTROL_CATEGORIES.map((c) => [c, 0])) as Record<
+    TimeControlCategory,
+    number
+  >;
 
 export interface ImportParams {
   /** The `Profile` the imported Games belong to — never another's (ADR-0014). */
@@ -71,7 +82,7 @@ export async function importMonth(
   const wanted = new Set(params.categories);
   let imported = 0;
   let alreadyPresent = 0;
-  const byCategory: Record<TimeControlCategory, number> = { bullet: 0, blitz: 0, rapid: 0, daily: 0 };
+  const byCategory = emptyTally();
   const results = { win: 0, loss: 0, draw: 0 };
   for (const game of monthGames) {
     // Which paces to keep is the PLAYER's choice, not a Platform fact — so it

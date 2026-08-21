@@ -23,7 +23,7 @@ const WHITE = [
     draw: 1,
     loss: 1,
     winRate: 0.5,
-    byCategory: { bullet: 0, blitz: 2, rapid: 1, daily: 0 },
+    byCategory: { bullet: 0, blitz: 2, rapid: 1, classical: 0, correspondence: 0 },
   },
 ];
 const BLACK = [
@@ -34,7 +34,7 @@ const BLACK = [
     draw: 0,
     loss: 2,
     winRate: 0,
-    byCategory: { bullet: 0, blitz: 2, rapid: 0, daily: 0 },
+    byCategory: { bullet: 0, blitz: 2, rapid: 0, classical: 0, correspondence: 0 },
   },
 ];
 
@@ -92,8 +92,8 @@ describe("ExplorerPage", () => {
 
 /** fetch stub: the starting Position offers e4; any deeper Position offers e5. */
 function stubDrill() {
-  const level0 = [{ san: "e4", count: 3, win: 1, draw: 1, loss: 1, winRate: 0.5, byCategory: { bullet: 0, blitz: 3, rapid: 0, daily: 0 } }];
-  const level1 = [{ san: "e5", count: 2, win: 2, draw: 0, loss: 0, winRate: 1, byCategory: { bullet: 0, blitz: 2, rapid: 0, daily: 0 } }];
+  const level0 = [{ san: "e4", count: 3, win: 1, draw: 1, loss: 1, winRate: 0.5, byCategory: { bullet: 0, blitz: 3, rapid: 0, classical: 0, correspondence: 0 } }];
+  const level1 = [{ san: "e5", count: 2, win: 2, draw: 0, loss: 0, winRate: 1, byCategory: { bullet: 0, blitz: 2, rapid: 0, classical: 0, correspondence: 0 } }];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string | URL): Promise<Response> => {
@@ -139,7 +139,7 @@ describe("ExplorerPage — drill-down", () => {
   });
 
   it("offers no further descent when the Position has no recorded candidates (the depth cap manifests here)", async () => {
-    const level0 = [{ san: "e4", count: 3, win: 1, draw: 1, loss: 1, winRate: 0.5, byCategory: { bullet: 0, blitz: 3, rapid: 0, daily: 0 } }];
+    const level0 = [{ san: "e4", count: 3, win: 1, draw: 1, loss: 1, winRate: 0.5, byCategory: { bullet: 0, blitz: 3, rapid: 0, classical: 0, correspondence: 0 } }];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string | URL): Promise<Response> => {

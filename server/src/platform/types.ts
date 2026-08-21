@@ -17,8 +17,29 @@ export function platformLabel(platform: Platform): string {
   return PLATFORM_LABELS[platform];
 }
 
-/** The pace of play a Game was played at (CONTEXT.md, "Time control category"). */
-export type TimeControlCategory = "bullet" | "blitz" | "rapid" | "daily";
+/**
+ * The pace of play a Game was played at (CONTEXT.md, "Time control category").
+ * **Five values, ours** — not chess.com's four: `classical` has no honest home
+ * anywhere else (folded into `rapid` it averages a 10-minute game with a
+ * 60-minute one), and `correspondence` is the game's own word for what
+ * chess.com calls `daily`, the one that survives now that chess.com is not the
+ * only Platform.
+ */
+export type TimeControlCategory =
+  | "bullet"
+  | "blitz"
+  | "rapid"
+  | "classical"
+  | "correspondence";
+
+/** The five categories, in increasing order of time per move. */
+export const TIME_CONTROL_CATEGORIES: TimeControlCategory[] = [
+  "bullet",
+  "blitz",
+  "rapid",
+  "classical",
+  "correspondence",
+];
 
 /**
  * An account on a Platform, reduced to what a `Profile` needs: the **canonical

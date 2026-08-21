@@ -6,7 +6,13 @@ import { candidateArrows } from "../chess/arrows";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
-import type { MoveHabitCandidate, Profile, Side } from "../types";
+import {
+  CADENCE_LABEL,
+  TIME_CONTROL_CATEGORIES,
+  type MoveHabitCandidate,
+  type Profile,
+  type Side,
+} from "../types";
 
 /** One shared empty list, so "nothing loaded yet" is a stable reference. */
 const EMPTY: MoveHabitCandidate[] = [];
@@ -156,9 +162,10 @@ export function ExplorerPage({ profile }: { profile: Profile }) {
                 <button type="button" onClick={() => descend(c.san)}>
                   {c.san}
                 </button>{" "}
-                — {c.count} {c.count > 1 ? "parties" : "partie"} · {percent(c.winRate)} · bullet{" "}
-                {c.byCategory.bullet}, blitz {c.byCategory.blitz}, rapid {c.byCategory.rapid}, daily{" "}
-                {c.byCategory.daily}
+                — {c.count} {c.count > 1 ? "parties" : "partie"} · {percent(c.winRate)} ·{" "}
+                {/* The five categories, from the one list of them: a breakdown
+                    that quietly omitted one would stop adding up to `count`. */}
+                {TIME_CONTROL_CATEGORIES.map((cat) => `${CADENCE_LABEL[cat]} ${c.byCategory[cat]}`).join(", ")}
               </li>
             ))}
           </ul>

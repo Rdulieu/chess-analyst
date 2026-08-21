@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { runImport } from "./runImport";
 import { ImportSummary } from "./ImportSummary";
 import {
+  CADENCE_LABEL,
+  TIME_CONTROL_CATEGORIES,
   platformLabel,
   type ImportResult,
   type ImportStatus,
@@ -10,9 +12,9 @@ import {
   type TimeControlCategory,
 } from "../../types";
 
-const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
+const CATEGORIES = TIME_CONTROL_CATEGORIES;
 
-const label = (c: TimeControlCategory) => c[0].toUpperCase() + c.slice(1);
+const label = (c: TimeControlCategory) => CADENCE_LABEL[c];
 
 /** The current month as an <input type="month"> value (YYYY-MM). */
 const thisMonth = () => new Date().toISOString().slice(0, 7);

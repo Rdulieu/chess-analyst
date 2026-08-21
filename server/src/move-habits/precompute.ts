@@ -63,7 +63,8 @@ function bumpCounter(db: Db, fen: string, game: Game, san: string): void {
     bullet: one(game.timeControlCategory === "bullet"),
     blitz: one(game.timeControlCategory === "blitz"),
     rapid: one(game.timeControlCategory === "rapid"),
-    daily: one(game.timeControlCategory === "daily"),
+    classical: one(game.timeControlCategory === "classical"),
+    correspondence: one(game.timeControlCategory === "correspondence"),
   };
   db.insert(moveHabits)
     .values({ profileId: game.profileId, fen, side: game.playerColor, san, ...delta })
@@ -79,7 +80,8 @@ function bumpCounter(db: Db, fen: string, game: Game, san: string): void {
         bullet: sql`${moveHabits.bullet} + ${delta.bullet}`,
         blitz: sql`${moveHabits.blitz} + ${delta.blitz}`,
         rapid: sql`${moveHabits.rapid} + ${delta.rapid}`,
-        daily: sql`${moveHabits.daily} + ${delta.daily}`,
+        classical: sql`${moveHabits.classical} + ${delta.classical}`,
+        correspondence: sql`${moveHabits.correspondence} + ${delta.correspondence}`,
       },
     })
     .run();

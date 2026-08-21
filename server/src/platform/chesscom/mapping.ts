@@ -1,4 +1,4 @@
-import type { ImportedGame } from "../types";
+import type { ImportedGame, TimeControlCategory } from "../types";
 import type { ChessComGame } from "./payload";
 import { parseOpening } from "./opening";
 
@@ -8,6 +8,19 @@ import { parseOpening } from "./opening";
  * densest, most edge-case-prone part of the adapter, isolated here so it can be
  * unit-tested on its own.
  */
+
+/**
+ * chess.com's pace vocabulary translated into ours: the three real-time paces
+ * agree word for word, and chess.com's `daily` is what the game itself calls
+ * **correspondence**. chess.com has no `classical`, which is exactly why the
+ * category could not be folded into another (`CONTEXT.md`).
+ */
+const PACES: Record<ChessComGame["time_class"], TimeControlCategory> = {
+  bullet: "bullet",
+  blitz: "blitz",
+  rapid: "rapid",
+  daily: "correspondence",
+};
 
 /** chess.com result codes that denote a draw (both sides carry the same one). */
 const DRAW_CODES = new Set([
@@ -51,7 +64,7 @@ export function toImportedGame(game: ChessComGame, username: string): ImportedGa
     playerColor: isWhite ? "white" : "black",
     result: normalizeResult(self.result),
     date: new Date(game.end_time * 1000).toISOString().slice(0, 10),
-    timeControlCategory: game.time_class,
+    timeControlCategory: PACES[game.time_class],
     eco,
     openingName,
   };

@@ -2,7 +2,7 @@ import type { Db } from "../db";
 import { clientFor, type PlatformRegistry } from "../platform";
 import { importRange, type ImportRangeParams } from "./range";
 import { monthsInRange } from "./months";
-import type { ImportResult } from "./service";
+import { emptyTally, type ImportResult } from "./service";
 
 /** Determinate progress of an Import, counted in months (ADR-0010). */
 export interface ImportStatus {
@@ -93,7 +93,7 @@ const emptySummary = (): ImportResult => ({
   totalFetched: 0,
   imported: 0,
   alreadyPresent: 0,
-  byCategory: { bullet: 0, blitz: 0, rapid: 0, daily: 0 },
+  byCategory: emptyTally(),
   results: { win: 0, loss: 0, draw: 0 },
   months: [],
 });

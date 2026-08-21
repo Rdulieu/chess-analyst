@@ -857,6 +857,38 @@ describe("import API", () => {
     expect(list.status).toBe(200);
   });
 
+  it("accepts an import scoped to `classical` alone and reports zero rather than failing", async () => {
+    // The category exists in the vocabulary before any Platform produces one:
+    // scoping to it must run and come back empty, not be refused (US-12).
+    const { db } = openDb(":memory:");
+    const profileId = seedProfile(db, "me");
+    const app = createApp(
+      db,
+      fakeRegistry({ "2024-01": [importedGame({ timeControlCategory: "blitz" })] }),
+    );
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        profileId,
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["classical"],
+      });
+
+    expect(res.status).toBe(202);
+    const final = await importDone(app);
+    expect(final.result).toMatchObject({ totalFetched: 1, imported: 0, alreadyPresent: 0 });
+    expect(final.result.byCategory).toEqual({
+      bullet: 0,
+      blitz: 0,
+      rapid: 0,
+      classical: 0,
+      correspondence: 0,
+    });
+    expect(final.result.message).toMatch(/no games found/i);
+  });
+
   it("POST /api/import reports zero with a message covering the whole range", async () => {
     const { db } = openDb(":memory:");
     const profileId = seedProfile(db, "me");
@@ -927,7 +959,13 @@ describe("move habits API", () => {
     expect(res.status).toBe(200);
     const e4 = res.body.candidates.find((c: { san: string }) => c.san === "e4");
     expect(e4).toMatchObject({ count: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 });
-    expect(e4.byCategory).toMatchObject({ bullet: 0, blitz: 2, rapid: 0, daily: 0 });
+    expect(e4.byCategory).toMatchObject({
+      bullet: 0,
+      blitz: 2,
+      rapid: 0,
+      classical: 0,
+      correspondence: 0,
+    });
   });
 });
 

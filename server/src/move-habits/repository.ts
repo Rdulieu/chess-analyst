@@ -46,7 +46,13 @@ export function listCandidates(
       draw: r.draw,
       loss: r.loss,
       winRate: r.count === 0 ? 0 : (r.win + 0.5 * r.draw) / r.count,
-      byCategory: { bullet: r.bullet, blitz: r.blitz, rapid: r.rapid, daily: r.daily },
+      byCategory: {
+        bullet: r.bullet,
+        blitz: r.blitz,
+        rapid: r.rapid,
+        classical: r.classical,
+        correspondence: r.correspondence,
+      },
     }))
     .sort((a, b) => b.count - a.count);
 }

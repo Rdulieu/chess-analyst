@@ -10,7 +10,7 @@ const emptyResult = {
   totalFetched: 2,
   imported: 2,
   alreadyPresent: 0,
-  byCategory: { bullet: 0, blitz: 2, rapid: 0, daily: 0 },
+  byCategory: { bullet: 0, blitz: 2, rapid: 0, classical: 0, correspondence: 0 },
   results: { win: 2, draw: 0, loss: 0 },
   months: [
     { month: { year: 2024, month: 1 }, imported: 2, alreadyPresent: 0 },
