@@ -10,9 +10,8 @@
   > et `Analysis pass` amendée. Branche `integration/US-15-weakness-profile`.
   >
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
-  > - **US-15a** — Comprendre l'analyse sur **une** partie (aucun agrégat) : stocker la `Best line` +
-  >   le 2e score + le `Search regime`, MultiPV=2 mesuré, ré-analyse, dérivation (`Phase`,
-  >   `Counted Move`, `Drift`), et la visualisation auditable sur la page Analyse. **La prochaine.**
+  > - **US-15a** — Comprendre l'analyse sur **une** partie. **Sortie de l'EPIC : story autonome
+  >   ci-dessous**, sur sa propre branche d'intégration, mergée dès qu'elle est finie.
   > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
   > - **US-15c** — L'agrégat sur tout l'historique ; c'est là que se tranche « taux marginaux vs
   >   conditionnels », avec de vraies données sous les yeux.
@@ -54,6 +53,38 @@
   >
   > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
   > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
+
+- **US-15a**: Comprendre, sur **une** partie, comment l'analyse juge mes coups — pour pouvoir croire
+  (ou contester) ce que l'app me dira plus tard sur mes faiblesses.
+  > **Grillée avec l'EPIC US-15** (2026-08-21) : décisions D1→D14 dans
+  > `.scratch/weakness-profile/GRILL-NOTES.md`, glossaire dans `CONTEXT.md`, **ADR-0016** et
+  > **ADR-0017**. **Isolée de l'EPIC** (choix du demandeur) : branche d'intégration propre,
+  > `integration/US-15a-per-game-analysis`, PR vers `develop` **dès la fin de 15a** — une autre
+  > feature passe avant le reste de l'EPIC, et l'analyse partie par partie ne doit pas l'attendre.
+  >
+  > **Aucun agrégat, aucune page de verdict.** La valeur de cette story se juge à « je peux évaluer
+  > la méthode », pas à « je sais sur quoi travailler » (ADR-0017).
+  >
+  > Contenu :
+  > - Stocker la **`Best line`** (PV entière, UCI, une seule colonne) et le score de la 2e ligne
+  >   (`cp2`/`mate2`) — **zéro temps moteur** : `uci-driver.ts` collecte déjà toutes les lignes `info`
+  >   et jette la variante.
+  > - **MultiPV=2**, avec la **mesure** due : < 1,5× on garde, 1,5–2× on revient au demandeur, > 2× on
+  >   revoit la méthode. La profondeur 16 n'est **pas** la variable d'ajustement (ADR-0009).
+  > - `evaluations.pass_id` + le **`Search regime`** porté par le pass, et la reprise restreinte au
+  >   même régime (ADR-0016).
+  > - **Migration** (ADR-0015 : plus de wipe) : un pass synthétique portant profondeur 16 / une ligne,
+  >   auquel on rattache les 1199 `Evaluation`s existantes, `pv` null assumé — aucun rejeu ne
+  >   reconstitue une variante. Ré-analyser les 20 parties = choix du joueur, ~11 min.
+  > - Dérivation (jamais stockée, retunable sans moteur) : **`Phase`** (seuils de départ à ajuster en
+  >   regardant de vraies parties), **`Counted Move`** + le motif d'exclusion, **`Drift`** en résidu,
+  >   et le **récapitulatif par partie** qui sommera vers l'agrégat de 15c.
+  > - Sur la page Analyse : le relevé par Move (`Best line` + réfutation, delta, phase, compté ou
+  >   non et pourquoi) et le **tracé cumulé** de la dérive. Mise en page libre — **l'UI ne décide pas
+  >   du modèle** (ADR-0017) ; la page est déjà la plus dense de l'app.
+  >
+  > Story grosse : voudra des tranches internes. Balle traçante : schéma + régime + PV stockée → le
+  > relevé par Move à l'écran → le tracé de dérive → le récapitulatif.
 
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
