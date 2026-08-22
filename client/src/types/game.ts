@@ -1,5 +1,33 @@
-/** chess.com's own time control classification (see CONTEXT.md → Game). */
-export type TimeControlCategory = "bullet" | "blitz" | "rapid" | "daily";
+/**
+ * The pace of play a Game was played at (CONTEXT.md → `Time control category`).
+ * **Ours, five values** — not any one Platform's: `classical` has its own bucket
+ * rather than being averaged into `rapid`, and `correspondence` is the game's
+ * own word for what chess.com calls "daily".
+ */
+export type TimeControlCategory =
+  | "bullet"
+  | "blitz"
+  | "rapid"
+  | "classical"
+  | "correspondence";
+
+/** The five categories, in increasing order of time per move. */
+export const TIME_CONTROL_CATEGORIES: TimeControlCategory[] = [
+  "bullet",
+  "blitz",
+  "rapid",
+  "classical",
+  "correspondence",
+];
+
+/** How a category is named on screen. */
+export const CADENCE_LABEL: Record<TimeControlCategory, string> = {
+  bullet: "Bullet",
+  blitz: "Blitz",
+  rapid: "Rapid",
+  classical: "Classical",
+  correspondence: "Correspondance",
+};
 
 /** The `Game` glossary term as delivered by the local API (Player-relative). */
 export interface Game {

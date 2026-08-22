@@ -1,6 +1,7 @@
 // Public surface of the Import feature (keeps `./import` a stable import path).
 export {
   importMonth,
+  emptyTally,
   type ImportParams,
   type ImportFigures,
   type ImportResult,

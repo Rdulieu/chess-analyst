@@ -31,7 +31,13 @@ afterEach(() => {
 const ZERO = { games: 0, win: 0, draw: 0, loss: 0, winRate: null };
 const STATS_SUMMARY = {
   total: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 },
-  byCategory: { bullet: ZERO, blitz: ZERO, rapid: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, daily: ZERO },
+  byCategory: {
+    bullet: ZERO,
+    blitz: ZERO,
+    rapid: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 },
+    classical: ZERO,
+    correspondence: ZERO,
+  },
   bySide: { white: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, black: ZERO },
 };
 
@@ -222,7 +228,7 @@ describe("App — import UI", () => {
       // The account is the Profile's own: nothing to type, nothing to mistype.
       expect(screen.queryByLabelText(/username/i)).toBeNull();
       // A checkbox per time control category.
-      for (const cat of ["bullet", "blitz", "rapid", "daily"]) {
+      for (const cat of ["bullet", "blitz", "rapid", "classical", "correspondance"]) {
         expect(screen.getByRole("checkbox", { name: new RegExp(cat, "i") })).toBeTruthy();
       }
     });
@@ -266,7 +272,7 @@ describe("App — import UI", () => {
               totalFetched: 1,
               imported: 1,
               alreadyPresent: 0,
-              byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
+              byCategory: { bullet: 0, blitz: 1, rapid: 0, classical: 0, correspondence: 0 },
               results: { win: 1, draw: 0, loss: 0 },
               months: [
                 { month: { year: 2024, month: 2 }, imported: 0, alreadyPresent: 0 },
@@ -296,7 +302,7 @@ describe("App — import UI", () => {
         profileId: PROFILE.id,
         from: { year: 2024, month: 2 },
         to: { year: 2024, month: 3 },
-        categories: ["bullet", "blitz", "rapid", "daily"],
+        categories: ["bullet", "blitz", "rapid", "classical", "correspondence"],
       });
     });
     // The post-import summary is shown, and the Profile's counter caught up.
@@ -337,7 +343,7 @@ describe("App — import UI", () => {
           totalFetched: 1,
           imported: 1,
           alreadyPresent: 0,
-          byCategory: { bullet: 0, blitz: 1, rapid: 0, daily: 0 },
+          byCategory: { bullet: 0, blitz: 1, rapid: 0, classical: 0, correspondence: 0 },
           results: { win: 1, draw: 0, loss: 0 },
           months: [{ month: { year: 2024, month: 1 }, imported: 1, alreadyPresent: 0 }],
         },

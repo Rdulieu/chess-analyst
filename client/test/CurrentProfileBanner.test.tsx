@@ -42,4 +42,18 @@ describe("the current-Profile banner", () => {
     // US-13's rule: a current/selected state is never told by colour alone.
     expect(screen.getByText(/profil courant/i)).toBeTruthy();
   });
+
+  it("names the Platform the figures come from, read off the Profile", () => {
+    // Two Platforms can spell the same account name, and the figures on screen
+    // come from one of them: the banner says which, from data (US-12).
+    render(
+      <MemoryRouter>
+        <CurrentProfileBanner profile={{ ...ALICE, platform: "lichess" }} />
+      </MemoryRouter>,
+    );
+
+    const banner = screen.getByRole("complementary", { name: /profil courant/i });
+    expect(banner.textContent).toMatch(/lichess\.org/);
+    expect(banner.textContent).not.toMatch(/chess\.com/);
+  });
 });

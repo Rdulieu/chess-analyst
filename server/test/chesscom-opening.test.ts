@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseOpening } from "../src/import/opening";
+import { parseOpening } from "../src/platform/chesscom/opening";
 
 describe("parseOpening", () => {
   it("reads the ECO code and derives a readable name from the ECOUrl slug", () => {

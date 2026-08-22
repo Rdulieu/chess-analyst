@@ -1,6 +1,11 @@
 import type { Db } from "../db";
-import type { ChessComClient, TimeControlCategory } from "../chesscom";
-import { importMonth, type ImportResult } from "./service";
+import {
+  TIME_CONTROL_CATEGORIES,
+  type Platform,
+  type PlatformClient,
+  type TimeControlCategory,
+} from "../platform";
+import { emptyTally, importMonth, type ImportResult } from "./service";
 import { monthsInRange, type MonthRef } from "./months";
 
 /** The scope of one Import: a contiguous month range and the wanted categories. */
@@ -8,9 +13,13 @@ export interface ImportRangeParams {
   /** The `Profile` the imported Games belong to (ADR-0014). */
   profileId: number;
   username: string;
+  /** The Profile's `Platform` — which adapter this Import fetches through. */
+  platform: Platform;
   from: MonthRef;
   to: MonthRef;
   categories: TimeControlCategory[];
+  /** Told when the Platform asks the Import to wait (see ImportParams). */
+  onWaiting?: (message: string) => void;
 }
 
 /**
@@ -28,7 +37,7 @@ export interface ImportRangeParams {
  */
 export async function importRange(
   db: Db,
-  client: ChessComClient,
+  client: PlatformClient,
   params: ImportRangeParams,
   onMonthDone?: (soFar: ImportResult) => void,
 ): Promise<ImportResult> {
@@ -36,7 +45,7 @@ export async function importRange(
     totalFetched: 0,
     imported: 0,
     alreadyPresent: 0,
-    byCategory: { bullet: 0, blitz: 0, rapid: 0, daily: 0 },
+    byCategory: emptyTally(),
     results: { win: 0, loss: 0, draw: 0 },
     months: [],
   };
@@ -50,6 +59,7 @@ export async function importRange(
         year: month.year,
         month: month.month,
         categories: params.categories,
+        onWaiting: params.onWaiting,
       });
     } catch (err) {
       // One unanswerable month does not abort the Import (ADR-0010): the failure
@@ -68,7 +78,7 @@ export async function importRange(
     total.totalFetched += one.totalFetched;
     total.imported += one.imported;
     total.alreadyPresent += one.alreadyPresent;
-    for (const c of ["bullet", "blitz", "rapid", "daily"] as const) {
+    for (const c of TIME_CONTROL_CATEGORIES) {
       total.byCategory[c] += one.byCategory[c];
     }
     total.results.win += one.results.win;

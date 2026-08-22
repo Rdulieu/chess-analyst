@@ -1,4 +1,5 @@
 import type { Db } from "../db";
+import type { TimeControlCategory } from "../platform";
 import { games, type UnownedGame } from "../db/schema";
 import { recordMoveHabits } from "./precompute";
 
@@ -27,7 +28,7 @@ function fixtureGame(
   pgn: string,
   playerColor: "white" | "black",
   result: "win" | "loss" | "draw",
-  timeControlCategory: "bullet" | "blitz" | "rapid" | "daily",
+  timeControlCategory: TimeControlCategory,
 ): UnownedGame {
   return {
     gameUrl: `fixture://move-habits/${ref}`,

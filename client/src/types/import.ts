@@ -48,6 +48,13 @@ export interface ImportStatus {
   running: boolean;
   total: number;
   done: number;
+  /**
+   * Set while the Platform has asked the Import to **wait** rather than
+   * answering (a rate limit is an instruction, not a failure). Its own state:
+   * neither progress nor a failed month — and null again as soon as the Platform
+   * answers, so a stale notice cannot claim the Import is still held.
+   */
+  waiting: string | null;
   /** The range's consolidated summary; null until the Import has finished. */
   result: ImportResult | null;
 }

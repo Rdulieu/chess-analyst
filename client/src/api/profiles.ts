@@ -1,4 +1,4 @@
-import type { Profile } from "../types";
+import type { Platform, Profile } from "../types";
 
 /**
  * The platform answered, and the answer is that this `Profile` is not there —
@@ -29,16 +29,17 @@ export async function fetchProfile(id: number): Promise<Profile> {
 }
 
 /**
- * Creates a `Profile` for this chess.com account — or, when the account already
- * has one, answers that Profile rather than a second one. The server validates
- * the account against chess.com, so a refusal carries the reason **in the
- * words the Player is shown**: the message is the feature, not the status code.
+ * Creates a `Profile` for this account **on this `Platform`** — or, when the
+ * account already has one there, answers that Profile rather than a second one.
+ * The server validates the account against the Platform named, so a refusal
+ * carries the reason **in the words the Player is shown**, naming the site they
+ * actually asked for: the message is the feature, not the status code.
  */
-export async function createProfile(username: string): Promise<Profile> {
+export async function createProfile(platform: Platform, username: string): Promise<Profile> {
   const res = await fetch("/api/profiles", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ platform, username }),
   });
   const body = (await res.json()) as Profile & { error?: string };
   if (!res.ok) throw new Error(body.error ?? `Failed to create profile (${res.status})`);

@@ -1,7 +1,13 @@
-import type { ImportResult, MonthlyImport, TimeControlCategory } from "../../types";
+import {
+  CADENCE_LABEL,
+  TIME_CONTROL_CATEGORIES,
+  type ImportResult,
+  type MonthlyImport,
+  type TimeControlCategory,
+} from "../../types";
 
-const CATEGORIES: TimeControlCategory[] = ["bullet", "blitz", "rapid", "daily"];
-const label = (c: TimeControlCategory) => c[0].toUpperCase() + c.slice(1);
+const CATEGORIES = TIME_CONTROL_CATEGORIES;
+const label = (c: TimeControlCategory) => CADENCE_LABEL[c];
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 const yyyymm = ({ year, month }: MonthlyImport["month"]) =>

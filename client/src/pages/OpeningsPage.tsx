@@ -4,16 +4,9 @@ import { fetchWeakOpenings } from "../api";
 import { Tally } from "../components/Tally";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
-import type { Profile, Side, TimeControlCategory, WeakOpeningEntry } from "../types";
+import { CADENCE_LABEL, type Profile, type Side, type WeakOpeningEntry } from "../types";
 
 const SIDE_LABEL: Record<Side, string> = { white: "Blancs", black: "Noirs" };
-const CADENCE_LABEL: Record<TimeControlCategory, string> = {
-  bullet: "Bullet",
-  blitz: "Blitz",
-  rapid: "Rapid",
-  daily: "Daily",
-};
-
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
 
 /** A `Weak opening` is highlighted when its `Win rate` is under 50% (CONTEXT.md). */

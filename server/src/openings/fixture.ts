@@ -1,6 +1,6 @@
 import type { Db } from "../db";
 import { games, type NewGame, type UnownedGame } from "../db/schema";
-import { parseOpening } from "../import/opening";
+import { parseOpening } from "../platform/chesscom/opening";
 
 /**
  * Deterministic `Weak opening` fixture dataset (ADR-0007): a handful of short
@@ -112,6 +112,9 @@ export const OPENINGS_FIXTURE: UnownedGame[] = [
  */
 export function seedOpenings(db: Db, profileId: number): void {
   for (const game of OPENINGS_FIXTURE) {
-    db.insert(games).values({ ...game, profileId }).onConflictDoNothing().run();
+    db.insert(games)
+      .values({ ...game, profileId })
+      .onConflictDoNothing()
+      .run();
   }
 }

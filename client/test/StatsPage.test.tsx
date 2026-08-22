@@ -18,7 +18,8 @@ const SUMMARY: StatsSummary = {
     bullet: bucket(0, 0, 0, 0),
     blitz: bucket(2, 1, 0, 1), // 50%
     rapid: bucket(0, 0, 0, 0),
-    daily: bucket(0, 0, 0, 0),
+    classical: bucket(0, 0, 0, 0),
+    correspondence: bucket(0, 0, 0, 0),
   },
   bySide: {
     white: bucket(2, 1, 0, 1),
@@ -111,7 +112,8 @@ describe("StatsPage", () => {
         bullet: bucket(0, 0, 0, 0),
         blitz: bucket(0, 0, 0, 0),
         rapid: bucket(0, 0, 0, 0),
-        daily: bucket(0, 0, 0, 0),
+        classical: bucket(0, 0, 0, 0),
+    correspondence: bucket(0, 0, 0, 0),
       },
       bySide: { white: bucket(0, 0, 0, 0), black: bucket(0, 0, 0, 0) },
     };
