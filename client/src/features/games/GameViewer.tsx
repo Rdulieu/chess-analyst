@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Board } from "../../components/Board";
+import { parseGame } from "../../chess/history";
 import { fetchGameAnnotations } from "../../api";
 import { useAnalysisPass } from "../analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
+import { ReanalyseAction } from "../analysis/ReanalyseAction";
 import { GameHeader } from "./GameHeader";
+import { gameHeader } from "./gameHeader";
 import { ReviewModeControl } from "../review/ReviewModeControl";
 import { atLeastAnnotated, loadReviewMode, saveReviewMode } from "../review/reviewMode";
 import type { Game, GameRecap, MoveAnnotation } from "../../types";
@@ -21,6 +24,16 @@ import type { Game, GameRecap, MoveAnnotation } from "../../types";
  * refresh the Game once the pass completes, so the annotations appear with no
  * manual reload.
  */
+/**
+ * How the confirmation names a Game: the two players and the date, which is what
+ * the header above the board already says — destroying the wrong Game's analysis
+ * by reflex is the risk the naming exists against.
+ */
+function describe(game: Game): string {
+  const { sides, date } = gameHeader(game);
+  return `${sides[0].name ?? "?"} — ${sides[1].name ?? "?"} (${date})`;
+}
+
 export function GameViewer({
   game,
   onAnalyzed,
@@ -39,6 +52,10 @@ export function GameViewer({
    */
   const [mode, setMode] = useState(loadReviewMode);
   const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(game.profileId);
+  /** Positions a pass on this Game would search — one per half-move, plus the
+   *  starting one. Read from the PGN so the cost can be quoted before any
+   *  analysis exists to count. */
+  const positions = useMemo(() => parseGame(game.pgn).plies.length + 1, [game.pgn]);
 
   useEffect(() => {
     if (!game.analyzed) return;
@@ -89,21 +106,33 @@ export function GameViewer({
         // leaving it above the board was enough on its own to push the diagram's
         // bottom edge off the screen.
         controls={
-          game.analyzed ? (
-            <ReviewModeControl mode={mode} onChange={chooseMode} />
-          ) : (
-            <div>
+          <div>
+            {game.analyzed ? (
+              <ReviewModeControl mode={mode} onChange={chooseMode} />
+            ) : (
               <p>Cette partie n'a pas encore été analysée.</p>
-              <button type="button" onClick={analyze} disabled={running}>
-                Analyser cette partie
-              </button>
-              <AnalysisPassStatus
-                status={status}
-                nothingToDo={nothingToDo}
-                onAcknowledge={acknowledge}
-              />
-            </div>
-          )
+            )}
+            {/*
+              Offered in BOTH states now. An analysed Game used to lose the action
+              altogether, which left the Player looking at an analysis they had no
+              way to redo from where they were reading it.
+            */}
+            <ReanalyseAction
+              analyzed={game.analyzed}
+              gameName={describe(game)}
+              // The Positions this Game's pass will search. Its own annotations
+              // when they are loaded — one entry per Position — and the PGN's
+              // half-moves otherwise, which is the same count.
+              positions={annotations?.length ?? positions}
+              running={running}
+              onAnalyze={analyze}
+            />
+            <AnalysisPassStatus
+              status={status}
+              nothingToDo={nothingToDo}
+              onAcknowledge={acknowledge}
+            />
+          </div>
         }
       />
     </div>
