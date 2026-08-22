@@ -228,3 +228,38 @@ Coût assumé : en `Detailed` le tally apparaît une fois (dans le récap) et en
 actuelle, donc la même information **change de place selon le mode**. Légèrement déroutant.
 L'alternative — laisser le tally en place et faire que le récap y renvoie — échangerait ça contre deux
 composants devant s'accorder sans source commune, ce qui est le pire mode de défaillance.
+
+## F8 — La `Phase` s'affiche à **quatre distances de lecture**
+
+Demandé par le demandeur : les trois options, plus les deux formes de la troisième.
+
+1. **Étiquette dans le panneau de détail**, par Move — la réponse précise quand on étudie **un** coup.
+2. **Marqueur de transition dans la liste des coups** — un séparateur **textuel** à la ligne où la
+   phase change (« Milieu de partie », « Finale »). C'est **celui qui répond vraiment à D4** : la
+   frontière devient une chose qu'on **voit en scannant**, c'est du texte (donc lu à voix haute, sans
+   couleur), et ça atterrit dans la liste, déjà la surface de scan. Grâce au **latching**, la frontière
+   de finale n'est franchie **qu'une fois** : **deux marqueurs au maximum** par partie, et zéro sur une
+   miniature de 20 coups — l'objection de bruit qui a tué le marquage systématique en F6 ne s'applique
+   donc pas ici.
+3. **Sur les graphiques**, et il a fallu corriger la forme : des « bandes » de fond sont **impossibles**
+   telles quelles. `EvaluationGraph` dessine **deux aires opaques** pleine hauteur — celle des Noirs est
+   le fond de la boîte (feuille de style), celle des Blancs un `<polygon>` rempli par-dessus : ce qui est
+   peint **derrière** est invisible. Et peindre **par-dessus** en semi-transparent teinterait les deux
+   aires, ce qui déplacerait la seule cible mesurée avec soin par US-13 — les marqueurs de sévérité et le
+   curseur ont des valeurs qui passent 3:1 **contre les deux aires à la fois** (ADR-0013 note
+   explicitement que les 2,92:1 et 2,93:1 eyeballés d'US-14 ne suffisaient pas). Formes retenues :
+   - **(i) des règles de frontière** — une ligne verticale à chaque transition, tracée par-dessus les
+     aires. C'est **l'idiome existant** : `data-mark="equality"` est déjà une ligne par-dessus, avec une
+     valeur choisie pour passer contre les deux. Deux lignes au plus, aucun teintage, aucun risque de
+     contraste.
+   - **(ii) un mince ruban étiqueté** aligné sur le même axe des x, **hors du tracé**, portant « Début /
+     Milieu / Finale » en **vrai texte** — les phases sont **nommées**, pas seulement délimitées.
+
+**Le ruban se place entre les deux graphiques** : le tracé de dérive partage le même axe des x (F4),
+donc **un seul ruban étiquette les deux**. Meilleur résultat que des bandes : les phases sont nommées,
+rien n'est teinté, et ça coûte un élément au lieu d'un par graphique.
+
+**Note de méthode** : l'objection initiale contre le dessin (« mettre un fait uniquement dans une image
+`aria-hidden` ») **ne survit pas** à l'option 2. L'invariant exige que chaque figure du dessin existe en
+texte ailleurs ; dès que les frontières sont dans la liste en texte, les marques sur les graphiques sont
+du **renforcement redondant** — ce que l'invariant autorise précisément.
