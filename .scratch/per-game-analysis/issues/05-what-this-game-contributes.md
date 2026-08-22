@@ -1,4 +1,23 @@
-Status: ready-for-agent
+Status: `done` — merged into `integration/US-15a-per-game-analysis` on 2026-08-23 : build +
+506 tests client / 266 serveur verts, **FP verte** sur les étapes 1, 2, 3, 5, 6 et les deux
+recoupements, **étape 4 non exercée** (aucun coup forcé signalé sur le corpus — structurel, cf.
+tranche 04). Aucune constatation bloquante.
+
+**La réconciliation a été vérifiée à la main sur quatre parties** — 72 (148,1 = 113,2 + 34,9),
+41 (191,2 = 144 + 47,2), 86 (31,9 = 11,1 + 20,8), 51 (60,6 = 28,4 + 32,3) — et le récapitulatif a
+été **recoupé coup par coup** contre la preuve par Move sur les parties 41 et 51 : correspondance
+exacte (22/24, 2 forcés, 6 erreurs ; 17/22, 1 forcé, 4 décidées, 1 erreur). C'est le contrôle pour
+lequel ADR-0017 existe.
+
+La constatation d'arrondi de la FP est corrigée dans la tranche : les trois chiffres étaient
+arrondis séparément, si bien que la partie 51 affichait 60,6 = 28,4 + 32,3, qui fait 60,7. Le
+modèle était exact ; c'est l'affichage qui mentait, sur la seule chose que le panneau invite le
+Player à vérifier.
+
+**Constatation ouverte, hors tranche** : « Analyser cette partie » est **silencieusement ignoré**
+tant qu'une bannière de pass non acquittée est à l'écran (rien ne se passe, aucun message), et la
+page affiche pendant ce temps la progression d'une **autre** partie comme si elle concernait celle
+qu'on regarde. Acquitter la bannière débloque le clic. Antérieur à cette tranche.
 
 ## Parent
 
