@@ -263,3 +263,56 @@ rien n'est teinté, et ça coûte un élément au lieu d'un par graphique.
 `aria-hidden` ») **ne survit pas** à l'option 2. L'invariant exige que chaque figure du dessin existe en
 texte ailleurs ; dès que les frontières sont dans la liste en texte, les marques sur les graphiques sont
 du **renforcement redondant** — ce que l'invariant autorise précisément.
+
+## F9 — Le `Search regime`, et **on jette les analyses existantes**
+
+**Le régime est un fait PAR PARTIE, pas par Move** : les lignes d'une partie peuvent venir de deux
+passes (reprise en milieu de partie), mais la règle de D9 interdit de reprendre à travers un changement
+de régime — donc **une partie a toujours un régime unique, par construction**. Il va donc dans le
+récapitulatif, **une ligne** (« Analyse : profondeur 16, 2 lignes »). Le répéter par Move afficherait
+90 fois la même valeur et suggérerait qu'elle peut varier.
+
+**Décision du demandeur : on jette les analyses existantes** plutôt que de développer un correctif
+temporaire. Donc **pas de gestion d'héritage, pas d'état `pv` null, `pv` requis**.
+
+**Cela renverse ADR-0015**, prise trois jours plus tôt, qui dit noir sur blanc que « wipe and
+re-import » n'est plus un plan, que **c'est une perte de données**, et qui prend précisément les
+`Evaluation`s pour motif (« nothing rebuilds Evaluations but engine time »). **Et le demandeur a
+raison : ADR-0015 n'avait pas anticipé ce cas.** Son argument pesait un coût de migration **borné**
+contre un coût moteur **récurrent et non borné**. Ici le rapport est inversé : le script de migration
+est trivial, mais **garder** ces lignes impose une branche dégradée **permanente** dans le code — un
+état `pv` null dans le panneau, un message d'explication, une ligne de pass synthétique, et les tests
+de tout ça — vivant pour toujours au service de 20 parties valant ~11 minutes de moteur. Le
+« correctif temporaire », ce n'est pas la migration : **c'est le chemin `pv` null, qui ne disparaît
+jamais**. ADR-0015 ne répond pas à cet argument.
+
+**Périmètre à énoncer précisément** : on jette les lignes `evaluations` de **20 parties**, **pas la
+base**. Profils, parties, PGN, ouvertures et `move_habits` restent ; la ré-analyse est une action du
+joueur sur des parties déjà importées.
+
+**Travail documentaire dû** : **amender ADR-0016** (elle spécifie aujourd'hui le pass synthétique
+d'héritage) et **noter dans ADR-0015** que cette exception a été prise, et pourquoi.
+
+## F10 — Lancer l'analyse depuis la page Analyse, avec avertissement d'écrasement
+
+Aujourd'hui la page n'offre « Analyser cette partie » **que** si la partie n'est pas analysée (le
+toggle prend la place sinon). Le demandeur veut pouvoir **relancer** l'analyse depuis cet écran, avec
+une **confirmation** prévenant qu'on va écraser une analyse existante.
+
+**Précédent exact à suivre** : `ProfilesPage.tsx:151` confirme la suppression d'un profil par une carte
+`role="alertdialog"` **en page**, qui **nomme la chose détruite** (« Supprimer le profil **X** ? Cette
+action est définitive »), avec **Annuler en action primaire**. Même classe d'acte, donc même motif :
+nommer la partie, dire ce qui est perdu **et ce que coûte sa reconstruction** (« son analyse actuelle
+sera écrasée — environ N minutes de calcul »), Annuler primaire.
+
+Écarté : le `confirm()` natif d'`ImportForm.tsx:69`. Ce cas-là avertit d'une **durée**, celui-ci d'une
+**destruction**, et la carte stylée peut nommer le coût là où une boîte de dialogue navigateur ne peut
+pas être supposée lue.
+
+**Conséquence serveur, trouvée en posant la question du front** (dans le périmètre de 15a) : **rien ne
+permet aujourd'hui de ré-analyser une partie analysée.** `analyzeGame` lit le drapeau `analyzed`
+d'abord et sort immédiatement ; le job filtre sur `!game.analyzed` avant même d'ouvrir un pass. Le
+mécanisme existe déjà dans ADR-0016 (un régime différent réévalue la partie entière) mais **le
+court-circuit `analyzed` est placé avant que quoi que ce soit ne regarde le régime** : ce réordonnancement
+est un item réel de la story, pas un détail. Avec F9 (on jette l'existant), il faut de toute façon un
+chemin explicite « réanalyser cette partie », déclenché par le joueur et confirmé.
