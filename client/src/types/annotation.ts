@@ -23,6 +23,13 @@ export interface MoveAnnotation {
    * with where the boundary fell in a Game of theirs.
    */
   phase: "early" | "middlegame" | "endgame";
+  /**
+   * Whether this Move counts in the analysis and, when it does not, which of the
+   * two reasons applies (CONTEXT.md `Counted Move`). `null` for ply 0 and for the
+   * **opponent's** Moves — nothing is derived for them, which is a different
+   * claim from "not counted".
+   */
+  counted: { counted: boolean; reason: "forced" | "decided" | null } | null;
 }
 
 /** The `Search regime` a Game was analyzed under (CONTEXT.md): depth and number

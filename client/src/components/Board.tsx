@@ -9,6 +9,7 @@ import { MoveRecord } from "../features/analysis/MoveRecord";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
+import { marksUncounted } from "../chess/counted";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { MoveAnnotation } from "../types";
 
@@ -282,6 +283,15 @@ export function Board({
                       {SEVERITY_GLYPH[annotation.severity]}
                     </span>
                   )}
+                  {annotation && marksUncounted(annotation) && (
+                    // Beside the severity glyph, which keeps carrying the fault:
+                    // this says the analysis does not hold the Player to it. In
+                    // text, with its own accessible name — a tint alone could
+                    // only ever mean "something", not "not counted" (ADR-0013).
+                    <span data-part="uncounted" aria-label="non compté">
+                      non compté
+                    </span>
+                  )}
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
@@ -303,6 +313,7 @@ export function Board({
         <MoveRecord
           record={record}
           phase={currentAnnotation?.phase ?? null}
+          counted={currentAnnotation?.counted ?? null}
           onPreview={previewVia}
         />
       )}
