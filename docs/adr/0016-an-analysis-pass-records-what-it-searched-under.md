@@ -83,3 +83,26 @@ eye.
   method is reconsidered. Depth is **not** the adjustment knob: ADR-0009 fixed depth 16 for
   reproducibility, and lowering it would worsen the noise on precisely the `Drift` figure US-15 exists
   to make trustworthy.
+
+## Note (US-15a slice 01, 2026-08-22): the measured ratio, and the decision it triggered
+
+**Measured: 2.1×** — above the 2× line, i.e. into "the method is reconsidered".
+
+Protocol, so the figure can be argued with: 200 Positions sampled from 50 real Games of the local
+database (four per Game, spread evenly through the Game, ply 0 excluded — it is the same Position in
+every Game), each evaluated at **depth 16** through the app's own `UciDriver` on the WASM
+`lite-single` backend, in one process, once at MultiPV=1 and once at MultiPV=2. Order was **varied**
+rather than assumed neutral: 2.11× with one line first, 2.19× with two lines first (593 → 1255
+ms/Position, and 586 → 1287 ms/Position). So it is not warm-up bias, and it is not 1.3–1.8× as this
+ADR expected.
+
+**Decision (the Player's, as the threshold prescribes): MultiPV=2 is kept anyway.** What the extra
+line buys is the **score of the alternative**, and it is bought during a re-analysis that is happening
+regardless — the argument above holds, at a price higher than forecast. The line itself was never the
+expense: the `pv` comes out of the same search at MultiPV=1, which is why keeping it costs nothing and
+why dropping to one line would have saved 2.1× while losing only `cp2`/`mate2`. That was the
+alternative on the table, and it was declined.
+
+The consequence to state plainly: a pass costs **about twice** what it did. Depth stays 16 — it was
+never the knob (above). If a later story finds the alternative's score unused, `lines` is data on the
+pass, so lowering it is a regime change and not a schema change.

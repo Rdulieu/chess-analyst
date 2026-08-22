@@ -127,6 +127,17 @@ describe("UCI driver — the second line", () => {
     expect(evaluation.second).toEqual({ cp: 12, mate: null });
   });
 
+  it("asks for the number of lines it was given, so a regime is data and not a constant", async () => {
+    const { commands, transport } = scriptedTransport([
+      "info depth 16 multipv 1 score cp 31 pv d2d4",
+      "bestmove d2d4",
+    ]);
+
+    await createUciDriver(transport, 1).initialize();
+
+    expect(commands).toContain("setoption name MultiPV value 1");
+  });
+
   it("reports no second line at all when the Position has a single legal move", async () => {
     const { transport } = scriptedTransport([
       "info depth 16 multipv 1 score mate 1 pv h4h7",

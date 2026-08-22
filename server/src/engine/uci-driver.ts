@@ -20,7 +20,7 @@ export interface UciDriver {
   evaluate(fen: string, depth: number): Promise<EngineEvaluation>;
 }
 
-export function createUciDriver(transport: UciTransport): UciDriver {
+export function createUciDriver(transport: UciTransport, lines = ANALYSIS_LINES): UciDriver {
   /** Sends `command`, collecting lines until one satisfies `isLast`. */
   function sendUntil(command: string, isLast: (line: string) => boolean): Promise<string[]> {
     return new Promise((resolve) => {
@@ -39,10 +39,13 @@ export function createUciDriver(transport: UciTransport): UciDriver {
   return {
     async initialize() {
       await sendUntil("uci", (line) => line === "uciok");
-      // Two lines, so every Evaluation carries what the *alternative* was worth
-      // (ADR-0016). Set once, at the handshake: the regime is a property of the
-      // whole pass, not something a single search negotiates.
-      transport.send(`setoption name MultiPV value ${ANALYSIS_LINES}`);
+      // How many lines to search — two by default, so every Evaluation carries
+      // what the *alternative* was worth (ADR-0016). Set once, at the handshake:
+      // the line count is part of the `Search regime`, a property of the whole
+      // pass, not something a single search negotiates. A parameter and not a
+      // constant because the regime is *data* — which is also what let its cost
+      // be measured against one line.
+      transport.send(`setoption name MultiPV value ${lines}`);
       await sendUntil("isready", (line) => line === "readyok");
     },
 
