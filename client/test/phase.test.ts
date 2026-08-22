@@ -6,6 +6,7 @@ import type { MoveAnnotation } from "../src/types";
 const of = (...phases: MoveAnnotation["phase"][]): MoveAnnotation[] =>
   phases.map((phase, ply) => ({
     counted: null,
+    chancesLost: null,
     ply,
     whiteEval: { cp: 0, mate: null },
     whiteWinChances: 50,

@@ -13,6 +13,7 @@ const move = (
   bestLine: [],
   phase: "middlegame",
   counted,
+  chancesLost: 0,
 });
 
 describe("Counted Move — what the move list marks", () => {

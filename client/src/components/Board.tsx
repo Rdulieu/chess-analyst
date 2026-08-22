@@ -4,6 +4,9 @@ import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
 import { EvaluationGraph } from "./EvaluationGraph";
+import { DriftGraph } from "./DriftGraph";
+import { PhaseRibbon } from "./PhaseRibbon";
+import { phaseBands } from "../chess/phaseBands";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
@@ -139,6 +142,9 @@ export function Board({
     [annotations],
   );
 
+  /** The Phase spans, shared by the two drawings and the ribbon between them. */
+  const bands = useMemo(() => (annotations ? phaseBands(annotations) : []), [annotations]);
+
   const currentAnnotation = annotations?.[index];
   const squareStyles =
     index > 0 && currentAnnotation?.severity
@@ -253,9 +259,32 @@ export function Board({
             <>
               {/* Landscape, and deliberately so: squeezed into a narrow column the
                   curve stops being a time axis and reads as a vertical drip. */}
+              {/* Each drawing is labelled, the curve included — it had none. Two
+                  pictures that do not say the same thing must not be mistakable
+                  for one another, and the label is the only part of either that
+                  is not `aria-hidden`. */}
+              <p data-part="graph-label">Avantage au fil de la partie</p>
               <div data-part="curve">
-                <EvaluationGraph annotations={annotations} currentPly={index} />
+                <EvaluationGraph annotations={annotations} currentPly={index} bands={bands} />
               </div>
+              {/*
+                The second drawing is Detailed-only, and that is not a layout
+                preference: it is `aria-hidden` on the grounds that every figure in
+                it is already text in the Game's recap — which is itself Detailed.
+                Shown at a level where the recap is absent, the drawing would carry
+                figures that exist nowhere in words.
+              */}
+              {detailed && (
+                <>
+                  {/* One ribbon for the two drawings, since they share the axis —
+                      and between them, so it reads as belonging to both. */}
+                  <PhaseRibbon bands={bands} lastX={annotations.length - 1} />
+                  <p data-part="graph-label">Chances perdues (cumul)</p>
+                  <div data-part="drift">
+                    <DriftGraph annotations={annotations} currentPly={index} bands={bands} />
+                  </div>
+                </>
+              )}
               {/*
                 In Annotated this stays exactly where US-14 put it. In Detailed the
                 recap says it — with the counted figure beside it and the reason

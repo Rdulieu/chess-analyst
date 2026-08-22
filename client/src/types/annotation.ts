@@ -30,6 +30,13 @@ export interface MoveAnnotation {
    * claim from "not counted".
    */
   counted: { counted: boolean; reason: "forced" | "decided" | null } | null;
+  /**
+   * What this Move cost the Player, in winning-chances points (ADR-0017).
+   * `null` where nothing is contributed (ply 0, the opponent's Moves), `0` for a
+   * Move that does not count. The Game's recap is the **sum** of these, which is
+   * what stops the cumulative trace and the total stated beside it disagreeing.
+   */
+  chancesLost: number | null;
 }
 
 /** The `Search regime` a Game was analyzed under (CONTEXT.md): depth and number

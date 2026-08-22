@@ -1,6 +1,6 @@
 import type { Game } from "../db/schema";
 import type { SearchRegime } from "../engine/types";
-import { countedMoves, type UncountedReason } from "./counted";
+import { chancesLostByMove, countedMoves, type UncountedReason } from "./counted";
 import { gamePlies, moveSeverities, type StoredEvaluation } from "./derivation";
 
 /**
@@ -63,6 +63,10 @@ export function gameRecap(
   const plies = gamePlies(evals);
   const severities = moveSeverities(plies, game.playerColor);
   const counted = countedMoves(plies, game.playerColor);
+  // The SAME per-Move figure the annotations carry — summed here rather than
+  // recomputed, so the trace drawn from those Moves and this total cannot
+  // disagree (ADR-0017).
+  const lostByMove = chancesLostByMove(plies, game.playerColor);
 
   const recap: GameRecap = {
     playerMoves: 0,
@@ -92,11 +96,7 @@ export function gameRecap(
     recap.countedMoves += 1;
     if (severity) recap.countedErrors += 1;
 
-    // The Position's chances are relative to whoever is to move there: the Player
-    // before their own Move, the opponent after it — hence the flip.
-    const lost = plies[i - 1].winChances - (100 - plies[i].winChances);
-    // Only losses. A Move that gained is not a negative loss to net off against
-    // another Move's: the figure is "what this Game cost the Player".
+    const lost = lostByMove[i] ?? 0;
     if (lost <= 0) continue;
     recap.chancesLost += lost;
     if (severity) recap.flaggedLoss += lost;
