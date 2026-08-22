@@ -60,6 +60,64 @@ The HP suite itself, including the new step:
 
 Verify: UI first, against the real running app.
 
+## Run log — 2026-08-21/22, partial
+
+**Done and committed on the integration branch:**
+
+- Path 0 gains `Metalyst` (lichess.org) as a third reference `Profile`, imported over its **full
+  71-month span**, with the *Why a third Profile* rationale, the IPv4-pin precondition, and the
+  journey grown from 7 to 10 steps.
+- HP-01 gains **step 10b**, the cross-platform switch. The suite still numbers **three** HPs.
+- HP-02, HP-03, `theme-pass.md` and the inventory `README.md` aligned on the three-Profile standing
+  state and the second `Platform` label now rendered on screens 7–8.
+- `.agentic/` ignored; build green; **659 tests** (223 server + 436 client).
+
+**path 0: ✅ green**, reported in full and verified independently against both snapshots.
+
+| Figure | Value |
+| --- | --- |
+| Games fetched over the span | 403 |
+| Games imported | 351 |
+| of which `classical` | 38 |
+| of which `correspondence` | 37 |
+
+Both snapshots read back correct: three Profiles (one `lichess`), `DudulSmash` at 0 then 82
+(72 blitz / 10 bullet), `Nonomoho` at 0 throughout, no category outside the five.
+
+**The three HPs are NOT run.** Four subagents were dispatched; **none delivered a report**, and only
+path 0 — dispatched alone, first — ever did. HP-01 demonstrably did the work (its database held 433
+Games and exactly **29** `Evaluation`s, the count the README predicts for the two shortest Games
+sharing a first Move) and its result was still lost. HP-02 and HP-03 died during setup having
+exercised nothing.
+
+> An unreported scenario is an **unrun** scenario. Row counts show that something ran; they say
+> nothing about whether the banner named the right site, whether the figures moved with the
+> `Platform`, or whether the theme pass held. Do not reconstruct a green from database forensics.
+
+**Therefore `step 10b` — the cross-platform switch, the reason this slice exists — has never been
+observed.** It is the first thing the resumed run must produce.
+
+### What a resume needs to know
+
+- The snapshots are rebuilt by re-running path 0 (~5 min for the Lichess span, ~2.8 s/month after
+  one genuine 429 pause). They are **not** committed.
+- **`npm run dev -w server` orphans its listener**: killing the pid npm returns leaves `tsx` serving.
+  Find the real one with `ss -lptn 'sport = :<port>'` and confirm ownership by reading `DB_FILE` out
+  of `/proc/<pid>/environ`. "Server stopped" means that listener is gone — a snapshot copied under a
+  live server captures a state no scenario will see.
+- **Never `pkill` by pattern** — sibling agents' servers die with it.
+- A finding reported against the Lichess wait notice ("never retracted") was **wrong**: `job.ts`
+  clears `waiting` on every completed month. The test that covered it only asserted after
+  `job.idle()`, which the end-of-pass `finally` satisfies regardless — so it would have passed over
+  a genuinely stuck notice. That blind spot is now closed by its own test. Re-measure the live DOM
+  before calling a UI observation a defect.
+
+### Still owed by this slice
+
+- [ ] HP-01, HP-02, HP-03 run and **reported**, step 10b included
+- [ ] The suite result pasted into the `integration -> develop` PR with the issues listed
+- [ ] The `ultraBullet` / aborted-game coverage gap stated explicitly in that PR
+
 ## Blocked by
 
 - `.scratch/lichess-import/issues/02-five-time-control-categories.md`
