@@ -316,3 +316,64 @@ mécanisme existe déjà dans ADR-0016 (un régime différent réévalue la part
 court-circuit `analyzed` est placé avant que quoi que ce soit ne regarde le régime** : ce réordonnancement
 est un item réel de la story, pas un détail. Avec F9 (on jette l'existant), il faut de toute façon un
 chemin explicite « réanalyser cette partie », déclenché par le joueur et confirmé.
+
+## F11 — Aperçu **au focus**, pas au survol
+
+**Trou dans F5, rattrapé** : l'aperçu tel que décrit était **au pointeur seulement**, ce qui excluait
+clavier et lecteur d'écran de la **seule** mécanique qui rend la ligne lisible — dans la story dont
+l'objet est la compréhension.
+
+**Retenu** : chaque ply de la ligne est un `<button>` **focusable** ; le focus prévisualise, le blur
+revient. Le survol devient alors la simple affordance pointeur **du même contrôle**, pas un second
+chemin de code. Ça ne coûte rien de plus (l'aperçu avait de toute façon besoin d'une cible par ply) et
+ça donne au ply un **nom accessible** (son SAN) : la ligne se lit comme une liste de coups au lieu
+d'une chaîne opaque.
+
+Le reste suit les règles existantes plutôt que d'inventer :
+
+- **Le tracé de dérive est `aria-hidden`**, comme la courbe, et légitimement — **parce que** F7 met la
+  dérive en texte dans le récapitulatif. Même invariant, même acquittement.
+- **Le ruban de phase est du vrai texte** (F8), donc lisible tel quel — c'est une des raisons pour
+  lesquelles il a battu les bandes colorées.
+- **La confirmation d'écrasement suit la carte `role="alertdialog"` de `ProfilesPage`** — pas de piège
+  à focus, pas d'élément `<dialog>`. La cohérence avec le seul motif de confirmation destructive de
+  l'app vaut mieux qu'en introduire un second, meilleur, dans une story qui ne parle pas de dialogues.
+- **Largeurs étroites** : les graphiques gardent leur boîte **paysage**. `Board.tsx` est explicite —
+  une courbe compressée « cesse d'être un axe de temps et se lit comme un écoulement vertical » — et
+  c'est la feuille qui possède cette boîte (`[data-part="curve"]`, `_dense`) : le nouveau graphique et
+  le ruban prennent leur géométrie de la feuille de la même façon, pas des composants.
+
+## F12 — Le scroll est acceptable ; **le plateau doit être entier au chargement**
+
+Cadré par le demandeur : le nouveau panneau **peut demander de défiler**, ce n'est pas un problème.
+**Seul le plateau doit être entièrement visible dès le chargement.** Mais il faut une **indication
+visuelle qu'une section existe en dessous** (un titre, ou un bouton de navigation en haut avec une
+ancre).
+
+**Où placer l'ancre — le code tranche.** `Board.tsx` dit que « tout ce qui est empilé au-dessus du
+diagramme est de la hauteur que le diagramme n'a pas », ce qui est **exactement pourquoi** le toggle
+d'annotations a été déplacé dans le panneau latéral au lieu de rester au-dessus de la rangée. Un bouton
+de navigation en haut dépenserait précisément la hauteur qu'on protège. Donc :
+
+- **l'ancre va dans le panneau latéral**, à côté du plateau, avec les autres `controls` — aucun coût de
+  hauteur pour le plateau, et elle voisine le sélecteur de mode qui fait apparaître le panneau ;
+- **le panneau porte un vrai titre** (un `h3` sous le `h2` « Analyse » de la page), ce qui satisfait
+  « titre » et rend la section navigable aux technologies d'assistance sans travail supplémentaire ;
+- l'ancre n'existe **qu'en `Detailed`**, puisque le panneau n'existe que là.
+
+**Point laissé ouvert exprès** : le panneau latéral portera désormais `controls`, stepper, readout, deux
+graphiques, un ruban, le récapitulatif et une liste de 90 lignes. Même le panneau de détail déplacé en
+dessous, ça fait beaucoup d'empilement vertical, et **on ne peut pas savoir d'ici** si ça se lit bien ou
+si ça devient une chasse au défilement. À **regarder pour de vrai** dans le Feature Path agentique sur
+une partie réelle, plutôt qu'à affirmer comme conçu — même traitement que le point de contrôle du tracé
+de dérive (F4).
+
+---
+
+## Pas d'ADR pour le front
+
+Aucune des décisions F1→F12 ne passe les trois tests. Elles sont **bon marché à défaire** : des
+composants clients et un défaut de mode, sans schéma, sans donnée persistée (le mode vit dans
+`localStorage`), sans temps moteur. Les deux seules décisions coûteuses de la journée — jeter les
+analyses existantes et exiger `pv` — sont déjà écrites, dans **ADR-0016** (amendée) et la **note
+ajoutée à ADR-0015**.
