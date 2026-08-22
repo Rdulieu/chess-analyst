@@ -51,7 +51,7 @@ export function GameViewer({
    * moves this review without speaking for the Player's other Games.
    */
   const [mode, setMode] = useState(loadReviewMode);
-  const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(game.profileId);
+  const { status, nothingToDo, blocked, run, acknowledge, running } = useAnalysisPass(game.profileId);
   /** Positions a pass on this Game would search — one per half-move, plus the
    *  starting one. Read from the PGN so the cost can be quoted before any
    *  analysis exists to count. */
@@ -75,8 +75,12 @@ export function GameViewer({
     saveReviewMode(next);
   };
 
-  const analyze = async () => {
-    await run([game.id]);
+  const analyze = async (overwrite = false) => {
+    // `overwrite` is the Player's confirmation travelling all the way to the
+    // engine. Without it the server filters this Game out as already analyzed
+    // and opens no pass — the confirmation would warn about a destruction that
+    // never happens.
+    await run([game.id], { overwrite });
     // The one exception to Unaided-by-default: the pass was asked for so there
     // would be something to look at, and finishing it with an identical screen
     // would make a successful pass indistinguishable from one that did nothing.
@@ -125,11 +129,14 @@ export function GameViewer({
               // half-moves otherwise, which is the same count.
               positions={annotations?.length ?? positions}
               running={running}
-              onAnalyze={analyze}
+              // An analysed Game only reaches here past the confirmation, so the
+              // overwrite is exactly the act the Player authorised.
+              onAnalyze={() => analyze(game.analyzed)}
             />
             <AnalysisPassStatus
               status={status}
               nothingToDo={nothingToDo}
+              blocked={blocked}
               onAcknowledge={acknowledge}
             />
           </div>

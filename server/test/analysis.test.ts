@@ -353,6 +353,45 @@ describe("analysis job", () => {
     });
   });
 
+  it("RE-analyzes an already-analyzed Game when the Player explicitly asked to overwrite it", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id]));
+    const before = evalsOf(db, game.id).length;
+
+    const job = createAnalysisJob(db, createFixtureEngine());
+    const started = job.start(SOLE_PROFILE, [game.id], { overwrite: true });
+    await job.idle();
+
+    // The whole point of the confirmation the Player just answered: this is the
+    // one path where spending engine time on an already-analyzed Game is right.
+    expect(started).toMatchObject({ started: true });
+    expect(job.status(SOLE_PROFILE)).toMatchObject({ outcome: "completed" });
+    // Re-evaluated, not duplicated: the Game holds one Evaluation per Position
+    // still, and they are the new pass's.
+    expect(evalsOf(db, game.id)).toHaveLength(before);
+    const passes = db.select().from(analysisPasses).all();
+    expect(evalsOf(db, game.id).every((e) => e.passId === passes[passes.length - 1].id)).toBe(true);
+  });
+
+  it("overwrites only the Games it was pointed at, never a whole Profile by accident", async () => {
+    const db = tempDb();
+    const asked = seedGame(db, { pgn: "1. e4 e5" });
+    const other = seedGame(db, { pgn: "1. d4 d5" });
+    const engine = createFixtureEngine();
+    await analyzeGame(db, engine, asked, seedPass(db, [asked.id]));
+    await analyzeGame(db, engine, other, seedPass(db, [other.id]));
+    const untouched = evalsOf(db, other.id).map((e) => e.passId);
+
+    const job = createAnalysisJob(db, createFixtureEngine());
+    job.start(SOLE_PROFILE, [asked.id], { overwrite: true });
+    await job.idle();
+
+    // Overwriting is a per-Game act the Player confirmed by name; the Game they
+    // did not name keeps the engine time it already cost.
+    expect(evalsOf(db, other.id).map((e) => e.passId)).toEqual(untouched);
+  });
+
   it("is single-flighted — a second start while one is running is ignored", async () => {
     const db = tempDb();
     const first = seedGame(db, { pgn: "1. e4 e5" });

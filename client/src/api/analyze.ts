@@ -16,11 +16,18 @@ import type { AnalysisStatus } from "../types";
 export async function startAnalysis(
   profileId: number,
   gameIds: number[],
+  /**
+   * The Player asked for these Games to be analyzed **again** and confirmed
+   * losing their stored `Evaluation`s (US-15a 07). Without it, a Game already
+   * analyzed under the current regime is filtered out and no pass opens at all —
+   * which is a confirmation answering a destruction that never happens.
+   */
+  overwrite = false,
 ): Promise<AnalysisStatus & { started: boolean }> {
   const res = await fetch(`/api/analyze?profileId=${profileId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ gameIds }),
+    body: JSON.stringify({ gameIds, overwrite }),
   });
   if (!res.ok) throw new Error(`Failed to start analysis (${res.status})`);
   return (await res.json()) as AnalysisStatus & { started: boolean };
