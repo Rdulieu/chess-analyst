@@ -8,6 +8,7 @@ import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
+import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { MoveAnnotation } from "../types";
 
@@ -117,6 +118,17 @@ export function Board({
           )
         : null,
     [annotations, index, plies, startFen, navigated],
+  );
+
+  /**
+   * Where the `Phase`s begin, by ply — the boundaries marked IN the move list, so
+   * a frontier is something the Player sees while scanning rather than something
+   * they have to click every Move to discover. At most two, because the
+   * derivation latches; none at all on a Game that never leaves the start.
+   */
+  const phaseStartAt = useMemo(
+    () => new Map(annotations ? phaseStarts(annotations).map((s) => [s.ply, s.phase]) : []),
+    [annotations],
   );
 
   const currentAnnotation = annotations?.[index];
@@ -240,9 +252,19 @@ export function Board({
             </>
           )}
           <ol aria-label="moves">
-            {plies.map((ply, i) => {
+            {plies.flatMap((ply, i) => {
               const annotation = annotations?.[i + 1];
-              return (
+              const phaseStart = phaseStartAt.get(i + 1);
+              return [
+                // The mark sits in the list, just before the Move that opens the
+                // Phase, and says which Phase in words: a boundary carried by a
+                // tint would be unreadable aloud and invisible to a Player who
+                // does not know the code (ADR-0013).
+                phaseStart && (
+                  <li key={`phase-${i}`} data-part="phase-start">
+                    {PHASE_START_LABEL[phaseStart]}
+                  </li>
+                ),
                 <li key={i}>
                   <button
                     type="button"
@@ -263,8 +285,8 @@ export function Board({
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
-                </li>
-              );
+                </li>,
+              ].filter(Boolean);
             })}
           </ol>
         </div>
@@ -277,7 +299,13 @@ export function Board({
         (CONTEXT.md): Annotated is exactly what US-7 and US-14 delivered, and the
         record is what Detailed adds to it.
       */}
-      {annotations && detailed && <MoveRecord record={record} onPreview={previewVia} />}
+      {annotations && detailed && (
+        <MoveRecord
+          record={record}
+          phase={currentAnnotation?.phase ?? null}
+          onPreview={previewVia}
+        />
+      )}
     </div>
   );
 }

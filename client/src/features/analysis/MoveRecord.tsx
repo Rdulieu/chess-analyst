@@ -1,5 +1,6 @@
 import type { LinePly, ReviewedMove } from "../../chess/bestLine";
 import { SEVERITY_GLYPH } from "../../chess/severity";
+import { PHASE_LABEL, type Phase } from "../../chess/phase";
 
 /**
  * The reviewed Move's own record (CONTEXT.md, `Review mode` → Detailed): what
@@ -19,10 +20,18 @@ import { SEVERITY_GLYPH } from "../../chess/severity";
  */
 export function MoveRecord({
   record,
+  phase,
   onPreview,
 }: {
   /** The reviewed Move's record, or `null` when there is nothing to report. */
   record: ReviewedMove | null;
+  /**
+   * The `Phase` the reviewed Move was played in. Named on **every** Move and not
+   * only on a flawed one: "where in the Game was this played" is a question about
+   * the Move, not about the mistake — and the threshold is a heuristic the Player
+   * is meant to be able to disagree with.
+   */
+  phase: Phase | null;
   /**
    * Previewing a ply of a line: the Position to show temporarily, or `null` to
    * go back, and **through which channel** — the focus and the pointer are
@@ -37,6 +46,11 @@ export function MoveRecord({
   return (
     <section aria-labelledby="move-record-heading" className="card" data-part="record">
       <h3 id="move-record-heading">Relevé du coup</h3>
+      {phase && (
+        <p data-part="phase">
+          Phase : <strong>{PHASE_LABEL[phase]}</strong>
+        </p>
+      )}
       {record ? (
         <>
           <p>
