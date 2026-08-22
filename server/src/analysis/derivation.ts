@@ -1,6 +1,7 @@
 import type { Game } from "../db/schema";
 import { winningChances, type CpOrMate } from "../danger/winning-chances";
 import { classifyMove, type MoveSeverity } from "../danger/move-quality";
+import { phases, type Phase } from "./phase";
 
 /** One half-move's annotation (US-7): the `Evaluation` and win% converted to
  *  White-relative (CONTEXT.md — stored values are side-to-move relative), and
@@ -18,6 +19,12 @@ export interface MoveAnnotation {
    * opponent's best reply — is how the Move actually played is punished.
    */
   bestLine: string[];
+  /**
+   * The `Phase` this Move was played in (CONTEXT.md) — derived from the FEN
+   * stored with the `Evaluation`, in the Game's own sequence, so it latches.
+   * No column, no engine call: retunable without re-analysing anything.
+   */
+  phase: Phase;
 }
 
 /** One analyzed Game's per-Position FEN, raw `Evaluation` and win% (ply 0 = initial Position). */
@@ -112,6 +119,9 @@ export function gameAnnotations(
 ): MoveAnnotation[] {
   const plies = gamePlies(evals);
   const severities = moveSeverities(plies, game.playerColor);
+  // Over the whole Game at once, and not Position by Position: the Phase latches,
+  // so it can only be read as a sequence.
+  const phaseOf = phases(plies.map((ply) => ply.fen));
 
   return plies.map((ply, i) => {
     const mover = moverAt(i);
@@ -121,6 +131,7 @@ export function gameAnnotations(
       whiteWinChances: mover === "white" ? ply.winChances : 100 - ply.winChances,
       severity: i === 0 ? null : severities[i - 1],
       bestLine: ply.bestLine,
+      phase: phaseOf[i],
     };
   });
 }

@@ -22,8 +22,8 @@ afterEach(() => {
 describe("GameViewer", () => {
   /** "1. e4 e5" annotated so that e4 is a Blunder with a line to report. */
   const ANNOTATED = [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"] },
-    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"] },
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early" },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early" },
   ] satisfies MoveAnnotation[];
 
   const moveItems = () =>

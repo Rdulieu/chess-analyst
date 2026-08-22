@@ -16,6 +16,13 @@ export interface MoveAnnotation {
    * played is punished.
    */
   bestLine: string[];
+  /**
+   * The `Phase` this Move was played in (CONTEXT.md) — **derived** server-side
+   * from the Position stored with the `Evaluation`, in the Game's own sequence
+   * (it latches). A heuristic, and shown precisely so the Player can disagree
+   * with where the boundary fell in a Game of theirs.
+   */
+  phase: "early" | "middlegame" | "endgame";
 }
 
 /** The `Search regime` a Game was analyzed under (CONTEXT.md): depth and number

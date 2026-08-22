@@ -102,9 +102,9 @@ describe("Board", () => {
     // "1. e4 e5": ply 1 is White's Move (e4, flagged a blunder here), ply 2 is
     // Black's reply (e5, never flagged regardless of its own Evaluation).
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
-      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null, bestLine: [] },
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early" },
+      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null, bestLine: [], phase: "early" },
     ];
     render(<Board pgn="1. e4 e5" annotations={annotations} />);
 
@@ -118,8 +118,8 @@ describe("Board", () => {
 
   it("shows the current Position's formatted Evaluation next to the status line, updating on navigation", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early" },
     ];
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
@@ -133,8 +133,8 @@ describe("Board", () => {
 
   it("renders a winning-chances balance bar for the current Position, updating on navigation", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early" },
     ];
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
@@ -148,9 +148,9 @@ describe("Board", () => {
 
   it("tints the destination square of the current Position's flawed Move, distinctly per severity", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
-      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [] },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early" },
+      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [], phase: "early" },
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
@@ -172,8 +172,8 @@ describe("Board", () => {
     // NAME: it verifies the wiring, which is what can break, rather than a hue
     // that was judged once on the pilot (ADR-0013).
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early" },
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4" annotations={annotations} />);
@@ -192,9 +192,9 @@ describe("Board", () => {
 
   it("tints no square when the current Position follows a clean Move, an opponent's Move, or is the start", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null, bestLine: [] }, // clean
-      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null, bestLine: [] }, // opponent's Move, never flagged
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null, bestLine: [], phase: "early" }, // clean
+      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null, bestLine: [], phase: "early" }, // opponent's Move, never flagged
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
@@ -242,9 +242,9 @@ describe("Evaluation curve", () => {
   }
 
   const three: MoveAnnotation[] = [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [] },
-    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early" },
+    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early" },
+    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early" },
   ];
 
   it("draws the Game's curve beside the board once the Game has Evaluations", () => {
@@ -370,8 +370,8 @@ describe("Evaluation curve", () => {
 
   it("says so in text when the Player made no flawed Move, rather than showing nothing", () => {
     const clean: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null, bestLine: [] },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early" },
+      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null, bestLine: [], phase: "early" },
     ];
     render(<Board pgn="1. e4" annotations={clean} />);
 
@@ -429,13 +429,14 @@ describe("Board orientation", () => {
 describe("the error tally's wording", () => {
   function annotationsWith(severities: MoveAnnotation["severity"][]): MoveAnnotation[] {
     return [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early" },
       ...severities.map((severity, i) => ({
         ply: i + 1,
         whiteEval: { cp: -100, mate: null },
         whiteWinChances: 40,
         severity,
         bestLine: [],
+        phase: "early" as const,
       })),
     ];
   }
@@ -450,6 +451,51 @@ describe("the error tally's wording", () => {
   });
 });
 
+describe("Board — where the Phases begin", () => {
+  /** "1. e4 e5 2. Nf3" with a boundary contrived at each of the two Moves. */
+  const withPhases = (...phases: MoveAnnotation["phase"][]): MoveAnnotation[] =>
+    phases.map((phase, ply) => ({
+      ply,
+      whiteEval: { cp: 0, mate: null },
+      whiteWinChances: 50,
+      severity: null,
+      bestLine: [],
+      phase,
+    }));
+
+  it("marks where each Phase begins IN the move list, in words rather than by a tint", () => {
+    render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={withPhases("early", "early", "middlegame", "endgame")} />,
+    );
+
+    const marks = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")
+      .filter((item) => item.dataset.part === "phase-start");
+    expect(marks.map((mark) => mark.textContent)).toEqual([
+      "Début du milieu de partie",
+      "Début de la finale",
+    ]);
+  });
+
+  it("puts each mark just before the Move that opens the Phase, which is what makes it scannable", () => {
+    render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={withPhases("early", "early", "middlegame", "middlegame")} />,
+    );
+
+    const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+    // e4, then the mark, then e5 — the Move whose Position is the first of the Phase.
+    expect(items[0].textContent).toContain("e4");
+    expect(items[1].dataset.part).toBe("phase-start");
+    expect(items[2].textContent).toContain("e5");
+  });
+
+  it("marks nothing on a Game that never leaves the start", () => {
+    render(<Board pgn="1. e4 e5 2. Nf3" annotations={withPhases("early", "early", "early", "early")} />);
+
+    const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+    expect(items.filter((item) => item.dataset.part === "phase-start")).toHaveLength(0);
+  });
+});
+
 describe("Board — the reviewed Move's record", () => {
   /** "1. e4 e5" annotated so that White's e4 is a Blunder. Ply 0's line is what
    *  should have been played instead; ply 1's line — from the Position *after*
@@ -461,21 +507,21 @@ describe("Board — the reviewed Move's record", () => {
       whiteWinChances: 55,
       severity: null,
       bestLine: ["d2d4", "d7d5"],
-    },
+      phase: "early",    },
     {
       ply: 1,
       whiteEval: { cp: -400, mate: null },
       whiteWinChances: 5,
       severity: "blunder",
       bestLine: ["e7e5", "g1f3"],
-    },
+      phase: "early",    },
     {
       ply: 2,
       whiteEval: { cp: -380, mate: null },
       whiteWinChances: 6,
       severity: null,
       bestLine: ["g1f3", "b8c6"],
-    },
+      phase: "early",    },
   ];
 
   const record = () => screen.getByRole("region", { name: /relevé/i });
@@ -511,7 +557,7 @@ describe("Board — the reviewed Move's record", () => {
         // Nine plies of a real line from the starting Position: more than the
         // display cap, which is exactly the case the engine produces at depth 16.
         bestLine: ["d2d4", "d7d5", "c2c4", "e7e6", "b1c3", "g8f6", "c1g5", "f8e7", "e2e3"],
-      },
+        phase: "early",      },
       annotations[1],
       annotations[2],
     ];
@@ -651,6 +697,17 @@ describe("Board — the reviewed Move's record", () => {
     render(<Board pgn="1. e4 e5" annotations={annotations} />);
 
     expect(screen.queryByRole("link", { name: /relevé/i })).toBeNull();
+  });
+
+  it("names the Phase the reviewed Move was played in, on every Move and not only on a flawed one", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+
+    // Ply 0 is the starting Position: nothing to report, but a Phase all the same.
+    expect(record().textContent).toMatch(/début de partie/i);
+
+    await user.click(screen.getByRole("button", { name: /next/i })); // e4, a Blunder
+    expect(record().textContent).toMatch(/début de partie/i);
   });
 
   it("keeps the record BELOW the board row, so nothing above the board moves when the Move changes", async () => {
