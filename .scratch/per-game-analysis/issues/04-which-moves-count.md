@@ -1,4 +1,21 @@
-Status: ready-for-agent
+Status: `done` — merged into `integration/US-15a-per-game-analysis` on 2026-08-23 after the
+auto-merge gate: build + 492 client / 258 server tests green, **FP 4/5 green, aucune constatation
+bloquante**, la 5e étape **non exercée** (voir ci-dessous). La constatation de formulation de la FP
+a été corrigée dans la tranche : le marqueur de la liste nomme son motif (« forcé ») au lieu de
+« non compté », puisque les deux motifs sont nommés distinctement *partout*.
+
+**À savoir pour la suite — l'étape 3 de la FP est structurellement inatteignable sur le corpus.**
+Sept parties choisies exprès (41, 86, 51, 431, 258, 72, 136) ont été analysées : **tous** les coups
+forcés ressortent non signalés, et les chutes mesurées disent pourquoi — 67,7→66,6 %, 36,6→36,2 %,
+52,9→52,7 %. Quand il n'y a qu'un coup légal, l'`Evaluation` avant et après sont deux lectures de
+la **même** recherche : l'écart est du bruit, jamais les 10 % qu'exige un signalement. Le critère
+« un coup forcé et signalé est exclu, motif forcé » **repose donc sur les tests unitaires**, et
+c'est assumé.
+
+Vérifié en revanche dans l'app réelle : un coup joué à **85,3 %** de chances et signalé `?!`
+**compte** (l'asymétrie tient), « forcé » l'emporte sur « déjà décidée » quand les deux
+s'appliquent, aucun coup signalé n'est jamais exclu pour « déjà décidée » sur les sept parties, et
+une partie perdue tôt avec quatre coups exclus n'affiche **aucun** marqueur.
 
 ## Parent
 
