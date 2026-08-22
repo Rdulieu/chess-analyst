@@ -2,6 +2,47 @@
 
 ## To do
 
+- **US-17**: Importer un historique Lichess sans payer une requête par mois vide.
+  > Pas encore grillée. **Constat mesuré** (import de référence `Metalyst`, 2026-08-21) : sur les
+  > **71 mois** du span, **51 étaient vides** — on a payé **72 % des requêtes pour zéro partie**,
+  > soit ~2,4 min de vide sur ~3,5 min d'import. Et les comptes creux sont la norme sur Lichess,
+  > pas l'exception : `Monado_Boy`, c'est 86 parties réparties sur ~80 mois.
+  >
+  > **La cause est structurelle, pas un réglage.** chess.com sert des **archives mensuelles** ;
+  > Lichess sert un **flux `since`/`until`** et peut renvoyer tout le span **en une seule requête**.
+  > On a plaqué la forme de chess.com sur une API qui n'en a pas besoin. Moins de requêtes
+  > *améliorerait* d'ailleurs notre position vis-à-vis de la règle « une requête à la fois » de
+  > Lichess, qui est la contrainte réelle du port (ADR-0016, point 4).
+  >
+  > **Ce n'est pas « importer par année ».** Le mois n'est pas une taille de requête, c'est un
+  > concept du domaine : `Monthly import` est dans `CONTEXT.md`, et la ligne à zéro est ce qui
+  > distingue *un trou dans l'historique* d'*un trou dans la récupération*. Une unité annuelle
+  > détruirait ça, ou imposerait un `Yearly import` qui ne veut rien dire pour le joueur.
+  >
+  > **Piste à instruire** : garder le mois comme unité **du domaine** et cesser d'en faire l'unité
+  > **de la requête** — une requête sur la plage, puis répartition des parties par mois **en local**
+  > sur la date de début. Exact et sans perte : la tranche US-12/06 a établi que Lichess date une
+  > partie sur son **début**, et c'est déjà la date qu'on stocke. Les lignes mensuelles, les mois à
+  > zéro et la progression sont préservés (le flux se trie `dateAsc`, chaque ligne se ferme au
+  > franchissement de la frontière).
+  >
+  > **Ce que le grill devra trancher** — c'est un **amendement à ADR-0016**, dont le point 2 a
+  > choisi le mois *délibérément* :
+  > - ADR-0016 oppose qu'« un flux unique qui meurt au mois 40 est un problème tout-ou-rien ».
+  >   L'argument est réel mais plus faible qu'il n'y paraît : la reprise est **déjà** « re-jouer la
+  >   plage » (US-12/04), la déduplication par URL rendant l'import exactement ce qui manque. La
+  >   localité du mois n'achète donc pas la reprise, elle achète la **ligne « en échec »** sur le
+  >   mois fautif. Que devient cette ligne quand la requête est unique ?
+  > - Faut-il **une borne** malgré tout (par année ? par nombre de parties ?), pour qu'un compte à
+  >   50 000 parties ne soit pas un seul flux sans le moindre retour avant la fin ? Le coût n'est
+  >   pas la mémoire — le ndjson est déjà lu en flux — mais le **délai avant le premier signe de
+  >   vie**.
+  >
+  > **Périmètre** : n'affecte **que** l'adaptateur Lichess. chess.com reste mois par mois, puisque
+  > c'est ce que son API sert, et le port garde le mois. Aucune migration de schéma attendue.
+  >
+  > Sortie de l'exploitation de US-12 (PR #52) ; ne bloque pas son merge.
+
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
