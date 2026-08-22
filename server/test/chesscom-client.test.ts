@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express from "express";
 import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
-import { createHttpChessComClient } from "../src/chesscom";
+import { createHttpChessComClient } from "../src/platform/chesscom/client";
 
 /**
  * A tiny stand-in for chess.com's public API, so the real fetch-based client is
@@ -33,11 +33,14 @@ beforeAll(async () => {
     // casing in `url` — which is why the canonical spelling is read off there.
     if (req.params.username.toLowerCase() === "known") {
       res.json({ username: "known", url: "https://www.chess.com/member/KnoWn" });
-    }
-    else res.status(404).json({ code: 0, message: "not found" });
+    } else res.status(404).json({ code: 0, message: "not found" });
   });
   app.get("/pub/player/:username/games/:year/:month", (req, res) => {
-    if (req.params.username === "known" && req.params.year === "2024" && req.params.month === "01") {
+    if (
+      req.params.username === "known" &&
+      req.params.year === "2024" &&
+      req.params.month === "01"
+    ) {
       res.json(ARCHIVE);
     } else {
       res.status(404).json({ code: 0, message: "not found" });
@@ -55,23 +58,31 @@ afterAll(async () => {
   );
 });
 
-describe("http chess.com client", () => {
-  it("fetches and returns a month's games", async () => {
+describe("the chess.com adapter's HTTP client", () => {
+  it("answers a month in OUR vocabulary, not chess.com's payload (ADR-0016)", async () => {
     const client = createHttpChessComClient(baseUrl);
 
-    const games = await client.fetchMonth("known", 2024, 1);
+    const month = await client.fetchMonth("known", 2024, 1);
 
-    expect(games).toHaveLength(1);
-    expect(games[0]).toMatchObject({
-      url: "https://www.chess.com/game/live/42",
-      time_class: "blitz",
+    expect(month.totalFetched).toBe(1);
+    expect(month.games).toHaveLength(1);
+    expect(month.games[0]).toMatchObject({
+      gameUrl: "https://www.chess.com/game/live/42",
+      timeControlCategory: "blitz",
+      opponent: "opp",
+      playerColor: "white",
+      result: "win",
+      date: "2024-01-01",
     });
   });
 
   it("returns an empty month rather than throwing when the archive is absent", async () => {
     const client = createHttpChessComClient(baseUrl);
 
-    await expect(client.fetchMonth("known", 2025, 12)).resolves.toEqual([]);
+    await expect(client.fetchMonth("known", 2025, 12)).resolves.toEqual({
+      totalFetched: 0,
+      games: [],
+    });
   });
 
   it("answers a player with the casing chess.com itself spells them in", async () => {

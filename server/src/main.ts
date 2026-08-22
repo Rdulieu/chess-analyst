@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { openDb } from "./db";
 import { createApp } from "./app";
-import { createHttpChessComClient } from "./chesscom";
+import { createHttpChessComClient, createHttpLichessClient } from "./platform";
 import { createEngine } from "./engine";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -18,10 +18,15 @@ if (repairedEvaluations > 0) {
   console.log(`repaired ${repairedEvaluations} evaluations missing their FEN`);
 }
 
-// Real chess.com client; base URL overridable via CHESSCOM_BASE_URL (e.g. to
-// point the agentic Feature Path at a fixture archive). The engine backend is
-// selected the same way (ENGINE_BACKEND / STOCKFISH_PATH) — ADR-0008.
-const app = createApp(db, createHttpChessComClient(), createEngine());
+// One adapter per supported Platform (ADR-0016); base URLs overridable by
+// environment (CHESSCOM_BASE_URL, LICHESS_BASE_URL) so the agentic Feature Path
+// can point at a fixture archive. The engine backend is selected the same way
+// (ENGINE_BACKEND / STOCKFISH_PATH) — ADR-0008.
+const app = createApp(
+  db,
+  { chesscom: createHttpChessComClient(), lichess: createHttpLichessClient() },
+  createEngine(),
+);
 app.listen(PORT, () => {
   console.log(`chess-analyst server listening on http://localhost:${PORT}`);
 });

@@ -9,9 +9,10 @@ from `CONTEXT.md`.
 drive-by onto an existing HP.
 
 **[Path 0](./path-0-bootstrap.md) is a prerequisite, not a fourth journey, and sits outside the
-cap.** It is run **first, once per suite run**: it creates **two** reference `Profile`s — one that
-owns the reference range, one that owns nothing — imports that range against the real chess.com API
-and leaves two database **snapshots** the three scenarios restore by file copy. The cap protects against a sprawling suite of user journeys; a
+cap.** It is run **first, once per suite run**: it creates **three** reference `Profile`s — one that
+owns the reference chess.com range, one that owns nothing, and one on **lichess.org** (`Metalyst`)
+owning its own real history — imports against the real chess.com **and** Lichess APIs, and leaves
+two database **snapshots** the three scenarios restore by file copy. The cap protects against a sprawling suite of user journeys; a
 state-building step is not a journey of value, and it asserts only that the state it produces is
 the state it claims. Since US-11 no scenario can start from nothing: every screen is about a
 `Profile`, so one has to exist before any journey begins.
@@ -24,8 +25,8 @@ restore the **imported** snapshot.
 
 | ID | Title | Covers | Status |
 |---|---|---|---|
-| path 0 | Bootstrap: two reference Profiles and one history | Profile, Import, Monthly import, Game | prerequisite — **not an HP** |
-| HP-01 | Import and explore my chess.com history | Profile, Import, Game, Move, Position, Theme | active |
+| path 0 | Bootstrap: three reference Profiles, two Platforms, two histories | Profile, Platform, Import, Monthly import, Game, Time control category | prerequisite — **not an HP** |
+| HP-01 | Import and explore my chess.com history | Profile, Platform, Import, Game, Move, Position, Theme | active |
 | HP-02 | Explore my move habits | Move habit, Position, Move, Profile, Theme | active |
 | HP-03 | Spot my weak openings | Weak opening, Opening, Win rate, Profile, Theme | active |
 
@@ -104,7 +105,7 @@ copy back to confirm it holds what you think.
 The real chess.com contract is therefore exercised **once per suite run** in path 0, plus HP-01's own
 import — which is HP-01's subject, not a duplicate.
 
-**Two Profiles, always, one of them current.** The suite held exactly one Profile until 2026-08-21,
+**Three Profiles, always, one of them current, one of them on the other Platform.** The suite held exactly one Profile until 2026-08-21,
 and that blind spot let a `/profiles` screen ship overflowing its own card by 24px in ordinary use —
 green across eight screens and two themes, because the defect needs two rows with one of them
 marked "Profil actuel" to appear at all (two rows unselected fit; add the selection and they do
@@ -112,6 +113,14 @@ not). More than one Profile is also what US-11 *exists for*: studying other play
 builds both, at the cost of **one extra chess.com validation request and no import**, and no
 scenario may quietly reduce itself to a single Profile. HP-03 goes further and **switches** Profile,
 which is where the partitioning of ADR-0014 stops being an assumption.
+
+Since US-12 a **third** Profile joins them, `Metalyst` on **lichess.org**, and this one is not free:
+path 0 imports its full 71-month span against the live Lichess API, which is now the longest single
+cost of the run. It buys the only live exercise of the Lichess adapter in the suite, and it is what
+lets **HP-01 step 10b** switch Platform and require the banner and every figure to follow — until
+US-12 both reference Profiles were chess.com, so an app that spelled "chess.com" into the chrome
+unconditionally would have run green. It is a **step, not a fourth HP**: the journey is unchanged,
+only the site behind it, and the cap still holds at three.
 
 **The snapshot does not carry the current-Profile selection.** It lives client-side, not in the
 database (ADR-0014). Every scenario selects `DudulSmash` as its own first step, which is what the
@@ -148,6 +157,11 @@ seconds per run and are simultaneously too slow and too flaky. Wait for the elem
   depth-16 winning chances (CONTEXT.md); a shallower run no longer tests the same thing.
 - **Do not swap in a fixture archive.** HP runs exist to exercise the real chess.com contract; that
   is the whole reason they are slow and run once, at the gate.
+- **Do not drop the Lichess Profile, and do not shorten its span.** It is the suite's only live
+  Lichess contract, and the 51 empty months in the span are what distinguish *a gap in the history*
+  from *a gap in the fetching*. A populated-months-only range would import the same Games and stop
+  testing that. Note also what it does **not** cover: `Metalyst` has no `ultraBullet` and no aborted
+  game, so those two rules stay fixture-only — state that rather than implying the run covers them.
 - **Do not drop the second Profile.** An empty second Profile is what makes a scoping leak
   observable — a global aggregate shows 82 games for an account that owns none — and what keeps the
   row layout under load. It costs one validation request and imports nothing; there is no cheaper

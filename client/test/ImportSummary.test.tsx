@@ -7,7 +7,7 @@ const result: ImportResult = {
   totalFetched: 6,
   imported: 4,
   alreadyPresent: 1,
-  byCategory: { bullet: 1, blitz: 2, rapid: 1, daily: 0 },
+  byCategory: { bullet: 1, blitz: 2, rapid: 1, classical: 0, correspondence: 0 },
   results: { win: 2, draw: 1, loss: 1 },
   months: [
     { month: { year: 2024, month: 1 }, imported: 4, alreadyPresent: 1 },

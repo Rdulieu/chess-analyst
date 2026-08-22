@@ -1,19 +1,25 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { createProfile, deleteProfile, fetchProfiles } from "../api";
-import type { Profile } from "../types";
+import { platformLabel, type Platform, type Profile } from "../types";
+
+/** The Platforms a Profile can be created on, in the order they are offered. */
+const PLATFORMS: Platform[] = ["chesscom", "lichess"];
 import { clearCurrentProfileId, loadCurrentProfileId, saveCurrentProfileId } from "../features/profiles/currentProfile";
 
 /**
  * Profils (`/profiles`): where the `Profile`s live — the list, the creation of a
  * new one, the choice of the **current** one, and deletion. A Profile is one
  * account on one platform (CONTEXT.md, ADR-0014), and creating one goes through
- * chess.com, so what lands in the list is an account that exists, spelled the
- * way chess.com spells it.
+ * its `Platform`, so what lands in the list is an account that exists, spelled
+ * the way that Platform spells it.
  */
 export function ProfilesPage() {
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [username, setUsername] = useState("");
+  // The Platform is chosen HERE and nowhere else; chess.com is the default so
+  // the routine creation stays one field and one click.
+  const [platform, setPlatform] = useState<Platform>("chesscom");
   const [error, setError] = useState<string | null>(null);
   const [currentId, setCurrentId] = useState<number | null>(loadCurrentProfileId);
 
@@ -59,7 +65,7 @@ export function ProfilesPage() {
       // the list is re-read rather than appended to (no second entry can appear)
       // and the Player ends up ON the Profile they named, whichever it turned
       // out to be.
-      const profile = await createProfile(username);
+      const profile = await createProfile(platform, username);
       setProfiles(await fetchProfiles());
       select(profile.id);
       setUsername("");
@@ -94,7 +100,7 @@ export function ProfilesPage() {
             // Profile: a voice-control Player must be able to say what they
             // read (WCAG 2.5.3), and the action must still be unambiguous
             // about whose parties it fetches.
-            aria-label={`Importer mes parties — ${current.username} (chess.com)`}
+            aria-label={`Importer mes parties — ${current.username} (${platformLabel(current.platform)})`}
           >
             Importer mes parties
           </Link>
@@ -102,7 +108,10 @@ export function ProfilesPage() {
       )}
 
       {profiles === null ? null : profiles.length === 0 ? (
-        <p>Aucun profil — créez-en un à partir d’un compte chess.com pour commencer.</p>
+        <p>
+          Aucun profil — créez-en un à partir d’un compte chess.com ou lichess.org pour
+          commencer.
+        </p>
       ) : (
         <ul aria-label="profils">
           {profiles.map((profile) => {
@@ -117,7 +126,7 @@ export function ProfilesPage() {
                 <span data-part="identity">
                   <Link to={`/profiles/${profile.id}`}>{profile.username}</Link>
                 </span>
-                <span data-part="platform">chess.com</span>
+                <span data-part="platform">{platformLabel(profile.platform)}</span>
                 {/* The size of the history, in words rather than bare figures:
                     which Profile is worth opening is the question this row
                     answers. */}
@@ -150,8 +159,8 @@ export function ProfilesPage() {
         // is the risk this step exists against.
         <div role="alertdialog" aria-label="confirmer la suppression" className="card">
           <p>
-            Supprimer le profil <strong>{doomed.username}</strong> (chess.com) ? Cette action est
-            définitive.
+            Supprimer le profil <strong>{doomed.username}</strong> (
+            {platformLabel(doomed.platform)}) ? Cette action est définitive.
           </p>
           <p data-part="actions">
             <button type="button" onClick={() => void confirmDeletion(doomed)}>
@@ -165,8 +174,25 @@ export function ProfilesPage() {
       )}
 
       <form aria-label="nouveau profil" onSubmit={onCreate}>
+        {/* The Platform first, because it decides where the account name is
+            looked up — and it is the one choice that can never be changed
+            afterwards (ADR-0014). */}
         <div>
-          <label htmlFor="profile-username">Compte chess.com</label>
+          <label htmlFor="profile-platform">Plateforme</label>
+          <select
+            id="profile-platform"
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value as Platform)}
+          >
+            {PLATFORMS.map((p) => (
+              <option key={p} value={p}>
+                {platformLabel(p)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="profile-username">Compte</label>
           <input
             id="profile-username"
             value={username}

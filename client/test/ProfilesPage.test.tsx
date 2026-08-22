@@ -14,6 +14,8 @@ const DUDUL: Profile = {
   analyzed: 20,
 };
 const HIKARU: Profile = { ...DUDUL, id: 2, username: "Hikaru" };
+/** The same account name on another Platform — two Profiles, never one. */
+const METALYST: Profile = { ...DUDUL, id: 3, platform: "lichess", username: "Metalyst" };
 
 const json = (body: unknown, status = 200) =>
   ({ ok: status < 300, status, json: async () => body }) as Response;
@@ -64,6 +66,20 @@ describe("ProfilesPage — the Profiles it knows", () => {
     expect(screen.queryByText(/aucun profil/i)).toBeNull();
   });
 
+  it("names each Profile's own Platform, so two same-named ones are told apart before selecting", async () => {
+    // The list is where a Player picks; picking the wrong site's Profile is the
+    // mistake this naming exists against (US-12).
+    vi.stubGlobal("fetch", vi.fn(async () => json([DUDUL, METALYST])));
+
+    renderPage();
+
+    const list = await screen.findByRole("list", { name: /profils/i });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows[0].textContent).toMatch(/chess\.com/i);
+    expect(rows[1].textContent).toMatch(/lichess\.org/);
+    expect(rows[1].textContent).not.toMatch(/chess\.com/i);
+  });
+
   it("says how big each Profile's history is, and how much of it is analyzed", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => json([DUDUL, { ...HIKARU, games: 0, analyzed: 0 }])));
 
@@ -91,7 +107,7 @@ describe("ProfilesPage — the Profiles it knows", () => {
 
     renderPage();
     await screen.findByRole("list", { name: /profils/i });
-    await user.type(screen.getByLabelText(/compte chess\.com/i), "ghost");
+    await user.type(screen.getByLabelText(/^compte$/i), "ghost");
     await user.click(screen.getByRole("button", { name: /ajouter/i }));
 
     expect((await screen.findByRole("alert")).textContent).toMatch(/introuvable.*ghost/i);
@@ -166,6 +182,60 @@ describe("ProfilesPage — the current Profile", () => {
   });
 });
 
+describe("ProfilesPage — choosing the Platform", () => {
+  it("offers the Platform at creation and posts the one that was chosen", async () => {
+    // The ONLY place a Platform is ever chosen: from then on it is a property of
+    // the Profile (ADR-0014), never a parameter of anything else (US-12).
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, opts?: RequestInit) => {
+        if (opts?.method === "POST") {
+          posted.push(JSON.parse(opts.body as string));
+          return json(METALYST, 201);
+        }
+        return json(posted.length === 0 ? [] : [METALYST]);
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText(/aucun profil/i);
+    await user.selectOptions(screen.getByLabelText(/plateforme/i), "lichess");
+    await user.type(screen.getByLabelText(/^compte$/i), "metalyst");
+    await user.click(screen.getByRole("button", { name: /ajouter/i }));
+
+    await screen.findByRole("list", { name: /profils/i });
+    expect(posted).toEqual([{ platform: "lichess", username: "metalyst" }]);
+    // And the Profile that lands reads as a lichess.org one, not a chess.com one.
+    const rows = within(screen.getByRole("list", { name: /profils/i })).getAllByRole("listitem");
+    expect(rows[0].textContent).toMatch(/lichess\.org/);
+  });
+
+  it("defaults to chess.com, so the routine creation is unchanged", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, opts?: RequestInit) => {
+        if (opts?.method === "POST") {
+          posted.push(JSON.parse(opts.body as string));
+          return json(DUDUL, 201);
+        }
+        return json(posted.length === 0 ? [] : [DUDUL]);
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText(/aucun profil/i);
+    await user.type(screen.getByLabelText(/^compte$/i), "dudulsmash");
+    await user.click(screen.getByRole("button", { name: /ajouter/i }));
+
+    await screen.findByRole("list", { name: /profils/i });
+    expect(posted).toEqual([{ platform: "chesscom", username: "dudulsmash" }]);
+  });
+});
+
 describe("ProfilesPage — creating lands me on the Profile", () => {
   const rowFor = (name: string) =>
     within(screen.getByRole("list", { name: /profils/i }))
@@ -191,14 +261,14 @@ describe("ProfilesPage — creating lands me on the Profile", () => {
 
     renderPage();
     await screen.findByText(/aucun profil/i);
-    await user.type(screen.getByLabelText(/compte chess\.com/i), "dudulsmash");
+    await user.type(screen.getByLabelText(/^compte$/i), "dudulsmash");
     await user.click(screen.getByRole("button", { name: /ajouter/i }));
 
     await screen.findByRole("list", { name: /profils/i });
     expect(within(rowFor("DudulSmash")).getByText(/profil actuel/i)).toBeTruthy();
 
     // Again, in another casing: still one entry, still the one I am on.
-    await user.type(screen.getByLabelText(/compte chess\.com/i), "DUDULSMASH");
+    await user.type(screen.getByLabelText(/^compte$/i), "DUDULSMASH");
     await user.click(screen.getByRole("button", { name: /ajouter/i }));
 
     expect(within(screen.getByRole("list", { name: /profils/i })).getAllByRole("listitem"))

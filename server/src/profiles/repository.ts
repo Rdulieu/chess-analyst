@@ -1,4 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
+import type { Platform } from "../platform";
 import type { Db } from "../db";
 import { games, profiles, type Profile } from "../db/schema";
 
@@ -30,23 +31,25 @@ export function getProfile(db: Db, id: number): ProfileWithCounts | undefined {
 
 /** The counted-Profile query, over all of them or over the one `id` names. */
 function countedProfiles(db: Db, id?: number): ProfileWithCounts[] {
-  return db
-    .select({
-      id: profiles.id,
-      platform: profiles.platform,
-      username: profiles.username,
-      createdAt: profiles.createdAt,
-      games: sql<number>`count(${games.id})`,
-      analyzed: sql<number>`sum(case when ${games.analyzed} then 1 else 0 end)`.mapWith(Number),
-    })
-    .from(profiles)
-    // A Profile with no Game yet is still a Profile, and reads zero rather than
-    // disappearing from the list.
-    .leftJoin(games, eq(games.profileId, profiles.id))
-    .where(id === undefined ? undefined : eq(profiles.id, id))
-    .groupBy(profiles.id)
-    .orderBy(profiles.id)
-    .all();
+  return (
+    db
+      .select({
+        id: profiles.id,
+        platform: profiles.platform,
+        username: profiles.username,
+        createdAt: profiles.createdAt,
+        games: sql<number>`count(${games.id})`,
+        analyzed: sql<number>`sum(case when ${games.analyzed} then 1 else 0 end)`.mapWith(Number),
+      })
+      .from(profiles)
+      // A Profile with no Game yet is still a Profile, and reads zero rather than
+      // disappearing from the list.
+      .leftJoin(games, eq(games.profileId, profiles.id))
+      .where(id === undefined ? undefined : eq(profiles.id, id))
+      .groupBy(profiles.id)
+      .orderBy(profiles.id)
+      .all()
+  );
 }
 
 /**
@@ -55,19 +58,12 @@ function countedProfiles(db: Db, id?: number): ProfileWithCounts[] {
  * normally agree; matching case-insensitively means that even a platform that
  * changed its mind about an account's casing cannot yield a second Profile.
  */
-export function findProfile(
-  db: Db,
-  platform: "chesscom",
-  username: string,
-): Profile | undefined {
+export function findProfile(db: Db, platform: Platform, username: string): Profile | undefined {
   return db
     .select()
     .from(profiles)
     .where(
-      and(
-        eq(profiles.platform, platform),
-        sql`lower(${profiles.username}) = lower(${username})`,
-      ),
+      and(eq(profiles.platform, platform), sql`lower(${profiles.username}) = lower(${username})`),
     )
     .get();
 }
@@ -102,7 +98,7 @@ export function deleteProfile(db: Db, id: number): boolean {
  */
 export function resolveProfile(
   db: Db,
-  platform: "chesscom",
+  platform: Platform,
   canonicalUsername: string,
 ): { profile: Profile; created: boolean } {
   const existing = findProfile(db, platform, canonicalUsername);
@@ -111,11 +107,7 @@ export function resolveProfile(
 }
 
 /** Stores a new `Profile` and returns it as stored (with its id). */
-export function createProfile(
-  db: Db,
-  platform: "chesscom",
-  username: string,
-): Profile {
+export function createProfile(db: Db, platform: Platform, username: string): Profile {
   return db
     .insert(profiles)
     .values({ platform, username, createdAt: new Date().toISOString() })

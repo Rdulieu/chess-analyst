@@ -4,7 +4,7 @@ import { openDb } from "../src/db";
 import { moveHabits } from "../src/db/schema";
 import { listGames } from "../src/repository";
 import { importMonth } from "../src/import";
-import { chessComGame, fakeClient, seedProfile } from "./fixtures";
+import { importedGame, fakeClient, seedProfile } from "./fixtures";
 
 /** A fresh database with the one `Profile` these tests import under. */
 function testDb() {
@@ -16,12 +16,12 @@ function testDb() {
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
 /** The archive of the single month these importMonth tests all work on. */
-const januaryOf = (games: ReturnType<typeof chessComGame>[]) => fakeClient({ "2024-01": games });
+const januaryOf = (games: ReturnType<typeof importedGame>[]) => fakeClient({ "2024-01": games });
 
 describe("importMonth", () => {
   it("imports and maps a month's games into the Player's Game shape", async () => {
     const { db, profileId } = testDb();
-    const client = januaryOf([chessComGame({ url: "https://www.chess.com/game/live/100" })]);
+    const client = januaryOf([importedGame({ gameUrl: "https://www.chess.com/game/live/100" })]);
 
     const result = await importMonth(db, client, {
       profileId,
@@ -49,20 +49,28 @@ describe("importMonth", () => {
     const { db, profileId } = testDb();
     const client = januaryOf([
       // Player is Black and lost.
-      chessComGame({
-        url: "https://www.chess.com/game/live/1",
-        white: { username: "opp", result: "win" },
-        black: { username: "Me", result: "checkmated" },
+      importedGame({
+        gameUrl: "https://www.chess.com/game/live/1",
+        playerColor: "black",
+        opponent: "opp",
+        result: "loss",
       }),
-      // Player is White and drew (both sides carry a draw code).
-      chessComGame({
-        url: "https://www.chess.com/game/live/2",
-        white: { username: "me", result: "agreed" },
-        black: { username: "opp", result: "agreed" },
+      // Player is White and drew.
+      importedGame({
+        gameUrl: "https://www.chess.com/game/live/2",
+        playerColor: "white",
+        opponent: "opp",
+        result: "draw",
       }),
     ]);
 
-    await importMonth(db, client, { profileId, username: "me", year: 2024, month: 1, categories: ["blitz"] });
+    await importMonth(db, client, {
+      profileId,
+      username: "me",
+      year: 2024,
+      month: 1,
+      categories: ["blitz"],
+    });
 
     const byUrl = Object.fromEntries(listGames(db, profileId).map((g) => [g.gameUrl, g]));
     expect(byUrl["https://www.chess.com/game/live/1"]).toMatchObject({
@@ -80,9 +88,9 @@ describe("importMonth", () => {
   it("keeps only the chosen time control categories", async () => {
     const { db, profileId } = testDb();
     const client = januaryOf([
-      chessComGame({ url: "https://www.chess.com/game/live/b", time_class: "blitz" }),
-      chessComGame({ url: "https://www.chess.com/game/live/x", time_class: "bullet" }),
-      chessComGame({ url: "https://www.chess.com/game/live/r", time_class: "rapid" }),
+      importedGame({ gameUrl: "https://www.chess.com/game/live/b", timeControlCategory: "blitz" }),
+      importedGame({ gameUrl: "https://www.chess.com/game/live/x", timeControlCategory: "bullet" }),
+      importedGame({ gameUrl: "https://www.chess.com/game/live/r", timeControlCategory: "rapid" }),
     ]);
 
     const result = await importMonth(db, client, {
@@ -94,15 +102,24 @@ describe("importMonth", () => {
     });
 
     expect(result.imported).toBe(2);
-    expect(listGames(db, profileId).map((g) => g.timeControlCategory).sort()).toEqual(["blitz", "rapid"]);
+    expect(
+      listGames(db, profileId)
+        .map((g) => g.timeControlCategory)
+        .sort(),
+    ).toEqual(["blitz", "rapid"]);
   });
 
-  it("skips non-standard variants (rules other than 'chess')", async () => {
+  it("reports what the Platform HAD as fetched, not what it handed over (out-of-scope games included)", async () => {
+    // The adapter drops what we do not study (variants, and later more), so the
+    // month can carry fewer games than it fetched. `totalFetched` keeps meaning
+    // "what the Platform had" — a month mostly out of scope must not read empty.
     const { db, profileId } = testDb();
-    const client = januaryOf([
-      chessComGame({ url: "https://www.chess.com/game/live/std", rules: "chess" }),
-      chessComGame({ url: "https://www.chess.com/game/live/960", rules: "chess960" }),
-    ]);
+    const client = fakeClient({
+      "2024-01": {
+        totalFetched: 5,
+        games: [importedGame({ gameUrl: "https://www.chess.com/game/live/std" })],
+      },
+    });
 
     const result = await importMonth(db, client, {
       profileId,
@@ -112,17 +129,26 @@ describe("importMonth", () => {
       categories: ["blitz"],
     });
 
+    expect(result.totalFetched).toBe(5);
     expect(result.imported).toBe(1);
-    expect(listGames(db, profileId).map((g) => g.gameUrl)).toEqual(["https://www.chess.com/game/live/std"]);
+    expect(listGames(db, profileId).map((g) => g.gameUrl)).toEqual([
+      "https://www.chess.com/game/live/std",
+    ]);
   });
 
   it("skips Games already retained and reports them as already present (dedup by URL)", async () => {
     const { db, profileId } = testDb();
     const client = januaryOf([
-      chessComGame({ url: "https://www.chess.com/game/live/a" }),
-      chessComGame({ url: "https://www.chess.com/game/live/b" }),
+      importedGame({ gameUrl: "https://www.chess.com/game/live/a" }),
+      importedGame({ gameUrl: "https://www.chess.com/game/live/b" }),
     ]);
-    const params = { profileId, username: "me", year: 2024, month: 1, categories: ["blitz" as const] };
+    const params = {
+      profileId,
+      username: "me",
+      year: 2024,
+      month: 1,
+      categories: ["blitz" as const],
+    };
 
     const first = await importMonth(db, client, params);
     const second = await importMonth(db, client, params);
@@ -134,40 +160,58 @@ describe("importMonth", () => {
 
   it("reports a full summary: total fetched, per-category counts and a win/draw/loss tally", async () => {
     const { db, profileId } = testDb();
-    const client = januaryOf([
-      chessComGame({ url: "u1", time_class: "blitz", white: { username: "me", result: "win" }, black: { username: "o", result: "resigned" } }),
-      chessComGame({ url: "u2", time_class: "blitz", white: { username: "o", result: "win" }, black: { username: "me", result: "checkmated" } }),
-      chessComGame({ url: "u3", time_class: "rapid", white: { username: "me", result: "agreed" }, black: { username: "o", result: "agreed" } }),
-      chessComGame({ url: "u4", time_class: "bullet", white: { username: "me", result: "win" }, black: { username: "o", result: "timeout" } }),
-      chessComGame({ url: "u5", time_class: "blitz", rules: "chess960" }), // filtered out
-    ]);
+    const client = fakeClient({
+      // Five games fetched, one of them out of scope and so never handed over.
+      "2024-01": {
+        totalFetched: 5,
+        games: [
+          importedGame({ gameUrl: "u1", timeControlCategory: "blitz", result: "win" }),
+          importedGame({
+            gameUrl: "u2",
+            timeControlCategory: "blitz",
+            result: "loss",
+            playerColor: "black",
+          }),
+          importedGame({ gameUrl: "u3", timeControlCategory: "rapid", result: "draw" }),
+          importedGame({ gameUrl: "u4", timeControlCategory: "bullet", result: "win" }),
+        ],
+      },
+    });
 
     const result = await importMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
       month: 1,
-      categories: ["bullet", "blitz", "rapid", "daily"],
+      categories: ["bullet", "blitz", "rapid", "classical", "correspondence"],
     });
 
     expect(result.totalFetched).toBe(5);
     expect(result.imported).toBe(4);
     expect(result.alreadyPresent).toBe(0);
-    expect(result.byCategory).toEqual({ bullet: 1, blitz: 2, rapid: 1, daily: 0 });
+    expect(result.byCategory).toEqual({
+      bullet: 1,
+      blitz: 2,
+      rapid: 1,
+      classical: 0,
+      correspondence: 0,
+    });
     expect(result.results).toEqual({ win: 2, draw: 1, loss: 1 });
   });
 
   it("precomputes Move habit counters for each imported Game", async () => {
     const { db, profileId } = testDb();
     const client = januaryOf([
-      chessComGame({
-        pgn: "1. e4 e5",
-        white: { username: "me", result: "win" },
-        black: { username: "opp", result: "resigned" },
-      }),
+      importedGame({ pgn: "1. e4 e5", playerColor: "white", result: "win" }),
     ]);
 
-    await importMonth(db, client, { profileId, username: "me", year: 2024, month: 1, categories: ["blitz"] });
+    await importMonth(db, client, {
+      profileId,
+      username: "me",
+      year: 2024,
+      month: 1,
+      categories: ["blitz"],
+    });
 
     const e4 = db
       .select()

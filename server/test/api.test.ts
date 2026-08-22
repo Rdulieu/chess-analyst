@@ -7,8 +7,15 @@ import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { recordMoveHabits } from "../src/move-habits/precompute";
-import { chessComGame, fakeClient, morphyGame, seedProfile, type PlayerAnswer } from "./fixtures";
-import type { ChessComClient } from "../src/chesscom";
+import {
+  importedGame,
+  fakeClient,
+  fakeRegistry,
+  morphyGame,
+  seedProfile,
+  type PlayerAnswer,
+} from "./fixtures";
+import type { PlatformClient } from "../src/platform";
 
 /** 4-field FEN of the standard starting Position. */
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
@@ -36,8 +43,10 @@ const gamesOf = (app: Parameters<typeof request>[0], profileId: number = SOLE_PR
 
 function appWithGame() {
   const { db } = openDb(":memory:");
-  db.insert(games).values(morphyGame(seedProfile(db))).run();
-  return createApp(db, fakeClient({}));
+  db.insert(games)
+    .values(morphyGame(seedProfile(db)))
+    .run();
+  return createApp(db, fakeRegistry({}));
 }
 
 describe("games API", () => {
@@ -81,7 +90,7 @@ describe("games API", () => {
   it("GET /api/games returns an empty list for a Profile that holds no Game yet", async () => {
     const { db } = openDb(":memory:");
     seedProfile(db);
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await gamesOf(app);
 
@@ -127,10 +136,16 @@ describe("games API", () => {
       .get();
     db.insert(evaluations)
       .values(
-        gamePositions(game.pgn).map((fen, ply) => ({ gameId: game.id, ply, fen, cp: 0, mate: null })),
+        gamePositions(game.pgn).map((fen, ply) => ({
+          gameId: game.id,
+          ply,
+          fen,
+          cp: 0,
+          mate: null,
+        })),
       )
       .run();
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/games/${game.id}/annotations`);
 
@@ -161,7 +176,7 @@ describe("analysis API", () => {
         })
         .run();
     }
-    return { app: createApp(db, fakeClient({}), createFixtureEngine()), db };
+    return { app: createApp(db, fakeRegistry({}), createFixtureEngine()), db };
   }
 
   const appWithGames = (pgns: string[]) => appAndStore(pgns).app;
@@ -227,7 +242,7 @@ describe("analysis API", () => {
         .get(),
     );
     return {
-      app: createApp(db, fakeClient({}), createFixtureEngine()),
+      app: createApp(db, fakeRegistry({}), createFixtureEngine()),
       mine,
       theirs,
       myGame: seeded[0],
@@ -351,31 +366,25 @@ describe("analysis API", () => {
     await startPass(app, await idsOf(app));
     expect(await waitDone(app)).toMatchObject({ acknowledged: false });
 
-    expect((await request(app).post(`/api/analyze/acknowledge?profileId=${SOLE_PROFILE}`)).status).toBe(204);
-    expect((await statusOf(app)).body).toMatchObject({
-      acknowledged: true,
-      done: 3,
-      games: 1,
-    });
+    expect(
+      (await request(app).post(`/api/analyze/acknowledge?profileId=${SOLE_PROFILE}`)).status,
+    ).toBe(204);
+    expect((await statusOf(app)).body).toMatchObject({ acknowledged: true, done: 3, games: 1 });
 
-    expect((await request(app).post(`/api/analyze/acknowledge?profileId=${SOLE_PROFILE}`)).status).toBe(204);
-    expect((await statusOf(app)).body).toMatchObject({
-      acknowledged: true,
-    });
+    expect(
+      (await request(app).post(`/api/analyze/acknowledge?profileId=${SOLE_PROFILE}`)).status,
+    ).toBe(204);
+    expect((await statusOf(app)).body).toMatchObject({ acknowledged: true });
   });
 
   it("POST /api/analyze says whether it actually started a pass, so 'nothing to do' is not guesswork", async () => {
     const app = appWithGames(["1. e4 e5"]);
     const ids = await idsOf(app);
 
-    expect((await startPass(app, ids)).body).toMatchObject({
-      started: true,
-    });
+    expect((await startPass(app, ids)).body).toMatchObject({ started: true });
     await waitDone(app);
 
-    expect((await startPass(app, ids)).body).toMatchObject({
-      started: false,
-    });
+    expect((await startPass(app, ids)).body).toMatchObject({ started: false });
   });
 
   it("GET /api/analyze/status reports the last pass to a freshly built app (it outlives the process)", async () => {
@@ -384,7 +393,7 @@ describe("analysis API", () => {
     await waitDone(app);
 
     // A second app over the same store — as after a restart.
-    const restarted = createApp(db, fakeClient({}), createFixtureEngine());
+    const restarted = createApp(db, fakeRegistry({}), createFixtureEngine());
     expect((await statusOf(restarted)).body).toEqual({
       running: false,
       total: 3,
@@ -437,7 +446,7 @@ describe("openings API", () => {
         openingGame(owner, { eco: "C50", openingName: "Italian Game", result: "win" }),
       ])
       .run();
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/openings?profileId=${owner}`);
 
@@ -459,7 +468,7 @@ describe("openings API", () => {
   it("GET /api/openings returns { openings: [] } for a Profile with no Game", async () => {
     const { db } = openDb(":memory:");
     const owner = seedProfile(db);
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/openings?profileId=${owner}`);
 
@@ -494,7 +503,7 @@ describe("danger API", () => {
         ),
       )
       .run();
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/danger?profileId=${owner}`);
 
@@ -525,7 +534,7 @@ describe("danger API", () => {
     db.insert(evaluations)
       .values(gamePositions("1. e4").map((fen, ply) => ({ gameId: 1, ply, fen, cp: 0 })))
       .run();
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/danger?profileId=${owner}`);
 
@@ -537,7 +546,7 @@ describe("danger API", () => {
   it("GET /api/danger returns no entry and no analyzed Game for a Profile with no Game", async () => {
     const { db } = openDb(":memory:");
     const owner = seedProfile(db);
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/danger?profileId=${owner}`);
 
@@ -551,7 +560,7 @@ describe("import API", () => {
     const { db } = openDb(":memory:");
     const mine = seedProfile(db, "DudulSmash");
     const friend = seedProfile(db, "Friend");
-    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
+    const app = createApp(db, fakeRegistry({ "2024-01": [importedGame()] }));
 
     const res = await request(app)
       .post("/api/import")
@@ -576,9 +585,9 @@ describe("import API", () => {
     const mine = seedProfile(db, "me");
     const app = createApp(
       db,
-      fakeClient({
-        "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/7" })],
-        "2024-02": [chessComGame({ url: "https://www.chess.com/game/live/8" })],
+      fakeRegistry({
+        "2024-01": [importedGame({ gameUrl: "https://www.chess.com/game/live/7" })],
+        "2024-02": [importedGame({ gameUrl: "https://www.chess.com/game/live/8" })],
       }),
     );
     const run = async (fromMonth: number) => {
@@ -608,7 +617,18 @@ describe("import API", () => {
     // dedup bug: each Profile records it as ITS Player played it.
     const app = createApp(
       db,
-      fakeClient({ "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/42" })] }),
+      // The adapter answers from the asked account's point of view, which is
+      // precisely what makes the two rows differ rather than collide.
+      fakeRegistry({
+        "2024-01": (username) => [
+          importedGame({
+            gameUrl: "https://www.chess.com/game/live/42",
+            playerColor: username === "me" ? "white" : "black",
+            result: username === "me" ? "win" : "loss",
+            opponent: username === "me" ? "opp" : "me",
+          }),
+        ],
+      }),
     );
     const importFor = async (profileId: number) => {
       await request(app)
@@ -645,7 +665,7 @@ describe("import API", () => {
 
   it("POST /api/import refuses a request naming no Profile, or an unknown one, and starts nothing", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
+    const app = createApp(db, fakeRegistry({ "2024-01": [importedGame()] }));
     const range = {
       from: { year: 2024, month: 1 },
       to: { year: 2024, month: 1 },
@@ -658,7 +678,9 @@ describe("import API", () => {
 
     // An id that names nothing is a different mistake from naming none, and
     // answers differently — 404 is "that Profile does not exist".
-    const unknown = await request(app).post("/api/import").send({ profileId: 4242, ...range });
+    const unknown = await request(app)
+      .post("/api/import")
+      .send({ profileId: 4242, ...range });
     expect(unknown.status).toBe(404);
 
     const status = await request(app).get("/api/import/status");
@@ -668,12 +690,14 @@ describe("import API", () => {
 
   it("POST /api/import accepts a month range, runs it in the background, and the Games then show up in GET /api/games", async () => {
     const { db } = openDb(":memory:");
-    const client = fakeClient({
-      "2024-01": [chessComGame({ url: "https://www.chess.com/game/live/1" })],
-      "2024-03": [chessComGame({ url: "https://www.chess.com/game/live/2" })],
-    });
     const profileId = seedProfile(db, "me");
-    const app = createApp(db, client);
+    const app = createApp(
+      db,
+      fakeRegistry({
+        "2024-01": [importedGame({ gameUrl: "https://www.chess.com/game/live/1" })],
+        "2024-03": [importedGame({ gameUrl: "https://www.chess.com/game/live/2" })],
+      }),
+    );
 
     const res = await request(app)
       .post("/api/import")
@@ -703,10 +727,10 @@ describe("import API", () => {
     const profileId = seedProfile(db, "me");
     const app = createApp(
       db,
-      fakeClient({
-        "2024-01": [chessComGame()],
+      fakeRegistry({
+        "2024-01": [importedGame()],
         "2024-02": new Error("chess.com request failed (429)"),
-        "2024-03": [chessComGame()],
+        "2024-03": [importedGame()],
       }),
     );
 
@@ -734,7 +758,7 @@ describe("import API", () => {
   it("POST /api/import rejects an inverted range with 400 and starts nothing", async () => {
     const { db } = openDb(":memory:");
     const profileId = seedProfile(db, "me");
-    const app = createApp(db, fakeClient({ "2024-01": [chessComGame()] }));
+    const app = createApp(db, fakeRegistry({ "2024-01": [importedGame()] }));
 
     const res = await request(app)
       .post("/api/import")
@@ -758,10 +782,12 @@ describe("import API", () => {
     let monthsFetched = 0;
     const profileId = seedProfile(db, "me");
     const app = createApp(db, {
-      fetchPlayer: async (username) => ({ username }),
-      fetchMonth: async () => {
-        monthsFetched++;
-        return [];
+      chesscom: {
+        fetchPlayer: async (username) => ({ username }),
+        fetchMonth: async () => {
+          monthsFetched++;
+          return { totalFetched: 0, games: [] };
+        },
       },
     });
     const nextYear = new Date().getFullYear() + 1;
@@ -785,7 +811,7 @@ describe("import API", () => {
   it("POST /api/import imposes no cap on how long a range may be", async () => {
     const { db } = openDb(":memory:");
     const profileId = seedProfile(db, "me");
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     // Rebuilding a whole history in one Import is a supported use (ADR-0010).
     const res = await request(app)
@@ -804,14 +830,14 @@ describe("import API", () => {
 
   it("stays responsive when the chess.com request fails", async () => {
     const { db } = openDb(":memory:");
-    const failing: ChessComClient = {
+    const failing: PlatformClient = {
       fetchPlayer: async (username) => ({ username }),
       fetchMonth: async () => {
         throw new Error("chess.com request failed (429)");
       },
     };
     const profileId = seedProfile(db, "me");
-    const app = createApp(db, failing);
+    const app = createApp(db, { chesscom: failing });
 
     const res = await request(app)
       .post("/api/import")
@@ -831,10 +857,42 @@ describe("import API", () => {
     expect(list.status).toBe(200);
   });
 
+  it("accepts an import scoped to `classical` alone and reports zero rather than failing", async () => {
+    // The category exists in the vocabulary before any Platform produces one:
+    // scoping to it must run and come back empty, not be refused (US-12).
+    const { db } = openDb(":memory:");
+    const profileId = seedProfile(db, "me");
+    const app = createApp(
+      db,
+      fakeRegistry({ "2024-01": [importedGame({ timeControlCategory: "blitz" })] }),
+    );
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        profileId,
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["classical"],
+      });
+
+    expect(res.status).toBe(202);
+    const final = await importDone(app);
+    expect(final.result).toMatchObject({ totalFetched: 1, imported: 0, alreadyPresent: 0 });
+    expect(final.result.byCategory).toEqual({
+      bullet: 0,
+      blitz: 0,
+      rapid: 0,
+      classical: 0,
+      correspondence: 0,
+    });
+    expect(final.result.message).toMatch(/no games found/i);
+  });
+
   it("POST /api/import reports zero with a message covering the whole range", async () => {
     const { db } = openDb(":memory:");
     const profileId = seedProfile(db, "me");
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     await request(app)
       .post("/api/import")
@@ -854,7 +912,7 @@ describe("import API", () => {
 describe("settings API", () => {
   it("GET /api/settings then PUT then GET round-trips the Player's username", async () => {
     const { db } = openDb(":memory:");
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const initial = await request(app).get("/api/settings");
     expect(initial.status).toBe(200);
@@ -892,7 +950,7 @@ describe("move habits API", () => {
         .get();
       recordMoveHabits(db, g);
     }
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app)
       .get("/api/move-habits")
@@ -901,7 +959,13 @@ describe("move habits API", () => {
     expect(res.status).toBe(200);
     const e4 = res.body.candidates.find((c: { san: string }) => c.san === "e4");
     expect(e4).toMatchObject({ count: 2, win: 1, draw: 0, loss: 1, winRate: 0.5 });
-    expect(e4.byCategory).toMatchObject({ bullet: 0, blitz: 2, rapid: 0, daily: 0 });
+    expect(e4.byCategory).toMatchObject({
+      bullet: 0,
+      blitz: 2,
+      rapid: 0,
+      classical: 0,
+      correspondence: 0,
+    });
   });
 });
 
@@ -923,9 +987,13 @@ describe("stats API", () => {
   it("GET /api/stats returns the history-wide summary (total, per cadence, per side)", async () => {
     const { db } = openDb(":memory:");
     const owner = seedProfile(db);
-    db.insert(games).values(game(owner, { result: "win", timeControlCategory: "blitz", playerColor: "white" })).run();
-    db.insert(games).values(game(owner, { result: "loss", timeControlCategory: "bullet", playerColor: "black" })).run();
-    const app = createApp(db, fakeClient({}));
+    db.insert(games)
+      .values(game(owner, { result: "win", timeControlCategory: "blitz", playerColor: "white" }))
+      .run();
+    db.insert(games)
+      .values(game(owner, { result: "loss", timeControlCategory: "bullet", playerColor: "black" }))
+      .run();
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/stats?profileId=${owner}`);
 
@@ -939,12 +1007,146 @@ describe("stats API", () => {
   it("GET /api/stats returns zeros with a null rate for a Profile with no Game", async () => {
     const { db } = openDb(":memory:");
     const owner = seedProfile(db);
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/stats?profileId=${owner}`);
 
     expect(res.status).toBe(200);
     expect(res.body.total).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
+  });
+});
+
+/**
+ * The `Platform` as a **value the code reads** rather than a word it spells
+ * (ADR-0016): which site an operation talks to is resolved from the `Profile`,
+ * and every message names the site actually asked for. A refusal that says
+ * "chess.com" when the Player asked for Lichess is the failure this exists
+ * against.
+ */
+describe("the Platform is resolved from the Profile", () => {
+  /** Two adapters wired at once, each answering only for its own Platform. */
+  const twoPlatforms = () => ({
+    chesscom: fakeClient({
+      "2024-01": [importedGame({ gameUrl: "https://www.chess.com/game/live/1" })],
+    }),
+    lichess: fakeClient(
+      { "2024-01": [importedGame({ gameUrl: "https://lichess.org/abcd1234" })] },
+      "Metalyst",
+    ),
+  });
+
+  it("POST /api/profiles validates against the Platform the request asked for", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, twoPlatforms());
+
+    const res = await request(app)
+      .post("/api/profiles")
+      .send({ platform: "lichess", username: "metalyst" });
+
+    expect(res.status).toBe(201);
+    // The canonical spelling comes from LICHESS's answer, not chess.com's.
+    expect(res.body).toMatchObject({ platform: "lichess", username: "Metalyst" });
+  });
+
+  it("POST /api/profiles names the Platform it could not reach, never another one", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, {
+      chesscom: fakeClient({}),
+      lichess: fakeClient({}, new Error("boom")),
+    });
+
+    const res = await request(app)
+      .post("/api/profiles")
+      .send({ platform: "lichess", username: "metalyst" });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toContain("lichess.org");
+    expect(res.body.error).not.toContain("chess.com");
+  });
+
+  it("POST /api/profiles names the Platform an unknown account is unknown to", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, { chesscom: fakeClient({}), lichess: fakeClient({}, false) });
+
+    const res = await request(app)
+      .post("/api/profiles")
+      .send({ platform: "lichess", username: "ghost" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toContain("lichess.org");
+  });
+
+  it("an Import fetches through the Profile's own Platform, not the app's first one", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, twoPlatforms());
+    const created = await request(app)
+      .post("/api/profiles")
+      .send({ platform: "lichess", username: "metalyst" });
+
+    await request(app)
+      .post("/api/import")
+      .send({
+        profileId: created.body.id,
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["blitz"],
+      });
+    await importDone(app);
+
+    const list = await gamesOf(app, created.body.id);
+    expect(list.body.map((g: { gameUrl: string }) => g.gameUrl)).toEqual([
+      "https://lichess.org/abcd1234",
+    ]);
+  });
+
+  it("refuses, loudly, a Platform this build has no adapter for — rather than fetching elsewhere", async () => {
+    const { db } = openDb(":memory:");
+    const app = createApp(db, fakeRegistry({})); // chess.com only
+
+    const res = await request(app)
+      .post("/api/profiles")
+      .send({ platform: "lichess", username: "metalyst" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/non prise en charge/i);
+    expect((await request(app).get("/api/profiles")).body).toEqual([]);
+  });
+
+  it("refuses an Import for a Profile whose Platform has no adapter, and starts nothing", async () => {
+    const { db } = openDb(":memory:");
+    // A Profile stored on a Platform this build cannot reach — the case a
+    // downgrade or a half-applied wiring produces.
+    const profileId = seedProfile(db, "Metalyst", "lichess");
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app)
+      .post("/api/import")
+      .send({
+        profileId,
+        from: { year: 2024, month: 1 },
+        to: { year: 2024, month: 1 },
+        categories: ["blitz"],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/non prise en charge/i);
+    expect((await request(app).get("/api/import/status")).body.running).toBe(false);
+  });
+
+  it("GET /api/profiles carries each Profile's Platform, so a reader never has to assume one", async () => {
+    const { db } = openDb(":memory:");
+    seedProfile(db, "me", "chesscom");
+    seedProfile(db, "Metalyst", "lichess");
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get("/api/profiles");
+
+    expect(
+      res.body.map((p: { platform: string; username: string }) => [p.platform, p.username]),
+    ).toEqual([
+      ["chesscom", "me"],
+      ["lichess", "Metalyst"],
+    ]);
   });
 });
 
@@ -956,7 +1158,7 @@ describe("stats API", () => {
 describe("profiles API", () => {
   /** An app whose chess.com always answers `canonical`, whatever casing is asked. */
   const appAnswering = (canonical: PlayerAnswer) =>
-    createApp(openDb(":memory:").db, fakeClient({}, canonical));
+    createApp(openDb(":memory:").db, fakeRegistry({}, canonical));
 
   it("POST /api/profiles stores the account under chess.com's own spelling", async () => {
     const app = appAnswering("DudulSmash");
@@ -1006,19 +1208,20 @@ describe("profiles API", () => {
   it("GET /api/profiles lists every Profile with its platform and username", async () => {
     const { db } = openDb(":memory:");
     for (const name of ["DudulSmash", "Hikaru"]) {
-      await request(createApp(db, fakeClient({}, name)))
+      await request(createApp(db, fakeRegistry({}, name)))
         .post("/api/profiles")
         .send({ username: name });
     }
 
-    const res = await request(createApp(db, fakeClient({}))).get("/api/profiles");
+    const res = await request(createApp(db, fakeRegistry({}))).get("/api/profiles");
 
     expect(res.status).toBe(200);
-    expect(res.body.map((p: { platform: string; username: string }) => [p.platform, p.username]))
-      .toEqual([
-        ["chesscom", "DudulSmash"],
-        ["chesscom", "Hikaru"],
-      ]);
+    expect(
+      res.body.map((p: { platform: string; username: string }) => [p.platform, p.username]),
+    ).toEqual([
+      ["chesscom", "DudulSmash"],
+      ["chesscom", "Hikaru"],
+    ]);
   });
 
   it("GET /api/profiles counts each Profile's own Games — imported and analyzed", async () => {
@@ -1033,7 +1236,7 @@ describe("profiles API", () => {
       ])
       .run();
 
-    const res = await request(createApp(db, fakeClient({}))).get("/api/profiles");
+    const res = await request(createApp(db, fakeRegistry({}))).get("/api/profiles");
 
     expect(res.body).toMatchObject([
       { username: "DudulSmash", games: 2, analyzed: 1 },
@@ -1051,7 +1254,7 @@ describe("profiles API", () => {
         { ...morphyGame(theirs), gameUrl: "https://chess.com/g/2" },
       ])
       .run();
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const res = await request(app).get(`/api/profiles/${mine}`);
 
@@ -1063,7 +1266,10 @@ describe("profiles API", () => {
       games: 1,
       analyzed: 1,
     });
-    expect((await request(app).get(`/api/profiles/${theirs}`)).body).toMatchObject({ games: 1, analyzed: 0 });
+    expect((await request(app).get(`/api/profiles/${theirs}`)).body).toMatchObject({
+      games: 1,
+      analyzed: 0,
+    });
     expect((await request(app).get("/api/profiles/9999")).status).toBe(404);
   });
 
@@ -1114,7 +1320,7 @@ describe("profile scoping", () => {
         scopedGame(b, { opponent: "bob-opponent", result: "loss" }),
       ])
       .run();
-    return { db, a, b, app: createApp(db, fakeClient({})) };
+    return { db, a, b, app: createApp(db, fakeRegistry({})) };
   }
 
   it("GET /api/games answers about the named Profile alone", async () => {
@@ -1160,7 +1366,9 @@ describe("profile scoping", () => {
     const { db, app, a, b } = twoProfiles();
     // Both players reach the same `Opening` as White in blitz: merged, it would
     // be one entry over three Games, and neither player's repertoire.
-    db.insert(games).values(scopedGame(b, { eco: "C20", result: "loss" })).run();
+    db.insert(games)
+      .values(scopedGame(b, { eco: "C20", result: "loss" }))
+      .run();
 
     const mine = await request(app).get(`/api/openings?profileId=${a}`);
     const theirs = await request(app).get(`/api/openings?profileId=${b}`);
@@ -1198,7 +1406,7 @@ describe("profile scoping", () => {
         ),
       )
       .run();
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const mine = await request(app).get(`/api/danger?profileId=${a}`);
     const theirs = await request(app).get(`/api/danger?profileId=${b}`);
@@ -1218,12 +1426,15 @@ describe("profile scoping", () => {
     const b = seedProfile(db, "Bob");
     // Both open 1. e4; Alice once, Bob twice. One line for the pair would read
     // "3 parties" and belong to neither of them.
-    for (const [owner, times] of [[a, 1], [b, 2]] as const) {
+    for (const [owner, times] of [
+      [a, 1],
+      [b, 2],
+    ] as const) {
       for (let i = 0; i < times; i++) {
         recordMoveHabits(db, db.insert(games).values(scopedGame(owner)).returning().get());
       }
     }
-    const app = createApp(db, fakeClient({}));
+    const app = createApp(db, fakeRegistry({}));
 
     const ask = (profileId: number | string) =>
       request(app).get("/api/move-habits").query({ profileId, side: "white", fen: START });

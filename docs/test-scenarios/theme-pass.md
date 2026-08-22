@@ -64,6 +64,12 @@ with none selected fits (625 into 625); two rows with one current does not (635 
 builds that state for the whole suite, so **do not reduce a scenario to a single Profile** to
 simplify it: the assertion lives in the pairing.
 
+Since US-12 the standing state is **three** Profiles, the third on **lichess.org** — so these two
+screens are also the ones where two different `Platform` labels are painted side by side, and the
+list is one row taller than the measurement above. The pairing rule is unchanged and the taller
+list only makes it stricter; what is added is that a site name is now **rendered text on these
+screens**, and must stay legible in both themes like any other ink.
+
 The **banner naming the current `Profile`** rides in the chrome of screens 1 to 6 and is deliberately
 absent from 7 and 8 — there the Profile is what the page is *about*. It is audited as chrome
 wherever it appears: its label is words, never a tint (assertion 4), and its link must hold contrast

@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Db } from "../db";
 import { normalizeRange, type ImportJob } from "../import";
 import { findProfileById } from "../profiles/repository";
+import { UnsupportedPlatformError } from "../platform";
 
 /**
  * Import routes (mounted at /api/import). A range Import is long-running, so
@@ -26,12 +27,14 @@ export function createImportRouter(db: Db, job: ImportJob): Router {
     // server picked, which is exactly what the partitioning exists against.
     const profile = findProfileById(db, Number(profileId));
     if (profile === undefined) {
-      res.status(profileId === undefined || profileId === null ? 400 : 404).json({
-        error:
-          profileId === undefined || profileId === null
-            ? "Aucun profil indiqué : l'import s'exécute depuis la page d'un profil."
-            : `Profil introuvable : ${profileId}`,
-      });
+      res
+        .status(profileId === undefined || profileId === null ? 400 : 404)
+        .json({
+          error:
+            profileId === undefined || profileId === null
+              ? "Aucun profil indiqué : l'import s'exécute depuis la page d'un profil."
+              : `Profil introuvable : ${profileId}`,
+        });
       return;
     }
 
@@ -44,9 +47,27 @@ export function createImportRouter(db: Db, job: ImportJob): Router {
       return;
     }
 
-    res
-      .status(202)
-      .json(job.start({ profileId: profile.id, username: profile.username, ...range, categories }));
+    // A Profile whose Platform this build has no adapter for is told so, rather
+    // than answered 202 for an Import that will never fetch anything.
+    let started;
+    try {
+      started = job.start({
+        profileId: profile.id,
+        username: profile.username,
+        // The site is read off the Profile, never asked for (ADR-0014).
+        platform: profile.platform,
+        ...range,
+        categories,
+      });
+    } catch (err) {
+      if (err instanceof UnsupportedPlatformError) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
+
+    res.status(202).json(started);
   });
 
   router.get("/status", (_req, res) => res.json(job.status()));

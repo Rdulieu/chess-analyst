@@ -4,14 +4,15 @@ import { fetchStats } from "../api";
 import { Tally } from "../components/Tally";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
-import type { Profile, Side, StatsBucket, TimeControlCategory } from "../types";
+import {
+  CADENCE_LABEL,
+  TIME_CONTROL_CATEGORIES,
+  type Profile,
+  type Side,
+  type StatsBucket,
+} from "../types";
 
-const CADENCES: { key: TimeControlCategory; label: string }[] = [
-  { key: "bullet", label: "Bullet" },
-  { key: "blitz", label: "Blitz" },
-  { key: "rapid", label: "Rapid" },
-  { key: "daily", label: "Daily" },
-];
+const CADENCES = TIME_CONTROL_CATEGORIES.map((key) => ({ key, label: CADENCE_LABEL[key] }));
 
 const SIDES: { key: Side; label: string }[] = [
   { key: "white", label: "Blancs" },
