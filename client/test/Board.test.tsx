@@ -534,6 +534,48 @@ describe("Board — the Moves that do not count", () => {
   });
 });
 
+describe("Board — the Game's recap", () => {
+  const RECAP = {
+    playerMoves: 10,
+    countedMoves: 8,
+    excluded: { forced: 1, decided: 1 },
+    flaggedMoves: 2,
+    countedErrors: 1,
+    chancesLost: 30,
+    flaggedLoss: 20,
+    drift: 10,
+    regime: { depth: 16, lines: 2 },
+  };
+  const annotated: MoveAnnotation[] = [
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: true, reason: null } },
+  ];
+
+  it("reads at the HEAD of the panel: it is the claim, and everything below it is the proof", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated} detailed recap={RECAP} />);
+
+    const recap = screen.getByRole("region", { name: /ce que cette partie apporte/i });
+    const move = screen.getByRole("region", { name: /relevé/i });
+    expect(recap.compareDocumentPosition(move)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("shows the error tally ONCE in Detailed — inside the recap, not beside it", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated} detailed recap={RECAP} />);
+
+    // Two correct counts disagreeing side by side read as a bug; the recap is the
+    // one that also states why they can differ.
+    expect(screen.queryByLabelText("vos erreurs")).toBeNull();
+    expect(screen.getByRole("region", { name: /ce que cette partie apporte/i })).toBeTruthy();
+  });
+
+  it("leaves the tally exactly where US-14 put it in Annotated, and shows no recap there", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated} recap={RECAP} />);
+
+    expect(screen.getByLabelText("vos erreurs")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /ce que cette partie apporte/i })).toBeNull();
+  });
+});
+
 describe("Board — the reviewed Move's record", () => {
   /** "1. e4 e5" annotated so that White's e4 is a Blunder. Ply 0's line is what
    *  should have been played instead; ply 1's line — from the Position *after*

@@ -3,6 +3,7 @@ import type { Db } from "../db";
 import { games, evaluations, analysisPasses } from "../db/schema";
 import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, type MoveAnnotation } from "../analysis/derivation";
+import { gameRecap, type GameRecap } from "../analysis/recap";
 
 export interface GameAnnotations {
   analyzed: boolean;
@@ -15,6 +16,12 @@ export interface GameAnnotations {
    * rather than assumed to be today's regime.
    */
   regime: SearchRegime | null;
+  /**
+   * What this Game contributes to the analysis (ADR-0017) — served beside the
+   * per-Move records because it is **the same derivation**, not a summary of the
+   * page's own making. `null` when the Game is not analyzed.
+   */
+  recap: GameRecap | null;
 }
 
 /**
@@ -27,10 +34,16 @@ export interface GameAnnotations {
 export function getGameAnnotations(db: Db, gameId: number): GameAnnotations | undefined {
   const game = db.select().from(games).where(eq(games.id, gameId)).get();
   if (!game) return undefined;
-  if (!game.analyzed) return { analyzed: false, plies: [], regime: null };
+  if (!game.analyzed) return { analyzed: false, plies: [], regime: null, recap: null };
 
   const evals = db.select().from(evaluations).where(eq(evaluations.gameId, gameId)).all();
-  return { analyzed: true, plies: gameAnnotations(game, evals), regime: gameRegime(db, gameId) };
+  const regime = gameRegime(db, gameId);
+  return {
+    analyzed: true,
+    plies: gameAnnotations(game, evals),
+    regime,
+    recap: gameRecap(game, evals, regime),
+  };
 }
 
 /**

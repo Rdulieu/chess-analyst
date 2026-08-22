@@ -15,4 +15,4 @@ export type {
   ImportStatus,
 } from "./import";
 export type { AnalysisStatus } from "./analysis";
-export type { MoveAnnotation, GameAnnotations } from "./annotation";
+export type { MoveAnnotation, GameAnnotations, GameRecap, SearchRegime } from "./annotation";

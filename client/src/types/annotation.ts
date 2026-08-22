@@ -39,10 +39,32 @@ export interface SearchRegime {
   lines: number;
 }
 
+/**
+ * What a Game **contributes** to the analysis (ADR-0017): the aggregate to come
+ * is this recap summed, so the page reads the same derivation the corpus will —
+ * never a second summary of its own making.
+ */
+export interface GameRecap {
+  playerMoves: number;
+  countedMoves: number;
+  excluded: { forced: number; decided: number };
+  /** Flawed Moves the **Game** shows, counted or not. */
+  flaggedMoves: number;
+  /** Flawed Moves the **analysis** holds the Player to. */
+  countedErrors: number;
+  chancesLost: number;
+  flaggedLoss: number;
+  /** The residual: `flaggedLoss + drift === chancesLost`, on every Game. */
+  drift: number;
+  regime: SearchRegime | null;
+}
+
 /** `GET /api/games/:id/annotations` response: `plies` is empty when `analyzed` is `false`. */
 export interface GameAnnotations {
   analyzed: boolean;
   plies: MoveAnnotation[];
   /** The regime the Game was analyzed under; `null` when unanalyzed or unknown. */
   regime: SearchRegime | null;
+  /** What this Game contributes; `null` when it has not been analyzed. */
+  recap: GameRecap | null;
 }

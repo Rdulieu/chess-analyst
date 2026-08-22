@@ -6,12 +6,13 @@ import { WinningChancesBar } from "./WinningChancesBar";
 import { EvaluationGraph } from "./EvaluationGraph";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
+import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { BOARD_SQUARES } from "../chess/boardTheme";
-import type { MoveAnnotation } from "../types";
+import type { GameRecap, MoveAnnotation } from "../types";
 
 /**
  * Interactive board for a Game: renders a Position, steps through the Game's
@@ -35,6 +36,7 @@ export function Board({
   pgn,
   annotations,
   detailed = false,
+  recap = null,
   orientation = "white",
   controls,
 }: {
@@ -47,6 +49,11 @@ export function Board({
    * appears without the annotations it comments on.
    */
   detailed?: boolean;
+  /**
+   * What this Game contributes to the analysis (ADR-0017), read at the head of
+   * the Detailed panel. `null` on a Game with no recap to state.
+   */
+  recap?: GameRecap | null;
   /**
    * A caller's own control over what the board shows — the `Review mode`'s
    * level control today. Taken as a slot rather than left above the board, because everything
@@ -249,7 +256,13 @@ export function Board({
               <div data-part="curve">
                 <EvaluationGraph annotations={annotations} currentPly={index} />
               </div>
-              <ErrorTallyReadout annotations={annotations} />
+              {/*
+                In Annotated this stays exactly where US-14 put it. In Detailed the
+                recap says it — with the counted figure beside it and the reason
+                they can differ — and saying it twice would put two correct counts
+                side by side that disagree, which reads as a bug.
+              */}
+              {!detailed && <ErrorTallyReadout annotations={annotations} />}
             </>
           )}
           <ol aria-label="moves">
@@ -314,6 +327,7 @@ export function Board({
         (CONTEXT.md): Annotated is exactly what US-7 and US-14 delivered, and the
         record is what Detailed adds to it.
       */}
+      {annotations && detailed && recap && <GameRecapReadout recap={recap} />}
       {annotations && detailed && (
         <MoveRecord
           record={record}

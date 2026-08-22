@@ -69,7 +69,7 @@ describe("getGameAnnotations", () => {
     // Still distinct from an analyzed Game with nothing to say, which is the
     // whole reason `analyzed` is reported at all — and with no regime, because
     // no pass has ever run on it.
-    expect(getGameAnnotations(db, game.id)).toEqual({ analyzed: false, plies: [], regime: null });
+    expect(getGameAnnotations(db, game.id)).toEqual({ analyzed: false, plies: [], regime: null, recap: null });
   });
 
   it("reports each Position's Best line, so a Move's own line and its refutation are both readable", () => {
