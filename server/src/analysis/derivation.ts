@@ -2,7 +2,7 @@ import type { Game } from "../db/schema";
 import { winningChances, type CpOrMate } from "../danger/winning-chances";
 import { classifyMove, type MoveSeverity } from "../danger/move-quality";
 import { phases, type Phase } from "./phase";
-import { countedMoves, type MoveCount } from "./counted";
+import { chancesLostByMove, countedMoves, type MoveCount } from "./counted";
 
 /** One half-move's annotation (US-7): the `Evaluation` and win% converted to
  *  White-relative (CONTEXT.md — stored values are side-to-move relative), and
@@ -33,6 +33,14 @@ export interface MoveAnnotation {
    * counted".
    */
   counted: MoveCount | null;
+  /**
+   * What this Move cost the Player, in winning-chances points (ADR-0017 — a Game
+   * carries the per-Move delta the aggregate consumes). `null` where nothing is
+   * contributed, `0` for a Move that does not count. The Game's own recap is the
+   * sum of these, so a trace drawn from them cannot disagree with the total
+   * stated beside it.
+   */
+  chancesLost: number | null;
 }
 
 /** One analyzed Game's per-Position FEN, raw `Evaluation` and win% (ply 0 = initial Position). */
@@ -131,6 +139,7 @@ export function gameAnnotations(
   // so it can only be read as a sequence.
   const phaseOf = phases(plies.map((ply) => ply.fen));
   const counted = countedMoves(plies, game.playerColor);
+  const lost = chancesLostByMove(plies, game.playerColor);
 
   return plies.map((ply, i) => {
     const mover = moverAt(i);
@@ -142,6 +151,7 @@ export function gameAnnotations(
       bestLine: ply.bestLine,
       phase: phaseOf[i],
       counted: counted[i],
+      chancesLost: lost[i],
     };
   });
 }

@@ -115,3 +115,20 @@ describe("gameRecap — flagged is not the same as counted, and the gap is the p
     expect(recap.flaggedLoss + recap.drift).toBeCloseTo(recap.chancesLost, 10);
   });
 });
+
+describe("gameRecap — the recap IS the sum of what the Moves carry", () => {
+  it("equals the per-Move figures served with the annotations, on a Game with real losses", async () => {
+    const { gameAnnotations } = await import("../src/analysis/derivation");
+    const evals = stored(PGN, [30, -20, 10, -40, -300, 280, -320, 300, -340]);
+    const game = { playerColor: "white" as const };
+
+    const recap = gameRecap(game, evals, REGIME);
+    const carried = gameAnnotations(game, evals)
+      .map((a) => a.chancesLost ?? 0)
+      .reduce((sum, lost) => sum + lost, 0);
+
+    // Not "close enough": the aggregate is this sum, so it is the same number or
+    // the reconciliation ADR-0017 rests on is already broken at one Game.
+    expect(carried).toBe(recap.chancesLost);
+  });
+});

@@ -1,5 +1,6 @@
 import { evaluationCurve } from "../chess/evaluationCurve";
 import { SEVERITY_GLYPH, SEVERITY_TINT, SEVERITY_TINT_INK } from "../chess/severity";
+import type { PhaseBand } from "../chess/phaseBands";
 import type { MoveAnnotation } from "../types";
 
 /**
@@ -41,9 +42,17 @@ import type { MoveAnnotation } from "../types";
 export function EvaluationGraph({
   annotations,
   currentPly,
+  bands = [],
 }: {
   annotations: MoveAnnotation[];
   currentPly: number;
+  /**
+   * The `Phase` spans, drawn as rules OVER the two grounds — the equality line's
+   * own idiom. Never as background bands: the grounds are opaque and full height,
+   * so anything behind them is invisible, and a tint laid over them would move
+   * the contrast the markers and the cursor were measured at (ADR-0013).
+   */
+  bands?: PhaseBand[];
 }) {
   const { points, lastX, markers } = evaluationCurve(annotations);
   if (points.length === 0) return null;
@@ -72,6 +81,18 @@ export function EvaluationGraph({
           strokeWidth={0.5}
           strokeDasharray="2 2"
         />
+        {bands.slice(1).map((band) => (
+          <line
+            key={band.from}
+            data-mark="phase-boundary"
+            x1={band.from}
+            y1={0}
+            x2={band.from}
+            y2={100}
+            strokeWidth={0.5}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
         <line
           data-mark="cursor"
           x1={currentPly}

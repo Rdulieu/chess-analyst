@@ -58,6 +58,33 @@ function classify(before: Ply): MoveCount {
 }
 
 /**
+ * What each of the Player's Moves **cost them**, in winning-chances points —
+ * the per-Move figure ADR-0017 says a Game carries, and the one the recap sums.
+ *
+ * `null` where nothing is contributed at all (ply 0, and the opponent's Moves);
+ * `0` for a Move that does not count, since an excluded Move contributes no loss
+ * by definition. Summing the non-null entries **is** the recap's `chancesLost`:
+ * one implementation, read by the page and by the aggregate, rather than two
+ * that agree by luck.
+ */
+export function chancesLostByMove(
+  plies: Ply[],
+  playerColor: Game["playerColor"],
+): (number | null)[] {
+  const counted = countedMoves(plies, playerColor);
+
+  return plies.map((_, i) => {
+    const move = counted[i];
+    if (move === null) return null;
+    if (!move.counted) return 0;
+    // The Position's chances are relative to whoever is to move there: the Player
+    // before their own Move, the opponent after it — hence the flip. Only losses:
+    // a Move that gained is not a negative loss to net off against another's.
+    return Math.max(0, plies[i - 1].winChances - (100 - plies[i].winChances));
+  });
+}
+
+/**
  * Whether the Position left exactly one legal Move. Playing the only Move there
  * is earns neither credit nor blame, and those Moves do nothing but **inflate
  * the denominator** — their share varies with the moment of the Game, so keeping
