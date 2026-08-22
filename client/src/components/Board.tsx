@@ -26,20 +26,28 @@ import type { MoveAnnotation } from "../types";
  * index (ply 0 = start) — `annotations[i + 1]` is the Move at `plies[i]`.
  * Drives the move-list glyphs/Evaluations, the current-Position readout and
  * balance bar, and the destination-square tint for the currently-viewed
- * flawed Move. Absent (the toggle off, or a not-yet-analyzed Game) renders
+ * flawed Move. Absent (Unaided, or a not-yet-analyzed Game) renders
  * exactly as without US-7: no glyph, no Evaluation, no bar, no tint.
  */
 export function Board({
   pgn,
   annotations,
+  detailed = false,
   orientation = "white",
   controls,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
   /**
-   * A caller's own control over what the board shows — the annotations toggle
-   * today. Taken as a slot rather than left above the board, because everything
+   * The `Review mode`'s **Detailed** level (CONTEXT.md): also show the reviewed
+   * Move's own record. A level above `annotations` and never below it — the
+   * caller passes a point on a scale, so there is no state where the record
+   * appears without the annotations it comments on.
+   */
+  detailed?: boolean;
+  /**
+   * A caller's own control over what the board shows — the `Review mode`'s
+   * level control today. Taken as a slot rather than left above the board, because everything
    * stacked above the diagram is height the diagram does not get, and the board
    * has to be visible in full. The caller owns the state; this component only
    * decides where it is read, which is beside the board with the rest of the
@@ -192,6 +200,15 @@ export function Board({
             height to be visible in full.
           */}
           {controls}
+          {/*
+            The way to the record, from beside the board. The panel itself is
+            BELOW the row — that is deliberate, its height varies and nothing
+            above the diagram may move — so without this the Player would have to
+            already know it exists. Scrolling to reach it is acceptable; not
+            knowing it is there is not. Only in Detailed, because that is the
+            only level at which there is anything to reach.
+          */}
+          {detailed && <a href="#move-record-heading">Aller au relevé du coup</a>}
           <div data-part="stepper">
             <button type="button" onClick={() => goTo(index - 1)} disabled={atStart}>
               Previous
@@ -256,11 +273,11 @@ export function Board({
         The reviewed Move's record, **below** the row and outside both panes: its
         height is whatever its lines need, and everything stacked above the
         diagram is height the diagram does not get (US-14's constraint, held here
-        by the document order). Governed by the same annotations toggle as the
-        rest of what the engine found — the `Review mode` of slice 02 is what
-        will replace that toggle with three levels.
+        by the document order). Shown at the `Review mode`'s **Detailed** level only
+        (CONTEXT.md): Annotated is exactly what US-7 and US-14 delivered, and the
+        record is what Detailed adds to it.
       */}
-      {annotations && <MoveRecord record={record} onPreview={previewVia} />}
+      {annotations && detailed && <MoveRecord record={record} onPreview={previewVia} />}
     </div>
   );
 }

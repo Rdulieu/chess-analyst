@@ -482,7 +482,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("names what should have been played, and its continuation, for the Move being reviewed", async () => {
     const user = userEvent.setup();
-    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i })); // e4, a Blunder
 
     // The line of the Position *before* the Move: d4, then its continuation —
@@ -493,7 +493,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("shows how the Move played is punished — the opponent's best reply and its continuation", async () => {
     const user = userEvent.setup();
-    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     const refutation = within(record()).getByRole("group", { name: /réfutation/i });
@@ -515,7 +515,7 @@ describe("Board — the reviewed Move's record", () => {
       annotations[1],
       annotations[2],
     ];
-    render(<Board pgn="1. e4 e5" annotations={long} />);
+    render(<Board pgn="1. e4 e5" annotations={long} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     const best = within(record()).getByRole("group", { name: /il fallait jouer/i });
@@ -527,7 +527,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("says there is nothing to report on a Move it does not flag, rather than showing the last one's record", async () => {
     const user = userEvent.setup();
-    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
     await user.click(screen.getByRole("button", { name: /next/i })); // e5, Black's reply
 
@@ -537,7 +537,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("draws the first Move of each line on the board, not only in notation", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     // Reading a notation back into a Position is the very skill the Player does
@@ -550,7 +550,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("shows the Position a focused ply of a line leads to, and goes back on blur", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     const refutation = within(record()).getByRole("group", { name: /réfutation/i });
@@ -569,7 +569,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("keeps a focused preview when the pointer leaves — hover is an affordance, not a second mechanism", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     const ply = within(record()).getAllByRole("button")[0];
@@ -585,7 +585,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("never moves the Player's place in the Game while previewing", async () => {
     const user = userEvent.setup();
-    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     fireEvent.focus(within(record()).getAllByRole("button")[0]);
@@ -599,7 +599,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("ends a preview when the Player navigates, rather than leaving another Move's line on the board", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.focus(within(record()).getAllByRole("button")[0]);
 
@@ -613,7 +613,7 @@ describe("Board — the reviewed Move's record", () => {
 
   it("puts every ply of a line within reach of the keyboard, previewing on focus", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     // Tabbing walks the line ply by ply: the preview is the only thing that
@@ -626,9 +626,36 @@ describe("Board — the reviewed Move's record", () => {
     expect(pieceAt(container, "d5")).toBe("bP"); // two plies in, previewed
   });
 
+  it("withholds the record below the Detailed level — Annotated is what US-7 and US-14 delivered", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    await user.click(screen.getByRole("button", { name: /next/i })); // e4, a Blunder
+
+    // The annotations themselves are there; only the record is the level above.
+    expect(screen.getByLabelText("blunder")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /relevé/i })).toBeNull();
+  });
+
+  it("points to the record from BESIDE the board, so it is not a panel the Player has to already know about", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+
+    const link = screen.getByRole("link", { name: /relevé/i });
+    // In the side pane — never stacked above the diagram, which must be whole on
+    // arrival — and pointing at the panel's own heading.
+    expect(link.closest('[data-pane="side"]')).not.toBeNull();
+    expect(link.getAttribute("href")).toBe("#move-record-heading");
+    expect(document.getElementById("move-record-heading")).not.toBeNull();
+  });
+
+  it("offers no way to the record at a level that does not show one", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+
+    expect(screen.queryByRole("link", { name: /relevé/i })).toBeNull();
+  });
+
   it("keeps the record BELOW the board row, so nothing above the board moves when the Move changes", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     const row = container.querySelector('[data-row="board"]')!;

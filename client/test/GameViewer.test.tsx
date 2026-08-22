@@ -12,41 +12,82 @@ function stubAnnotations(plies: MoveAnnotation[]) {
   );
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  // The Review mode is remembered across Games *and* sessions, so it is also
+  // remembered across tests unless each one starts from a blank slate.
+  localStorage.clear();
+});
 
 describe("GameViewer", () => {
-  it("fetches and shows annotations for an analyzed Game", async () => {
-    stubAnnotations([
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
-    ]);
+  /** "1. e4 e5" annotated so that e4 is a Blunder with a line to report. */
+  const ANNOTATED = [
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"] },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"] },
+  ] satisfies MoveAnnotation[];
+
+  const moveItems = () =>
+    within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+
+  it("opens an analysed Game in Unaided: the Game is readable and the engine says nothing", async () => {
+    stubAnnotations(ANNOTATED);
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
 
-    // Scoped to the move list rather than to the page, so a list item added elsewhere
-    // in the viewer cannot make this assertion drift.
-    const moves = await screen.findByRole("list", { name: "moves" });
-    const items = within(moves).getAllByRole("listitem");
-    expect(items[0].textContent).toContain("??");
-    expect(items[0].textContent).toContain("-4.0");
-  });
-
-  it("hides every glyph and Evaluation once the toggle is switched off", async () => {
-    stubAnnotations([
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
-    ]);
-    const user = userEvent.setup();
-    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
-    await screen.findByText(/-4\.0/);
-
-    await user.click(screen.getByRole("checkbox", { name: /afficher les annotations/i }));
-
-    // Scoped to the move list: an unscoped negative assertion would pass vacuously
-    // on any other list item the viewer renders.
-    const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+    // The move list is there — it is not an annotation — and the level control is
+    // there to ask with. What the engine found is not.
+    await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+    const items = moveItems();
     expect(items[0].textContent).not.toContain("??");
     expect(items[0].textContent).not.toContain("-4.0");
+    expect(screen.queryByRole("region", { name: /relevé/i })).toBeNull();
+  });
+
+  it("offers ONE control with three exclusive levels, never two independent switches", async () => {
+    stubAnnotations(ANNOTATED);
+
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    const group = await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+    const levels = within(group).getAllByRole("radio");
+    expect(levels).toHaveLength(3);
+    expect(levels.filter((level) => (level as HTMLInputElement).checked)).toHaveLength(1);
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("reveals the annotations at the intermediate level, and the record only at the detailed one", async () => {
+    stubAnnotations(ANNOTATED);
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("radio", { name: /annoté/i }));
+
+    expect(moveItems()[0].textContent).toContain("??");
+    expect(moveItems()[0].textContent).toContain("-4.0");
+    // Annotated is exactly what US-7/US-14 delivered: the record is the next level up.
+    expect(screen.queryByRole("region", { name: /relevé/i })).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /détaillé/i }));
+
+    expect(moveItems()[0].textContent).toContain("??");
+    expect(screen.getByRole("region", { name: /relevé/i })).toBeTruthy();
+  });
+
+  it("remembers the level, so the next Game opens at it without being asked again", async () => {
+    stubAnnotations(ANNOTATED);
+    const user = userEvent.setup();
+    const { unmount } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("radio", { name: /détaillé/i }));
+    unmount();
+    // Another Game — a remount is what navigating to one does.
+    render(<GameViewer game={{ ...OPERA_GAME, id: 99, analyzed: true }} />);
+
+    expect((await screen.findByRole("radio", { name: /détaillé/i })) as HTMLInputElement).toHaveProperty(
+      "checked",
+      true,
+    );
+    expect(screen.getByRole("region", { name: /relevé/i })).toBeTruthy();
   });
 
   it("keeps a single live region of ours: the pass progress, not the move readout", () => {
@@ -66,7 +107,7 @@ describe("GameViewer", () => {
     expect(screen.getByLabelText("current move").textContent).toBe("Start");
   });
 
-  it("does not fetch annotations, and shows no toggle, for a not-yet-analyzed Game", () => {
+  it("does not fetch annotations, and offers no level control, for a not-yet-analyzed Game", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -77,7 +118,8 @@ describe("GameViewer", () => {
     expect(fetchMock.mock.calls.map(([url]) => url as string)).not.toContain(
       `/api/games/${OPERA_GAME.id}/annotations`,
     );
-    expect(screen.queryByRole("checkbox", { name: /afficher les annotations/i })).toBeNull();
+    // Nothing to reveal on an unanalysed Game, so the control offers nothing.
+    expect(screen.queryByRole("radiogroup", { name: /niveau de revue/i })).toBeNull();
   });
 
   it("shows an explicit invitation and a per-Game 'Analyser' action for a not-yet-analyzed Game, alongside the board", () => {
@@ -124,6 +166,44 @@ describe("GameViewer", () => {
     expect((await screen.findByRole("status", { name: /progression de l'analyse/i })).textContent).toBe(
       "0/3 positions évaluées",
     );
+  });
+
+  it("moves THIS review to Annotated when a pass finishes on it, without changing the remembered level", async () => {
+    let analyzed = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
+          return { ok: true, status: 202, json: async () => ({ running: true, total: 2, done: 0, games: 1 }) } as Response;
+        }
+        if (url.startsWith("/api/analyze/status")) {
+          analyzed = true;
+          return { ok: true, status: 200, json: async () => ({ running: false, total: 2, done: 2, games: 1 }) } as Response;
+        }
+        if (url.endsWith("/annotations")) {
+          return { ok: true, status: 200, json: async () => ({ analyzed: true, plies: ANNOTATED }) } as Response;
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    // The parent re-renders the Game as analysed once the pass reports done —
+    // which is what an unanalysed Game becoming reviewable looks like.
+    const { rerender } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    await user.click(screen.getByRole("button", { name: /analyser cette partie/i }));
+    await waitFor(() => expect(analyzed).toBe(true));
+    rerender(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    // A finished pass that changed nothing on screen is indistinguishable from
+    // one that did nothing: this review shows what was just computed.
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")[0].textContent,
+      ).toContain("??"),
+    );
+    // ...but the Player never asked for that on their *other* Games.
+    expect(localStorage.getItem("chess-analyst.review-mode")).toBeNull();
   });
 
   it("notifies once the analysis pass completes, so the Game and its annotations can refresh", async () => {

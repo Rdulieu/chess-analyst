@@ -4,13 +4,18 @@ import { fetchGameAnnotations } from "../../api";
 import { useAnalysisPass } from "../analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
 import { GameHeader } from "./GameHeader";
+import { ReviewModeControl } from "../review/ReviewModeControl";
+import { atLeastAnnotated, loadReviewMode, saveReviewMode } from "../review/reviewMode";
 import type { Game, MoveAnnotation } from "../../types";
 
 /**
  * Shows one selected Game on the interactive board. When the Game has been
  * through the analysis pass (US-4), also fetches its per-Move annotations
- * (US-7 — severity glyph + Evaluation) and shows/hides them via a toggle
- * (on by default). For a not-yet-analyzed Game, the board is shown all the
+ * (US-7 — severity glyph + Evaluation) and shows as much of them as the
+ * `Review mode` asks for (CONTEXT.md): **Unaided by default** — a Game is opened
+ * to be read, and the engine's verdict is something the Player asks for. The
+ * chosen level is remembered, so it is chosen once and not on every Game.
+ * For a not-yet-analyzed Game, the board is shown all the
  * same — a Game is explorable as soon as it is imported — with a scoped
  * "Analyser" action offered *above* it (US-7); `onAnalyzed` lets the parent
  * refresh the Game once the pass completes, so the annotations appear with no
@@ -24,7 +29,12 @@ export function GameViewer({
   onAnalyzed?: () => void | Promise<void>;
 }) {
   const [annotations, setAnnotations] = useState<MoveAnnotation[] | null>(null);
-  const [showAnnotations, setShowAnnotations] = useState(true);
+  /**
+   * The level for **this** review. Seeded from the remembered choice, and written
+   * back only when the Player themself picks one — the end-of-pass promotion below
+   * moves this review without speaking for the Player's other Games.
+   */
+  const [mode, setMode] = useState(loadReviewMode);
   const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(game.profileId);
 
   useEffect(() => {
@@ -34,8 +44,18 @@ export function GameViewer({
       .catch(() => setAnnotations(null));
   }, [game.id, game.analyzed]);
 
+  const chooseMode = (next: typeof mode) => {
+    setMode(next);
+    saveReviewMode(next);
+  };
+
   const analyze = async () => {
     await run([game.id]);
+    // The one exception to Unaided-by-default: the pass was asked for so there
+    // would be something to look at, and finishing it with an identical screen
+    // would make a successful pass indistinguishable from one that did nothing.
+    // Only THIS review moves — the remembered level is left alone.
+    setMode(atLeastAnnotated);
     await onAnalyzed?.();
   };
 
@@ -50,7 +70,8 @@ export function GameViewer({
       <Board
         pgn={game.pgn}
         orientation={game.playerColor}
-        annotations={showAnnotations ? (annotations ?? undefined) : undefined}
+        annotations={mode === "unaided" ? undefined : (annotations ?? undefined)}
+        detailed={mode === "detailed"}
         // Handed to the board as controls rather than stacked above it: they
         // belong with the readout they govern, and every line above the diagram is
         // height the diagram does not get — which is why BOTH states go through
@@ -59,14 +80,7 @@ export function GameViewer({
         // bottom edge off the screen.
         controls={
           game.analyzed ? (
-            <label>
-              <input
-                type="checkbox"
-                checked={showAnnotations}
-                onChange={() => setShowAnnotations((v) => !v)}
-              />{" "}
-              Afficher les annotations
-            </label>
+            <ReviewModeControl mode={mode} onChange={chooseMode} />
           ) : (
             <div>
               <p>Cette partie n'a pas encore été analysée.</p>
