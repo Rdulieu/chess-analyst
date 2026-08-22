@@ -102,8 +102,23 @@ reports. **None arrived.** No completion notification carried them — the orche
 five agents, exactly one was ever heard from, and only because it answered a follow-up with
 `SendMessage`. Roughly thirty minutes of real-API work, green, invisible.
 
-The cause is not established, so do not encode one. What is established is the **symptom** and the
-**cure**, and the cure is cheap:
+**What happened on 2026-08-22 (FP run, one subagent).** Delivery **worked** — twice. The subagent's
+report arrived on its own, in full, with no prompting; a second, targeted report arrived the same
+way. But in both cases an `idle_notification` followed **after** the report, carrying nothing, which
+reads exactly like the 2026-08-21 symptom. Relancing on it produced a **duplicate** of a report
+already received — and the subagent itself believed its first send had been lost, because a sender
+cannot tell whether its message landed.
+
+So the current picture, and it is narrower than the 2026-08-21 incident suggested:
+
+- A report **can** arrive unprompted. Treat delivery as working, not as broken by default.
+- **An `idle_notification` is not a signal that a report is missing.** It says the agent ended a
+  turn, and it may well arrive after a report you already have. **Check what you have received
+  before relancing**; a relance costs a duplicate at best and a re-run at worst.
+- Ask (§5.1 below) only when a report is **genuinely** absent — nothing received for that scenario.
+
+The cause of the 2026-08-21 loss remains unestablished, so do not encode one. What is established is
+the **symptom** and the **cure**, and the cure is cheap:
 
 1. **Tell each subagent to send its report with `SendMessage`** when it finishes, rather than
    relying on the automatic delivery alone. Belt and braces; the braces cost one sentence.
@@ -230,6 +245,8 @@ Answer these, and write the answers down:
 - **Did any report arrive on its own**, as a completion notification, with no prompting? That is the
   documented behaviour and it is the single most important thing to re-check. If it now works,
   §5.1's incident becomes history rather than a live warning, and the belt-and-braces can relax.
+  *(2026-08-22, FP: yes — twice, unprompted. Still unverified for a parallel HP fan-out, which is
+  where the 2026-08-21 loss happened; one subagent is not five.)*
 - **Did the `SendMessage`-on-idle relance work?** For how many agents?
 - **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
 - **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
