@@ -41,9 +41,15 @@ subagent drives the running app (UI-first) and reports findings, so validation i
 step, not just a suggestion. Iterate `/tdd` ↔ `/agentic-tests` until build + tests + FP are
 green with no blocking finding, then merge per Git flow.
 
-This subagent step is the **baseline** — it leverages Claude Code subagents. Building richer
-orchestrations on top (parallel/adversarial reviewers, several FPs, dedicated workflow tooling)
-is encouraged.
+This subagent step is the **baseline** — it leverages Claude Code subagents. In **HP** mode the
+runner goes further and is itself an orchestrator: the prerequisite first and alone, then **one
+subagent per scenario in parallel**. That fan-out has one contract that is easy to get wrong and
+expensive to get wrong — a subagent's final message does **not** reach the orchestrator, only a
+`SendMessage` does, and a report that never arrives is recoverable from the subagent transcripts.
+The skill carries the details; do not improvise the dispatch.
+
+Building richer orchestrations on top (adversarial reviewers, several FPs, dedicated workflow
+tooling) is encouraged.
 
 ## Git flow
 
