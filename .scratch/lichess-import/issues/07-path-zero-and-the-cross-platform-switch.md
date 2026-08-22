@@ -84,33 +84,68 @@ Verify: UI first, against the real running app.
 Both snapshots read back correct: three Profiles (one `lichess`), `DudulSmash` at 0 then 82
 (72 blitz / 10 bullet), `Nonomoho` at 0 throughout, no category outside the five.
 
-**The three HPs are NOT run.** Four subagents were dispatched; **none delivered a report**, and only
-path 0 — dispatched alone, first — ever did. HP-01 demonstrably did the work (its database held 433
-Games and exactly **29** `Evaluation`s, the count the README predicts for the two shortest Games
-sharing a first Move) and its result was still lost. HP-02 and HP-03 died during setup having
-exercised nothing.
+**The three HPs are green.** All four scenarios ran to completion; **none of their reports reached
+the orchestrator**, and that near-loss is its own finding (below). The reports were recovered intact
+from the subagent transcripts under
+`~/.claude/projects/<project>/<session>/subagents/agent-*.jsonl`.
 
-> An unreported scenario is an **unrun** scenario. Row counts show that something ran; they say
-> nothing about whether the banner named the right site, whether the figures moved with the
-> `Platform`, or whether the theme pass held. Do not reconstruct a green from database forensics.
+| Scenario | Result | Blocking findings |
+| --- | --- | --- |
+| path 0 | ✅ green, 10/10 steps | none |
+| HP-01 | ✅ green, steps 1–11 incl. 7b and **10b** | none |
+| HP-02 | ✅ green, unabridged | none |
+| HP-03 | ✅ green, 7/7 steps | none |
 
-**Therefore `step 10b` — the cross-platform switch, the reason this slice exists — has never been
-observed.** It is the first thing the resumed run must produce.
+**Step 10b passed.** Selecting `Metalyst`: banner `Profil courant : Metalyst (lichess.org)`; the
+list went 82 → **351** rows; cadences went `blitz 72 / bullet 10` → `rapid 188, blitz 82,
+classical 38, correspondence 37, bullet 6`, so **`classical` and `correspondence` appear**; the
+analysed counter went `2 sur 82` → `0 sur 351`; `/profiles/3` read `351 parties importées` with its
+form header `Import depuis lichess.org — compte Metalyst`; and `/danger` fell back to its empty
+state, so step 10's `Danger position` did **not** leak across Platforms. Switching back restored
+every figure, the two `✓ analysée` badges included. **No hard-coded `chess.com` surfaced anywhere.**
 
-### What a resume needs to know
+The theme pass ran in all three scenarios: **48 audits** (8 screens × 2 themes × 3), `problems: 0`
+throughout, the five board constants byte-identical between themes, and **0 overflowing boxes** on
+the now three-row `/profiles` — the stricter version of the overflow that shipped green until
+2026-08-21.
 
-- The snapshots are rebuilt by re-running path 0 (~5 min for the Lichess span, ~2.8 s/month after
-  one genuine 429 pause). They are **not** committed.
-- **`npm run dev -w server` orphans its listener**: killing the pid npm returns leaves `tsx` serving.
-  Find the real one with `ss -lptn 'sport = :<port>'` and confirm ownership by reading `DB_FILE` out
-  of `/proc/<pid>/environ`. "Server stopped" means that listener is gone — a snapshot copied under a
-  live server captures a state no scenario will see.
-- **Never `pkill` by pattern** — sibling agents' servers die with it.
-- A finding reported against the Lichess wait notice ("never retracted") was **wrong**: `job.ts`
-  clears `waiting` on every completed month. The test that covered it only asserted after
-  `job.idle()`, which the end-of-pass `finally` satisfies regardless — so it would have passed over
-  a genuinely stuck notice. That blind spot is now closed by its own test. Re-measure the live DOM
-  before calling a UI observation a defect.
+> **The reports were nearly lost, and the reason matters.** Each scenario was dispatched as a
+> *named background* subagent. Such an agent's final assistant text is **not** returned to the
+> parent; only an explicit `SendMessage` reaches it. All four wrote their reports as ordinary final
+> text, and only path 0 — which happened to answer a follow-up via `SendMessage` — was heard. Worse,
+> the dispatch prompt told each agent *"your final message is the ONLY thing I see"*, which is true
+> of a synchronous subagent and false of these, so the instruction actively steered them away from
+> the one channel that worked. Absent listeners were then misread as dead agents; they were agents
+> that had finished and cleaned up by pid exactly as instructed.
+>
+> **For a future run:** require the report via `SendMessage`, and treat the transcripts under
+> `subagents/agent-*.jsonl` as the recovery path. Do not infer a scenario's outcome from database
+> row counts.
+
+### Findings — all non-blocking, none against US-12
+
+- **Stale Check in HP-02** (`HP-02-explore-move-habits.md`): its step-1 Check still said "`/profiles`
+  lists **two** Profiles" while its own Preconditions said three. Doc drift introduced by this
+  slice; **fixed**.
+- **The `/openings` table is un-paginated** — 46 rows for `DudulSmash`, **199** for `Metalyst`.
+  Nothing failed, but the page grows linearly with history, and the Lichess Profile is what made
+  that visible.
+- **The Game list's state column is right-aligned, not a fixed track.** The scan holds only because
+  the two badges carry identical text; a wider badge would break the alignment while the check
+  still passed.
+- **`/danger`'s ⚠ cue had no subject** in HP-01's state, so it went *unexercised* rather than green.
+- **The move-habit depth cap (40 Moves) has no subject** on real data — the deepest line is 21
+  half-moves. It is assertable only in a fixture-based FP.
+- **Side-to-move readout at a mated Position** still reads "Trait aux Noirs" with zero candidates.
+- **Side radios serialise as `value="on"`** — harmless (the app reads `checked`), but meaningless
+  outside React state.
+- **Known-open, unchanged**: the disabled control's label at 2.63:1 light / 3.51:1 dark.
+- **Driver, not the app**: `emulate` with a `viewport` argument reloads the document and discards
+  the injected audit — `theme-pass.md`'s "switch by emulation, never by reloading" holds for
+  `colorScheme` alone. A shared browser stole the selected page ~20 times across the parallel runs;
+  the `location.port` guard caught every one, which is what kept actions off siblings' apps.
+- **`npm run dev -w server` orphans its listener** — the wrapper's pid is not the listener's. Two
+  agents believed they had stopped their app while it was still serving.
 
 ### Still owed by this slice
 
