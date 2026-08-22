@@ -3,6 +3,7 @@ import request from "supertest";
 import { eq } from "drizzle-orm";
 import { openDb } from "../src/db";
 import { gamePositions } from "../src/chess/positions";
+import { fixtureBestLine } from "../src/engine/fixture";
 import { games, evaluations } from "../src/db/schema";
 import { createApp } from "../src/app";
 import { createFixtureEngine } from "../src/engine/fixture";
@@ -142,6 +143,7 @@ describe("games API", () => {
           fen,
           cp: 0,
           mate: null,
+          pv: fixtureBestLine(fen).join(" "),
         })),
       )
       .run();
@@ -499,7 +501,13 @@ describe("danger API", () => {
     db.insert(evaluations)
       .values(
         [1, 2].flatMap((gameId) =>
-          gamePositions("1. e4").map((fen, ply) => ({ gameId, ply, fen, cp: 0 })),
+          gamePositions("1. e4").map((fen, ply) => ({
+            gameId,
+            ply,
+            fen,
+            cp: 0,
+            pv: fixtureBestLine(fen).join(" "),
+          })),
         ),
       )
       .run();
@@ -532,7 +540,15 @@ describe("danger API", () => {
       )
       .run();
     db.insert(evaluations)
-      .values(gamePositions("1. e4").map((fen, ply) => ({ gameId: 1, ply, fen, cp: 0 })))
+      .values(
+        gamePositions("1. e4").map((fen, ply) => ({
+          gameId: 1,
+          ply,
+          fen,
+          cp: 0,
+          pv: fixtureBestLine(fen).join(" "),
+        })),
+      )
       .run();
     const app = createApp(db, fakeRegistry({}));
 
@@ -1402,7 +1418,13 @@ describe("profile scoping", () => {
     db.insert(evaluations)
       .values(
         inserted.flatMap((g) =>
-          gamePositions("1. e4").map((fen, ply) => ({ gameId: g.id, ply, fen, cp: 0 })),
+          gamePositions("1. e4").map((fen, ply) => ({
+            gameId: g.id,
+            ply,
+            fen,
+            cp: 0,
+            pv: fixtureBestLine(fen).join(" "),
+          })),
         ),
       )
       .run();

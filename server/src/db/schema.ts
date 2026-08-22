@@ -100,11 +100,28 @@ export const evaluations = sqliteTable(
     // to query the engine (ADR-0012). Required, so no insert path can omit it
     // and no read path has a null to reason about. Denormalised against the
     // Game's PGN, which is accepted: Import dedups by game URL and source PGNs
-    // are immutable. Rows predating the column carry the empty sentinel and are
-    // repaired at open (see `repairMissingFens`).
+    // are immutable.
     fen: text("fen").notNull(),
     cp: integer("cp"),
     mate: integer("mate"),
+    // The `Best line` from this Position (CONTEXT.md), **whole**, in UCI, as the
+    // engine printed it — one space-separated column, the best move being its
+    // **head** (ADR-0016). Deliberately not a `bestmove` column beside it: two
+    // places for the same fact is one place too many, and they could diverge.
+    // Required: an Evaluation with no line is what this app used to store, and
+    // keeping such rows would make every read path branch on their absence
+    // forever (the legacy rows are dropped instead — named exception to ADR-0015).
+    pv: text("pv").notNull(),
+    // The **score of the engine's second-best line** (`cp2`/`mate2`), never its
+    // variation: what says whether the best move was the only one worth playing.
+    // Both null when there was no second line at all — a Position with a single
+    // legal move — which is a fact, not a gap.
+    cp2: integer("cp2"),
+    mate2: integer("mate2"),
+    // The `Analysis pass` that wrote this row, hence the `Search regime` it was
+    // produced under. The relation that was missing: a pass's `game_ids` is a
+    // JSON array, so nothing joined an Evaluation to its provenance.
+    passId: integer("pass_id").references(() => analysisPasses.id),
   },
   (t) => [primaryKey({ columns: [t.gameId, t.ply] })],
 );
@@ -131,6 +148,12 @@ export const analysisPasses = sqliteTable("analysis_passes", {
     .references(() => profiles.id),
   gameIds: text("game_ids", { mode: "json" }).notNull().$type<number[]>(),
   total: integer("total").notNull(),
+  // The `Search regime` (CONTEXT.md): the depth searched and how many lines. On
+  // the pass and not repeated on every Evaluation — provenance is a property of
+  // the run. Defaulted so the column can exist on rows that predate it; every
+  // pass opened from now on states its own.
+  depth: integer("depth").notNull().default(0),
+  lines: integer("lines").notNull().default(0),
   startedAt: text("started_at").notNull(),
   endedAt: text("ended_at"),
   // How the pass ended (CONTEXT.md, `Analysis pass`): `completed` when every

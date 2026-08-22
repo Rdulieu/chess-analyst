@@ -118,16 +118,21 @@ describe("the upgrade to Profiles — existing data belongs to its Player", () =
     ).toEqual([]);
   });
 
-  it("carries an analyzed Game's Evaluations across untouched — the rows no re-import rebuilds", () => {
+  it("carries an analyzed Game across, and leaves its Evaluations to the migration that owns them", () => {
     const file = legacyDb();
     const id = seedGame(file, { url: "https://chess.com/1", analyzed: true });
     seedEvaluations(file, id, 40);
-    const before = query(file, "SELECT * FROM evaluations ORDER BY game_id, ply");
 
     openDb(file).sqlite.close();
 
-    expect(query(file, "SELECT * FROM evaluations ORDER BY game_id, ply")).toEqual(before);
-    expect(query(file, "SELECT analyzed FROM games")).toEqual([{ analyzed: 1 }]);
+    // The Game itself survives with its owner, which is what this migration is
+    // about. Its Evaluations do **not** survive the open — a later migration
+    // drops the rows that carry no `Best line` (ADR-0016, the named exception to
+    // ADR-0015), and it is asserted where it happens
+    // (`best-line-migration.test.ts`). Amended rather than worked around: this
+    // suite used to assert those rows were untouched, and that is no longer true.
+    const [owner] = query<{ id: number }>(file, "SELECT id FROM profiles");
+    expect(query(file, "SELECT profile_id FROM games")).toEqual([{ profile_id: owner.id }]);
   });
 
   it("assigns the existing Move habits, and lets a second Profile count the same Move without colliding", () => {

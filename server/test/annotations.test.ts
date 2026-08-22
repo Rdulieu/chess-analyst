@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
 import { gamePositions } from "../src/chess/positions";
+import { fixtureBestLine } from "../src/engine/fixture";
 import { games, evaluations, type NewGame } from "../src/db/schema";
 import { getGameAnnotations } from "../src/annotations/repository";
 import { seedProfile } from "./fixtures";
@@ -36,13 +37,18 @@ function seedEvaluation(
   ply: number,
   evaluation: { cp?: number | null; mate?: number | null },
 ) {
+  const fen = gamePositions(game.pgn)[ply];
   db.insert(evaluations)
     .values({
       gameId: game.id,
       ply,
-      fen: gamePositions(game.pgn)[ply],
+      fen,
       cp: evaluation.cp ?? null,
       mate: evaluation.mate ?? null,
+      // A stored Evaluation always carries its `Best line` (ADR-0016), and a
+      // fixture's has to be playable from the Position: it is drawn on the board
+      // and replayed ply by ply by whoever reads it.
+      pv: fixtureBestLine(fen).join(" "),
     })
     .run();
 }
