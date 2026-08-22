@@ -6,7 +6,7 @@ import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
 import { GameHeader } from "./GameHeader";
 import { ReviewModeControl } from "../review/ReviewModeControl";
 import { atLeastAnnotated, loadReviewMode, saveReviewMode } from "../review/reviewMode";
-import type { Game, MoveAnnotation } from "../../types";
+import type { Game, GameRecap, MoveAnnotation } from "../../types";
 
 /**
  * Shows one selected Game on the interactive board. When the Game has been
@@ -29,6 +29,9 @@ export function GameViewer({
   onAnalyzed?: () => void | Promise<void>;
 }) {
   const [annotations, setAnnotations] = useState<MoveAnnotation[] | null>(null);
+  /** What this Game contributes — served with the annotations, from the same
+   *  derivation the future aggregate folds (ADR-0017). */
+  const [recap, setRecap] = useState<GameRecap | null>(null);
   /**
    * The level for **this** review. Seeded from the remembered choice, and written
    * back only when the Player themself picks one — the end-of-pass promotion below
@@ -40,8 +43,14 @@ export function GameViewer({
   useEffect(() => {
     if (!game.analyzed) return;
     fetchGameAnnotations(game.id)
-      .then((result) => setAnnotations(result.plies))
-      .catch(() => setAnnotations(null));
+      .then((result) => {
+        setAnnotations(result.plies);
+        setRecap(result.recap);
+      })
+      .catch(() => {
+        setAnnotations(null);
+        setRecap(null);
+      });
   }, [game.id, game.analyzed]);
 
   const chooseMode = (next: typeof mode) => {
@@ -72,6 +81,7 @@ export function GameViewer({
         orientation={game.playerColor}
         annotations={mode === "unaided" ? undefined : (annotations ?? undefined)}
         detailed={mode === "detailed"}
+        recap={recap}
         // Handed to the board as controls rather than stacked above it: they
         // belong with the readout they govern, and every line above the diagram is
         // height the diagram does not get — which is why BOTH states go through

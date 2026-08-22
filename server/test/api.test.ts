@@ -115,7 +115,7 @@ describe("games API", () => {
     const res = await request(app).get(`/api/games/${id}/annotations`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ analyzed: false, plies: [], regime: null });
+    expect(res.body).toEqual({ analyzed: false, plies: [], regime: null, recap: null });
   });
 
   it("GET /api/games/:id/annotations returns the per-ply annotations for an analyzed Game", async () => {
