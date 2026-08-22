@@ -37,7 +37,7 @@ function query<T = Record<string, unknown>>(file: string, sql: string): T[] {
 const migrationsFolder = resolve(dirname(fileURLToPath(import.meta.url)), "../src/db/migrations");
 
 /** The last migration applied *before* the one this suite is about. */
-const LAST_PRE_BEST_LINE_MIGRATION = "0010_lame_smiling_tiger";
+const LAST_PRE_BEST_LINE_MIGRATION = "0011_five_time_control_categories";
 
 /**
  * A database at the schema *before* this upgrade, holding an analyzed Game and
