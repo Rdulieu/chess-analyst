@@ -17,8 +17,8 @@ afterEach(() => vi.unstubAllGlobals());
 describe("GameViewer", () => {
   it("fetches and shows annotations for an analyzed Game", async () => {
     stubAnnotations([
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
     ]);
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
@@ -33,8 +33,8 @@ describe("GameViewer", () => {
 
   it("hides every glyph and Evaluation once the toggle is switched off", async () => {
     stubAnnotations([
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [] },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [] },
     ]);
     const user = userEvent.setup();
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);

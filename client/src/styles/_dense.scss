@@ -347,3 +347,23 @@ section[aria-label="partie"] {
   border-radius: var(--radius);
   overflow: hidden;
 }
+
+// The reviewed Move's record, BELOW the board row and in its own card: its height
+// is whatever its lines need, and everything stacked above the diagram is height
+// the diagram does not get. Full width of the screen's column, because a line of
+// six Moves reads across, not down.
+[data-part="record"] {
+  margin-block-start: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+// One `Best line`, read as a row of Moves: its label, then a button per ply. They
+// wrap rather than scroll — a line is short by construction (the display cap).
+[data-part="line"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}

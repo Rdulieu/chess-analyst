@@ -115,7 +115,7 @@ describe("games API", () => {
     const res = await request(app).get(`/api/games/${id}/annotations`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ analyzed: false, plies: [] });
+    expect(res.body).toEqual({ analyzed: false, plies: [], regime: null });
   });
 
   it("GET /api/games/:id/annotations returns the per-ply annotations for an analyzed Game", async () => {
@@ -155,6 +155,11 @@ describe("games API", () => {
     expect(res.body.analyzed).toBe(true);
     expect(res.body.plies).toHaveLength(3);
     expect(res.body.plies[0]).toMatchObject({ ply: 0, severity: null });
+    // The `Best line` crosses the wire as a line, ply by ply — not as a single
+    // best move (ADR-0016), and not left for the client to re-derive.
+    expect(res.body.plies.map((p: { bestLine: string[] }) => p.bestLine)).toEqual(
+      gamePositions(game.pgn).map((fen) => fixtureBestLine(fen)),
+    );
   });
 });
 

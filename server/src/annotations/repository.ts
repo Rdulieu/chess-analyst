@@ -1,11 +1,20 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "../db";
-import { games, evaluations } from "../db/schema";
+import { games, evaluations, analysisPasses } from "../db/schema";
+import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, type MoveAnnotation } from "../analysis/derivation";
 
 export interface GameAnnotations {
   analyzed: boolean;
   plies: MoveAnnotation[];
+  /**
+   * The `Search regime` this Game was analyzed under (CONTEXT.md) — uniform per
+   * Game by construction, since a Game whose Evaluations came from another
+   * regime is re-evaluated whole. `null` when the Game is not analyzed, or when
+   * its Evaluations name no pass: unknown provenance is said to be unknown
+   * rather than assumed to be today's regime.
+   */
+  regime: SearchRegime | null;
 }
 
 /**
@@ -18,8 +27,24 @@ export interface GameAnnotations {
 export function getGameAnnotations(db: Db, gameId: number): GameAnnotations | undefined {
   const game = db.select().from(games).where(eq(games.id, gameId)).get();
   if (!game) return undefined;
-  if (!game.analyzed) return { analyzed: false, plies: [] };
+  if (!game.analyzed) return { analyzed: false, plies: [], regime: null };
 
   const evals = db.select().from(evaluations).where(eq(evaluations.gameId, gameId)).all();
-  return { analyzed: true, plies: gameAnnotations(game, evals) };
+  return { analyzed: true, plies: gameAnnotations(game, evals), regime: gameRegime(db, gameId) };
+}
+
+/**
+ * The `Search regime` a Game's stored `Evaluation`s were produced under, read
+ * back through the pass that wrote them. One regime per Game by construction
+ * (`analyzeGame` re-evaluates a Game whole rather than mixing two), so the first
+ * row's pass speaks for all of them.
+ */
+function gameRegime(db: Db, gameId: number): SearchRegime | null {
+  const pass = db
+    .select({ depth: analysisPasses.depth, lines: analysisPasses.lines })
+    .from(evaluations)
+    .innerJoin(analysisPasses, eq(evaluations.passId, analysisPasses.id))
+    .where(eq(evaluations.gameId, gameId))
+    .get();
+  return pass ?? null;
 }
