@@ -1,4 +1,28 @@
-Status: ready-for-agent
+Status: `done` — mergée dans `integration/US-15a-per-game-analysis` le 2026-08-23 : build +
+525 tests client / 267 serveur verts, **FP verte sur les six étapes**, aucune constatation
+bloquante.
+
+**Mesuré, pas estimé à l'œil** : un même coup tombe au **même pixel** dans les deux dessins
+(465,250 px dans chacun, à trois décimales ; les règles de frontière aussi), et le point d'arrivée
+du tracé égale **exactement** le total du récapitulatif sur quatre parties (148,1 / 191,2 / 56,5 /
+32,0) — le même tableau, sommé une fois.
+
+Trois constatations de la FP corrigées dans la tranche : le ruban dérivait de 3 à 9 px (le padding
+d'un item flex est prélevé avant la répartition proportionnelle) ; les marques tombaient à ~2:1
+**à l'intérieur** de l'aire du tracé, un troisième fond que personne n'avait mesuré (opacité
+ramenée à 0,12, qui tient 3:1 dans les deux thèmes) ; le ruban affichait « Milieu de pa… », voire
+« M… ».
+
+**Laissé ouvert, pour le point de contrôle** : l'échelle des y est **par partie**, donc chaque tracé
+finit en haut de sa boîte et les hauteurs ne sont **pas comparables** d'une partie à l'autre. Un
+Player qui feuillette dix parties verra dix tracés qui touchent le plafond.
+
+**Ce que la FP dit de la probation, honnêtement** : sur une partie à grosse erreur unique (72), la
+falaise de la courbe et la marche du tracé sont le **même événement dessiné deux fois** — le tracé
+n'apporte rien. Sur une partie grignotée (51), la courbe paraît calme pendant vingt coups pendant
+que le tracé grimpe déjà un escalier visible : le Player était à 25 % de perte avant que la courbe
+ne montre quoi que ce soit. C'est exactement ce pour quoi la tranche a été écrite. La question des
+dix parties est donc : ce partage justifie-t-il le dessin ?
 
 ## Parent
 
