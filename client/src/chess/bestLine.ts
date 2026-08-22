@@ -31,7 +31,7 @@ export const DISPLAYED_PLIES = 6;
  * Position must read as nothing, not as a continuation of this one.
  */
 export function readBestLine(fen: string, uci: string[], cap = DISPLAYED_PLIES): LinePly[] {
-  const chess = new Chess(fen);
+  const chess = new Chess({ fen });
   const line: LinePly[] = [];
 
   for (const move of uci.slice(0, cap)) {

@@ -20,7 +20,7 @@ import type { Engine } from "./types";
 export function createFixtureEngine(): Engine {
   return {
     async evaluate(fen) {
-      const legal = new Chess(fen).moves({ verbose: true });
+      const legal = new Chess({ fen }).moves({ verbose: true });
       return {
         cp: fixtureCp(fen),
         mate: null,
@@ -31,8 +31,14 @@ export function createFixtureEngine(): Engine {
   };
 }
 
-/** How many plies deep the fixture's `Best line` runs, when the Position allows. */
-const FIXTURE_LINE_PLIES = 4;
+/**
+ * How many plies deep the fixture's `Best line` runs, when the Position allows.
+ * Deliberately **longer than the client's display cap** (~6 plies): a fixture
+ * line shorter than the cap can never exercise the truncation, and the Feature
+ * Path found exactly that hole — every stored line was 4 plies, so "the shown
+ * line is capped, the stored one is not" was never actually observed on screen.
+ */
+const FIXTURE_LINE_PLIES = 10;
 
 /**
  * A deterministic legal line from `fen`, in UCI — the `Best line` this fixture
@@ -47,7 +53,7 @@ const FIXTURE_LINE_PLIES = 4;
  * legal move (mate/stalemate) — the line is then simply shorter.
  */
 export function fixtureBestLine(fen: string): string[] {
-  const chess = new Chess(fen);
+  const chess = new Chess({ fen });
   const line: string[] = [];
   for (let ply = 0; ply < FIXTURE_LINE_PLIES; ply++) {
     const legal = chess.moves({ verbose: true });

@@ -25,10 +25,14 @@ export function MoveRecord({
   record: ReviewedMove | null;
   /**
    * Previewing a ply of a line: the Position to show temporarily, or `null` to
-   * go back. The preview is **never** allowed to touch the navigation index —
-   * `Board` keeps that as the single source of "where the Player is".
+   * go back, and **through which channel** — the focus and the pointer are
+   * reported separately because they can disagree (the pointer can leave a
+   * button that still holds focus), and a keyboard reader must not lose their
+   * preview to a mouse that happened to be resting there. The preview is
+   * **never** allowed to touch the navigation index — `Board` keeps that as the
+   * single source of "where the Player is".
    */
-  onPreview: (fen: string | null) => void;
+  onPreview: (fen: string | null, via: "focus" | "hover") => void;
 }) {
   return (
     <section aria-labelledby="move-record-heading" className="card" data-part="record">
@@ -66,7 +70,7 @@ function Line({
 }: {
   label: string;
   plies: LinePly[];
-  onPreview: (fen: string | null) => void;
+  onPreview: (fen: string | null, via: "focus" | "hover") => void;
 }) {
   if (plies.length === 0) return null;
 
@@ -77,10 +81,10 @@ function Line({
         <button
           key={i}
           type="button"
-          onFocus={() => onPreview(ply.fen)}
-          onBlur={() => onPreview(null)}
-          onMouseEnter={() => onPreview(ply.fen)}
-          onMouseLeave={() => onPreview(null)}
+          onFocus={() => onPreview(ply.fen, "focus")}
+          onBlur={() => onPreview(null, "focus")}
+          onMouseEnter={() => onPreview(ply.fen, "hover")}
+          onMouseLeave={() => onPreview(null, "hover")}
         >
           {ply.san}
         </button>

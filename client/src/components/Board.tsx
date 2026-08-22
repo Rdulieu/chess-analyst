@@ -64,10 +64,16 @@ export function Board({
    * the balance bar, the square tint and the curve's cursor all keep naming the
    * Move actually being reviewed while the board shows the previewed Position.
    */
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ focus: string | null; hover: string | null }>({
+    focus: null,
+    hover: null,
+  });
 
   const navigated = index === 0 ? startFen : plies[index - 1].fen;
-  const position = preview ?? navigated;
+  // The focus wins over the pointer: the pointer is the same control's mouse
+  // affordance, and a Player reading the line by keyboard must not lose the
+  // preview because the mouse drifted off the button that still holds focus.
+  const position = preview.focus ?? preview.hover ?? navigated;
   const currentMove = index === 0 ? "Start" : plies[index - 1].san;
   const atStart = index === 0;
   const atEnd = index === plies.length;
@@ -80,8 +86,12 @@ export function Board({
    */
   const goTo = (next: number) => {
     setIndex(next);
-    setPreview(null);
+    setPreview({ focus: null, hover: null });
   };
+
+  /** Reports one channel's preview without disturbing the other's. */
+  const previewVia = (fen: string | null, via: "focus" | "hover") =>
+    setPreview((current) => ({ ...current, [via]: fen }));
 
   /**
    * The reviewed Move's record — computed once, read twice: the panel names its
@@ -250,7 +260,7 @@ export function Board({
         rest of what the engine found — the `Review mode` of slice 02 is what
         will replace that toggle with three levels.
       */}
-      {annotations && <MoveRecord record={record} onPreview={setPreview} />}
+      {annotations && <MoveRecord record={record} onPreview={previewVia} />}
     </div>
   );
 }

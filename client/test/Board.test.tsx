@@ -545,6 +545,22 @@ describe("Board — the reviewed Move's record", () => {
     expect(pieceAt(container, "e4")).toBe("wP");
   });
 
+  it("keeps a focused preview when the pointer leaves — hover is an affordance, not a second mechanism", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const ply = within(record()).getAllByRole("button")[0];
+    fireEvent.focus(ply);
+    fireEvent.mouseEnter(ply);
+    fireEvent.mouseLeave(ply);
+
+    // The pointer moved away; the focus did not. A Player reading the line with
+    // the keyboard must not lose their preview because the mouse happened to be
+    // resting on that button.
+    expect(pieceAt(container, "d4")).toBe("wP");
+  });
+
   it("never moves the Player's place in the Game while previewing", async () => {
     const user = userEvent.setup();
     render(<Board pgn="1. e4 e5" annotations={annotations} />);

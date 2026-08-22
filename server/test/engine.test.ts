@@ -30,7 +30,7 @@ describe("fixture Engine", () => {
     // an arrow to nowhere. Legality is the fixture's contract, not decoration.
     const evaluation = await createFixtureEngine().evaluate(AFTER_E4);
 
-    const chess = new Chess(AFTER_E4);
+    const chess = new Chess({ fen: AFTER_E4 });
     expect(evaluation.pv.length).toBeGreaterThan(1);
     for (const uci of evaluation.pv) {
       expect(chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4) })).toBeTruthy();
