@@ -200,3 +200,31 @@ exactement comme `data-severity` aujourd'hui — le glyphe porte, la teinte renf
 distinctement** partout (« position déjà décidée » / « coup forcé »), jamais fondus en « non compté ».
 Ils disent deux choses différentes — l'un que la position n'avait plus rien à perdre, l'autre qu'il n'y
 avait pas le choix — et un joueur qui ne peut pas les distinguer ne peut auditer ni l'un ni l'autre.
+
+## F7 — Le récapitulatif **absorbe** `ErrorTallyReadout` en `Detailed`
+
+Collision qui n'était pas une question de placement : `ErrorTallyReadout` dit « Vos erreurs : 2
+imprécisions ?! · 1 erreur ? » et compte **tous** les Moves signalés ; le récapitulatif dit « 3 erreurs
+comptées » et ne compte que les `Counted Move`s. Depuis F6, **ces deux nombres peuvent légitimement
+différer** (un Move signalé mais forcé compte dans le premier, pas dans le second). Deux résumés côte
+à côte en désaccord d'une unité, c'est exactement la « divergence entre les vues » qu'US-14 s'était
+engagée à éviter — et ici la divergence serait **correcte**, ce qui est pire : ça se lit comme un bug
+sans en être un.
+
+**Retenu (b)** : en `Detailed`, le récapitulatif **absorbe** le tally — un seul résumé, qui énonce les
+deux chiffres **et la raison de leur écart** quand il y en a un (« 3 erreurs, dont 1 non comptée : coup
+forcé »). En `Annotated`, le tally reste **exactement** ce qu'US-14 a livré. Rejeté **(a)** (les deux
+côte à côte sans explication) et **(c)** (garder le tally et mettre le récap ailleurs : ça sépare
+physiquement sans résoudre la contradiction — qui défile voit les deux de toute façon).
+
+**Placement : en haut du nouveau panneau.** C'est le chiffre de réconciliation, donc la première chose
+qu'on lit pour vérifier la méthode, et tout ce qui est en dessous en est la preuve coup par coup.
+
+Contenu, en mots et en chiffres : Moves comptés sur le total du joueur, exclus par motif, erreurs
+comptées, total des chances perdues, et la **dérive** — cette dernière servant aussi d'**équivalent
+textuel** dû par le tracé (F4).
+
+Coût assumé : en `Detailed` le tally apparaît une fois (dans le récap) et en `Annotated` à sa place
+actuelle, donc la même information **change de place selon le mode**. Légèrement déroutant.
+L'alternative — laisser le tally en place et faire que le récap y renvoie — échangerait ça contre deux
+composants devant s'accorder sans source commune, ce qui est le pire mode de défaillance.
