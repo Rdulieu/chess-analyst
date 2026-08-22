@@ -1,4 +1,4 @@
-import { PHASE_LABEL } from "../chess/phase";
+import { PHASE_RIBBON_LABEL } from "../chess/phase";
 import type { PhaseBand } from "../chess/phaseBands";
 
 /**
@@ -29,7 +29,10 @@ export function PhaseRibbon({ bands, lastX }: { bands: PhaseBand[]; lastX: numbe
           // this Phase covers. Everything else is the sheet's.
           style={{ flexGrow: Math.max(band.to - band.from, 0.001) / span }}
         >
-          {PHASE_LABEL[band.phase]}
+          {/* The label is one level in: padding on the band itself would be taken
+              out of the free space before the proportional split and push every
+              band off the axis it is meant to sit on. */}
+          <span>{PHASE_RIBBON_LABEL[band.phase]}</span>
         </span>
       ))}
     </p>

@@ -12,6 +12,18 @@ export const PHASE_LABEL: Record<Phase, string> = {
   endgame: "Finale",
 };
 
+/**
+ * The shorter name the **ribbon** uses. A band is only as wide as its Phase's
+ * share of the Game, and a middlegame lasting a dozen Moves rendered
+ * "Milieu de pa…" — or, on a short one, "M…", which names nothing at all. These
+ * are still words, and the full names are a Move-list mark away.
+ */
+export const PHASE_RIBBON_LABEL: Record<Phase, string> = {
+  early: "Début",
+  middlegame: "Milieu",
+  endgame: "Finale",
+};
+
 /** The mark the move list puts where a Phase begins, in words. */
 export const PHASE_START_LABEL: Record<Phase, string> = {
   early: "Début de la partie",

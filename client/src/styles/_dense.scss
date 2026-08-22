@@ -373,11 +373,20 @@ section[aria-label="partie"] {
     block-size: 100%;
   }
 
-  // The area under the running total. Muted on a sunk ground: it is the shape
-  // that carries the meaning — a step against a slope — not the ink.
+  // The area under the running total. The **stroke** carries the meaning — a step
+  // against a slope — and the fill is only a hint of accumulation, which is why
+  // it is this faint.
+  //
+  // 0.12 is measured, not chosen by eye. The cursor and the boundary rules are
+  // drawn OVER this fill, so the fill is a third ground nobody had measured: at
+  // the 0.35 it shipped with, both marks fell to about 2:1 inside the area (2.20
+  // / 2.25 light, 2.02 / 1.98 dark) while passing comfortably above it — crisp on
+  // one half of the box and dim on the other. At 0.12 the composite keeps both
+  // marks over 3:1 in BOTH themes (cursor 3.09 light / 3.29 dark, boundary 3.16 /
+  // 3.22). ADR-0013's floor is not waived because a drawing is decorative.
   polygon {
     fill: var(--ink-muted);
-    fill-opacity: 0.35;
+    fill-opacity: 0.12;
     stroke: var(--ink-muted);
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
@@ -406,19 +415,34 @@ section[aria-label="partie"] {
 // bounded.
 [data-part="phase-ribbon"] {
   display: flex;
-  gap: 1px;
   font-size: var(--text-s);
   color: var(--ink-muted);
 
-  span {
+  // The band itself carries NO padding and no gap, and that is load-bearing: a
+  // flex item's fixed parts are taken out of the free space before the
+  // proportional split, so padding here would give every band its true share
+  // PLUS its own padding — the widest losing, the narrow ones gaining. Measured
+  // at 3–9 px of drift against the boundary rules, on a ribbon whose whole job is
+  // to sit on the same axis. The divider is an inset shadow, which costs no
+  // layout at all.
+  > span {
     flex-basis: 0;
     min-inline-size: 0;
-    padding-inline: var(--space-1);
+    overflow: hidden;
     background: var(--ground-sunk);
-    border-radius: var(--radius);
+
+    + span {
+      box-shadow: inset 1px 0 0 var(--border);
+    }
+  }
+
+  // The padding lives one level in, where it cannot disturb the split.
+  span span {
+    display: block;
+    padding-inline: var(--space-1);
     // A narrow band must not wrap into two lines and shove the drawing below it
-    // down; the ribbon is a scale, and the move list already names the Phases in
-    // full where a Player needs to read them.
+    // down; the ribbon is a scale, and the move list names the Phases in full
+    // where a Player needs to read them.
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

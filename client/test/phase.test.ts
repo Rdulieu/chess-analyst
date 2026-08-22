@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PHASE_LABEL, phaseStarts } from "../src/chess/phase";
+import { PHASE_LABEL, PHASE_RIBBON_LABEL, phaseStarts } from "../src/chess/phase";
 import type { MoveAnnotation } from "../src/types";
 
 /** Annotations carrying nothing but the Phase — the only field this reads. */
@@ -44,5 +44,19 @@ describe("Phase — what the move list marks", () => {
     expect(PHASE_LABEL.early).toBe("Début de partie");
     expect(PHASE_LABEL.middlegame).toBe("Milieu de partie");
     expect(PHASE_LABEL.endgame).toBe("Finale");
+  });
+});
+
+describe("Phase — the ribbon's own names", () => {
+  it("names every Phase in a form short enough for a band to hold", () => {
+    // The full names are the move list's; a ribbon band is only as wide as its
+    // Phase's share of the Game, and an ellipsis names nothing.
+    expect(PHASE_RIBBON_LABEL.early).toBe("Début");
+    expect(PHASE_RIBBON_LABEL.middlegame).toBe("Milieu");
+    expect(PHASE_RIBBON_LABEL.endgame).toBe("Finale");
+    // Still words, never abbreviations a reader has to decode.
+    for (const label of Object.values(PHASE_RIBBON_LABEL)) {
+      expect(label.length).toBeGreaterThan(4);
+    }
   });
 });

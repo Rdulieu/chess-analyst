@@ -588,7 +588,9 @@ describe("Board — the second drawing", () => {
     );
 
     const ribbon = screen.getByLabelText("phases de la partie");
-    expect(ribbon.textContent).toContain("Début de partie");
+    // The ribbon's own shorter names: a band is only as wide as its Phase's share
+    // of the Game, and "Milieu de pa…" names less than "Milieu".
+    expect(ribbon.textContent).toContain("Début");
     expect(ribbon.textContent).toContain("Finale");
     // Between them: after the curve, before the trace.
     const { curve, drift } = boxes(container);
