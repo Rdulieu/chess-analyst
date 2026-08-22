@@ -458,7 +458,7 @@ Ce qu'un `evaluations` row portera en plus (décidé) :
 
 - **`pv`** — la variante principale **entière**, en **UCI**, telle que le moteur la sort. **Une seule
   colonne, pas de `bestmove` séparé** : le meilleur coup est la tête de la PV, deux colonnes
-  pourraient divergerpour rien. *(Nuance assumée : la ligne UCI `bestmove` peut, rarement, différer de
+  pourraient diverger pour rien. *(Nuance assumée : la ligne UCI `bestmove` peut, rarement, différer de
   la tête de la dernière `info … pv` ; on adopte la tête de la PV.)* Entière et non tronquée, parce
   que tronquer « à ce qu'on affiche » ferait entrer une décision de présentation dans la donnée —
   l'erreur qu'ADR-0009 existe pour empêcher, et que D6 interdit. UCI et non SAN : c'est l'artefact

@@ -141,6 +141,18 @@
   >
   > Story grosse : voudra des tranches internes. Balle traçante : schéma + régime + PV stockée → le
   > relevé par Move à l'écran → le tracé de dérive → le récapitulatif.
+  >
+  > **PRD** : `.scratch/per-game-analysis/PRD.md`. **Sept tranches** (à jouer **séquentiellement**,
+  > choix du demandeur), dans `.scratch/per-game-analysis/issues/` :
+  > - `01-the-best-line-end-to-end` — **HITL** (la mesure MultiPV peut revenir au demandeur ; c'est
+  >   aussi la tranche qui jette les analyses existantes)
+  > - `02-review-mode` — bloquée par 01 ; porte l'amendement de **HP-01** et des suites client
+  > - `03-the-phase-of-a-move` — bloquée par 02
+  > - `04-which-moves-count` — bloquée par 02
+  > - `05-what-this-game-contributes` — bloquée par 03 et 04 ; la fonction que **15c pliera**
+  > - `06-the-drift-trace` — bloquée par 05 ; **écrite pour être supprimable** (point de contrôle des
+  >   dix parties)
+  > - `07-relaunch-the-analysis-from-the-review` — bloquée par 01
 
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > Pas encore grillée. Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière

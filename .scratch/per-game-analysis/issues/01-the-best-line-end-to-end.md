@@ -20,7 +20,7 @@ parsing — la garder, la stocker, et la montrer sur la page Analyse pour le Mov
   **MultiPV=2**, et rend aussi le **score de la deuxième ligne**.
 - **Le stockage** : une `Evaluation` porte désormais la variante **entière**, en **UCI**, telle que le
   moteur la sort — **une seule colonne**, le meilleur coup étant sa **tête** (pas de champ
-  `bestmove` séparé qui pourrait divergerde la variante) — plus le **score de la 2e ligne seulement**
+  `bestmove` séparé qui pourrait diverger de la variante) — plus le **score de la 2e ligne seulement**
   (jamais sa variante), et le **pass qui l'a écrite**.
 - **Le `Search regime`** (profondeur, nombre de lignes) est porté par le **pass**, pas répété sur
   chaque ligne. Cela demande la relation qui **manque aujourd'hui** : rien ne relie une `Evaluation`

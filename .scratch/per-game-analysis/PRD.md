@@ -90,7 +90,7 @@ méthode** », pas « je sais sur quoi travailler ».
 - `evaluations` gagne **`pv`** (la variante **entière**, en **UCI**, telle que le moteur la sort),
   **`cp2`/`mate2`** (le score de la deuxième ligne seulement, pas sa variante) et **`pass_id`**.
 - **Une seule colonne pour la ligne** : le meilleur coup est la **tête** de la `pv` ; pas de colonne
-  `bestmove` qui pourrait divergerde la variante. La tête de PV fait foi.
+  `bestmove` qui pourrait diverger de la variante. La tête de PV fait foi.
 - La variante est stockée **entière** ; le plafonnement est un **choix d'affichage** (≈6 plys montrés,
   le reste atteignable), jamais un plafond de stockage.
 - `analysis_passes` porte le **`Search regime`** : la **profondeur** et le **nombre de lignes**. La

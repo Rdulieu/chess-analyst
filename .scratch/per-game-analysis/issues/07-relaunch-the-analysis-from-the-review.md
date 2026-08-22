@@ -19,7 +19,7 @@ d'écraser une analyse existante.
   reconstruction** (un ordre de grandeur en minutes), avec **Annuler en action primaire**.
 - **Motif à suivre, il existe déjà** : la suppression d'un `Profile` se confirme par une carte
   `role="alertdialog"` **en page**, qui **nomme** ce qu'elle détruit. Même classe d'acte, même motif.
-  **Pas** de boîte de dialogue natrive du navigateur : celle utilisée ailleurs avertit d'une **durée**,
+  **Pas** de boîte de dialogue native du navigateur : celle utilisée ailleurs avertit d'une **durée**,
   celle-ci avertit d'une **destruction**, et une carte peut nommer le coût.
 - Annuler **ne touche à rien** : ni pass ouvert, ni `Evaluation` perdue.
 - Confirmer relance le pass sur cette partie, et l'écran rend compte de son avancement et de sa fin
