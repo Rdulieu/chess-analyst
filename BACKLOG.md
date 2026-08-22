@@ -101,17 +101,16 @@
 
 - **US-15a**: Comprendre, sur **une** partie, comment l'analyse juge mes coups — pour pouvoir croire
   (ou contester) ce que l'app me dira plus tard sur mes faiblesses.
-  > ⚠️ **À GRILLER À NOUVEAU AVANT DE DÉMARRER — côté front.** Le grilling de l'EPIC a tranché **le
-  > modèle** et a posé que la donnée et sa présentation sont **deux contraintes distinctes** (D6 /
-  > ADR-0017) — mais la seconde n'a **jamais** été discutée : on n'a jamais parlé de *comment* ces
-  > informations s'affichent, sur une page qui est déjà la plus dense de l'app. Dix questions ouvertes
-  > dans `.scratch/per-game-analysis/QUESTIONS-FRONT.md` (où vit le relevé par Move, comment montrer
-  > deux variantes, la navigation **en arbre** — qui recoupe US-16 —, la coexistence du tracé de
-  > dérive avec l'`Evaluation curve` d'US-14, le marquage « ne compte pas », le récapitulatif, les
-  > bandes de `Phase`, le toggle devenu sélecteur de mode, l'a11y, l'affichage du `Search regime`).
-  > `/to-prd` a été **interrompu** pour cette raison. Les **coutures de test sont déjà validées** et
-  > n'ont pas à être re-discutées : `.scratch/per-game-analysis/SEAMS.md` (seule la couture client
-  > dépend des décisions de présentation).
+  > **Front grillé** (2026-08-22) : décisions **F1→F12** dans
+  > `.scratch/per-game-analysis/GRILL-FRONT.md`. `CONTEXT.md` gagne **`Review mode`** (Unaided /
+  > Annotated / Detailed, **Unaided par défaut** — changement de comportement : les annotations étaient
+  > affichées par défaut depuis US-7, donc **HP-01 et quatre suites client sont à amender**). Coutures
+  > de test validées : `.scratch/per-game-analysis/SEAMS.md`. **Pas d'ADR pour le front** (tout est bon
+  > marché à défaire) ; en revanche **ADR-0016 est amendée** et **ADR-0015 reçoit une note** : on
+  > **jette** les 1199 `Evaluation`s existantes plutôt que de porter à jamais une branche `pv` null.
+  > Deux points laissés à vérifier sur pièces plutôt qu'affirmés : la **valeur réelle du tracé de
+  > dérive** (dix parties, puis on garde ou on supprime) et la **lisibilité de l'empilement** du
+  > panneau latéral (à regarder dans le FP). **Prête pour `/to-prd`.**
   >
   > **Grillée (modèle) avec l'EPIC US-15** (2026-08-21) : décisions D1→D14 dans
   > `.scratch/weakness-profile/GRILL-NOTES.md`, glossaire dans `CONTEXT.md`, **ADR-0016** et
