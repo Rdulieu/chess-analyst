@@ -9,7 +9,7 @@ import { MoveRecord } from "../features/analysis/MoveRecord";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
-import { marksUncounted } from "../chess/counted";
+import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { MoveAnnotation } from "../types";
 
@@ -283,13 +283,18 @@ export function Board({
                       {SEVERITY_GLYPH[annotation.severity]}
                     </span>
                   )}
-                  {annotation && marksUncounted(annotation) && (
+                  {annotation && marksUncounted(annotation) && annotation.counted?.reason && (
                     // Beside the severity glyph, which keeps carrying the fault:
                     // this says the analysis does not hold the Player to it. In
                     // text, with its own accessible name — a tint alone could
-                    // only ever mean "something", not "not counted" (ADR-0013).
-                    <span data-part="uncounted" aria-label="non compté">
-                      non compté
+                    // only ever mean "something", not "not counted" (ADR-0013) —
+                    // and naming the REASON, because the two reasons are kept
+                    // apart everywhere, this surface included.
+                    <span
+                      data-part="uncounted"
+                      aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
+                    >
+                      {UNCOUNTED_MARK[annotation.counted.reason].text}
                     </span>
                   )}
                   {annotation && (

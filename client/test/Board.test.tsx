@@ -516,7 +516,9 @@ describe("Board — the Moves that do not count", () => {
 
     // The glyph still carries the fault; the mark says the analysis excludes it.
     expect(within(firstMove()).getByLabelText("blunder")).toBeTruthy();
-    expect(within(firstMove()).getByLabelText(/non compté/i).textContent).toMatch(/non compté/i);
+    // The mark names its REASON: by construction it can only be a forced Move,
+    // and "non compté" alone would say strictly less on the scanning surface.
+    expect(within(firstMove()).getByLabelText(/coup forcé, non compté/i).textContent).toBe("forcé");
   });
 
   it("leaves an uncounted Move that carries no severity unmarked, so a lost Game grows no trail of marks", () => {

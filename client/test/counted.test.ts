@@ -46,3 +46,15 @@ describe("Counted Move — what the panel says", () => {
     expect(COUNTED_STATEMENT.forced).not.toBe(COUNTED_STATEMENT.decided);
   });
 });
+
+describe("Counted Move — the mark names its reason", () => {
+  it("says which reason, on the scanning surface too — the two are kept apart everywhere", async () => {
+    const { UNCOUNTED_MARK } = await import("../src/chess/counted");
+
+    expect(UNCOUNTED_MARK.forced.text).toBe("forcé");
+    expect(UNCOUNTED_MARK.forced.name).toMatch(/non compté/i);
+    // Defined rather than assumed unreachable: if it ever renders, it says what
+    // it means instead of a generic phrase.
+    expect(UNCOUNTED_MARK.decided.text).not.toBe(UNCOUNTED_MARK.forced.text);
+  });
+});

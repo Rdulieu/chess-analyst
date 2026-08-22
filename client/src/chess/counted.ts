@@ -17,6 +17,22 @@ export const COUNTED_STATEMENT: Record<UncountedReason, string> = {
 export const COUNTED_YES = "Compté dans l'analyse.";
 
 /**
+ * The mark the move list puts on a flagged Move that does not count: its **own
+ * reason**, not a bare "non compté".
+ *
+ * The two reasons are named apart *everywhere* — that is the slice's rule, and
+ * the move list is not an exception to it. By construction the mark can only ever
+ * be `forced` (an already-decided Position has less than the 10% left to lose
+ * that flagging requires), so a generic wording would spend the scanning surface
+ * to say strictly less than the truth. `decided` is defined all the same rather
+ * than assumed unreachable: if it ever renders, it will say what it means.
+ */
+export const UNCOUNTED_MARK: Record<UncountedReason, { text: string; name: string }> = {
+  forced: { text: "forcé", name: "coup forcé, non compté" },
+  decided: { text: "déjà décidée", name: "position déjà décidée, non compté" },
+};
+
+/**
  * Whether the move list marks this Move as an uncounted one.
  *
  * **Only Moves that carry a severity AND do not count.** That pair is the
