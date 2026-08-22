@@ -66,6 +66,9 @@ merge**, report.
    recover it from the transcripts (§5.2) before treating it as lost or re-running it.
 6. Produce a per-scenario report (pass/fail) + a consolidated **Findings** section, ready to
    paste into the integration→develop PR. Report the prerequisite's own result as its own line.
+7. **Audit §5 against what this run actually observed, and correct it** — §5.6. It is written from
+   one incident and is knowingly ahead of its evidence; a run that leaves a stale warning standing
+   makes every later run obey it.
 
 The agent **never merges** into `develop`: it runs, reports, and proposes the HP curation
 (see `git-flow`). HP red → the human decides.
@@ -147,7 +150,7 @@ overwrites nothing that would have been useful.
 
 ### 5.3 Reading a subagent's state without guessing
 
-Three signals lie, and each one cost a wrong conclusion on the same run:
+Three signals lie, and each one cost a wrong conclusion on the same run (2026-08-21):
 
 - **`idle` does not mean finished.** It means the agent ended a turn. Ask for the report.
 - **No listeners on its ports does NOT mean the agent died.** It means the agent **cleaned up**,
@@ -164,7 +167,8 @@ silence.
 ### 5.4 Isolation kit — what every dispatch prompt must pin
 
 Parallel scenarios share a machine, and the failure mode is one agent's action landing in another
-agent's app. Give each subagent, explicitly:
+agent's app. Everything below was measured on the 2026-08-21 run; re-check it (§5.6). Give each
+subagent, explicitly:
 
 - **Its own ports and its own `DB_FILE`.** Never the project's default command if that command
   hard-codes ports — start the parts separately with the env vars.
@@ -197,6 +201,41 @@ Beyond its scenario and its ports:
   snapshot. Stale reads and driver quirks have produced more false findings on this suite than the
   app has produced real ones.
 - **Partial beats silent.** If it cannot finish, it must report the part it did.
+
+### 5.6 These instructions are provisional — verify them, and correct them
+
+**§5 is written from a single run.** One incident, one machine, one day (2026-08-21). Its remedies
+work, but its picture of *why* is incomplete by construction — and §5.1's central symptom is
+explicitly at odds with what the official documentation promises. That gap is unresolved.
+
+**So the next HP run carries a second job: audit this section against what it actually observes.**
+Not as a chore at the end — as part of the run, because the run is the only experiment that can
+settle any of it.
+
+Answer these, and write the answers down:
+
+- **Did any report arrive on its own**, as a completion notification, with no prompting? That is the
+  documented behaviour and it is the single most important thing to re-check. If it now works,
+  §5.1's incident becomes history rather than a live warning, and the belt-and-braces can relax.
+- **Did the `SendMessage`-on-idle relance work?** For how many agents?
+- **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
+- **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
+  document, the shared browser stealing the selected page? Any of these may have been fixed
+  upstream, and a warning about a bug that no longer exists costs real time on every future run.
+
+**Then correct the skill in the same run**, as a doc commit alongside the suite result. Three rules
+for that edit:
+
+- **Date every claim** you keep or add, so the next reader knows how old the evidence is.
+- **Delete what has stopped being true.** A stale warning is worse than no warning: it is obeyed.
+- **Do not state a mechanism you have not established.** Say what you observed and what you did
+  about it. The first version of §5.1 asserted a confident cause that the documentation
+  contradicted; the observation was sound, the explanation invented. Report the symptom and the
+  cure, and leave the cause open until something actually demonstrates it.
+
+> A runner's instructions describe a system that moves. This section is the only part of the skill
+> that is knowingly written ahead of its evidence, and it stays honest only if each run pays a few
+> minutes to re-check it.
 
 ## 6. Execution rules (agent)
 
@@ -238,6 +277,8 @@ one that silently loses runs.
 - [ ] The state it is handed, with figures, and what about it is deliberate
 - [ ] Re-measure before calling anything a defect; partial beats silent
 - [ ] A truthful red beats an optimistic green; an abridged step reported as green is worse than a red
+
+And once the suite is in: **did §5 describe this run correctly?** Correct it if not (§5.6).
 
 And after the run: **no report ⇒ ask via `SendMessage` ⇒ still nothing ⇒ recover from the
 transcript (§5.2)**. Only then is a scenario genuinely unrun — and even then, check the transcript
