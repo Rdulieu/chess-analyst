@@ -60,12 +60,17 @@ eye.
   regimes is worse than a Game re-analyzed: the first is wrong without saying so. It stays bounded by
   being **Player-triggered** like every engine run in this app (`CONTEXT.md`, `Analysis pass`), never
   a silent background repair.
-- **The existing 1199 Evaluations are migrated, not discarded** (ADR-0015). The migration creates a
-  **synthetic pass row** carrying the regime those rows were actually produced under — depth 16, one
-  line — and points them at it. They keep a null `pv`, which is honest: the line was never stored and
-  **no replay can recover it** (unlike ADR-0012's FENs, recoverable from the PGN — the reason that
-  repair could be automatic and this one cannot). Re-analyzing those 20 Games to fill their lines is
-  then a **Player's choice worth ~11 minutes**, not a migration requirement.
+- **The existing 1199 Evaluations are discarded, and `pv` is required.** This is a deliberate
+  exception to ADR-0015 (see the note added there). Keeping them was the first plan — a synthetic pass
+  row carrying their real regime, depth 16 and one line, with a null `pv` since **no replay can
+  recover a line** (unlike ADR-0012's FENs, recoverable from the PGN, which is why that repair could
+  be automatic and this one cannot). It was dropped because the cost is not the migration script: it
+  is a **permanent** null-`pv` branch — a degraded state in the record panel, a message explaining it,
+  and tests for both — living forever to serve **20 Games worth ~11 minutes of engine time**. ADR-0015
+  weighed a bounded migration against an unbounded recurring engine cost; here the ratio is inverted,
+  and it is the *code* that would carry the recurring cost. The scope is narrow and stays narrow: the
+  `evaluations` rows of those Games, **not the database** — Profiles, Games, PGNs, openings and
+  `move_habits` are untouched, and rebuilding is a Player-triggered pass over Games already imported.
 - Storage: the whole PV is ~120 bytes per row, ~5 MB for a year of play — the same order as the 3 MB
   ADR-0012 accepted. The line is stored **entire and in UCI**: truncating it "to what we display"
   would bake a presentation decision into the data, which is what ADR-0009 exists to prevent, and
