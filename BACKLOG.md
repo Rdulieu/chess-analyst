@@ -6,8 +6,10 @@
 
 ## In review
 
+## Done
+
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
-  > **Livrée**, en attente du merge humain (PR #52). Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
+  > **Livrée.** Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
   > modelé sur chess.com** — `fetchMonth(username, year, month)` (archives mensuelles),
   > `time_class`, `rules` pour écarter les variantes, codes de résultat maison, et l'`Opening` est
@@ -112,15 +114,22 @@
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
   >
-  > **En review** (2026-08-22) — PR #52 vers `develop` : https://github.com/Rdulieu/chess-analyst/pull/52
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #52, mergée le
+  > 2026-08-22). Trace de la revue : les sept tranches sur `integration/US-12-lichess-import`,
+  > **path 0 + HP-01 + HP-02 + HP-03 tous verts**, zéro finding bloquant, build et tests verts
+  > (659). Path 0 porte désormais un **troisième profil de référence sur l'autre plateforme**,
+  > `Metalyst` (lichess.org), importé sur ses 71 mois réels — 403 récupérées, **351** importées,
+  > 38 `classical`, 37 `correspondence` — et HP-01 gagne une étape qui **bascule de plateforme** :
+  > bannière et chiffres suivent la `Platform`, la suite reste à **trois** HP.
+  > Limite de couverture assumée : ce compte n'a ni partie `ultraBullet` ni partie abandonnée,
+  > ces deux règles restent couvertes par fixtures. Suite : **US-17** (le mois vide coûte une
+  > requête pour rien côté Lichess).
   > Suite HP **verte** (path 0 + 3/3), zéro finding bloquant. `Metalyst` (lichess.org) rejoint
   > path 0 sur ses 71 mois réels — 403 récupérées, **351** importées, 38 `classical`, 37
   > `correspondence` — et HP-01 gagne une étape qui **bascule de plateforme** : la suite reste à
   > trois HP. Limite assumée : pas de partie `ultraBullet` ni abandonnée sur ce compte, ces deux
   > règles restent sur fixtures.
 
-
-## Done
 
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > **Grillée** (2026-08-17) — branche `integration/US-11-profiles`.
