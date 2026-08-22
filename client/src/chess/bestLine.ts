@@ -48,6 +48,21 @@ export function readBestLine(fen: string, uci: string[], cap = DISPLAYED_PLIES):
 }
 
 /**
+ * How many plies of a stored line the display leaves out. Shown as such, because
+ * six plies of ten presented as "the line" is a small lie in a story whose whole
+ * point is that the Player can audit what the app claims. What is *not* offered
+ * here is a way to walk the rest: playing a line out is the mechanic of US-16,
+ * and a throwaway version of it would constrain that design.
+ */
+export function hiddenPlies(fen: string, uci: string[], cap = DISPLAYED_PLIES): number {
+  // Counted against the line actually readable from the Position, not the raw
+  // stored length: a line that stops early because it is not playable here has
+  // no hidden remainder, it has a defect, and the two must not read alike.
+  const readable = readBestLine(fen, uci, Number.POSITIVE_INFINITY).length;
+  return Math.max(0, readable - cap);
+}
+
+/**
  * What is known about the Move being reviewed: the two `Best line`s that explain
  * it, and the severity that makes it worth explaining. `null` when there is
  * nothing to report — the Position at the start of the Game, an opponent's Move,
@@ -60,8 +75,12 @@ export interface ReviewedMove {
   severity: NonNullable<MoveAnnotation["severity"]>;
   /** The line of the Position **before** the Move: what should have been played. */
   shouldHavePlayed: LinePly[];
+  /** Plies of that line the cap leaves out — 0 when the whole line is shown. */
+  shouldHavePlayedHidden: number;
   /** The line of the Position **after** it: the opponent's best reply, and how the Move is punished. */
   refutation: LinePly[];
+  /** Plies of the refutation the cap leaves out. */
+  refutationHidden: number;
 }
 
 export function reviewedMove(
@@ -73,9 +92,12 @@ export function reviewedMove(
   const reviewed = index > 0 ? annotations[index] : undefined;
   if (!reviewed?.severity) return null;
 
+  const before = annotations[index - 1]?.bestLine ?? [];
   return {
     severity: reviewed.severity,
-    shouldHavePlayed: readBestLine(positionBefore, annotations[index - 1]?.bestLine ?? []),
+    shouldHavePlayed: readBestLine(positionBefore, before),
+    shouldHavePlayedHidden: hiddenPlies(positionBefore, before),
     refutation: readBestLine(positionAfter, reviewed.bestLine),
+    refutationHidden: hiddenPlies(positionAfter, reviewed.bestLine),
   };
 }

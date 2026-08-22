@@ -503,6 +503,28 @@ describe("Board — the reviewed Move's record", () => {
     ]);
   });
 
+  it("says a line continues past what it shows, rather than passing six plies off as the whole line", async () => {
+    const user = userEvent.setup();
+    const long: MoveAnnotation[] = [
+      {
+        ...annotations[0],
+        // Nine plies of a real line from the starting Position: more than the
+        // display cap, which is exactly the case the engine produces at depth 16.
+        bestLine: ["d2d4", "d7d5", "c2c4", "e7e6", "b1c3", "g8f6", "c1g5", "f8e7", "e2e3"],
+      },
+      annotations[1],
+      annotations[2],
+    ];
+    render(<Board pgn="1. e4 e5" annotations={long} />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const best = within(record()).getByRole("group", { name: /il fallait jouer/i });
+    expect(within(best).getAllByRole("button")).toHaveLength(6);
+    // In text, not as a bare ellipsis: the count is the honest statement, and it
+    // is what a screen reader reads out.
+    expect(best.textContent).toMatch(/3 coups de plus/i);
+  });
+
   it("says there is nothing to report on a Move it does not flag, rather than showing the last one's record", async () => {
     const user = userEvent.setup();
     render(<Board pgn="1. e4 e5" annotations={annotations} />);

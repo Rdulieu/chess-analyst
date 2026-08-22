@@ -185,6 +185,19 @@ subagent, explicitly:
   (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours (e.g. via `/proc/<pid>/environ`)
   before killing it. Two agents on one run believed they had stopped an app that was still up, and
   one of them copied a database out from under it.
+- **Kill the watcher, not just the listener — and prefer no watcher at all** (measured
+  2026-08-22, US-15a FP). Killing the listener under a `tsx watch` wrapper leaves the **wrapper**
+  alive, and a *free port is not proof of a stopped app*: the next edit to a source file makes the
+  watcher **resurrect a server on that port**. On this run the port was verified free at 09:57, a
+  commit touched the sources at 09:59, and the relaunch then failed `EADDRINUSE` against a server
+  nobody had started. Worse than the nuisance: what is then serving is **code the agent never
+  meant to test**. So kill the whole tree (wrapper included), and for a run that is *validating a
+  specific commit* start the server **without watch** (`npx tsx src/main.ts`) — one pid, no
+  resurrection, and no doubt about which code answered.
+- **Ports are not necessarily free just because they were assigned to you** (2026-08-22): two
+  orphans from the previous day still held the assigned pair. A subagent should **not** kill
+  processes it cannot prove are its own — it should shift to a free pair, say which, and report the
+  orphans for their owner.
 - **Restore state before starting the server**, not after: a server usually creates its database
   file on open, so a copy made afterwards is overwritten by a live process.
 

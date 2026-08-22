@@ -43,8 +43,18 @@ export function MoveRecord({
             Coup joué : <strong>{SEVERITY_GLYPH[record.severity]}</strong>{" "}
             <span>({record.severity})</span>
           </p>
-          <Line label="Il fallait jouer" plies={record.shouldHavePlayed} onPreview={onPreview} />
-          <Line label="Réfutation" plies={record.refutation} onPreview={onPreview} />
+          <Line
+            label="Il fallait jouer"
+            plies={record.shouldHavePlayed}
+            hidden={record.shouldHavePlayedHidden}
+            onPreview={onPreview}
+          />
+          <Line
+            label="Réfutation"
+            plies={record.refutation}
+            hidden={record.refutationHidden}
+            onPreview={onPreview}
+          />
         </>
       ) : (
         <p>Rien à signaler sur ce coup.</p>
@@ -66,10 +76,13 @@ export function MoveRecord({
 function Line({
   label,
   plies,
+  hidden,
   onPreview,
 }: {
   label: string;
   plies: LinePly[];
+  /** Plies the cap leaves out, stated rather than silently dropped. */
+  hidden: number;
   onPreview: (fen: string | null, via: "focus" | "hover") => void;
 }) {
   if (plies.length === 0) return null;
@@ -89,6 +102,12 @@ function Line({
           {ply.san}
         </button>
       ))}
+      {hidden > 0 && (
+        // In text and not as a bare ellipsis: the count is what a screen reader
+        // reads out, and it is the honest statement — the line goes on, this is
+        // where the display stops. Walking the rest of it is US-16's mechanic.
+        <span>(+{hidden} coups de plus)</span>
+      )}
     </div>
   );
 }

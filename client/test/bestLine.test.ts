@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readBestLine, DISPLAYED_PLIES } from "../src/chess/bestLine";
+import { readBestLine, hiddenPlies, DISPLAYED_PLIES } from "../src/chess/bestLine";
 
 /** The Position after 1. e4 — Black to move. */
 const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
@@ -36,6 +36,15 @@ describe("readBestLine", () => {
 
     expect(long.length).toBeGreaterThan(DISPLAYED_PLIES);
     expect(line).toHaveLength(DISPLAYED_PLIES);
+  });
+
+  it("says a capped line continues, so six plies of ten do not read as the whole line", () => {
+    const long = ["e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1g1", "f6e4", "d2d4"];
+
+    expect(readBestLine(AFTER_E4, long).length).toBe(DISPLAYED_PLIES);
+    expect(hiddenPlies(AFTER_E4, long)).toBe(long.length - DISPLAYED_PLIES);
+    // A line that fits is not "truncated by zero": nothing to announce.
+    expect(hiddenPlies(AFTER_E4, ["e7e5", "g1f3"])).toBe(0);
   });
 
   it("stops rather than lying when a line is not playable from the Position", () => {
