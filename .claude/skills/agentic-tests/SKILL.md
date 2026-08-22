@@ -58,8 +58,9 @@ merge**, report.
 3. Read all `docs/test-scenarios/HP-*.md` and run each journey **independently** against the app (an
    HP must run on its own — restoring a shared snapshot into its **own** database file is a clean
    start; inheriting another scenario's live database is not). Dispatch **one subagent per
-   scenario, in parallel** — see [§5 Orchestration](#5-orchestration--one-subagent-per-scenario-in-parallel),
-   whose delivery contract is not optional: a report that is not `SendMessage`d never arrives.
+   scenario, in parallel** — see [§5 Orchestration](#5-orchestration--one-subagent-per-scenario-in-parallel).
+   Parallelism sits well inside the concurrent-subagent limit (20 by default); the thing to get
+   right is **collecting** the reports, not spawning them.
 4. Apply the **execution rules** (§6).
 5. **Collect every report before concluding.** A scenario that has not reported has not run — but
    recover it from the transcripts (§5.2) before treating it as lost or re-running it.
@@ -83,43 +84,47 @@ others instead of being added to them.
    scenario restores; dispatching the HPs before it has finished hands them a state that does not
    exist yet. It is the one step that is never parallel.
 2. **Then all HPs at once**, one subagent each.
-3. The orchestrator **collects the reports** (see the delivery contract below) and consolidates.
+3. The orchestrator **collects the reports** (§5.1 — do not assume they arrive on their own) and
+   consolidates.
 
-### 5.1 The delivery contract — read this before dispatching anything
+### 5.1 Collecting the reports — do not assume delivery
 
-**A named background subagent's final message does NOT reach the orchestrator.** Its plain text
-output goes nowhere the parent can see. **Only an explicit `SendMessage` back to the orchestrator
-delivers anything.**
+**What the documentation says.** A background subagent's results reach the orchestrator *"as a
+completion notification in a later turn"*, and the orchestrator waits for that notification before
+reporting them. Delivery is supposed to be automatic. ([subagents docs](https://code.claude.com/docs/en/sub-agents))
 
-This is the single failure that costs whole runs. Measured on 2026-08-21: four scenarios each ran
-to completion and wrote full, detailed reports; **none arrived**. Only the one that happened to
-answer a follow-up via `SendMessage` was ever heard. Roughly thirty minutes of real-API work,
-green, invisible.
+**What happened on 2026-08-21.** Four scenarios each ran to completion and wrote full, detailed
+reports. **None arrived.** No completion notification carried them — the orchestrator received only
+`idle_notification`s, and an idle agent has not completed: it has ended a turn and is waiting. Of
+five agents, exactly one was ever heard from, and only because it answered a follow-up with
+`SendMessage`. Roughly thirty minutes of real-API work, green, invisible.
 
-It was made worse by the dispatch prompt itself, which told every agent *"your final message is
-the ONLY thing I see"* — true of a synchronous subagent, **false of a named background one**, and
-it steered them into the one channel that does not work.
+The cause is not established, so do not encode one. What is established is the **symptom** and the
+**cure**, and the cure is cheap:
 
-So, in every dispatch prompt:
+1. **Tell each subagent to send its report with `SendMessage`** when it finishes, rather than
+   relying on the automatic delivery alone. Belt and braces; the braces cost one sentence.
+2. **On `idle` with nothing received, ask.** `SendMessage` the agent a request for its report. A
+   completed subagent auto-resumes on `SendMessage`, so this works even after it has finished.
+3. **Still nothing? Recover from the transcript** (§5.2). Never re-run first.
 
-> **Deliver your report with `SendMessage` to the orchestrator. Your final assistant message is
-> NOT delivered — text you simply write is lost. Send the report, then stop.**
-
-And ask for it **once more on completion**: when a subagent signals idle without having sent
-anything, `SendMessage` it a request for the report. That request often succeeds where the
-agent's own final message did not.
+> **Do not tell a subagent "your final message is the only thing I see."** That was in the dispatch
+> prompt on the run above, and it is the kind of confident falsehood that steers an agent away from
+> the channel that actually works. Ask for `SendMessage` explicitly instead.
 
 ### 5.2 Recovering a report that never arrived
 
-**A missing report is not a lost run.** Subagent transcripts are on disk, and the report is in
-them verbatim:
+**A missing report is not a lost run.** Subagent transcripts are on disk — a documented location,
+one file per agent, keyed by agent id — and the report is in them verbatim:
 
 ```
 ~/.claude/projects/<project-slug>/<session-id>/subagents/agent-*.jsonl
 ```
 
-One file per subagent, named after it. Take the **last assistant text block** of each — that is
-the report. A one-liner that dumps them all:
+Take the **last assistant text block** of each — that is the report. Transcripts survive the main
+conversation compacting, and are swept only after `cleanupPeriodDays` (30 by default), so a report
+from an earlier session in the retention window is still recoverable. A one-liner that dumps them
+all:
 
 ```bash
 python3 - <<'EOF'
@@ -225,7 +230,7 @@ not findings about the app, and a reviewer must not have to work out which is wh
 Before sending a scenario to a subagent, confirm its prompt carries all eight. The first is the
 one that silently loses runs.
 
-- [ ] **Deliver the report via `SendMessage`** — its final message is not delivered
+- [ ] **Deliver the report via `SendMessage`** on completion — do not rely on automatic delivery alone
 - [ ] Its own ports, its own `DB_FILE`, its own browser context
 - [ ] Restore state **before** starting the server
 - [ ] A `location.port` guard on every injected script
@@ -235,4 +240,5 @@ one that silently loses runs.
 - [ ] A truthful red beats an optimistic green; an abridged step reported as green is worse than a red
 
 And after the run: **no report ⇒ ask via `SendMessage` ⇒ still nothing ⇒ recover from the
-transcript (§5.2)**. Only then is a scenario genuinely unrun.
+transcript (§5.2)**. Only then is a scenario genuinely unrun — and even then, check the transcript
+before paying for the network and the engine a second time.
