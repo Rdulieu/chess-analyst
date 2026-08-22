@@ -1,4 +1,9 @@
-Status: ready-for-agent
+Status: `done` — merged into `integration/US-15a-per-game-analysis` on 2026-08-22 after the
+auto-merge gate: build + 469 client / 236 server tests green, **FP 7/7 green** on the real app
+(two real engine passes, migration 0012 dropping the legacy Evaluations as designed), no blocking
+finding. Two non-blocking findings left open: the viewport could only be measured at 1019x630
+(the diagram still fitted whole), and following the record anchor then leaving Detailed leaves a
+stale `#move-record-heading` in the URL.
 
 ## Parent
 
