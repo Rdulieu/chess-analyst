@@ -107,7 +107,18 @@ export interface AnalysisJob {
    * where it was pointed (ADR-0014), so a `gameId` belonging to someone else is
    * a caller's mistake to refuse, not a Game to quietly analyze.
    */
-  start(profileId: number, gameIds: number[]): AnalysisStatus & { started: boolean };
+  start(
+    profileId: number,
+    gameIds: number[],
+    /**
+     * `overwrite` — the Player asked for these Games to be analyzed **again**
+     * and confirmed losing their stored `Evaluation`s (US-15a 07). It lifts the
+     * "already analyzed under this regime" filter for **exactly the Games
+     * named**, and never for a wider selection: overwriting is a per-Game act
+     * the Player confirmed by name.
+     */
+    options?: { overwrite?: boolean },
+  ): AnalysisStatus & { started: boolean };
   /** Marks **this Profile's** last pass's summary as seen. Display only. */
   acknowledge(profileId: number): void;
   /** Resolves when the current pass (if any) has finished — for tests/shutdown. */
@@ -180,7 +191,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
   return {
     status: snapshot,
 
-    start(profileId, gameIds) {
+    start(profileId, gameIds, { overwrite = false } = {}) {
       // One engine, so one pass at a time — whichever Profile asked.
       if (runningPassId !== null) return { ...snapshot(profileId), started: false };
 
@@ -195,7 +206,10 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
       const foreign = selected.filter((game) => game.profileId !== profileId);
       if (foreign.length > 0) throw new ForeignGameError(foreign.map((game) => game.id));
 
-      const pending = selected.filter((game) => needsAnalysis(db, game));
+      // Everything named, when the Player confirmed the overwrite: the filter
+      // exists to avoid spending engine time twice by accident, and this is the
+      // one path where spending it again is the whole request.
+      const pending = overwrite ? selected : selected.filter((game) => needsAnalysis(db, game));
 
       // Nothing to analyze: no pass is opened at all — an empty pass is not a
       // pass, and must not overwrite the one the Player last ran.
@@ -222,7 +236,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
       current = (async () => {
         try {
           for (const game of pending) {
-            await analyzeGame(db, engine, game, pass);
+            await analyzeGame(db, engine, game, pass, { overwrite });
           }
         } catch (err) {
           // A backend failure (e.g. the engine not being wired up) must not take

@@ -90,6 +90,62 @@ describe("GameViewer", () => {
     expect(screen.getByRole("region", { name: /relevé/i })).toBeTruthy();
   });
 
+  it("offers to re-analyse a Game that is ALREADY analysed, which this screen used not to", async () => {
+    stubAnnotations(ANNOTATED);
+
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    expect(
+      await screen.findByRole("button", { name: /réanalyser cette partie/i }),
+    ).toBeTruthy();
+  });
+
+  it("warns before overwriting an existing analysis, and cancelling starts nothing", async () => {
+    stubAnnotations(ANNOTATED);
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("button", { name: /réanalyser cette partie/i }));
+    const warning = screen.getByRole("alertdialog", { name: /confirmer la réanalyse/i });
+    // It names the Game — deleting the wrong one's Evaluations by reflex is the risk.
+    expect(warning.textContent).toContain("Paul Morphy");
+    expect(warning.textContent).toMatch(/écrasée/i);
+
+    await user.click(screen.getByRole("button", { name: /annuler/i }));
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    // The annotations are still on screen: nothing was destroyed.
+    await user.click(screen.getByRole("radio", { name: /annoté/i }));
+    expect(moveItems()[0].textContent).toContain("??");
+  });
+
+  it("sends the confirmation to the server, so a confirmed re-analysis actually opens a pass", async () => {
+    const posts: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
+          posts.push(JSON.parse(opts.body as string));
+          return { ok: true, status: 202, json: async () => ({ running: false, total: 2, done: 2, started: true }) } as Response;
+        }
+        if (url.startsWith("/api/analyze/status")) {
+          return { ok: true, status: 200, json: async () => ({ running: false, total: 2, done: 2 }) } as Response;
+        }
+        return { ok: true, status: 200, json: async () => ({ analyzed: true, plies: ANNOTATED, recap: null, regime: null }) } as Response;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("button", { name: /réanalyser cette partie/i }));
+    await user.click(screen.getByRole("button", { name: /^réanalyser$/i }));
+
+    // A Game already analysed under the current regime is filtered out of an
+    // ordinary pass, so without this flag the confirmation would warn about a
+    // destruction the server then refuses to perform.
+    await waitFor(() => expect(posts).toContainEqual({ gameIds: [OPERA_GAME.id], overwrite: true }));
+  });
+
   it("keeps a single live region of ours: the pass progress, not the move readout", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("no fetch expected"); }));
 

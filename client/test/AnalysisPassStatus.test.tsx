@@ -51,3 +51,20 @@ describe("AnalysisPassStatus — how the pass ended", () => {
     expect(screen.getByRole("button", { name: /fermer/i })).toBeTruthy();
   });
 });
+
+describe("AnalysisPassStatus — the two refusals are not the same fact", () => {
+  it("says a pass is already running, rather than claiming the selection is analysed", () => {
+    render(<AnalysisPassStatus status={null} blocked />);
+
+    // A Player who just confirmed overwriting an analysis and reads "déjà
+    // analysée" is being contradicted about the act they authorised.
+    expect(screen.getByRole("status").textContent).toMatch(/déjà en cours/i);
+    expect(screen.getByRole("status").textContent).not.toMatch(/déjà analysée/i);
+  });
+
+  it("keeps the 'nothing to analyse' wording for what it actually describes", () => {
+    render(<AnalysisPassStatus status={null} nothingToDo />);
+
+    expect(screen.getByRole("status").textContent).toMatch(/déjà analysée/i);
+  });
+});

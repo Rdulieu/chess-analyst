@@ -29,6 +29,15 @@ export async function analyzeGame(
   engine: Engine,
   game: Game,
   pass: Pick<AnalysisPass, "id" | "depth" | "lines">,
+  /**
+   * The Player explicitly asked for this Game to be analyzed **again** and
+   * confirmed losing what is stored (US-15a 07). It is the one case where
+   * spending engine time on an already-analyzed Game is right, so it goes
+   * through the SAME re-evaluation the regime change uses — the whole Game
+   * goes and is analyzed from ply 0 — rather than a second mechanism that
+   * could leave half a Game behind.
+   */
+  { overwrite = false }: { overwrite?: boolean } = {},
 ): Promise<void> {
   // Evaluations this Game holds that `pass`'s regime cannot stand behind: rows
   // from a pass at another depth or another line count, and rows whose pass is
@@ -53,7 +62,7 @@ export async function analyzeGame(
   // A Game is never *partly* re-evaluated: the whole Game goes, and is analyzed
   // from ply 0. Half a Game at each of two regimes is the one state this must
   // never produce.
-  if (foreignRegime > 0) {
+  if (foreignRegime > 0 || overwrite) {
     db.delete(evaluations).where(eq(evaluations.gameId, game.id)).run();
     db.update(games).set({ analyzed: false }).where(eq(games.id, game.id)).run();
   } else {
