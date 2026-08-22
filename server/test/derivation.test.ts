@@ -138,3 +138,24 @@ describe("gameAnnotations — the Phase of each Move", () => {
     expect(annotations.map((a) => a.phase)).toEqual(["endgame", "endgame"]);
   });
 });
+
+describe("gameAnnotations — whether a Move counts", () => {
+  it("says of each of the Player's Moves whether it counts, and asserts nothing about the opponent's", () => {
+    const game = { pgn: "1. e4 e5 2. Nf3", playerColor: "white" as const };
+    const evals = stored(game.pgn, [
+      { ply: 0, cp: 25, mate: null },
+      { ply: 1, cp: -10, mate: null },
+      { ply: 2, cp: 5, mate: null },
+      { ply: 3, cp: 0, mate: null },
+    ]);
+
+    const annotations = gameAnnotations(game, evals);
+
+    expect(annotations.map((a) => a.counted)).toEqual([
+      null, // the starting Position is no Move
+      { counted: true, reason: null },
+      null, // Black's
+      { counted: true, reason: null },
+    ]);
+  });
+})

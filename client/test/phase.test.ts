@@ -5,6 +5,7 @@ import type { MoveAnnotation } from "../src/types";
 /** Annotations carrying nothing but the Phase — the only field this reads. */
 const of = (...phases: MoveAnnotation["phase"][]): MoveAnnotation[] =>
   phases.map((phase, ply) => ({
+    counted: null,
     ply,
     whiteEval: { cp: 0, mate: null },
     whiteWinChances: 50,

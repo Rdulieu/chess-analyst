@@ -1,6 +1,8 @@
 import type { LinePly, ReviewedMove } from "../../chess/bestLine";
 import { SEVERITY_GLYPH } from "../../chess/severity";
 import { PHASE_LABEL, type Phase } from "../../chess/phase";
+import { COUNTED_STATEMENT, COUNTED_YES } from "../../chess/counted";
+import type { MoveAnnotation } from "../../types";
 
 /**
  * The reviewed Move's own record (CONTEXT.md, `Review mode` → Detailed): what
@@ -21,6 +23,7 @@ import { PHASE_LABEL, type Phase } from "../../chess/phase";
 export function MoveRecord({
   record,
   phase,
+  counted,
   onPreview,
 }: {
   /** The reviewed Move's record, or `null` when there is nothing to report. */
@@ -32,6 +35,14 @@ export function MoveRecord({
    * is meant to be able to disagree with.
    */
   phase: Phase | null;
+  /**
+   * Whether the reviewed Move counts in the analysis, and why not when it does
+   * not. `null` on the opponent's Moves and on the starting Position, where the
+   * panel asserts **nothing** — the denominator is about the Player's play, and
+   * "not counted" said of the opponent would invite the reading that it might
+   * have been.
+   */
+  counted: MoveAnnotation["counted"];
   /**
    * Previewing a ply of a line: the Position to show temporarily, or `null` to
    * go back, and **through which channel** — the focus and the pointer are
@@ -49,6 +60,13 @@ export function MoveRecord({
       {phase && (
         <p data-part="phase">
           Phase : <strong>{PHASE_LABEL[phase]}</strong>
+        </p>
+      )}
+      {counted && (
+        <p data-part="counted" data-counted={counted.counted}>
+          {counted.counted || counted.reason === null
+            ? COUNTED_YES
+            : COUNTED_STATEMENT[counted.reason]}
         </p>
       )}
       {record ? (
