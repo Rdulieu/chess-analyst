@@ -1,4 +1,9 @@
-Status: ready-for-agent
+Status: `done` — merged into `integration/US-15a-per-game-analysis` on 2026-08-23 after the
+auto-merge gate: build + 479 client / 247 server tests green, **FP 6/6 green** on the real app
+(game 111 swept move by move, boundaries cross-checked against an independent implementation of
+the CONTEXT rules), no blocking finding. The FP found the move cap firing on Black's 14th instead
+of White's 15th; fixed in the slice and re-verified — exactly one half-move moved, latching and
+the Endgame boundary untouched.
 
 ## Parent
 
