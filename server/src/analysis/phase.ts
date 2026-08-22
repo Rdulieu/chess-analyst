@@ -17,9 +17,15 @@
 export type Phase = "early" | "middlegame" | "endgame";
 
 /**
- * The move number at which the Early game ends whatever the position looks like.
- * A backstop against a passive Game claiming to still be starting after forty
- * moves — not the usual boundary, which is development.
+ * The move at which the Early game ends whatever the position looks like — a
+ * backstop against a passive Game claiming to still be starting after forty
+ * moves, not the usual boundary, which is development.
+ *
+ * Read as **White's 15th Move is the first one no longer in the Early game**.
+ * The distinction is not pedantry: a FEN's move number rises on **Black's** move,
+ * so `fullmove >= 15` alone fires on Black's 14th — a half-move early, and
+ * visibly so on a real Game (a Player looking at 14...d5 with the king still on
+ * e8 would say the opening is not over).
  */
 const MOVE_CAP = 15;
 
@@ -70,13 +76,20 @@ export function phases(fens: string[]): Phase[] {
 /** The fields of a FEN this derivation reads — placement, castling, move number. */
 interface Position {
   placement: string;
+  /** Whose Move it is here — what tells White's 15th from Black's 14th. */
+  toMove: "w" | "b";
   castling: string;
   fullmove: number;
 }
 
 function parse(fen: string): Position {
-  const [placement, , castling = "-", , , fullmove = "1"] = fen.split(" ");
-  return { placement, castling, fullmove: Number(fullmove) || 1 };
+  const [placement, toMove = "w", castling = "-", , , fullmove = "1"] = fen.split(" ");
+  return {
+    placement,
+    toMove: toMove === "b" ? "b" : "w",
+    castling,
+    fullmove: Number(fullmove) || 1,
+  };
 }
 
 /**
@@ -86,8 +99,18 @@ function parse(fen: string): Position {
  * yet moved a piece has not finished starting.
  */
 function startIsOver(position: Position): boolean {
-  if (position.fullmove >= MOVE_CAP) return true;
+  if (capReached(position)) return true;
   return (["white", "black"] as const).every((side) => developed(position, side));
+}
+
+/**
+ * Whether White's `MOVE_CAP`-th Move has been played by the time this Position is
+ * reached. A Position after White's Move has **Black** to move on the same move
+ * number, which is exactly the half-move the naive `fullmove >= cap` gets wrong.
+ */
+function capReached(position: Position): boolean {
+  if (position.fullmove > MOVE_CAP) return true;
+  return position.fullmove === MOVE_CAP && position.toMove === "b";
 }
 
 /**

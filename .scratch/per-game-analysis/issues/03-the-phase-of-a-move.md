@@ -53,8 +53,11 @@ La **`Phase`** (`CONTEXT.md`) : où en est la partie quand un Move est joué —
 2. Il sélectionne un coup avant la première frontière → le relevé le situe en début de partie.
 3. Il sélectionne un coup entre les deux frontières → le relevé le situe en milieu de partie.
 4. Il sélectionne un coup après la seconde → le relevé le situe en finale.
-5. Il ouvre une partie de vingt coups → **aucune** transition n'est annoncée, et ses coups sont situés
-   en début / milieu de partie.
+5. Il ouvre une partie courte **qui ne quitte pas le début** → **aucune** transition n'est annoncée,
+   et tous ses coups sont situés en début de partie. (Formulation corrigée pendant la FP : la version
+   d'origine demandait « aucune transition » sur une partie dont les coups sont « en début / milieu »,
+   ce qui se contredit — une partie qui atteint le milieu a par construction une transition à
+   annoncer. Le critère d'acceptation, lui, était déjà précis.)
 6. Il ouvre une partie où un pion est promu en finale → les coups qui suivent la promotion sont
    toujours situés en finale.
 

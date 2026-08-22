@@ -41,6 +41,11 @@ describe("Phase — the Early game boundary", () => {
 
     // A passive Game cannot still claim to be starting after forty moves.
     expect(result[result.length - 1]).not.toBe("early");
+    // And it falls on WHITE's 15th Move (ply 29), not on Black's 14th (ply 28):
+    // a FEN's move number rises on Black's Move, so the naive reading fires a
+    // half-move early — visibly so on a real Game.
+    expect(result[28]).toBe("early");
+    expect(result[29]).toBe("middlegame");
     // ...and it was still starting well into the Game: the cap is a backstop,
     // not the usual boundary.
     expect(result[10]).toBe("early");
