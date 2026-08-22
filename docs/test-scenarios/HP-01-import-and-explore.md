@@ -1,6 +1,6 @@
 ---
 id: HP-01
-covers: [Profile, Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation, Theme]
+covers: [Profile, Platform, Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation, Theme]
 ---
 
 # HP-01 — Import and explore my chess.com history
@@ -23,6 +23,8 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 > there yet, so it cannot restore the imported snapshot the other two use.
 
 ## Drive-by
+- `Platform` (US-12, graft — no fourth HP): the suite holds Profiles on **both** sites, and step
+  10b switches between them, requiring every figure and the banner to follow the `Platform`.
 - `Profile` scoping (US-11): the `Import` is an operation **on one Profile**, run from its own page
   with no username field, and every screen afterwards speaks of that Profile, named by the chrome's
   banner.
@@ -51,10 +53,16 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   file, talking to the **real** chess.com API (no `CHESSCOM_BASE_URL` override).
 - **Clean data state, restored**: [path 0](./path-0-bootstrap.md)'s **empty-history snapshot**
   copied into this scenario's database file, with the server stopped. It holds the reference
-  `Profile`, a **second Profile (`Nonomoho`) owning nothing**, and **no Games at all**, so the
-  empty-state invitation shows and the import counts are predictable. Two Profiles is the suite's
-  standing state — see [`theme-pass.md`](./theme-pass.md) for why — so step 1 selects one **among
-  two** rather than confirming the only one. The Profile's creation and its chess.com validation belong to path 0; this scenario
+  `Profile`, a **second Profile (`Nonomoho`) owning nothing**, a **third on lichess.org
+  (`Metalyst`) carrying its own imported history**, and **no Game under either chess.com
+  Profile**, so the empty-state invitation shows and the import counts are predictable. Three
+  Profiles is the suite's standing state — see [`theme-pass.md`](./theme-pass.md) for why — so
+  step 1 selects one **among three** rather than confirming the only one.
+
+  > `Metalyst` arriving populated is deliberate, and does not soften this scenario's empty start:
+  > "no history" is a statement about `DudulSmash`, and it only holds beside a populated third
+  > Profile **if reads are Profile-scoped** (ADR-0014). It is also what gives step 10b something
+  > to switch *to* — see [path 0](./path-0-bootstrap.md)'s *Why a third Profile*. The Profile's creation and its chess.com validation belong to path 0; this scenario
   starts from the Profile and imports onto it.
 - **Nothing is selected on arrival**: the current `Profile` lives client-side, not in the database
   (ADR-0014), so step 1 selects it.
@@ -130,6 +138,27 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 
    > Do not substitute "the two shortest Games **overall**": it is the same pair here, but only
    > because both happen to answer 1.e4 — it would go green for the wrong reason elsewhere.
+10b. **(US-12) Switch Platform — from a chess.com Profile to the Lichess one.** On `/profiles`,
+    select **`Metalyst`** → the chrome's banner names **`Metalyst (lichess.org)`**, and **every
+    figure on screen changes with it**: "Mes parties" lists `Metalyst`'s Lichess history instead of
+    `DudulSmash`'s 82 Games, its cadences now include **`classical` and `correspondence`** — two
+    categories chess.com never produces — the Profile page's counters read `Metalyst`'s, and the
+    analysed count drops back to **0**, since the pass of step 10 belongs to the other Profile.
+    Then **select `DudulSmash` back** → every figure returns to what step 10 left, the two analysed
+    Games included.
+
+    > **What this step is for.** Both reference Profiles were chess.com until US-12, so nothing in
+    > the suite had ever *required* a screen to change with the `Platform`: an app that spelled
+    > "chess.com" into the banner unconditionally would have run green. This is the only step where
+    > a hard-coded site name fails, and the only place the partition is checked **across**
+    > Platforms rather than between two accounts on the same one.
+    >
+    > It is a **step, not a fourth HP**: the journey has not changed — import, then explore — only
+    > the site behind it. The suite stays at **three** Happy Paths.
+    >
+    > Switching back is not tidiness, it is a precondition: step 11 asserts against the state steps
+    > 1–10 built, and it must run under the Profile that owns it.
+
 11. **Theme pass (US-13)** — walk the navigation across **all eight screens** (Mes parties,
     Explorateur, Ouvertures, Positions dangereuses, Stats, Analyse by opening a Game, Profils, and
     the Profile's own page), first in the light theme, then again with the system's **dark preference
@@ -146,7 +175,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 
 ## Checks
 ### UI
-- Step 1: `/profiles` lists **two** Profiles; `DudulSmash` reads **0** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers "Sélectionner". Every scoped screen afterwards carries the banner naming `DudulSmash`. Nothing on the list overflows its container — the pairing of those two states in one column is what used to.
+- Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **0** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers "Sélectionner". Every scoped screen afterwards carries the banner naming `DudulSmash`. Nothing on the list overflows its container — the pairing of those two states in one column is what used to.
 - Step 2: "Mes parties" carries its own heading, shows an invitation to import and **no import form** — the form is not on this screen since US-11, and the invitation leads to the Profile's page. With the restored empty history no Games are listed.
 - Step 3: the Profile's page (`/profiles/:id`) names the Profile and carries the import form: a first and a last month, category checkboxes and an Import button, and **no username field** at all. Both month fields default to the current month; each field is labelled above it (US-13's skeleton) and the Import button is the form's primary action, visibly distinguished from the secondary controls. The progress readout is visible during the run, is **determinate** (n/N, counted in months, N = 2 for this range), advances to N/N, and is gone once the Import completes.
 - Step 4: the import landed on `DudulSmash` and nowhere else — `Nonomoho` still reads `0 parties · 0 analysées` on `/profiles` (ADR-0014). On a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).

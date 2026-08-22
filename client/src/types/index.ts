@@ -1,4 +1,7 @@
+export type { Platform } from "./platform";
+export { platformLabel } from "./platform";
 export type { TimeControlCategory, Game } from "./game";
+export { TIME_CONTROL_CATEGORIES, CADENCE_LABEL } from "./game";
 export type { Profile } from "./profile";
 export type { Side, MoveHabitCandidate } from "./move-habit";
 export type { StatsBucket, StatsSummary } from "./stats";

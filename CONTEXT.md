@@ -1,14 +1,26 @@
 # chess-analyst
 
-Solo tool that imports the chess.com game history of one or more `Profile`s — the user's own, and
+Solo tool that imports the game history of one or more `Profile`s from their chess `Platform` — the user's own, and
 those of friends whose play they want to study — and helps find where each can improve —
 which openings, which recurring positions — by combining engine evaluation and personal
 statistics, through an interactive board to navigate the history.
 
 ## Language
 
+**Platform**:
+The chess site a `Profile`'s account lives on and whose public API an `Import` fetches from —
+**chess.com** or **lichess.org**. It is an **attribute of the Profile**, fixed when the Profile is
+created, and never a parameter of an Import: there is no screen on which the Player chooses a
+source. A Platform is what makes two accounts of the same name two different Profiles, and it is
+**named on screen wherever an account is** — in the current-Profile banner, in the Profile list,
+and on the import screen, so the Player always knows which site they are about to fetch from.
+Platforms are **not interchangeable in what they answer**: the same domain concepts (`Game`,
+`Opening`, time control category) come back in each Platform's own shape and own vocabulary, and
+reconciling them is the translation `Import` owns.
+_Avoid_: Source, Provider, Site, Server (Lichess's own word for its backend)
+
 **Profile**:
-**One account on one chess platform** — the pair (platform, username), e.g. `Rdulieu` on
+**One account on one chess `Platform`** — the pair (platform, username), e.g. `Rdulieu` on
 chess.com. It is the **unit of partitioning**: every Game, and every aggregate derived from Games
 (`Move habit`s, `Weak opening`s, `Danger position`s, `Evaluation`s, the stats view), belongs to
 exactly one Profile, and **nothing is ever shared or merged across Profiles**. The tool holds
@@ -31,13 +43,44 @@ opposite from one to the other.
 _Avoid_: User, Me, Account, Owner
 
 **Game**:
-A complete chess.com match imported **under a `Profile`**, with its PGN, the opponent, the **side the
-Player played** (White or Black), the **result from the Player's side** (win, loss, or draw),
-the date, and the **time control category** (bullet, blitz, rapid, or daily — chess.com's own
-classification). Identified across imports by its chess.com game URL, which is unique and
-immutable **within its Profile** — the same match imported under two Profiles is two Games, each
+A match of **standard chess from the initial position**, played on a `Platform` and imported
+**under a `Profile`**, with its PGN, the
+opponent, the **side the Player played** (White or Black), the **result from the Player's side**
+(win, loss, or draw), the **date the `Platform` files it under**, and the
+**`Time control category`**. That date is deliberately not "the end" nor "the start" in the
+abstract: it is whichever instant the Platform itself buckets the match by — its end on chess.com,
+its start on Lichess. What matters is that each Platform stays **consistent with itself**, so a
+Game's date always falls inside the `Monthly import` that brought it in, and "I imported months X
+to Y" means "I have every Game dated X to Y". Only a correspondence game can straddle a month
+boundary at all, so this is the difference between a rare mismatch and a silently missing Game. Identified across imports by
+its **URL on its Platform** — one canonical URL per match, whichever way the Platform happens to
+spell it — which is unique and immutable **within its Profile** — the same match imported under two Profiles is two Games, each
 recorded from its own Player's side.
 _Avoid_: Match, Party
+
+**Time control category**:
+The pace a `Game` was played at, in **our own** five-value vocabulary — `bullet`, `blitz`,
+`rapid`, `classical`, `correspondence` — not a `Platform`'s. Each Platform's own classification is
+**translated into it at import**, and the translation is deliberately not one-to-one:
+- Lichess's `ultraBullet` becomes `bullet`: sub-30-second chess is the same thing we study under
+  bullet — reflexes — and no Platform-neutral question distinguishes them.
+- chess.com's `daily` and Lichess's `correspondence` are **the same concept under two words**, and
+  `correspondence` is the one the game itself uses, so it is the canonical name.
+- Lichess's `classical` gets its **own** value, because it has no honest home: folded into `rapid`
+  it would average a 10-minute game with a 60-minute one, folded into `correspondence` it would mix
+  real-time play with move-a-day play. A category exists to make an aggregate comparable; one that
+  merges incomparable paces defeats its own purpose.
+Games a Platform classifies outside these are not translated, they are **out of an Import's scope**
+and never become Games at all: a variant such as chess960, and equally a normal-rules game started
+from an arbitrary position (Lichess's `fromPosition`), which our FEN- and ECO-keyed aggregates all
+assume away. **Games against the computer are out of scope too**, for a different reason: the
+opponent is not an account, and every aggregate here asks a question about play against people.
+chess.com never exposes them at all, so importing Lichess's would make two Profiles silently
+incomparable. That is the line: a pace we lack a word for is worth a new word; a game that is not
+the game is worth nothing. A game that *was* the game but ended before it began — aborted, no
+moves — **is** imported, from either Platform alike, and lands in the `Other` opening bucket;
+dropping it on one Platform only would make two Profiles silently incomparable.
+_Avoid_: Time class (chess.com's field name), Perf / perfType (Lichess's), Cadence, Speed, Daily
 
 **Opening**:
 The named sequence of initial moves a game follows, **identified by its ECO code** and carrying
@@ -154,7 +197,7 @@ A Move the **player themselves** has played from a recurring Position, within th
 moves (40 Moves) of a Game — the core of the explorer. Positions are merged across Games by
 transposition — reaching the same position via a different move order still counts as the same
 Position. Shown with its frequency, its `Win rate`, and a breakdown of how many of those games fall into
-each time control category (bullet, blitz, rapid, daily) — the `Win rate` itself is computed
+each `Time control category` — the `Win rate` itself is computed
 across all time controls combined, not split by category. **Scoped by the side the player
 played** (White/Black): the explorer is opened for one side and aggregates only the player's
 Games on that side. The frequency (count) is always shown alongside the rate.
@@ -187,12 +230,13 @@ the Games still unanalyzed.
 _Avoid_: Analysis (too vague), Scan, Job, Batch
 
 **Import**:
-The act of fetching a `Profile`'s Games from its platform's public API. It is always **an
-operation on one Profile** — the account to fetch is the Profile's own, never something chosen at
-import time — and the Games it brings in belong to that Profile alone. Triggered
+The act of fetching a `Profile`'s Games from its `Platform`'s public API. It is always **an
+operation on one Profile** — the account *and* the Platform to fetch from are the Profile's own,
+neither ever chosen at import time, though the import screen **names** the Platform it will use —
+and the Games it brings in belong to that Profile alone. Triggered
 **manually** by the Player and **scoped** to a **contiguous range of months** (a first and a last
-month, each matching one chess.com monthly archive — a single month is simply a range of one) and
-a chosen set of **time control categories** (any subset of bullet, blitz, rapid, daily) — never
+month — a single month is simply a range of one) and
+a chosen set of **`Time control category`s** (any subset of the five) — never
 automatic, never implicitly all-history. The range is not capped: rebuilding a whole history in
 one Import is a legitimate use.
 **Incremental**: within the chosen scope, only Games not already retained are fetched and
@@ -203,10 +247,14 @@ it.
 _Avoid_: Sync, Fetch, Backfill
 
 **Monthly import**:
-One month's slice of an Import — the unit the Player is shown progress and outcome by. An Import
-covers its months **one at a time, in order**, and reports each as its own line: how many Games it
-brought in, how many were already retained, and whether chess.com could be reached for that month
-at all. A month that fails does **not** abort the Import: the remaining months are still covered,
+One month's slice of an Import — the unit the Player is shown progress and outcome by, and **our**
+unit rather than a `Platform`'s: the calendar month, in UTC (the reference `Game.date` already
+uses). chess.com happens to serve exactly that; a Platform that serves arbitrary date ranges is
+asked for a month's worth. The month is what makes progress countable and a failure local, so it
+holds until something needs finer or coarser slices — nothing in the domain forbids that later.
+An Import covers its months **one at a time, in order**, and reports each as its own line: how many Games it
+brought in, how many were already retained, and whether the `Platform` could be reached for that
+month at all. A month that fails does **not** abort the Import: the remaining months are still covered,
 and the failure is carried on that month's line rather than as a global verdict — an Import whose
 months mostly succeeded is not a failed Import. A month the Player was simply inactive in is
 reported the same way as any other, at zero, which is why the per-month lines exist at all: a gap

@@ -157,7 +157,7 @@ describe("fetchMoveHabits", () => {
         draw: 1,
         loss: 1,
         winRate: 0.5,
-        byCategory: { bullet: 0, blitz: 2, rapid: 1, daily: 0 },
+        byCategory: { bullet: 0, blitz: 2, rapid: 1, classical: 0, correspondence: 0 },
       },
     ];
     const fetchMock = vi.fn<(url: string | URL) => Promise<Response>>(

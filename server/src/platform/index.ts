@@ -1,0 +1,17 @@
+// Public surface of the Platform port (ADR-0016).
+export {
+  TIME_CONTROL_CATEGORIES,
+  platformLabel,
+  clientFor,
+  UnsupportedPlatformError,
+  type Platform,
+  type TimeControlCategory,
+  type FetchHooks,
+  type PlatformAccount,
+  type ImportedGame,
+  type MonthFetch,
+  type PlatformClient,
+  type PlatformRegistry,
+} from "./types";
+export { createHttpChessComClient } from "./chesscom/client";
+export { createHttpLichessClient } from "./lichess/client";

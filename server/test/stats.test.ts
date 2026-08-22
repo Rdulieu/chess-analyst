@@ -62,7 +62,14 @@ describe("getStats", () => {
     expect(byCategory.bullet).toMatchObject({ games: 1, win: 1, winRate: 1 });
     // Unplayed cadences are present at zero, with no rate.
     expect(byCategory.rapid).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
-    expect(byCategory.daily).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
+    expect(byCategory.classical).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
+    expect(byCategory.correspondence).toEqual({
+      games: 0,
+      win: 0,
+      draw: 0,
+      loss: 0,
+      winRate: null,
+    });
   });
 
   it("breaks the results down by the side the Player played", () => {

@@ -6,6 +6,7 @@ import { recordMoveHabits } from "../src/move-habits/precompute";
 import { seedMoveHabits } from "../src/move-habits/fixture";
 import { listCandidates } from "../src/move-habits/repository";
 import { seedProfile } from "./fixtures";
+import { gamePositions } from "../src/chess/positions";
 
 /** The 4-field FEN of the standard starting position (no move counters). */
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
@@ -160,5 +161,42 @@ describe("seedMoveHabits (fixture dataset)", () => {
 
     const e4 = listCandidates(db, owner, START, "white").find((c) => c.san === "e4")!;
     expect(e4.count).toBe(3);
+  });
+});
+
+/**
+ * An **aborted** game: real, sent by both Platforms, and kept on purpose so the
+ * corpus is the same kind of thing everywhere (CONTEXT.md, US-12/05). Its PGN
+ * carries headers, no move at all, and `*` as the result — which is exactly the
+ * shape a move-by-move walk must survive.
+ */
+describe("a Game with no moves", () => {
+  const ABORTED_PGN = [
+    '[Event "Rated blitz game"]',
+    '[White "someone"]',
+    '[Black "opponent"]',
+    '[Result "*"]',
+    "",
+    "*",
+  ].join("\n");
+
+  it("is walked without failing, and simply contributes no Move habit", () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: ABORTED_PGN });
+
+    expect(() => recordMoveHabits(db, game)).not.toThrow();
+
+    expect(db.select().from(moveHabits).all()).toEqual([]);
+    // Still marked done: nothing to compute is not the same as not yet computed,
+    // and a Game left unflagged would be walked again on every pass.
+    expect(
+      db.select({ computed: games.moveHabitsComputed }).from(games).where(eq(games.id, game.id)).get(),
+    ).toEqual({ computed: true });
+  });
+
+  it("has exactly one Position — the initial one — so an analysis pass has something honest to do", () => {
+    expect(gamePositions(ABORTED_PGN)).toEqual([
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    ]);
   });
 });

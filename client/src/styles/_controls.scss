@@ -126,6 +126,13 @@ form[aria-label="import"] {
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   align-items: start;
 
+  // Which site this Import will ask, and under which account: a sentence, not a
+  // field, so it spans the grid and reads before anything is chosen (US-12).
+  [data-part="platform"] {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
   // A set and an action are not fields: they take the whole width rather than
   // being squeezed into a field-sized column.
   fieldset,
@@ -137,4 +144,16 @@ form[aria-label="import"] {
   button[type="submit"] {
     justify-self: start;
   }
+}
+
+// An Import held by the Platform rather than working (a rate limit is an
+// instruction, not a failure). Said in words — the tint can never be the only
+// cue — and set apart from the progress line above it, because "waiting" and
+// "advancing" are two different states (US-12, US-13's rule).
+p[data-part="waiting"] {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  background: var(--tint-wait);
+  color: var(--tint-wait-ink);
 }

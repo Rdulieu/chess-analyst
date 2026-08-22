@@ -10,13 +10,23 @@ const emptyResult = {
   totalFetched: 2,
   imported: 2,
   alreadyPresent: 0,
-  byCategory: { bullet: 0, blitz: 2, rapid: 0, daily: 0 },
+  byCategory: { bullet: 0, blitz: 2, rapid: 0, classical: 0, correspondence: 0 },
   results: { win: 2, draw: 0, loss: 0 },
   months: [
     { month: { year: 2024, month: 1 }, imported: 2, alreadyPresent: 0 },
     { month: { year: 2024, month: 2 }, imported: 0, alreadyPresent: 0 },
     { month: { year: 2024, month: 3 }, imported: 0, alreadyPresent: 0 },
   ],
+};
+
+/** The `Profile` these tests import under — a chess.com account, as before. */
+const PROFILE = {
+  id: 7,
+  platform: "chesscom" as const,
+  username: "DudulSmash",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  games: 0,
+  analyzed: 0,
 };
 
 /** The current month as an <input type="month"> value, as the form defaults to it. */
@@ -44,7 +54,7 @@ function stubRelay(polls: unknown[], total = polls.length) {
 describe("ImportForm", () => {
   it("labels each field beside its own control, and marks one action as the primary one", async () => {
     stubRelay([]);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     // Each text field is a labelled control of its own, not a control buried in
     // the label's text — which is what lets the label sit above the field.
@@ -68,7 +78,7 @@ describe("ImportForm", () => {
     // The field's disappearance IS the guarantee: it was the only way one
     // account's Games could ever be imported under another's Profile (US-11).
     stubRelay([]);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await screen.findByLabelText(/^du$/i);
     expect(screen.queryByLabelText(/username|compte/i)).toBeNull();
@@ -76,7 +86,7 @@ describe("ImportForm", () => {
 
   it("offers a first and a last month, both defaulting to the current month", async () => {
     stubRelay([]);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     const from = await screen.findByLabelText(/^du$/i);
     const to = screen.getByLabelText(/^au$/i);
@@ -86,7 +96,7 @@ describe("ImportForm", () => {
 
   it("submits the range the Player chose and reports progress in months", async () => {
     const posted = stubRelay([{ running: false, total: 3, done: 3, result: emptyResult }], 3);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText(/^du$/i));
     await userEvent.type(screen.getByLabelText(/^du$/i), "2024-01");
@@ -120,7 +130,7 @@ describe("ImportForm", () => {
     const posted = stubRelay([{ running: false, total: 36, done: 36, result: emptyResult }], 36);
     const confirm = vi.fn((message: string) => Boolean(message));
     vi.stubGlobal("confirm", confirm);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await chooseRange("2021-01", "2023-12"); // 36 months
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
@@ -133,7 +143,7 @@ describe("ImportForm", () => {
   it("starts nothing and keeps the entry intact when the Player declines", async () => {
     const posted = stubRelay([]);
     vi.stubGlobal("confirm", vi.fn(() => false));
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await chooseRange("2021-01", "2023-12");
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
@@ -147,12 +157,67 @@ describe("ImportForm", () => {
     const posted = stubRelay([{ running: false, total: 24, done: 24, result: emptyResult }], 24);
     const confirm = vi.fn((message: string) => Boolean(message));
     vi.stubGlobal("confirm", confirm);
-    render(<ImportForm profileId={7} onImported={() => {}} />);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
 
     await chooseRange("2022-01", "2023-12"); // exactly 24 months
     await userEvent.click(screen.getByRole("button", { name: /import/i }));
 
     expect(confirm).not.toHaveBeenCalled();
     await waitFor(() => expect(posted).toHaveLength(1));
+  });
+
+  it("names the Platform it will fetch from, read off the Profile", async () => {
+    // Nobody should be one click away from importing from the wrong site: the
+    // form says which, and says it from the Profile rather than from fixed text.
+    stubRelay([]);
+    render(<ImportForm profile={{ ...PROFILE, platform: "lichess", username: "Metalyst" }} onImported={() => {}} />);
+
+    const text = screen.getByRole("form", { name: "import" }).textContent ?? "";
+    expect(text).toMatch(/lichess\.org/);
+    expect(text).toMatch(/Metalyst/);
+    expect(text).not.toMatch(/chess\.com/);
+  });
+
+  it("says the Import is waiting on the Platform, distinctly from progress and failure", async () => {
+    // A Platform can ask us to wait (a 429 is an instruction, not a failure). A
+    // minute of silence reads as a freeze, so the wait gets said — and it is not
+    // dressed as a failed month, which would be a different claim entirely.
+    //
+    // The stub holds the wait until this test has SEEN it, and only then lets the
+    // Import finish: nothing here depends on how fast the machine polls.
+    let released = false;
+    const held = {
+      running: true,
+      total: 2,
+      done: 0,
+      waiting: "lichess.org demande d'attendre.",
+      result: null,
+    };
+    const finished = { running: false, total: 2, done: 2, waiting: null, result: emptyResult };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, opts?: RequestInit) => {
+        if (url === "/api/import" && opts?.method === "POST") return json(held, 202);
+        if (url === "/api/import/status") return json(released ? finished : held);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
+
+    await user.click(screen.getByRole("button", { name: /^import$/i }));
+
+    const waiting = await screen.findByRole("status", { name: /attente de la plateforme/i });
+    expect(waiting.textContent).toMatch(/attendre/i);
+    // No month is presented as failed while the Import is merely held.
+    expect(screen.queryByText(/échec/i)).toBeNull();
+
+    // And the notice goes away once the Platform answers again: a stale one would
+    // claim the Import is still held when it has finished.
+    released = true;
+    await waitFor(
+      () => expect(screen.queryByRole("status", { name: /attente de la plateforme/i })).toBeNull(),
+      { timeout: 5000 },
+    );
   });
 });

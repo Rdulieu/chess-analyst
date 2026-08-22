@@ -1,18 +1,22 @@
 import type { Db } from "../src/db";
 import type { NewGame, UnownedGame } from "../src/db/schema";
 import { resolveProfile } from "../src/profiles/repository";
-import type { ChessComClient, ChessComGame } from "../src/chesscom";
+import type { ImportedGame, Platform, PlatformClient, PlatformRegistry } from "../src/platform";
+import type { ChessComGame } from "../src/platform/chesscom/payload";
 
 let urlSeq = 0;
 
 /**
  * How the fake answers `fetchPlayer`: `true` = known and spelled as typed,
- * `false` = unknown to chess.com, a string = known under THAT canonical
- * spelling, an `Error` = chess.com unreachable.
+ * `false` = unknown to the Platform, a string = known under THAT canonical
+ * spelling, an `Error` = the Platform is unreachable.
  */
 export type PlayerAnswer = boolean | string | Error;
 
-/** A chess.com game as the public API returns it, with sensible defaults. */
+/**
+ * A chess.com game as the public API returns it, with sensible defaults. Used
+ * only by the **adapter's** own tests — nothing above it sees this shape.
+ */
 export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
   return {
     url: `https://www.chess.com/game/live/${urlSeq++}`,
@@ -27,33 +31,84 @@ export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
 }
 
 /**
- * A ChessComClient stubbed with one archive per month, keyed `YYYY-MM` — an
- * Import now spans a range, so a fake that answers the same games whatever the
- * month cannot tell one month's contribution from another's. A month with no
- * entry answers empty, like chess.com's own 404-for-no-archive.
+ * A game as the **port** hands it over (ADR-0016): already in our vocabulary,
+ * with sensible defaults. This is what everything above the adapter fakes —
+ * a fake answering a chess.com payload would make the import suite know a
+ * Platform by name, which is exactly what the port exists to prevent.
+ */
+export function importedGame(over: Partial<ImportedGame> = {}): ImportedGame {
+  return {
+    gameUrl: `https://www.chess.com/game/live/${urlSeq++}`,
+    pgn: "1. e4 e5",
+    opponent: "opp",
+    playerColor: "white",
+    result: "win",
+    date: "2024-01-01",
+    timeControlCategory: "blitz",
+    eco: "other",
+    openingName: "Autre / non classée",
+    ...over,
+  };
+}
+
+/**
+ * What a fake month may answer: the games as such, a `MonthFetch` when a test
+ * needs `totalFetched` to differ from them, a **function of the username** when
+ * the answer is Player-relative (the adapter's job in real life), or an Error.
+ */
+export type FakeMonth =
+  | ImportedGame[]
+  | { totalFetched: number; games: ImportedGame[] }
+  | ((username: string) => ImportedGame[])
+  | Error;
+
+/**
+ * A `PlatformClient` stubbed with one month per key `YYYY-MM` — an Import spans
+ * a range, so a fake that answers the same games whatever the month cannot tell
+ * one month's contribution from another's. A month with no entry answers empty,
+ * like a Platform with no archive that month.
+ *
+ * `totalFetched` mirrors the games given, which is the nominal case; a test
+ * about "the Platform returned more than we kept" states it explicitly by
+ * passing a `MonthFetch` instead of an array.
  */
 export function fakeClient(
-  archives: Record<string, ChessComGame[] | Error>,
+  months: Record<string, FakeMonth>,
   player: PlayerAnswer = true,
-): ChessComClient {
+): PlatformClient {
   return {
     fetchPlayer: async (username) => {
-      // An Error stands for chess.com being unreachable — the case a caller must
-      // tell apart from "this account does not exist" (US-11).
+      // An Error stands for the Platform being unreachable — the case a caller
+      // must tell apart from "this account does not exist" (US-11).
       if (player instanceof Error) throw player;
       if (player === false) return null;
-      // A string is the CANONICAL spelling chess.com answers, whatever casing
+      // A string is the CANONICAL spelling the Platform answers, whatever casing
       // was asked for; `true` means "known, spelled as typed".
       return { username: typeof player === "string" ? player : username };
     },
-    fetchMonth: async (_username, year, month) => {
-      const archive = archives[`${year}-${String(month).padStart(2, "0")}`];
-      // An Error entry stands for a month chess.com could not answer for
+    fetchMonth: async (username, year, month) => {
+      const raw = months[`${year}-${String(month).padStart(2, "0")}`];
+      const entry = typeof raw === "function" ? raw(username) : raw;
+      // An Error entry stands for a month the Platform could not answer for
       // (unreachable, 5xx, rate-limited) — the failure an Import must survive.
-      if (archive instanceof Error) throw archive;
-      return archive ?? [];
+      if (entry instanceof Error) throw entry;
+      if (entry === undefined) return { totalFetched: 0, games: [] };
+      if (Array.isArray(entry)) return { totalFetched: entry.length, games: entry };
+      return entry;
     },
   };
+}
+
+/**
+ * The registry `createApp` is wired with: one adapter per Platform (ADR-0016).
+ * Tests that only ever import from chess.com name that Platform alone, so a
+ * Profile on another one fails loudly rather than silently fetching elsewhere.
+ */
+export function fakeRegistry(
+  months: Record<string, FakeMonth> = {},
+  player: PlayerAnswer = true,
+): PlatformRegistry {
+  return { chesscom: fakeClient(months, player) };
 }
 
 /**
@@ -92,8 +147,12 @@ export const MORPHY_GAME: UnownedGame = {
  * The `Profile` a test's Games belong to — every Game needs one (ADR-0014), and
  * most tests only need *a* Player, not a particular one.
  */
-export function seedProfile(db: Db, username = "DudulSmash"): number {
-  return resolveProfile(db, "chesscom", username).profile.id;
+export function seedProfile(
+  db: Db,
+  username = "DudulSmash",
+  platform: Platform = "chesscom",
+): number {
+  return resolveProfile(db, platform, username).profile.id;
 }
 
 /** The Opera Game, filed under a Profile. */

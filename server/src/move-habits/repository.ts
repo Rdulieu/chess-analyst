@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { moveHabits } from "../db/schema";
-import type { TimeControlCategory } from "../chesscom";
+import type { TimeControlCategory } from "../platform";
 
 /** A candidate Move from a Position (for one side), with its Move habit stats. */
 export interface MoveHabitCandidate {
@@ -36,11 +36,7 @@ export function listCandidates(
     .select()
     .from(moveHabits)
     .where(
-      and(
-        eq(moveHabits.profileId, profileId),
-        eq(moveHabits.fen, fen),
-        eq(moveHabits.side, side),
-      ),
+      and(eq(moveHabits.profileId, profileId), eq(moveHabits.fen, fen), eq(moveHabits.side, side)),
     )
     .all()
     .map((r) => ({
@@ -50,7 +46,13 @@ export function listCandidates(
       draw: r.draw,
       loss: r.loss,
       winRate: r.count === 0 ? 0 : (r.win + 0.5 * r.draw) / r.count,
-      byCategory: { bullet: r.bullet, blitz: r.blitz, rapid: r.rapid, daily: r.daily },
+      byCategory: {
+        bullet: r.bullet,
+        blitz: r.blitz,
+        rapid: r.rapid,
+        classical: r.classical,
+        correspondence: r.correspondence,
+      },
     }))
     .sort((a, b) => b.count - a.count);
 }
