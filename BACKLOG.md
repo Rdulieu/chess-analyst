@@ -4,8 +4,10 @@
 
 ## Doing
 
+## In review
+
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
-  > **En cours d'implémentation** (tranche 01). Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
+  > **Livrée**, en attente du merge humain (PR #52). Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
   > modelé sur chess.com** — `fetchMonth(username, year, month)` (archives mensuelles),
   > `time_class`, `rules` pour écarter les variantes, codes de résultat maison, et l'`Opening` est
@@ -109,9 +111,14 @@
   >   un compte) ou choisi à chaque import ? Voir la dépendance ci-dessus.
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
+  >
+  > **En review** (2026-08-22) — PR #52 vers `develop` : https://github.com/Rdulieu/chess-analyst/pull/52
+  > Suite HP **verte** (path 0 + 3/3), zéro finding bloquant. `Metalyst` (lichess.org) rejoint
+  > path 0 sur ses 71 mois réels — 403 récupérées, **351** importées, 38 `classical`, 37
+  > `correspondence` — et HP-01 gagne une étape qui **bascule de plateforme** : la suite reste à
+  > trois HP. Limite assumée : pas de partie `ultraBullet` ni abandonnée sur ce compte, ces deux
+  > règles restent sur fixtures.
 
-
-## In review
 
 ## Done
 
