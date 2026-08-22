@@ -1,8 +1,10 @@
 import type { GameRecap } from "../../types";
 
-/** A chances figure, in points, with at most one decimal — enough to add up on
- *  screen, not so much as to claim a precision the heuristics do not have. */
-const points = (value: number) => `${Math.round(value * 10) / 10} %`;
+/** A chances figure, in points, always to one decimal — enough to add up on
+ *  screen, not so much as to claim a precision the heuristics do not have.
+ *  Always, so three figures on one line read as one precision rather than as
+ *  three. */
+const points = (value: number) => `${value.toFixed(1)} %`;
 
 /**
  * What this Game **contributes** to the analysis (ADR-0017), read at the **head
@@ -19,8 +21,24 @@ const points = (value: number) => `${Math.round(value * 10) / 10} %`;
  * Game and held against nobody — and two correct summaries disagreeing side by
  * side read as a bug. So this states both, **and the reason for the gap**.
  */
+/** One decimal, as a number — so the parts can be added before being printed. */
+const round = (value: number) => Math.round(value * 10) / 10;
+
 export function GameRecapReadout({ recap }: { recap: GameRecap }) {
   const gap = recap.flaggedMoves - recap.countedErrors;
+  /**
+   * The two parts are rounded, and the residual is then the **difference of the
+   * rounded parts** — not a third independent rounding of the exact drift.
+   *
+   * The model is exact (`flaggedLoss + drift === chancesLost`), but rounding the
+   * three figures separately can leave the sum on screen off by 0.1, and adding
+   * the two parts back to the total is precisely what this panel invites the
+   * Player to do. A recap whose one checkable claim fails to check is worse than
+   * one decimal of drift.
+   */
+  const lost = round(recap.chancesLost);
+  const flagged = round(recap.flaggedLoss);
+  const drift = round(lost - flagged);
 
   return (
     <section aria-labelledby="game-recap-heading" className="card" data-part="recap">
@@ -45,9 +63,9 @@ export function GameRecapReadout({ recap }: { recap: GameRecap }) {
         )}
       </p>
       <p>
-        Chances perdues : <strong>{points(recap.chancesLost)}</strong> — dont{" "}
-        {points(recap.flaggedLoss)} sur vos erreurs signalées et{" "}
-        <strong>{points(recap.drift)}</strong> de dérive (ce qu'aucune erreur signalée n'explique).
+        Chances perdues : <strong>{points(lost)}</strong> — dont {points(flagged)} sur vos erreurs
+        signalées et <strong>{points(drift)}</strong> de dérive (ce qu'aucune erreur signalée
+        n'explique).
       </p>
       <p data-part="regime">
         {recap.regime

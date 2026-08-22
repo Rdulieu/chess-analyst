@@ -91,3 +91,32 @@ describe("The Game's recap — what it states", () => {
     expect(text()).toMatch(/0/);
   });
 });
+
+describe("The Game's recap — the figures add up ON SCREEN", () => {
+  it("shows a residual that is the difference of the figures shown, not a third rounding", () => {
+    // Real values from Game 51: rounded independently they print 60.6 = 28.4 +
+    // 32.3, which adds to 60.7. The model is exact; only the display lied — and
+    // adding the two parts back is exactly what this panel invites.
+    render(
+      <GameRecapReadout
+        recap={{
+          ...RECAP,
+          chancesLost: 60.610029825,
+          flaggedLoss: 28.351291273,
+          drift: 32.258738552,
+        }}
+      />,
+    );
+
+    const shown = text().match(/(\d+\.\d)\s*%/g)!.map((figure) => parseFloat(figure));
+    const [total, flagged, drift] = shown;
+    expect(flagged + drift).toBeCloseTo(total, 10);
+  });
+
+  it("prints every chances figure to the same precision", () => {
+    render(<GameRecapReadout recap={{ ...RECAP, chancesLost: 191.2, flaggedLoss: 144, drift: 47.2 }} />);
+
+    // "144 %" beside "47.2 %" reads as a different precision, not the same one.
+    expect(text()).toContain("144.0 %");
+  });
+});
