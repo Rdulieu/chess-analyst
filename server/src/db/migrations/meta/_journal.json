@@ -85,6 +85,13 @@
       "when": 1787007016706,
       "tag": "0011_five_time_control_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787379552598,
+      "tag": "0012_best_line_and_search_regime",
+      "breakpoints": true
     }
   ]
 }

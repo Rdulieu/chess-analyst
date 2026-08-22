@@ -5,6 +5,8 @@ import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
 import { EvaluationGraph } from "./EvaluationGraph";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
+import { MoveRecord } from "../features/analysis/MoveRecord";
+import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { MoveAnnotation } from "../types";
@@ -55,11 +57,59 @@ export function Board({
 }) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
   const [index, setIndex] = useState(0);
+  /**
+   * A Position shown **temporarily**, while the Player points at (or focuses) a
+   * ply inside a `Best line`. Deliberately a second, separate piece of state:
+   * `index` stays the single source of where the Player *is*, so the readout,
+   * the balance bar, the square tint and the curve's cursor all keep naming the
+   * Move actually being reviewed while the board shows the previewed Position.
+   */
+  const [preview, setPreview] = useState<{ focus: string | null; hover: string | null }>({
+    focus: null,
+    hover: null,
+  });
 
-  const position = index === 0 ? startFen : plies[index - 1].fen;
+  const navigated = index === 0 ? startFen : plies[index - 1].fen;
+  // The focus wins over the pointer: the pointer is the same control's mouse
+  // affordance, and a Player reading the line by keyboard must not lose the
+  // preview because the mouse drifted off the button that still holds focus.
+  const position = preview.focus ?? preview.hover ?? navigated;
   const currentMove = index === 0 ? "Start" : plies[index - 1].san;
   const atStart = index === 0;
   const atEnd = index === plies.length;
+
+  /**
+   * Moves the Player. Navigating also ends any preview: a previewed Position
+   * belongs to the line of the Move that was being read, and would otherwise
+   * outlive it — the board would show one Move's variation while everything
+   * beside it named another.
+   */
+  const goTo = (next: number) => {
+    setIndex(next);
+    setPreview({ focus: null, hover: null });
+  };
+
+  /** Reports one channel's preview without disturbing the other's. */
+  const previewVia = (fen: string | null, via: "focus" | "hover") =>
+    setPreview((current) => ({ ...current, [via]: fen }));
+
+  /**
+   * The reviewed Move's record — computed once, read twice: the panel names its
+   * lines, the board draws their first Move. Two derivations of "the record"
+   * could drift apart; one cannot.
+   */
+  const record = useMemo(
+    () =>
+      annotations
+        ? reviewedMove(
+            annotations,
+            index,
+            index > 1 ? plies[index - 2].fen : startFen,
+            navigated,
+          )
+        : null,
+    [annotations, index, plies, startFen, navigated],
+  );
 
   const currentAnnotation = annotations?.[index];
   const squareStyles =
@@ -75,6 +125,19 @@ export function Board({
           },
         }
       : undefined;
+
+  /**
+   * The board's arrows for the record: the Move that should have been played,
+   * and the opponent's best reply to the one that was. Only the **first** ply of
+   * each line — an arrow per ply would draw the whole line at once and say
+   * nothing about its order.
+   */
+  const recordArrows = record
+    ? [
+        arrowFor(record.shouldHavePlayed[0], "var(--arrow-best-line)"),
+        arrowFor(record.refutation[0], "var(--arrow-refutation)"),
+      ].filter((arrow): arrow is BoardArrow => arrow !== null)
+    : [];
 
   return (
     <div>
@@ -103,6 +166,11 @@ export function Board({
               allowDragging: false,
               squareStyles,
               showAnimations: false,
+              // The first Move of each of the record's lines, drawn: turning a
+              // notation back into a Position is precisely the skill the Player
+              // has not acquired yet. Each line is also named in the panel's
+              // text, so an arrow's colour is never the only carrier.
+              arrows: recordArrows,
             }}
           />
           {/*
@@ -125,10 +193,10 @@ export function Board({
           */}
           {controls}
           <div data-part="stepper">
-            <button type="button" onClick={() => setIndex((i) => i - 1)} disabled={atStart}>
+            <button type="button" onClick={() => goTo(index - 1)} disabled={atStart}>
               Previous
             </button>
-            <button type="button" onClick={() => setIndex((i) => i + 1)} disabled={atEnd}>
+            <button type="button" onClick={() => goTo(index + 1)} disabled={atEnd}>
               Next
             </button>
           </div>
@@ -162,7 +230,7 @@ export function Board({
                   <button
                     type="button"
                     aria-current={index === i + 1 ? "true" : undefined}
-                    onClick={() => setIndex(i + 1)}
+                    onClick={() => goTo(i + 1)}
                   >
                     {ply.san}
                   </button>
@@ -184,6 +252,27 @@ export function Board({
           </ol>
         </div>
       </div>
+      {/*
+        The reviewed Move's record, **below** the row and outside both panes: its
+        height is whatever its lines need, and everything stacked above the
+        diagram is height the diagram does not get (US-14's constraint, held here
+        by the document order). Governed by the same annotations toggle as the
+        rest of what the engine found — the `Review mode` of slice 02 is what
+        will replace that toggle with three levels.
+      */}
+      {annotations && <MoveRecord record={record} onPreview={previewVia} />}
     </div>
   );
+}
+
+/** One board arrow, as `react-chessboard` takes them. */
+interface BoardArrow {
+  startSquare: string;
+  endSquare: string;
+  color: string;
+}
+
+/** The arrow for a line's first ply, or `null` for a line with no ply to draw. */
+function arrowFor(ply: LinePly | undefined, color: string): BoardArrow | null {
+  return ply ? { startSquare: ply.from, endSquare: ply.to, color } : null;
 }

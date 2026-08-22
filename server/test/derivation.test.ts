@@ -1,13 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { gameAnnotations, gamePlies } from "../src/analysis/derivation";
 import { gamePositions } from "../src/chess/positions";
+import { fixtureBestLine } from "../src/engine/fixture";
 
 /** Stamps each stored `Evaluation` with the FEN of the Position it is of — what
  *  the `Analysis pass` writes (ADR-0012). Irrelevant to the annotations
  *  themselves, but a stored row always carries one. */
 function stored<T extends { ply: number }>(pgn: string, evals: T[]) {
   const fens = gamePositions(pgn);
-  return evals.map((e) => ({ ...e, fen: fens[e.ply] }));
+  // A stored Evaluation always carries its `Best line` (ADR-0016), and the
+  // fixture's is playable from the Position it belongs to.
+  return evals.map((e) => ({ ...e, fen: fens[e.ply], pv: fixtureBestLine(fens[e.ply]).join(" ") }));
 }
 
 describe("gamePlies", () => {
@@ -15,8 +18,8 @@ describe("gamePlies", () => {
     // Deliberately not the FENs of any real Game: if the derivation replayed a
     // PGN it would produce something else entirely (ADR-0012).
     const evals = [
-      { ply: 1, fen: "second", cp: 10, mate: null },
-      { ply: 0, fen: "first", cp: 25, mate: null },
+      { ply: 1, fen: "second", cp: 10, mate: null, pv: "" },
+      { ply: 0, fen: "first", cp: 25, mate: null, pv: "" },
     ];
 
     const plies = gamePlies(evals);

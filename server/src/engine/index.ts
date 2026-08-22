@@ -3,8 +3,8 @@ import { createFixtureEngine } from "./fixture";
 import { createNativeEngine } from "./native";
 import { createWasmEngine } from "./wasm";
 
-export type { Engine, EngineEvaluation } from "./types";
-export { ANALYSIS_DEPTH } from "./types";
+export type { Engine, EngineEvaluation, SearchRegime } from "./types";
+export { ANALYSIS_DEPTH, ANALYSIS_LINES, ANALYSIS_REGIME } from "./types";
 export { createFixtureEngine } from "./fixture";
 
 /**

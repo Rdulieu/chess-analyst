@@ -1,4 +1,9 @@
-Status: ready-for-agent
+Status: `done` — merged into `integration/US-15a-per-game-analysis` (build + tests + FP 7/7 verts,
+puis re-vérification 4/4 après correction de trois findings, 2026-08-22). **Mesure MultiPV rendue :
+2,1× (> 2×), décision du demandeur = on garde MultiPV=2** ; protocole et les deux runs dans
+ADR-0016. La suppression des `Evaluation`s héritées a été jouée sur des copies uniquement ; la base
+réelle est sauvegardée (`server/chess-analyst.db.pre-US15a-01.20260822-090342.bak`) et sera migrée au
+prochain lancement.
 
 ## Parent
 

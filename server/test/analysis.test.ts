@@ -7,6 +7,7 @@ import { createAnalysisJob } from "../src/analysis/job";
 import { createFixtureEngine } from "../src/engine/fixture";
 import { gamePositions } from "../src/chess/positions";
 import type { Engine } from "../src/engine/types";
+import { ANALYSIS_REGIME } from "../src/engine/types";
 import { seedProfile } from "./fixtures";
 
 function tempDb() {
@@ -35,12 +36,58 @@ function seedGame(db: ReturnType<typeof tempDb>, game: Partial<NewGame> & Pick<N
 const evalsOf = (db: ReturnType<typeof tempDb>, gameId: number) =>
   db.select().from(evaluations).where(eq(evaluations.gameId, gameId)).all();
 
+/**
+ * An `Analysis pass` for `gameIds`, under a `Search regime` (CONTEXT.md).
+ * Every Evaluation is written **by** a pass, so a pass is what the analysis is
+ * handed — and the regime it ran under is the pass's own property.
+ */
+function seedPass(
+  db: ReturnType<typeof tempDb>,
+  gameIds: number[],
+  regime: { depth: number; lines: number } = ANALYSIS_REGIME,
+) {
+  return db
+    .insert(analysisPasses)
+    .values({
+      profileId: seedProfile(db),
+      gameIds,
+      total: 0,
+      startedAt: "2026-01-01T00:00:00Z",
+      // Closed: an open pass is one a job would reconcile as `interrupted`, and
+      // these passes exist to own Evaluations, not to be reported on.
+      endedAt: "2026-01-01T00:01:00Z",
+      outcome: "completed",
+      ...regime,
+    })
+    .returning()
+    .get();
+}
+
 describe("analyzeGame", () => {
+  it("stores the Best line, the second line's score, and the pass that wrote them", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+    const pass = seedPass(db, [game.id]);
+
+    await analyzeGame(db, createFixtureEngine(), game, pass);
+
+    const rows = evalsOf(db, game.id).sort((a, b) => a.ply - b.ply);
+    // The line is stored **whole**, in UCI, its head being the best move
+    // (ADR-0016) — the display cap is the client's business, never the store's.
+    expect(rows[0].pv.split(" ").length).toBeGreaterThan(1);
+    expect(rows.every((r) => r.pv.length > 0)).toBe(true);
+    // The alternative's score, and never its line.
+    expect(rows.every((r) => typeof r.cp2 === "number")).toBe(true);
+    // The provenance that was missing: an Evaluation can be read back to the
+    // `Search regime` that produced it.
+    expect(rows.every((r) => r.passId === pass.id)).toBe(true);
+  });
+
   it("stores one Evaluation per Position — the initial Position plus one after each half-move", async () => {
     const db = tempDb();
     const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" }); // 3 half-moves → 4 Positions
 
-    await analyzeGame(db, createFixtureEngine(), game);
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id]));
 
     const rows = evalsOf(db, game.id);
     expect(rows).toHaveLength(4);
@@ -52,7 +99,7 @@ describe("analyzeGame", () => {
     const db = tempDb();
     const game = seedGame(db, { pgn: "1. e4 e5" });
 
-    await analyzeGame(db, createFixtureEngine(), game);
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id]));
 
     // The pass computes the FEN anyway to ask the engine; storing it is what
     // spares every read path a full PGN replay (ADR-0012).
@@ -64,7 +111,7 @@ describe("analyzeGame", () => {
     const db = tempDb();
     const game = seedGame(db, { pgn: "1. e4 e5" });
 
-    await analyzeGame(db, createFixtureEngine(), game);
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id]));
 
     expect(db.select().from(games).where(eq(games.id, game.id)).get()!.analyzed).toBe(true);
   });
@@ -73,10 +120,53 @@ describe("analyzeGame", () => {
     const db = tempDb();
     const game = seedGame(db, { pgn: "1. e4 e5" }); // 2 half-moves → 3 Positions
 
-    await analyzeGame(db, createFixtureEngine(), game);
-    await analyzeGame(db, createFixtureEngine(), game); // second run must be a no-op
+    const pass = seedPass(db, [game.id]);
+    await analyzeGame(db, createFixtureEngine(), game, pass);
+    await analyzeGame(db, createFixtureEngine(), game, pass); // second run must be a no-op
 
     expect(evalsOf(db, game.id)).toHaveLength(3);
+  });
+
+  it("re-evaluates a Game whole when its stored Evaluations came from another Search regime", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" }); // 4 Positions
+
+    // Analyzed at depth 8, one line: a shallower regime than the one this app
+    // runs today.
+    const shallow = seedPass(db, [game.id], { depth: 8, lines: 1 });
+    await analyzeGame(db, createFixtureEngine(), game, shallow);
+    expect(evalsOf(db, game.id)).toHaveLength(4);
+
+    // Resuming would leave nothing to do; the regime differs, so the whole Game
+    // is re-evaluated instead. A `Drift` figure is a sum over every ply, so one
+    // Game must never mix two depths inside a single number.
+    let evaluated = 0;
+    const counting: Engine = {
+      async evaluate(fen, depth) {
+        evaluated++;
+        return createFixtureEngine().evaluate(fen, depth);
+      },
+    };
+    const pass = seedPass(db, [game.id]);
+    await analyzeGame(db, counting, game, pass);
+
+    expect(evaluated).toBe(4);
+    const rows = evalsOf(db, game.id);
+    expect(rows).toHaveLength(4); // replaced, not doubled
+    expect(rows.every((r) => r.passId === pass.id)).toBe(true);
+  });
+
+  it("re-analyzes an already-analyzed Game under a new regime — the flag no longer short-circuits the comparison", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id], { depth: 8, lines: 1 }));
+    // The Game is flagged analyzed, which used to end the story right there.
+    expect(db.select().from(games).where(eq(games.id, game.id)).get()!.analyzed).toBe(true);
+
+    const pass = seedPass(db, [game.id]);
+    await analyzeGame(db, createFixtureEngine(), game, pass);
+
+    expect(evalsOf(db, game.id).every((r) => r.passId === pass.id)).toBe(true);
   });
 
   it("resumes a Game left half-evaluated, without recomputing what is already stored", async () => {
@@ -92,7 +182,8 @@ describe("analyzeGame", () => {
         return createFixtureEngine().evaluate(fen, depth);
       },
     };
-    await analyzeGame(db, dying, game).catch(() => {});
+    const pass = seedPass(db, [game.id]);
+    await analyzeGame(db, dying, game, pass).catch(() => {});
     expect(evalsOf(db, game.id)).toHaveLength(2);
 
     // The next pass must pick up at the third Position, not collide on the first.
@@ -103,7 +194,8 @@ describe("analyzeGame", () => {
         return createFixtureEngine().evaluate(fen, depth);
       },
     };
-    await analyzeGame(db, counting, game);
+    // The same regime, so the resumed pass continues where the dead one stopped.
+    await analyzeGame(db, counting, game, seedPass(db, [game.id]));
 
     expect(reEvaluated).toBe(2); // only the two missing Positions
     expect(evalsOf(db, game.id)).toHaveLength(4);
@@ -161,7 +253,7 @@ describe("analysis job", () => {
     const db = tempDb();
     const already = seedGame(db, { pgn: "1. e4 e5" });
     const pending = seedGame(db, { pgn: "1. d4 d5" });
-    await analyzeGame(db, createFixtureEngine(), already); // this one must be skipped
+    await analyzeGame(db, createFixtureEngine(), already, seedPass(db, [already.id])); // skipped
 
     const job = createAnalysisJob(db, createFixtureEngine());
     const started = job.start(SOLE_PROFILE, [already.id, pending.id]);
@@ -233,6 +325,34 @@ describe("analysis job", () => {
     expect(engineUsed).toBe(false); // a dead pass is never auto-resumed
   });
 
+  it("covers a Game analyzed under another Search regime, instead of filtering it out as done", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" }); // 3 Positions
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id], { depth: 8, lines: 1 }));
+
+    const job = createAnalysisJob(db, createFixtureEngine());
+    const started = job.start(SOLE_PROFILE, [game.id]);
+
+    // The `analyzed` flag used to be the filter, ahead of anything that could
+    // look at the regime — so a Game analyzed at another depth could never be
+    // re-analyzed at all.
+    expect(started).toMatchObject({ started: true, total: 3 });
+    await job.idle();
+    expect(job.status(SOLE_PROFILE)).toMatchObject({ done: 3, total: 3, outcome: "completed" });
+    expect(evalsOf(db, game.id)).toHaveLength(3);
+  });
+
+  it("still skips a Game already analyzed under the regime it is about to run", async () => {
+    const db = tempDb();
+    const game = seedGame(db, { pgn: "1. e4 e5" });
+    await analyzeGame(db, createFixtureEngine(), game, seedPass(db, [game.id]));
+
+    // Same regime: nothing to redo, and no engine time spent twice.
+    expect(createAnalysisJob(db, createFixtureEngine()).start(SOLE_PROFILE, [game.id])).toMatchObject({
+      started: false,
+    });
+  });
+
   it("is single-flighted — a second start while one is running is ignored", async () => {
     const db = tempDb();
     const first = seedGame(db, { pgn: "1. e4 e5" });
@@ -246,19 +366,23 @@ describe("analysis job", () => {
     expect(db.select().from(games).where(eq(games.id, other.id)).get()!.analyzed).toBe(false);
   });
 
-  it("reports nothing to do (total 0, not running) when every given Game is already analyzed", async () => {
+  it("opens no pass when every given Game is already analyzed, and keeps reporting the last real one", async () => {
     const db = tempDb();
-    const game = seedGame(db, { pgn: "1. e4 e5" });
-    await analyzeGame(db, createFixtureEngine(), game);
-
+    const game = seedGame(db, { pgn: "1. e4 e5" }); // 2 half-moves → 3 Positions
     const job = createAnalysisJob(db, createFixtureEngine());
+    job.start(SOLE_PROFILE, [game.id]);
+    await job.idle();
+
+    // Nothing left to do: no pass is opened — and the pass the Player actually
+    // ran is still what their screen reports. An empty pass is not a pass, and
+    // must not overwrite the one before it with a zeroed readout.
     expect(job.start(SOLE_PROFILE, [game.id])).toEqual({
       running: false,
-      total: 0,
-      done: 0,
-      games: 0,
+      total: 3,
+      done: 3,
+      games: 1,
       acknowledged: false,
-      outcome: null,
+      outcome: "completed",
       error: null,
       started: false,
     });
