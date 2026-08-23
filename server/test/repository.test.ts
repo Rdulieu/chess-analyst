@@ -40,6 +40,60 @@ describe("game repository", () => {
     expect(typeof all[0].id).toBe("number");
   });
 
+  it("lists a Profile's Games most recent first", () => {
+    const { db } = tempDb();
+    const profileId = seedProfile(db);
+    // Inserted in no particular order, so passing cannot be an accident of
+    // insertion order: the middle date is stored last.
+    for (const date of ["2026-01-15", "2026-03-20", "2026-02-10"]) {
+      db.insert(games)
+        .values({
+          profileId,
+          gameUrl: `https://www.chess.com/game/live/d-${date}`,
+          pgn: "1. e4 e5",
+          opponent: "Alice",
+          playerColor: "white",
+          result: "win",
+          date,
+          timeControlCategory: "blitz",
+        })
+        .run();
+    }
+
+    expect(listGames(db, profileId).map((g) => g.date)).toEqual([
+      "2026-03-20",
+      "2026-02-10",
+      "2026-01-15",
+    ]);
+  });
+
+  it("orders Games played the same day by the most recently retained", () => {
+    const { db } = tempDb();
+    const profileId = seedProfile(db);
+    // The `date` column is a day with no clock, so several Games a day is a real
+    // tie. The order they were retained in is the only chronological signal
+    // left, so the last one imported reads first.
+    const ids = ["a", "b", "c"].map(
+      (tag) =>
+        db
+          .insert(games)
+          .values({
+            profileId,
+            gameUrl: `https://www.chess.com/game/live/tie-${tag}`,
+            pgn: "1. e4 e5",
+            opponent: tag,
+            playerColor: "white",
+            result: "win",
+            date: "2026-04-01",
+            timeControlCategory: "blitz",
+          })
+          .returning()
+          .get().id,
+    );
+
+    expect(listGames(db, profileId).map((g) => g.id)).toEqual([...ids].reverse());
+  });
+
   it("getGame returns the Game by id, or undefined when it does not exist", () => {
     const { db } = tempDb();
     const inserted = db

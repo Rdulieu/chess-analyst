@@ -1,9 +1,8 @@
 import { gameHeader } from "./gameHeader";
+import { RESULT_LABEL } from "../../types";
 import type { Game } from "../../types";
 
 const COLOR_LABEL = { white: "Blancs", black: "Noirs" } as const;
-
-const RESULT_LABEL = { win: "Victoire", loss: "Défaite", draw: "Nulle" } as const;
 
 /**
  * States what Game is on screen, above its board (US-10a): both players with

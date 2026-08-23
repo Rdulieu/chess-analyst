@@ -128,9 +128,14 @@ tr[data-weak="true"] > * {
 }
 
 // The "analysée" badge: a bordered pill, its checkmark and its word inside the
-// border. In a list of eighty Games the pill is what the eye catches, but the
+// border. In a table of eighty Games the pill is what the eye catches, but the
 // checkmark and the word are what the meaning rests on.
-[data-part="state"] > [aria-label="analysée"] {
+//
+// Selected by its OWN label and not by the cell around it: the badge moved from
+// a list row's `state` part to an `État` cell, and a selector naming its
+// container silently stopped matching — jsdom does not load this sheet, so no
+// test said so. Its accessible name is the one thing that did not change.
+[aria-label="analysée"] {
   display: inline-block;
   background: var(--tint-ok);
   color: var(--tint-ok-ink);

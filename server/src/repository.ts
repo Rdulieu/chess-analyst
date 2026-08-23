@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "./db";
 import { games, settings, type Game } from "./db/schema";
 
@@ -21,9 +21,25 @@ export function setPlayerUsername(db: Db, username: string): void {
  * The Games of **one `Profile`** (ADR-0014). There is deliberately no way to
  * ask for "every Game": a list spanning two Profiles would be one player's
  * history with another's mixed in, and nothing in the rows would say so.
+ *
+ * **Most recent first**, and the order belongs HERE rather than to a screen: the
+ * Player thinks of a history as running backwards from today, so that is a
+ * property of the Game list itself, not a way of laying one out. Every consumer
+ * of the list inherits it without asking.
+ *
+ * `date` is an ISO day (`YYYY-MM-DD`), so a lexicographic sort IS the
+ * chronological one — no parsing, and the index on the column can serve it. The
+ * day carries no time, so several Games a day are a real tie; `id` breaks it,
+ * the most recently retained first, which is the only chronological signal left
+ * once the clock is gone.
  */
 export function listGames(db: Db, profileId: number): Game[] {
-  return db.select().from(games).where(eq(games.profileId, profileId)).all();
+  return db
+    .select()
+    .from(games)
+    .where(eq(games.profileId, profileId))
+    .orderBy(desc(games.date), desc(games.id))
+    .all();
 }
 
 /** A single Game's full detail, or undefined when no Game has that id. */
