@@ -26,6 +26,29 @@ const noop = () => {};
 
 describe("GameList", () => {
 
+  it("lets the table scroll inside its own container, never the page", () => {
+    render(
+      <GameList
+        games={[game({ id: 1 })]}
+        onSelect={noop}
+        selectedIds={new Set()}
+        onToggleSelect={noop}
+      />,
+    );
+
+    // Six columns of `nowrap` cells outgrow a narrow content column, and when
+    // they do it must be the CONTAINER that scrolls. Left to the page, the whole
+    // document scrolled sideways at 900px and the table overhung its column by
+    // 130px at 1440px — measured on the running app, invisible to jsdom.
+    //
+    // The container wraps the table HERE and not in the page, unlike /stats and
+    // /openings whose tables are built inline in their page: this table belongs
+    // to the component, so the guarantee travels with it and no future caller
+    // can forget it.
+    const table = screen.getByRole("table", { name: /parties/i });
+    expect(table.parentElement?.dataset.scroll).toBe("x");
+  });
+
   it("is a table whose header row names the columns", () => {
     render(
       <GameList

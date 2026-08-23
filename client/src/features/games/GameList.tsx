@@ -23,50 +23,61 @@ export function GameList({
   onToggleSelect: (id: number) => void;
 }) {
   return (
-    <table aria-label="parties">
-      <thead>
-        <tr>
-          {/* Unnamed on purpose: every checkbox below already says which Game it
-              selects, so a header word here would only repeat it. */}
-          <th scope="col" />
-          <th scope="col">Date</th>
-          <th scope="col">Adversaire</th>
-          <th scope="col">Résultat</th>
-          <th scope="col">Cadence</th>
-          <th scope="col">État</th>
-        </tr>
-      </thead>
-      <tbody>
-        {games.map((g) => (
-          <tr key={g.id}>
-            <td>
-              <input
-                type="checkbox"
-                aria-label={`sélectionner la partie vs ${g.opponent}`}
-                checked={selectedIds.has(g.id)}
-                onChange={() => onToggleSelect(g.id)}
-              />
-            </td>
-            <td>{g.date}</td>
-            <td>
-              <button type="button" onClick={() => onSelect(g)}>
-                {g.opponent}
-              </button>
-            </td>
-            <td>{RESULT_LABEL[g.result]}</td>
-            <td>{CADENCE_LABEL[g.timeControlCategory]}</td>
-            <td>
-              {g.analyzed && (
-                // A bordered pill rather than bold text: in a 54-row list the
-                // bold was easy to miss. The pill's tint, ink and border come
-                // from the stylesheet; the checkmark and the word carry the
-                // meaning, so the tint is never the only cue.
-                <span aria-label="analysée">✓ analysée</span>
-              )}
-            </td>
+    // Six columns of `nowrap` cells outgrow a narrow content column, and when
+    // they do it is the CONTAINER that scrolls, never the page (`_tables.scss`).
+    // Left to the page, the document scrolled sideways at 900px and the table
+    // overhung its column by 130px at 1440px — measured on the running app,
+    // where jsdom could never have seen it.
+    //
+    // The container lives HERE rather than in the page, unlike /stats and
+    // /openings whose tables are built inline in theirs: this table belongs to
+    // the component, so the guarantee travels with it.
+    <div data-scroll="x">
+      <table aria-label="parties">
+        <thead>
+          <tr>
+            {/* Unnamed on purpose: every checkbox below already says which Game it
+                selects, so a header word here would only repeat it. */}
+            <th scope="col" />
+            <th scope="col">Date</th>
+            <th scope="col">Adversaire</th>
+            <th scope="col">Résultat</th>
+            <th scope="col">Cadence</th>
+            <th scope="col">État</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {games.map((g) => (
+            <tr key={g.id}>
+              <td>
+                <input
+                  type="checkbox"
+                  aria-label={`sélectionner la partie vs ${g.opponent}`}
+                  checked={selectedIds.has(g.id)}
+                  onChange={() => onToggleSelect(g.id)}
+                />
+              </td>
+              <td>{g.date}</td>
+              <td>
+                <button type="button" onClick={() => onSelect(g)}>
+                  {g.opponent}
+                </button>
+              </td>
+              <td>{RESULT_LABEL[g.result]}</td>
+              <td>{CADENCE_LABEL[g.timeControlCategory]}</td>
+              <td>
+                {g.analyzed && (
+                  // A bordered pill rather than bold text: in a 54-row list the
+                  // bold was easy to miss. The pill's tint, ink and border come
+                  // from the stylesheet; the checkmark and the word carry the
+                  // meaning, so the tint is never the only cue.
+                  <span aria-label="analysée">✓ analysée</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
