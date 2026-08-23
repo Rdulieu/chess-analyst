@@ -1,6 +1,7 @@
 import type { Db } from "../db";
 import { games, evaluations, type NewGame, type UnownedGame } from "../db/schema";
 import { gamePositions } from "../chess/positions";
+import { fixtureBestLine } from "../engine/fixture";
 
 /**
  * Deterministic `Danger position` fixture (ADR-0009): Games with **pre-stored
@@ -28,7 +29,18 @@ export function seedDangerFixture(db: Db, profileId: number): void {
     // stores — the FEN included (ADR-0012).
     const fens = gamePositions(game.pgn);
     db.insert(evaluations)
-      .values(evals.map(([ply, cp]) => ({ gameId: id, ply, fen: fens[ply], cp })))
+      .values(
+        evals.map(([ply, cp]) => ({
+          gameId: id,
+          ply,
+          fen: fens[ply],
+          cp,
+          // A pass stores the `Best line` too (ADR-0016); the fixture's is the
+          // deterministic playable one, so anything reading it gets a line it
+          // can actually draw.
+          pv: fixtureBestLine(fens[ply]).join(" "),
+        })),
+      )
       .run();
   }
 }

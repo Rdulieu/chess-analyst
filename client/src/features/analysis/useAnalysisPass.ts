@@ -22,12 +22,15 @@ export function useAnalysisPass(profileId: number) {
   const [status, setStatus] = useState<AnalysisStatus | null>(null);
   /** Set when the last click opened no pass at all — every Game was analyzed. */
   const [nothingToDo, setNothingToDo] = useState(false);
+  /** Set when the last click was refused because a pass was already running. */
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     // Switching Profile switches readouts: the previous one's summary must not
     // linger on a screen that is now about somebody else.
     setStatus(null);
     setNothingToDo(false);
+    setBlocked(false);
     let live = true;
     fetchAnalysisStatus(profileId)
       .then((next) => live && setStatus(next))
@@ -38,10 +41,16 @@ export function useAnalysisPass(profileId: number) {
   }, [profileId]);
 
   const run = useCallback(
-    async (gameIds: number[]) => {
+    async (gameIds: number[], { overwrite = false }: { overwrite?: boolean } = {}) => {
       setNothingToDo(false);
-      const { started } = await runAnalysis(profileId, gameIds, setStatus);
-      setNothingToDo(!started);
+      setBlocked(false);
+      const { started, blocked: busy } = await runAnalysis(profileId, gameIds, setStatus, overwrite);
+      // The two refusals are told apart, because they answer different acts: a
+      // Player who confirmed overwriting an analysis and reads "la sélection est
+      // déjà analysée" is being contradicted by the app about what they just
+      // authorised.
+      setBlocked(busy);
+      setNothingToDo(!started && !busy);
     },
     [profileId],
   );
@@ -53,5 +62,5 @@ export function useAnalysisPass(profileId: number) {
     await acknowledgeAnalysis(profileId).catch(() => {});
   }, [profileId]);
 
-  return { status, nothingToDo, run, acknowledge, running: status?.running ?? false };
+  return { status, nothingToDo, blocked, run, acknowledge, running: status?.running ?? false };
 }

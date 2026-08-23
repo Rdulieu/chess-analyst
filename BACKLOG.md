@@ -2,6 +2,324 @@
 
 ## To do
 
+- **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
+  seulement par ouverture ou par position.
+  > **Recadrage de l'objectif du produit** (2026-08-19). **Grillée** (2026-08-21) — état complet et
+  > raisonnement : `.scratch/weakness-profile/GRILL-NOTES.md` (décisions D1→D12). `CONTEXT.md` :
+  > cinq termes ajoutés (**Best line**, **Phase**, **Counted Move**, **Drift**, **Search regime**),
+  > et `Analysis pass` amendée. Branche `integration/US-15-weakness-profile`.
+  >
+  > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
+  > - **US-15a** — Comprendre l'analyse sur **une** partie. **Sortie de l'EPIC : story autonome
+  >   ci-dessous**, sur sa propre branche d'intégration, mergée dès qu'elle est finie.
+  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
+  > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
+  >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
+  >   du récapitulatif par partie (ADR-0017), tout approximatif se propage.
+  > - **US-15c** — L'agrégat sur tout l'historique ; c'est là que se tranche « taux marginaux vs
+  >   conditionnels », avec de vraies données sous les yeux.
+  > - **US-15d** — Le verdict « sur quoi travailler » (et le sort de `/openings` et `/danger`).
+  > - **US-15e+** — Les motifs, un par un.
+  > - Non planifié : le suivi dans le temps (est-ce que ça s'améliore ?).
+  >
+  > Ce n'est **pas une US mais une EPIC** : elle se découpera en plusieurs US grillées séparément.
+  > Les briques existantes (`/openings`, `/danger`, annotations `?!`/`?`/`??`) ont été construites
+  > parce qu'elles étaient les plus simples, pas parce qu'elles étaient le but : l'app **détecte**
+  > déjà des faiblesses sous trois formes, mais ne rend **aucun verdict** et ne dit jamais la
+  > **cause**.
+  >
+  > Déjà tranché :
+  > - L'objectif est bien le **thème** (« je m'effondre en finale », « je rate les fourchettes »),
+  >   pas un classement des briques actuelles.
+  > - Méthode : **dorsale sans motifs** (axes dérivés du moteur et du FEN — phase, matériel,
+  >   tactique manquée vs dérive, pression du temps, position calme/tranchante), puis **détection par
+  >   règles greffée un motif à la fois**. **Pas de LLM** (décision du demandeur).
+  > - **Premier chantier** : le moteur calcule `bestmove` **et la variante**, et on les **jette** —
+  >   `uci-driver.ts` collecte toutes les lignes `info` puis n'en garde que le score et `bestmove`.
+  >   Tout motif est une affirmation sur l'écart entre le coup joué et le meilleur coup, donc sans
+  >   elles rien n'est possible. **Les stocker ne coûte aucun temps moteur** (un changement de parsing
+  >   et deux colonnes) ; seule la ré-analyse des parties déjà faites se paie. MultiPV=2, lui, se paie
+  >   vraiment — d'où la mesure due en 15a.
+  > - **Méthodologie auditable** (exigence structurante du demandeur) : le joueur doit pouvoir
+  >   **comprendre et évaluer** la méthode, donc la vue par partie et le verdict global sont **le même
+  >   calcul**, et une partie porte **tout** ce que l'agrégat consomme — y compris **pourquoi un coup
+  >   ne compte pas**. C'est pourquoi la première story ne porte que sur **une** partie.
+  > - La **donnée et sa présentation sont deux contraintes distinctes** : l'UI ne décide pas du
+  >   modèle.
+  > - Pas d'étiquette « erreur tactique / positionnelle » à l'étape 1 : on **montre la variante**
+  >   (déjà calculée et jetée aujourd'hui) plutôt que d'affirmer une catégorie qu'on classerait mal.
+  >
+  > Reste ouvert, à trancher en **15c** avec les données en main : taux marginaux ou conditionnels.
+  > Les axes sont **corrélés** (en blitz les coups de finale *sont* les coups à faible horloge), donc
+  > un classement par axe risque de dire « travaille tes finales » quand la vraie cause est
+  > l'horloge — d'où 15b avant 15c.
+  >
+  > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
+  > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
+
+- **US-16**: Analyser moi-même une de mes parties — commenter, explorer des variations, désigner les
+  coups qui me semblent importants — puis confronter mon analyse à celle du moteur pour progresser en
+  analyse.
+  > Pas encore grillée. Le but n'est **pas** de mieux montrer l'analyse moteur (c'est US-15a) mais de
+  > faire **travailler le joueur** : d'abord analyser **sans moteur**, pour exercer sa capacité
+  > d'analyse et sa compréhension du jeu ; ensuite seulement, confronter son analyse à celle du moteur
+  > et de notre moteur d'analyse (US-15) pour en évaluer la pertinence, et faire ressortir ses points
+  > forts et faibles **en analyse** (et non plus seulement en jeu).
+  > **Bonus visé par le demandeur** : c'est aussi une manière d'évaluer la pertinence de *notre*
+  > moteur d'analyse.
+  >
+  > État vérifié : **ADR-0004 a déjà payé pour cette US, en US-1.** `cm-chess` a été choisi *contre*
+  > `chess.js`, malgré une communauté bien plus petite, précisément pour son **historique en arbre
+  > (variations)** et ses **annotations PGN natives (NAG, commentaires)** — « branching analysis lines
+  > are of real interest for this project ». Rien n'exploite encore cette capacité : `history.ts`
+  > aplatit le PGN en une liste linéaire de plys.
+  >
+  > Points à trancher au grilling :
+  > - **Terminologie** : « commentaire », « variation », « coup important » n'existent pas au
+  >   glossaire, et « important » demande un terme propre qui ne collide ni avec `Danger position`
+  >   (récurrence, agrégat) ni avec `Move habit`. L'analyse du joueur elle-même est un objet à nommer.
+  > - **Le problème de l'aveuglement, structurel.** La page Analyse montre aujourd'hui l'info moteur
+  >   **en permanence** : `WinningChancesBar` et `EvaluationGraph` sont dans `Board.tsx`, et le toggle
+  >   d'annotations est **à `true` par défaut** (`GameViewer.tsx:27`). US-15a en ajoutera encore. Or
+  >   analyser « sans moteur » n'est pas un simple interrupteur : **une fois vu, on ne peut pas ne pas
+  >   avoir vu**. Il faut donc un **ordre** (analyser → révéler), pas seulement un affichage
+  >   conditionnel — et décider ce qui se passe si le joueur révèle puis modifie son analyse.
+  > - **Ce que « pertinent » veut dire**, et c'est le cœur : comparer les coups désignés importants aux
+  >   Moves signalés / `Counted Move` d'US-15a ? Les variations proposées à la `Best line` ? Les
+  >   commentaires à rien du tout (non comparables) ? Chaque réponse est un critère de notation
+  >   différent, et un mauvais critère apprendra au joueur à imiter le moteur plutôt qu'à comprendre.
+  > - **Découpage / dépendance** : la moitié « annoter en aveugle » est constructible **tout de
+  >   suite** ; la moitié « confronter » dépend d'**US-15a** (le relevé par Move). Donc probablement
+  >   deux stories, et c'est ce qui permet de commencer celle-ci avant le reste de l'EPIC.
+  > - **Persistance** : l'analyse du joueur est une donnée **irremplaçable** (elle n'a aucun amont) —
+  >   ADR-0015 s'applique pleinement, migration due, et elle est à **cloisonner par `Profile`**
+  >   (ADR-0014). Stockage sous forme de **PGN annoté** (ce que `cm-chess` sait lire et écrire nativement,
+  >   donc exportable vers d'autres outils) ou en modèle relationnel ? Vrai arbitrage, **ADR probable**.
+  > - **Où ça vit** : dans la page Analyse ou dans un parcours dédié « exercice » (ADR-0006 : une page
+  >   par parcours) ? La page Analyse est déjà la plus dense de l'app.
+  > - **La circularité du bonus, à assumer** : utiliser l'accord joueur/moteur pour juger *notre*
+  >   moteur d'analyse suppose que le joueur a raison. Un désaccord révèle une **divergence**, jamais
+  >   **qui se trompe**. C'est un signal utile (où regarder) et non un oracle de validation — à écrire
+  >   noir sur blanc, sinon la story promet une garantie qu'elle ne peut pas tenir.
+
+- **US-15a**: Comprendre, sur **une** partie, comment l'analyse juge mes coups — pour pouvoir croire
+  (ou contester) ce que l'app me dira plus tard sur mes faiblesses.
+  > **Front grillé** (2026-08-22) : décisions **F1→F12** dans
+  > `.scratch/per-game-analysis/GRILL-FRONT.md`. `CONTEXT.md` gagne **`Review mode`** (Unaided /
+  > Annotated / Detailed, **Unaided par défaut** — changement de comportement : les annotations étaient
+  > affichées par défaut depuis US-7, donc **HP-01 et quatre suites client sont à amender**). Coutures
+  > de test validées : `.scratch/per-game-analysis/SEAMS.md`. **Pas d'ADR pour le front** (tout est bon
+  > marché à défaire) ; en revanche **ADR-0016 est amendée** et **ADR-0015 reçoit une note** : on
+  > **jette** les 1199 `Evaluation`s existantes plutôt que de porter à jamais une branche `pv` null.
+  > Deux points laissés à vérifier sur pièces plutôt qu'affirmés : la **valeur réelle du tracé de
+  > dérive** (dix parties, puis on garde ou on supprime) et la **lisibilité de l'empilement** du
+  > panneau latéral (à regarder dans le FP). **Prête pour `/to-prd`.**
+  >
+  > **Grillée (modèle) avec l'EPIC US-15** (2026-08-21) : décisions D1→D14 dans
+  > `.scratch/weakness-profile/GRILL-NOTES.md`, glossaire dans `CONTEXT.md`, **ADR-0016** et
+  > **ADR-0017**. **Isolée de l'EPIC** (choix du demandeur) : branche d'intégration propre,
+  > `integration/US-15a-per-game-analysis`, PR vers `develop` **dès la fin de 15a** — une autre
+  > feature passe avant le reste de l'EPIC, et l'analyse partie par partie ne doit pas l'attendre.
+  >
+  > **Aucun agrégat, aucune page de verdict.** La valeur de cette story se juge à « je peux évaluer
+  > la méthode », pas à « je sais sur quoi travailler » (ADR-0017).
+  >
+  > Contenu :
+  > - Stocker la **`Best line`** (PV entière, UCI, une seule colonne) et le score de la 2e ligne
+  >   (`cp2`/`mate2`) — **zéro temps moteur** : `uci-driver.ts` collecte déjà toutes les lignes `info`
+  >   et jette la variante.
+  > - **MultiPV=2**, avec la **mesure** due : < 1,5× on garde, 1,5–2× on revient au demandeur, > 2× on
+  >   revoit la méthode. La profondeur 16 n'est **pas** la variable d'ajustement (ADR-0009).
+  > - `evaluations.pass_id` + le **`Search regime`** porté par le pass, et la reprise restreinte au
+  >   même régime (ADR-0016).
+  > - **Migration** (ADR-0015 : plus de wipe) : un pass synthétique portant profondeur 16 / une ligne,
+  >   auquel on rattache les 1199 `Evaluation`s existantes, `pv` null assumé — aucun rejeu ne
+  >   reconstitue une variante. Ré-analyser les 20 parties = choix du joueur, ~11 min.
+  > - Dérivation (jamais stockée, retunable sans moteur) : **`Phase`** (seuils de départ à ajuster en
+  >   regardant de vraies parties), **`Counted Move`** + le motif d'exclusion, **`Drift`** en résidu,
+  >   et le **récapitulatif par partie** qui sommera vers l'agrégat de 15c.
+  > - Sur la page Analyse : le relevé par Move (`Best line` + réfutation, delta, phase, compté ou
+  >   non et pourquoi) et le **tracé cumulé** de la dérive. Mise en page libre — **l'UI ne décide pas
+  >   du modèle** (ADR-0017) ; la page est déjà la plus dense de l'app.
+  >
+  > Story grosse : voudra des tranches internes. Balle traçante : schéma + régime + PV stockée → le
+  > relevé par Move à l'écran → le tracé de dérive → le récapitulatif.
+  >
+  > **PRD** : `.scratch/per-game-analysis/PRD.md`. **Sept tranches** (à jouer **séquentiellement**,
+  > choix du demandeur), dans `.scratch/per-game-analysis/issues/` :
+  > - `01-the-best-line-end-to-end` — **HITL** (la mesure MultiPV peut revenir au demandeur ; c'est
+  >   aussi la tranche qui jette les analyses existantes)
+  > - `02-review-mode` — bloquée par 01 ; porte l'amendement de **HP-01** et des suites client
+  > - `03-the-phase-of-a-move` — bloquée par 02
+  > - `04-which-moves-count` — bloquée par 02
+  > - `05-what-this-game-contributes` — bloquée par 03 et 04 ; la fonction que **15c pliera**
+  > - `06-the-drift-trace` — bloquée par 05 ; **écrite pour être supprimable** (point de contrôle des
+  >   dix parties)
+  > - `07-relaunch-the-analysis-from-the-review` — bloquée par 01
+  >
+  > **Livrée** (2026-08-23) : les sept tranches sont mergées dans
+  > `integration/US-15a-per-game-analysis`. Jugement du demandeur : « pas mal pour un premier jet ».
+  > La suite est **US-15a-bis**, ci-dessous, qui doit passer **avant** l'agrégat de 15c.
+
+- **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
+  corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
+  > **Pas encore grillée.** Demandée par le demandeur le 2026-08-23 après la livraison d'US-15a :
+  > la feature « paraît pas mal pour un premier jet », mais elle mérite une passe d'analyse plus
+  > poussée **avant** d'être étendue à l'analyse globale.
+  >
+  > **Elle bloque US-15c.** C'est la raison d'être de la story : ADR-0017 fait de l'agrégat la
+  > **somme du récapitulatif par partie**, donc tout ce qui est approximatif ici est approximatif à
+  > l'échelle du corpus, en pire — et corrigé après coup, il faudrait réécrire les deux côtés.
+  > Corollaire heureux : rien de ce qui suit ne coûte de temps moteur, tout est **dérivé** (ADR-0009)
+  > et donc retunable sans ré-analyse ni migration. C'est exactement pour cette passe que la
+  > dérivation a été gardée hors du schéma.
+  >
+  > **Matière première déjà identifiée** — les points laissés ouverts par les sept FP, à instruire
+  > sur de vraies parties plutôt qu'à trancher sur le papier :
+  > - **Les seuils de `Phase`.** Annoncés « heuristiques, pas des faits » et affichés exprès pour
+  >   être contestés. Le cap « coup 15 » est implémenté comme *le 15e coup des Blancs est le premier
+  >   hors début de partie* ; l'autre lecture décale d'un coup entier. Et « développement achevé »
+  >   est exigé **des deux camps** — lecture retenue, jamais validée sur des parties.
+  > - **Le tracé de dérive reste en l'état pour l'instant — décision du demandeur (2026-08-23).** Le
+  >   graphique est **gardé tel quel**, l'analyse détaillée est reportée à cette story. La tranche 06
+  >   reste **écrite pour être supprimable** (dérivée client, aucun schéma, aucun temps moteur), donc
+  >   rien n'est engagé par ce report.
+  >   Ce qui est acquis pour cette analyse-là, à ne pas redécouvrir :
+  >   - Le **chiffre** de `Drift` n'est pas en cause : c'est le résidu d'ADR-0017, il est en texte dans
+  >     le récapitulatif et 15c le sommera. Seul le **dessin** est en question.
+  >   - L'argument porteur du dessin n'est pas « falaises vs pente » mais **brut contre net** : la
+  >     courbe mélange les pertes du Player et les cadeaux de l'adversaire, le tracé ne compte que les
+  >     coups **comptés** du Player. Deux parties peuvent avoir la même courbe et des tracés très
+  >     différents — c'est ce qui se voit sur la partie 51, où la position ne bougeait pas parce que
+  >     l'adversaire rendait ce que le Player lâchait.
+  >   - Parts de dérive mesurées : **25 %** (partie 41), **24 %** (72), **53 %** (51), **65 %** (86).
+  >     Sur la moitié de cet échantillon la dérive porte la majorité de ce qui a été perdu — mais les
+  >     parties avaient été choisies pour d'autres raisons, ce n'est pas un tirage.
+  > - **L'échelle des y du tracé est par partie**, et c'est le défaut à corriger **avant** la revue des
+  >   dix parties, pas après : `ceiling = total`, donc **tout** tracé finit en haut de sa boîte. Une
+  >   partie à 5 % de pertes dessine la même ascension pleine hauteur qu'une à 191 %. L'œil lit
+  >   « hauteur = gravité », et cette lecture est fausse à chaque fois — donc une revue faite en
+  >   l'état jugerait l'encodage, pas le dessin. Une échelle fixe et partagée rend la hauteur porteuse
+  >   et les parties comparables.
+  >   Option à arbitrer ensuite : ne tracer que **le résidu** plutôt que le cumul total, pour que le
+  >   dessin ne porte que ce que rien d'autre ne montre. Cela cogne contre une décision grillée (« la
+  >   dérive s'y **lit** au lieu d'y être dessinée ») — l'ADR interdisait la dérive en **épisodes
+  >   bornés**, qui double-compterait, et un cumul du résidu reste additif ; mais c'est une décision
+  >   du demandeur, pas de l'agent.
+  > - **Le plancher `Counted Move` à 10 %** n'a jamais été regardé sur des données : combien de coups
+  >   une vraie partie perd-elle réellement par « position déjà décidée » ? Si la part est grosse, le
+  >   dénominateur de 15c l'est aussi. Mesuré sur la partie **51** : 4 coups sur 22.
+  > - **Angle mort confirmé sur pièces : une erreur voyante peut n'être signalée par rien.** Repéré par
+  >   le demandeur le 2026-08-23 sur la partie 51, coup 16 `Ke6` — l'évaluation passe de **+4,26 à
+  >   +5,84** (1,58 pion lâché, « facile à voir »), et l'app n'affiche **aucun glyphe**.
+  >   Ce n'est pas un défaut : les sévérités sont définies sur les **chances de gain**, qui **saturent**
+  >   aux extrêmes. Le même écart de 1,58 pion, calculé avec la fonction de l'app selon l'endroit où il
+  >   tombe :
+  >
+  >   | Position du Player | Chances avant → après | Chute | Signalé ? |
+  >   | --- | --- | --- | --- |
+  >   | équilibre (0,00) | 50,0 → 35,9 % | **14,1** | oui, imprécision |
+  >   | −1,00 | 40,9 → 27,9 % | **13,0** | oui, imprécision |
+  >   | −3,00 | 24,9 → 15,6 % | 9,3 | **non** |
+  >   | **−4,26 (le `Ke6` réel)** | **17,2 → 10,4 %** | **6,8** | **non** |
+  >   | −6,00 | 9,9 → 5,8 % | 4,1 | **non** |
+  >
+  >   Le coup est bien **compté**, et ses 6,8 points sont dans la dérive (6,8 des 29,7) — il n'est pas
+  >   perdu, il n'est pas *nommé*. L'intention se défend : signaler sur les centipions ferait dix-huit
+  >   reproches sur une partie déjà jouée au coup 25.
+  >   **Mais l'angle mort est réel et il est double** : sous 10 % de chances, rien n'est signalé **et**
+  >   le coup est exclu du dénominateur. Toute la fin de chaque partie perdue est donc invisible à
+  >   l'analyse — or « je m'effondre quand je suis derrière » est une faiblesse réelle, répétable et
+  >   travaillable. **La valeur pour le résultat et la valeur pour la progression ne sont pas la même
+  >   chose, et l'outil ne mesure que la première.** Un coup qu'un humain repère d'un coup d'œil et que
+  >   l'app ne mentionne pas est aussi, très concrètement, ce qui fait douter de la méthode.
+  >   **Piste, et le vocabulaire existe déjà** : la tranche 04 a construit le cas « **montré par la
+  >   partie, non retenu par l'analyse** » — glyphe affiché, coup hors dénominateur, motif en mots — et
+  >   personne ne l'a jamais atteint (seuls les coups forcés pouvaient, et un coup forcé n'est jamais
+  >   signalé, cf. plus haut). Le Player verrait ses coups marqués avec « ne compte pas : la position
+  >   était déjà décidée », le dénominateur ne bougerait pas, et l'écart serait expliqué par la phrase
+  >   que le récapitulatif sait déjà écrire. **Arbitrage du demandeur** : cela ajoute un seuil, et
+  >   US-15a avait tenu à n'en ajouter aucun.
+  >   **Mais attention : abaisser un seuil ne suffit PAS.** Voir la section de comparaison ci-dessous —
+  >   le coup `Kc7` de la même partie coûte 0,36 pion et chess.com le signale quand même. Il faut un
+  >   critère qui ne soit **pas** une chance de gain.
+  > - **Un coup forcé n'est jamais signalé** sur ce corpus (mesuré : sept parties, tous les coups
+  >   forcés non signalés — avant/après sont deux lectures de la **même** recherche). Le motif
+  >   d'exclusion « forcé » existe donc surtout pour le dénominateur ; vérifier qu'il vaut encore la
+  >   peine d'être distingué à l'écran.
+  >
+  > ### Comparaison avec chess.com sur la partie 51 — rapport complet
+  >
+  > Le demandeur a fourni le bilan chess.com de la **même partie** (2026-08-23). Le rapport complet —
+  > méthodologie des deux systèmes, avantages, inconvénients, angles morts, options d'arbitrage,
+  > sources — est dans **`.scratch/per-game-analysis/COMPARISON-CHESSCOM.md`**. L'essentiel :
+  >
+  > **Sur les mêmes 22 coups : chess.com en signale 6, nous en signalons 1.** Précision annoncée 77,7
+  > chez eux ; chez nous 57,2 % de chances perdues dont 29,7 de dérive. Avec la formule **lichess
+  > publiée** sur nos données, la partie vaut 83,5 — ils sont donc **plus sévères** que lichess, ce qui
+  > est cohérent avec un moteur plus fort.
+  >
+  > **Leur méthode n'est pas auditable** : CAPS2 est un secret commercial, et leur centre d'aide dit
+  > explicitement ne divulguer ni la formule, ni la profondeur du moteur, ni les seuils. Les seuils
+  > qu'on trouve en ligne (7-10 / 10-20 / 20+ sur les chances de gain, avec une escalade en centipions)
+  > sont de **tierce partie**, pas officiels.
+  >
+  > **Les quatre coups qu'ils mettent en avant, avec nos chiffres :**
+  >
+  > | Coup | Éval avant → après (nous) | Chances du Player | Notre chute | Nous | chess.com |
+  > | --- | --- | --- | --- | --- | --- |
+  > | **12. Nd7** | +0,39 → +3,96 | 46,4 → 18,9 % | **27,5** | erreur `?` | **gaffe `??`** |
+  > | **13. Kc7** | +4,09 → +4,45 | 18,2 → 16,3 % | **1,9** | *rien* | signalé |
+  > | **16. Ke6** | +4,26 → +5,84 | 17,2 → 10,4 % | **6,8** | *rien* | signalé |
+  > | **20. Bxb2** | +7,17 → +10,01 | 6,7 → 2,4 % | 4,3 | **exclu** | signalé |
+  >
+  > Ce que cet alignement établit, et qui doit guider la décision :
+  >
+  > 1. **Les trois coups qu'ils voient et que nous manquons sont tous dans la zone où notre métrique
+  >    s'est éteinte** (chances entre 18 % et 6 %). Le seul que les deux systèmes signalent est le seul
+  >    joué dans une position encore disputée. Ce n'est pas un hasard : c'est **la forme de la
+  >    différence** — notre analyse est fine tant que la partie est vivante, aveugle dès qu'elle est
+  >    jouée.
+  > 2. **`Kc7` falsifie « il suffit d'abaisser un seuil »** : 0,36 pion, 1,9 point de chances, signalé
+  >    chez eux. La position dit pourquoi — après `13.Nxf7+ Kc7?`, `14.Nxh8` emporte la tour ; l'éval ne
+  >    bouge pas parce qu'ils gagnaient déjà de quatre pions, mais du matériel a changé de camp.
+  >    **Inférence, pas fait** : leur classifieur garde une notion **concrète** (matériel, séquence
+  >    forcée) que les chances de gain effacent.
+  > 3. **`Nd7` n'est qu'un désaccord de calibrage** : même coup, même meilleur coup (`Ke8`), 27,5 points
+  >    perdus. Notre ligne « gaffe » est à 30, la leur à 20.
+  > 4. **Test de transposition** : leurs seuils appliqués à **nos** évaluations, sans plancher ni
+  >    exclusion, donnent **2** coups signalés, pas 6. Les seuils n'expliquent donc pas l'écart seuls.
+  > 5. **La fin de partie vaut zéro, pas « peu »** : `22. Bd4` fait passer le mat de sept coups à un
+  >    coup, et notre métrique enregistre **exactement 0**.
+  >
+  > **Un angle mort qui n'avait pas encore été nommé : l'attribution.** L'adversaire a joué à **96,1**,
+  > niveau estimé 1800, zéro faute. Notre app ne l'analyse pas du tout (les sévérités sont Player-only
+  > par décision) et ne peut donc **jamais** dire « en face c'était très bien joué ». Le Player ne peut
+  > pas distinguer *je me suis effondré* de *il a été trop fort* — deux conclusions opposées sur ce
+  > qu'il faut travailler. C'est ce qui menace le plus le verdict de **15d**.
+  >
+  > **Ce qui reste à faire** : un cas n'est pas un échantillon. Refaire cet alignement sur les dix
+  > parties de la revue déjà prévue, avant de trancher.
+  >
+  > **À vérifier en premier, parce que la prémisse en dépend : le récapitulatif est-il
+  > reproductible ?** En recollant les rapports de FP, la **même partie 51** ressort à **60,6 %** de
+  > chances perdues chez un agent et **56,5 %** chez un autre, sous le même régime annoncé
+  > (profondeur 16, 2 lignes) ; la partie 86 varie de 31,9 à 32,0. Un troisième agent a en revanche
+  > vérifié qu'une **ré-analyse par lui-même** redonnait des chiffres identiques. **Non vérifié** :
+  > c'est peut-être une lecture croisée de deux rapports produits sur deux bases différentes. Mais si
+  > l'écart est réel, un récapitulatif non reproductible n'est **pas auditable**, et c'est toute la
+  > raison d'être d'ADR-0017 qui tombe. Protocole : analyser deux fois la même partie sous le même
+  > régime, comparer les récapitulatifs au chiffre près, **avant** que 15c ne somme quoi que ce soit.
+  >
+  > **Bug antérieur à ticketer au passage** (hors tranche, vu par la FP de la 05) : « Analyser cette
+  > partie » est **silencieusement avalé** tant qu'une bannière de pass non acquittée est affichée —
+  > rien ne se passe, aucun message — et l'écran montre pendant ce temps la progression d'une **autre**
+  > partie comme si elle concernait celle qu'on regarde. Le chemin de réanalyse de la tranche 07 n'est
+  > **pas** touché (re-testé), mais le chemin ordinaire l'est.
+  >
+  > À grillier avec de vraies parties sous les yeux, pas en salle : c'est une story de **mesure et
+  > d'arbitrage**, pas de construction.
+
 - **US-17**: Importer un historique Lichess sans payer une requête par mois vide.
   > Pas encore grillée. **Constat mesuré** (import de référence `Metalyst`, 2026-08-21) : sur les
   > **71 mois** du span, **51 étaient vides** — on a payé **72 % des requêtes pour zéro partie**,
@@ -41,7 +359,70 @@
   > **Périmètre** : n'affecte **que** l'adaptateur Lichess. chess.com reste mois par mois, puisque
   > c'est ce que son API sert, et le port garde le mois. Aucune migration de schéma attendue.
   >
-  > Sortie de l'exploitation de US-12 (PR #52) ; ne bloque pas son merge.
+  > Sortie de l'exploitation de US-12, mergée depuis (PR #52, 2026-08-22).
+
+- **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
+  rien céder de ce qu'elle teste.
+  > **Pas encore grillée.** Demandée le 2026-08-23 après la passe HP d'US-15a : la suite est verte
+  > mais lente, et une suite lente est une suite qu'on lance moins souvent — donc une suite qui
+  > protège moins.
+  >
+  > ### Ce que la course du 2026-08-23 a coûté
+  >
+  > | Étape | Durée | Provenance de la mesure | Dont, mesuré |
+  > | --- | --- | --- | --- |
+  > | path 0 (bootstrap) | **~15-20 min** | non instrumenté — borne basse déduite | import Lichess **~10 min** (12:59→13:09), dont **~6 min de pure attente** (6 pauses de 60 s) |
+  > | HP-01 (import + explore) | **~19 min** | déduit des horodatages de fin | import chess.com **6,5 s** · passe moteur 29 positions **34,7 s** · calcul `/danger` **0,9 s** |
+  > | HP-02 (habitudes de coup) | **~13 min** | déduit des horodatages de fin | — |
+  > | HP-03 (ouvertures faibles) | **~12 min** | déduit des horodatages de fin | — |
+  > | **Total mur** | **~35-40 min** | path 0 en série, puis les trois HP en parallèle | |
+  >
+  > **Ces chiffres sont déduits, pas mesurés** — sauf ceux de la dernière colonne. Les trois durées
+  > d'HP viennent de l'écart entre le lancement groupé et l'horodatage de fin de chaque sous-agent ;
+  > le total de path 0 n'a pas de début connu. **C'est la première chose à corriger** : que chaque
+  > scénario rende sa propre durée, et celle de ses phases (import, passe moteur, parcours, passe de
+  > thème). On ne peut pas optimiser ce qu'on déduit.
+  >
+  > ### Ce qui a cessé d'être le coût
+  >
+  > **Le moteur n'est plus le problème** : 29 positions en **34,7 s**. La suite a longtemps été
+  > dominée par lui (« ~3,5 min » traîne encore dans un commentaire de `README.md`, d'avant le
+  > backend natif). Le coût s'est déplacé sur **le réseau** et sur **la longueur des parcours**.
+  >
+  > ### Pistes, à instruire — pas encore des décisions
+  >
+  > - **Le plus gros levier est un jeu de données, comme pressenti.** L'import Lichess de `Metalyst`
+  >   couvre **71 mois dont 51 vides** et paie ~6 min de bridage. Or l'assertion qu'il porte est
+  >   « un mois vide est listé à zéro, donc un trou d'historique se distingue d'un trou de
+  >   récupération » : elle a besoin de **quelques** mois vides entre des mois peuplés, pas de 51.
+  >   Un compte de référence à **span court et troué** tiendrait la même assertion pour une fraction
+  >   des requêtes. `README.md` dit aujourd'hui « ne pas raccourcir le span » — **cette US est
+  >   l'endroit où rediscuter cette règle**, en séparant ce qui est testé de ce qui est payé.
+  > - **Le bridage Lichess est par IP** sur l'export : moins de requêtes, moins de pauses. Le gain
+  >   est donc superlinéaire, pas proportionnel.
+  > - **Réutiliser le snapshot entre deux courses.** Tous les mois des deux plages sont immuables, donc
+  >   le snapshot ne périme pas. Mais `README.md` veut le **contrat réseau réel exercé une fois par
+  >   course** : mettre le snapshot en cache, c'est cesser d'exercer l'adaptateur Lichess en direct.
+  >   **Arbitrage du demandeur**, à poser explicitement — par exemple un cache avec une péremption, ou
+  >   un import live réduit à un mois témoin.
+  > - **Instrumenter avant d'optimiser** (cf. ci-dessus), puis regarder où passent les ~12 min
+  >   d'HP-02 et d'HP-03, qui n'importent rien et n'analysent rien. Sur ces deux scénarios, le
+  >   parcours et la passe de thème sont **tout** le coût.
+  > - **Le pilotage lui-même a coûté cher** : les trois scénarios se sont fait voler leur page par le
+  >   navigateur partagé, deux ont dû rebasculer sur leur propre Chrome **en cours de route**. Partir
+  >   directement sur un navigateur privé (déjà consigné dans le skill) supprime des reprises.
+  >
+  > ### Ce qui n'est pas à brader
+  >
+  > `docs/test-scenarios/README.md` §« What not to trim » reste la référence, et cette US ne l'annule
+  > pas : **pas** de profondeur moteur abaissée, **pas** d'archive fixture à la place du contrat
+  > chess.com réel, **pas** de second profil supprimé, **pas** d'état hérité d'un autre scénario,
+  > **pas** de passe de thème raccourcie aux écrans déjà traversés. La seule règle que cette US met
+  > explicitement sur la table est la longueur du span Lichess — parce que c'est la seule où le prix
+  > payé et l'assertion tenue se sont visiblement décorrélés.
+  >
+  > **Critère de succès à définir au grill**, mais l'ordre de grandeur visé est « la suite tourne en
+  > moins de dix minutes, et rien de ce qu'elle affirmait n'a disparu ».
 
 ## Doing
 

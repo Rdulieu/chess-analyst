@@ -92,10 +92,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 4. Read the consolidated summary → it reports the total games fetched over the range, a per-category breakdown, how many were newly imported vs already present, and a win/draw/loss tally.
 5. Read the per-month lines → one line per month of the range, in order, each saying what that month brought in.
 6. See the imported Games listed in the app → the list reads as rows, each row holding its selection control, its description and its analysed state in the same three places.
-7. Open one imported Game the Player played **as White** (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → a header names both players with their colour and marks which one is the Player, alongside the result, date, cadence and `Opening`; its Position renders on the board, White at the bottom; stepping forward/backward and jumping to a Move updates the Position accordingly.
+7. Open one imported Game the Player played **as White** (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → a header names both players with their colour and marks which one is the Player, alongside the result, date, cadence and `Opening`; its Position renders on the board, White at the bottom; stepping forward/backward and jumping to a Move updates the Position accordingly. The Game is not analysed yet, so there is nothing of the engine to reveal and **no `Niveau de revue` control** is offered — only the invitation to analyse it.
 7b. Go back and open a Game the Player played **as Black** → the same header, now marking the Player on the Black side, and the board is read **Black at the bottom**.
 8. Start the same Import again from the Profile's page (same range + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
-9. Reopen the app (reload) → `DudulSmash` is **still the current Profile**: the banner names it without re-selecting, and the scoped screens show its history straight away.
+9. Reopen the app (reload) → `DudulSmash` is **still the current Profile**: the banner names it without re-selecting, and the scoped screens show its history straight away. The `Review mode` is remembered the same way and has never been changed, so a Game still opens **Unaided** after a reload: the app does not start volunteering the engine's verdict.
 10. (Drive-by, US-4 + US-8 + US-10b) Select the **two shortest Games sharing the same first Move**
    and start the analysis pass on them (real WASM
    Stockfish, depth 16 — allow it real time to finish) → while it runs, a count of **Positions
@@ -125,12 +125,17 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    Then reopen **whichever of the two Games carries at least one flawed Move of the Player's** (the
    move list and the error tally say which; if neither does, record the curve's error marking as *not
    exercised* rather than red — the step selects the two shortest Games, and a short Game often holds
-   no mistake at all) → beside its board, in the annotations pane, an `Evaluation curve`
+   no mistake at all) → it opens **Unaided** (US-15a): the Moves and the board, and **nothing** from
+   the engine — no glyph, no `Evaluation`, no advantage bar, no curve. Ask the `Niveau de revue`
+   control for the **annotated** level → beside its board, in the annotations pane, an `Evaluation curve`
    runs from the starting Position on the left to the last Move on the right; stepping through
    the Moves moves a mark along it, and the Player's own flawed Moves are marked on it by the
    same glyph the move list uses, beside a tally that names the fault in words (`Vos erreurs : 1
    grosse erreur ??` — the category spelled out and the glyph repeated, so the tint is never the only
-   cue).
+   cue). Ask it for the **detailed** level → the reviewed Move's own **titled** record appears below
+   the board row, and a link beside the board leads to it; the board itself is **whole on arrival** at
+   all three levels. Reload → the level asked for is still the one shown, and opening **another** Game
+   opens it at that same level without asking again.
 
    > **Why here and not as a scenario of its own**: the curve needs a Game with real
    > `Evaluation`s, which this step has just produced — it costs one navigation and no engine
@@ -181,10 +186,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 - Step 4: the import landed on `DudulSmash` and nowhere else — `Nonomoho` still reads `0 parties · 0 analysées` on `/profiles` (ADR-0014). On a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
 - Step 5: exactly two lines, in range order — **`2026-05` at 28 imported** and **`2026-06` at 54 imported**, summing to the consolidated 82. Neither is marked in échec.
 - Step 6: the number of listed Games matches the imported count from the summary (82 on a clean run). It is still a **list**, not a table, and each entry reads as a row of three parts — the selection checkbox, the description, the analysed state — with every badge landing on the same left edge across rows so the column can be scanned.
-- Step 7: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The **second pane beside the board is the annotations pane, and it only exists once the Game is analysed** — on the unanalysed Game this step opens, the board row holds the board alone and the move list runs below it. The row proper is asserted at step 10.
+- Step 7: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The pane beside the board holds the move list — a move list is not an annotation, and it is there for every Game — but on this unanalysed Game it holds **nothing of the engine** and offers no `Niveau de revue` control: there is nothing to reveal. The row proper is asserted at step 10.
 - Step 7b: on a Black-side Game the board is **Black-at-bottom** — the Player's own back rank is nearest them — and the Player mark has moved to the Black line of the header. The pieces have not moved: the board is turned, not rearranged.
 - Step 8: the replay's summary shows **0 imported / 82 already present**, both month lines saying so (28 and 54 already present); the listed Game count is unchanged.
-- Step 9: after reload, `DudulSmash` is still the current Profile — the banner names it with no re-selection, and the scoped screens render its history rather than sending the Player to `/profiles`. The selection is what survives a restart now; there is no remembered username field left to pre-fill.
+- Step 9: after reload, the `Review mode` is still Unaided — never chosen, never volunteered — and `DudulSmash` is still the current Profile — the banner names it with no re-selection, and the scoped screens render its history rather than sending the Player to `/profiles`. The selection is what survives a restart now; there is no remembered username field left to pre-fill.
 - Step 10: after the analysis pass completes, each selected Game shows the "analysée" badge — a
   bordered pill carrying **both** a checkmark and the word, so the tint is never the only signal;
   `/danger` renders a grid of cards (not the empty-state invitation) with at least one recurring

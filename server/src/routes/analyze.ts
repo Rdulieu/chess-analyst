@@ -5,7 +5,9 @@ import { scopedProfile } from "./scope";
 
 /**
  * Analysis-pass routes (mounted at /api/analyze). `POST /` starts a background
- * pass over the not-yet-analyzed among the given `gameIds` and returns 202
+ * pass over the not-yet-analyzed among the given `gameIds` — or over **all** of
+ * them when the body carries `overwrite: true`, which is the Player having
+ * confirmed losing an existing analysis (US-15a 07) — and returns 202
  * immediately (the pass runs in the background); `GET /status` reports the
  * determinate progress the client polls.
  *
@@ -23,8 +25,11 @@ export function createAnalyzeRouter(db: Db, job: AnalysisJob): Router {
     const gameIds = Array.isArray(req.body?.gameIds)
       ? req.body.gameIds.filter((id: unknown): id is number => Number.isInteger(id))
       : [];
+    // Only ever `true` when the client says so explicitly: a missing or
+    // malformed flag means the ordinary pass, never a destruction.
+    const overwrite = req.body?.overwrite === true;
     try {
-      res.status(202).json(job.start(profile.id, gameIds));
+      res.status(202).json(job.start(profile.id, gameIds, { overwrite }));
     } catch (err) {
       if (!(err instanceof ForeignGameError)) throw err;
       res.status(400).json({ error: err.message });

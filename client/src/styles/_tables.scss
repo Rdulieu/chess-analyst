@@ -46,11 +46,16 @@ thead th {
 }
 
 // The figures, pushed to the right so digits line up under one another. Counted
-// from the END of the row: both tables finish with the same three figure columns
-// (Parties, Résultats, Win rate) while their leading columns differ, so one rule
-// serves both screens and no class is needed. The stats group header spans the
-// row and is excluded — it is a heading, not a figure.
-tr > :nth-last-child(-n + 3):not([scope="colgroup"]) {
+// from the END of the row: the two FIGURE tables finish with the same three
+// columns (Parties, Résultats, Win rate) while their leading columns differ, so
+// one rule serves both screens and no class is needed. The stats group header
+// spans the row and is excluded — it is a heading, not a figure.
+//
+// The Game table is excluded too, and by its label rather than by a new class:
+// its last three columns are Résultat, Cadence and État, which are WORDS. Words
+// pushed right leave a ragged left edge down the column, which is the opposite
+// of what aligning digits buys.
+table:not([aria-label="parties"]) tr > :nth-last-child(-n + 3):not([scope="colgroup"]) {
   text-align: end;
 }
 

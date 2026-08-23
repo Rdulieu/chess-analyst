@@ -55,6 +55,31 @@ describe("GamesPage — the screen announces itself", () => {
     expect(within(screenRegion).getByRole("heading", { level: 2, name: /mes parties/i })).toBeTruthy();
   });
 
+  it("asks for the wide column, because six columns do not fit the reading measure", async () => {
+    // Same diagnosis as `/openings`, which carries the same attribute for the same
+    // reason: inside the 72ch reading column the Game table needs 788px for 659px
+    // of room, so its last column — `État`, and with it the "analysée" badge — sits
+    // off-screen at every viewport. The container scrolls rather than the page
+    // (that part is settled), but a column nothing hints at is a column nobody
+    // reads. The FP of the games-table slice measured it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.startsWith("/api/games")) return json([GAME]);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <GamesPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    const screenRegion = await screen.findByRole("region", { name: /mes parties/i });
+    expect(screenRegion.getAttribute("data-width")).toBe("wide");
+  });
+
   it("shows the Game list alone — the import form moved onto the Profile's page", async () => {
     // Importing is an operation ON a Profile (US-11): the form left the busiest
     // screen in the app for the page of the Profile it imports under.

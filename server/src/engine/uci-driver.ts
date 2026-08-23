@@ -1,4 +1,5 @@
 import type { EngineEvaluation } from "./types";
+import { ANALYSIS_LINES } from "./types";
 
 /**
  * The transport a `UciDriver` speaks over — a raw line-in/line-out UCI
@@ -19,7 +20,7 @@ export interface UciDriver {
   evaluate(fen: string, depth: number): Promise<EngineEvaluation>;
 }
 
-export function createUciDriver(transport: UciTransport): UciDriver {
+export function createUciDriver(transport: UciTransport, lines = ANALYSIS_LINES): UciDriver {
   /** Sends `command`, collecting lines until one satisfies `isLast`. */
   function sendUntil(command: string, isLast: (line: string) => boolean): Promise<string[]> {
     return new Promise((resolve) => {
@@ -38,6 +39,13 @@ export function createUciDriver(transport: UciTransport): UciDriver {
   return {
     async initialize() {
       await sendUntil("uci", (line) => line === "uciok");
+      // How many lines to search — two by default, so every Evaluation carries
+      // what the *alternative* was worth (ADR-0016). Set once, at the handshake:
+      // the line count is part of the `Search regime`, a property of the whole
+      // pass, not something a single search negotiates. A parameter and not a
+      // constant because the regime is *data* — which is also what let its cost
+      // be measured against one line.
+      transport.send(`setoption name MultiPV value ${lines}`);
       await sendUntil("isready", (line) => line === "readyok");
     },
 
@@ -49,21 +57,40 @@ export function createUciDriver(transport: UciTransport): UciDriver {
   };
 }
 
-/** Reads the last `score cp`/`score mate` and the `bestmove` out of a search's `info`/`bestmove` lines. */
+/**
+ * Reads a search's `info` lines into an `EngineEvaluation`: the deepest line's
+ * score, and its `pv` — the `Best line`, whole. The variation was always in the
+ * output and used to be dropped at parse time; keeping it costs no engine time
+ * (ADR-0016).
+ */
 function parseEvaluation(lines: string[]): EngineEvaluation {
   let cp: number | null = null;
   let mate: number | null = null;
-  let bestmove = "";
+  let pv: string[] = [];
+  let second: EngineEvaluation["second"] = null;
 
   for (const line of lines) {
+    if (!line.startsWith("info ")) continue;
     const score = line.match(/score (cp|mate) (-?\d+)/);
-    if (score) {
-      cp = score[1] === "cp" ? Number(score[2]) : null;
-      mate = score[1] === "mate" ? Number(score[2]) : null;
+    if (!score) continue;
+    const value = {
+      cp: score[1] === "cp" ? Number(score[2]) : null,
+      mate: score[1] === "mate" ? Number(score[2]) : null,
+    };
+    const variation = line.match(/ pv ((?:[a-h][1-8][a-h][1-8][qrbn]?(?: |$))+)/);
+
+    // `multipv` numbers the lines of one search; its absence means a single-line
+    // search, which is the first line by definition. Later `info` lines are
+    // deeper, so each simply overwrites the one before for its own rank.
+    const rank = Number(line.match(/ multipv (\d+)/)?.[1] ?? 1);
+    if (rank === 1) {
+      cp = value.cp;
+      mate = value.mate;
+      if (variation) pv = variation[1].trim().split(" ");
+    } else if (rank === 2) {
+      second = value;
     }
-    const bestmoveMatch = line.match(/^bestmove (\S+)/);
-    if (bestmoveMatch) bestmove = bestmoveMatch[1];
   }
 
-  return { cp, mate, bestmove };
+  return { cp, mate, pv, second };
 }
