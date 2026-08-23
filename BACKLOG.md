@@ -208,7 +208,40 @@
   >   du demandeur, pas de l'agent.
   > - **Le plancher `Counted Move` à 10 %** n'a jamais été regardé sur des données : combien de coups
   >   une vraie partie perd-elle réellement par « position déjà décidée » ? Si la part est grosse, le
-  >   dénominateur de 15c l'est aussi.
+  >   dénominateur de 15c l'est aussi. Mesuré sur la partie **51** : 4 coups sur 22.
+  > - **Angle mort confirmé sur pièces : une erreur voyante peut n'être signalée par rien.** Repéré par
+  >   le demandeur le 2026-08-23 sur la partie 51, coup 16 `Ke6` — l'évaluation passe de **+4,26 à
+  >   +5,84** (1,58 pion lâché, « facile à voir »), et l'app n'affiche **aucun glyphe**.
+  >   Ce n'est pas un défaut : les sévérités sont définies sur les **chances de gain**, qui **saturent**
+  >   aux extrêmes. Le même écart de 1,58 pion, calculé avec la fonction de l'app selon l'endroit où il
+  >   tombe :
+  >
+  >   | Position du Player | Chances avant → après | Chute | Signalé ? |
+  >   | --- | --- | --- | --- |
+  >   | équilibre (0,00) | 50,0 → 35,9 % | **14,1** | oui, imprécision |
+  >   | −1,00 | 40,9 → 27,9 % | **13,0** | oui, imprécision |
+  >   | −3,00 | 24,9 → 15,6 % | 9,3 | **non** |
+  >   | **−4,26 (le `Ke6` réel)** | **17,2 → 10,4 %** | **6,8** | **non** |
+  >   | −6,00 | 9,9 → 5,8 % | 4,1 | **non** |
+  >
+  >   Le coup est bien **compté**, et ses 6,8 points sont dans la dérive (6,8 des 29,7) — il n'est pas
+  >   perdu, il n'est pas *nommé*. L'intention se défend : signaler sur les centipions ferait dix-huit
+  >   reproches sur une partie déjà jouée au coup 25.
+  >   **Mais l'angle mort est réel et il est double** : sous 10 % de chances, rien n'est signalé **et**
+  >   le coup est exclu du dénominateur. Toute la fin de chaque partie perdue est donc invisible à
+  >   l'analyse — or « je m'effondre quand je suis derrière » est une faiblesse réelle, répétable et
+  >   travaillable. **La valeur pour le résultat et la valeur pour la progression ne sont pas la même
+  >   chose, et l'outil ne mesure que la première.** Un coup qu'un humain repère d'un coup d'œil et que
+  >   l'app ne mentionne pas est aussi, très concrètement, ce qui fait douter de la méthode.
+  >   **Piste, et le vocabulaire existe déjà** : la tranche 04 a construit le cas « **montré par la
+  >   partie, non retenu par l'analyse** » — glyphe affiché, coup hors dénominateur, motif en mots — et
+  >   personne ne l'a jamais atteint (seuls les coups forcés pouvaient, et un coup forcé n'est jamais
+  >   signalé, cf. plus haut). Un **second critère de sévérité fondé sur les centipions** (par exemple
+  >   « chute ≥ 1,5 pion »), **signalé mais non compté**, remplirait exactement ce trou : le Player voit
+  >   son `Ke6`, le dénominateur ne bouge pas, les taux de 15c restent comparables, et l'écart
+  >   « la partie en montre 3, l'analyse en retient 1 » est expliqué par la phrase que le récapitulatif
+  >   sait déjà écrire. **Arbitrage du demandeur** : cela ajoute un seuil, et US-15a avait tenu à n'en
+  >   ajouter aucun.
   > - **Un coup forcé n'est jamais signalé** sur ce corpus (mesuré : sept parties, tous les coups
   >   forcés non signalés — avant/après sont deux lectures de la **même** recherche). Le motif
   >   d'exclusion « forcé » existe donc surtout pour le dénominateur ; vérifier qu'il vaut encore la
