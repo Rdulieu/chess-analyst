@@ -82,6 +82,32 @@ export interface MonthFetch {
 }
 
 /**
+ * Raised when the Platform's answer **ended before it was finished** — the
+ * connection died mid-body. It exists because the alternative is silence: a
+ * games stream read line by line simply stops yielding, the month imports
+ * partially and is reported at zero, indistinguishable from a month the Player
+ * was inactive in. That is the "gap in the fetching disguised as a gap in the
+ * history" the per-month lines exist to prevent (`CONTEXT.md`, `Monthly
+ * import`).
+ *
+ * It carries the `partial` fetch rather than discarding it: the break is no
+ * reason to throw away what already arrived. Re-running is free (dedup by URL),
+ * so keeping the Games costs nothing and losing them is silent.
+ */
+export class TruncatedStreamError extends Error {
+  constructor(
+    platform: Platform,
+    /** Everything that arrived before the break — kept, never rolled back. */
+    readonly partial: MonthFetch,
+  ) {
+    super(
+      `${platformLabel(platform)} a interrompu sa réponse avant la fin : le mois est incomplet. Relancez l'import pour le compléter.`,
+    );
+    this.name = "TruncatedStreamError";
+  }
+}
+
+/**
  * What a fetch can tell its caller **while it is still running**. Today that is
  * one thing: it is waiting on the Platform rather than working. A minute of
  * silence reads as a freeze, so the wait has to be sayable — and it is the

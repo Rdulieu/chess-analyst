@@ -3,7 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { openDb } from "../src/db";
 import { moveHabits } from "../src/db/schema";
 import { listGames } from "../src/repository";
-import { importMonth } from "../src/import";
+import { importMonth, importRange } from "../src/import";
+import { TruncatedStreamError } from "../src/platform";
 import { importedGame, fakeClient, seedProfile } from "./fixtures";
 
 /** A fresh database with the one `Profile` these tests import under. */
@@ -238,5 +239,60 @@ describe("importMonth", () => {
     expect(result.message).toMatch(/no games found/i);
     expect(result.message).toContain("2024-03");
     expect(listGames(db, profileId)).toHaveLength(0);
+  });
+});
+
+describe("a month whose stream was cut short", () => {
+  it("keeps the Games that arrived, and still reports the month a failure", async () => {
+    // Two things that must hold together: the Player does not lose what already
+    // came in, AND the month is not allowed to read as done. Persisting without
+    // raising would be the silent hole; raising without persisting would throw
+    // away Games the Platform already paid to send.
+    const { db, profileId } = testDb();
+    const arrived = importedGame({ gameUrl: "https://lichess.org/arrived1" });
+    const client = fakeClient({
+      "2024-01": new TruncatedStreamError("lichess", { totalFetched: 1, games: [arrived] }),
+    });
+
+    await expect(
+      importMonth(db, client, {
+        profileId,
+        username: "me",
+        year: 2024,
+        month: 1,
+        categories: ["blitz"],
+      }),
+    ).rejects.toThrow(TruncatedStreamError);
+
+    expect(listGames(db, profileId).map((g) => g.gameUrl)).toEqual([
+      "https://lichess.org/arrived1",
+    ]);
+  });
+
+  it("does not count a cut month as covered, and says so in words", async () => {
+    // The line the Player reads. An empty month reads as a plain zero; this one
+    // has to say the fetch broke, or the two collapse into one.
+    const { db, profileId } = testDb();
+    const client = fakeClient({
+      "2024-01": [importedGame({ gameUrl: "https://lichess.org/full1" })],
+      "2024-02": new TruncatedStreamError("lichess", {
+        totalFetched: 1,
+        games: [importedGame({ gameUrl: "https://lichess.org/half1" })],
+      }),
+    });
+
+    const result = await importRange(db, client, {
+      profileId,
+      username: "me",
+      platform: "lichess",
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 2 },
+      categories: ["blitz"],
+    });
+
+    expect(result.months[0].failure).toBeUndefined();
+    expect(result.months[1].failure).toMatch(/interrompu|incomplet/i);
+    // Kept: both the whole month's Game and the half month's.
+    expect(listGames(db, profileId)).toHaveLength(2);
   });
 });

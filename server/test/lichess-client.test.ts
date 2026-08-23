@@ -3,6 +3,7 @@ import express from "express";
 import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
 import { createHttpLichessClient } from "../src/platform/lichess/client";
+import { TruncatedStreamError } from "../src/platform";
 
 /**
  * A tiny stand-in for the Lichess API, so the real client is exercised end to
@@ -99,6 +100,36 @@ beforeAll(async () => {
     res.status(500).json({ error: "Internal Server Error" });
   });
   app.get("/__broken-calls", (_req, res) => res.json({ calls: brokenCalls.length }));
+
+  /**
+   * A stream **cut mid-body**: one whole game, then half of the next line, then
+   * the socket destroyed. Served chunked (no `Content-Length`), exactly like the
+   * real export — so the premature end is something the client can notice.
+   */
+  app.get("/api/games/user/truncated", (_req, res) => {
+    res.type("application/x-ndjson");
+    res.flushHeaders();
+    res.write(JSON.stringify(game({ id: "arrived1" })) + "\n");
+    res.write('{"id":"cutoff","spe');
+    // Destroyed only once the bytes are actually on the wire: killing it sooner
+    // is a connect-level reset, not the mid-body cut this is about. Not
+    // res.end() — a chunked body abandoned without its terminating chunk is what
+    // a dropped connection really looks like.
+    setTimeout(() => res.socket?.destroy(), 50);
+  });
+
+  /**
+   * The nastier cut: the socket dies **exactly on a line boundary**, so nothing
+   * partial is left over. This is the case a tail-parse cannot catch — the
+   * reader simply runs out of chunks and returns, and the month reads as a clean
+   * (short) success.
+   */
+  app.get("/api/games/user/truncated-clean", (_req, res) => {
+    res.type("application/x-ndjson");
+    res.flushHeaders();
+    res.write(JSON.stringify(game({ id: "arrived1" })) + "\n");
+    setTimeout(() => res.socket?.destroy(), 50);
+  });
 
   app.get("/api/games/user/:username", (req, res) => {
     exportCalls.push({ username: req.params.username, query: req.query });
@@ -284,5 +315,55 @@ describe("a 429 from Lichess", () => {
       calls: number;
     };
     expect(calls).toBe(1);
+  });
+});
+
+describe("a truncated games stream", () => {
+  it("raises instead of quietly answering with what arrived", async () => {
+    // The hole this closes: the reader stops yielding when the body dies
+    // mid-flight, so a half-imported month would be indistinguishable from a
+    // month the Player was inactive in. Silence here becomes a permanent,
+    // invisible gap in the history.
+    const client = createHttpLichessClient(baseUrl);
+
+    await expect(client.fetchMonth("truncated", 2024, 1)).rejects.toThrow(TruncatedStreamError);
+  });
+
+  it("raises even when the cut lands exactly on a line boundary", async () => {
+    // Nothing partial is left to fail a parse, so detecting this cannot rest on
+    // the leftovers: the stream itself has to be known to have ended early.
+    const client = createHttpLichessClient(baseUrl);
+
+    await expect(client.fetchMonth("truncated-clean", 2024, 1)).rejects.toThrow(
+      TruncatedStreamError,
+    );
+  });
+
+  it("carries the games that did arrive, so they are not lost with the break", async () => {
+    // The break is not a reason to throw away what was already received: a
+    // re-run costs nothing (dedup by URL), but a Game silently dropped here is
+    // one the Player never gets back without noticing it was missing.
+    const client = createHttpLichessClient(baseUrl);
+
+    const error = await client
+      .fetchMonth("truncated", 2024, 1)
+      .then(() => null, (e: unknown) => e as TruncatedStreamError);
+
+    expect(error).toBeInstanceOf(TruncatedStreamError);
+    expect(error?.partial.games.map((g) => g.gameUrl)).toEqual([
+      "https://lichess.org/arrived1",
+    ]);
+    expect(error?.partial.totalFetched).toBe(1);
+  });
+
+  it("says the stream ended early, in words a Player can act on", async () => {
+    // What lands on the month's line. `aborted` — Node's own word — names a
+    // socket, not a thing the Player can do; the message has to say the answer
+    // was cut short and that re-running is the way out.
+    const client = createHttpLichessClient(baseUrl);
+
+    await expect(client.fetchMonth("truncated", 2024, 1)).rejects.toThrow(
+      /interrompu|incomplet/i,
+    );
   });
 });

@@ -1,4 +1,11 @@
-import { platformLabel, type FetchHooks, type MonthFetch, type PlatformAccount, type PlatformClient } from "../types";
+import {
+  platformLabel,
+  TruncatedStreamError,
+  type FetchHooks,
+  type MonthFetch,
+  type PlatformAccount,
+  type PlatformClient,
+} from "../types";
 import { discard, lichessGet, readNdjson, readText } from "./request";
 import { isInScope, monthWindow, toImportedGame } from "./mapping";
 import type { LichessGame } from "./payload";
@@ -99,13 +106,24 @@ export function createHttpLichessClient(
 
       let totalFetched = 0;
       const games = [];
-      for await (const line of readNdjson(body)) {
-        const game = line as LichessGame;
-        // `totalFetched` says what Lichess HAD, out-of-scope games included, so
-        // a month mostly out of scope never reads as an empty one.
-        totalFetched++;
-        if (isInScope(game)) games.push(toImportedGame(game, username));
+      try {
+        for await (const line of readNdjson(body)) {
+          const game = line as LichessGame;
+          // `totalFetched` says what Lichess HAD, out-of-scope games included, so
+          // a month mostly out of scope never reads as an empty one.
+          totalFetched++;
+          if (isInScope(game)) games.push(toImportedGame(game, username));
+        }
+      } catch (err) {
+        // The stream died mid-body. Node raises here (`aborted`, ECONNRESET) —
+        // measured, not assumed — but its word names a socket, not something the
+        // Player can act on, so it is restated. What arrived rides along.
+        if (isPrematureEnd(body, err)) throw new TruncatedStreamError("lichess", { totalFetched, games });
+        throw err;
       }
+      // The iteration can also end cleanly on a boundary while the message was
+      // never completed; `complete` is Node's own account of that.
+      if (!body.complete) throw new TruncatedStreamError("lichess", { totalFetched, games });
       return { totalFetched, games };
     },
   };
@@ -131,4 +149,14 @@ async function exportMonth(url: string, retryAfterMs: number, hooks?: FetchHooks
   );
   await sleep(retryAfterMs);
   return lichessGet(url, { accept: "application/x-ndjson" });
+}
+
+/**
+ * Whether this failure is the body ending early rather than a bad payload. A
+ * `JSON.parse` blowing up on a line that arrived whole is a payload bug and must
+ * keep surfacing as itself; an incomplete message is a truncation whatever the
+ * error says.
+ */
+function isPrematureEnd(body: { complete: boolean }, err: unknown): boolean {
+  return !body.complete || (err as { code?: string })?.code === "ECONNRESET";
 }

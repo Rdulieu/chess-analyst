@@ -4,7 +4,9 @@ import { gameExistsByUrl } from "../repository";
 import { recordMoveHabits } from "../move-habits/precompute";
 import {
   TIME_CONTROL_CATEGORIES,
+  TruncatedStreamError,
   type FetchHooks,
+  type ImportedGame,
   type PlatformClient,
   type TimeControlCategory,
 } from "../platform";
@@ -81,18 +83,48 @@ export async function importMonth(
   client: PlatformClient,
   params: ImportParams,
 ): Promise<ImportFigures> {
-  const { totalFetched, games: monthGames } = await client.fetchMonth(
-    params.username,
-    params.year,
-    params.month,
-    { onWaiting: params.onWaiting },
-  );
+  let fetched;
+  try {
+    fetched = await client.fetchMonth(params.username, params.year, params.month, {
+      onWaiting: params.onWaiting,
+    });
+  } catch (err) {
+    // A stream cut mid-body still delivered Games, and the Platform already paid
+    // to send them. They are persisted before the failure is handed on: the
+    // month must not read as covered, but it must not cost the Player what did
+    // arrive either (dedup by URL makes the re-run add exactly the rest).
+    if (err instanceof TruncatedStreamError) persist(db, params, err.partial.games);
+    throw err;
+  }
+  const { totalFetched, games: monthGames } = fetched;
+  const { imported, alreadyPresent, byCategory, results } = persist(db, params, monthGames);
+  const summary: ImportFigures = {
+    totalFetched,
+    imported,
+    alreadyPresent,
+    byCategory,
+    results,
+  };
+  if (imported === 0 && alreadyPresent === 0) {
+    const yyyymm = `${params.year}-${String(params.month).padStart(2, "0")}`;
+    summary.message = `No games found for ${yyyymm} in the selected time control categories.`;
+  }
+  return summary;
+}
+
+/**
+ * Files the in-scope Games under the Profile, deduped by URL, and tallies what
+ * happened. Split out because it runs over a **partial** fetch just as well as a
+ * whole one: a truncated stream's Games are persisted on exactly this path, so
+ * there is no second, subtly different way of storing a Game.
+ */
+function persist(db: Db, params: ImportParams, fetchedGames: ImportedGame[]) {
   const wanted = new Set(params.categories);
   let imported = 0;
   let alreadyPresent = 0;
   const byCategory = emptyTally();
   const results = { win: 0, loss: 0, draw: 0 };
-  for (const game of monthGames) {
+  for (const game of fetchedGames) {
     // Which paces to keep is the PLAYER's choice, not a Platform fact — so it
     // stays here while the variant filter went into the adapter (ADR-0018).
     if (!wanted.has(game.timeControlCategory)) continue;
@@ -107,16 +139,5 @@ export async function importMonth(
     recordMoveHabits(db, inserted);
     imported++;
   }
-  const summary: ImportFigures = {
-    totalFetched,
-    imported,
-    alreadyPresent,
-    byCategory,
-    results,
-  };
-  if (imported === 0 && alreadyPresent === 0) {
-    const yyyymm = `${params.year}-${String(params.month).padStart(2, "0")}`;
-    summary.message = `No games found for ${yyyymm} in the selected time control categories.`;
-  }
-  return summary;
+  return { imported, alreadyPresent, byCategory, results };
 }
