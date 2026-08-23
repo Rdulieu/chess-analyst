@@ -70,7 +70,9 @@ export async function importRange(
         month,
         imported: 0,
         alreadyPresent: 0,
-        failure: err instanceof Error ? err.message : "Import failed",
+        // Not everything thrown is an Error — a PGN parser can throw its own
+        // class — and "Import failed" tells the Player nothing they can act on.
+        failure: err instanceof Error ? err.message : `Import failed: ${String(err)}`,
       });
       onMonthDone?.(snapshot(total));
       continue;

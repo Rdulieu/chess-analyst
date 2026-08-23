@@ -4,6 +4,7 @@ export {
   platformLabel,
   clientFor,
   UnsupportedPlatformError,
+  TruncatedStreamError,
   type Platform,
   type TimeControlCategory,
   type FetchHooks,
