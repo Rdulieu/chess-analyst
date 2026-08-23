@@ -27,4 +27,13 @@ export default tseslint.config(
     files: ["**/*.config.{js,ts}", "client/vite.config.ts"],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // Agentic-test tooling that runs **inside the page under test**: it is
+    // injected and evaluated by the driver, so it lives in the browser's globals
+    // and its entry point is called from outside the file by design. Linted as
+    // node/unused, it reports 18 errors that say nothing about the code.
+    files: ["docs/test-scenarios/tools/**/*.js"],
+    languageOptions: { globals: { ...globals.browser } },
+    rules: { "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^themeAudit$" }] },
+  },
 );
