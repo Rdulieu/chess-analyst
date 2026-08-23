@@ -102,8 +102,35 @@ reports. **None arrived.** No completion notification carried them — the orche
 five agents, exactly one was ever heard from, and only because it answered a follow-up with
 `SendMessage`. Roughly thirty minutes of real-API work, green, invisible.
 
-The cause is not established, so do not encode one. What is established is the **symptom** and the
-**cure**, and the cure is cheap:
+**What happened on 2026-08-22 (FP run, one subagent).** Delivery **worked** — twice. The subagent's
+report arrived on its own, in full, with no prompting; a second, targeted report arrived the same
+way. But in both cases an `idle_notification` followed **after** the report, carrying nothing, which
+reads exactly like the 2026-08-21 symptom. Relancing on it produced a **duplicate** of a report
+already received — and the subagent itself believed its first send had been lost, because a sender
+cannot tell whether its message landed.
+
+**What happened on 2026-08-23 (full HP suite: path 0, then three HPs in parallel).** Delivery worked
+**4 out of 4**, every report unprompted, in full — including the **parallel fan-out**, which is the
+exact shape that lost four reports on 2026-08-21. **No `SendMessage` relance was needed. No
+transcript recovery was needed.** Each report was again followed by an empty `idle_notification`,
+confirming that signal means nothing about delivery.
+
+That settles the open question of §5.6 as far as one run can: **treat delivery as working**, in
+parallel included. The 2026-08-21 loss remains unexplained and is now **history rather than a live
+warning** — one incident, never reproduced across two later runs. Keep the ladder below, because it
+costs one sentence in a dispatch prompt and a lost suite costs half an hour of real engine and
+network time; but do not design a run around the assumption that reports vanish.
+
+So the current picture, and it is narrower than the 2026-08-21 incident suggested:
+
+- A report **can** arrive unprompted. Treat delivery as working, not as broken by default.
+- **An `idle_notification` is not a signal that a report is missing.** It says the agent ended a
+  turn, and it may well arrive after a report you already have. **Check what you have received
+  before relancing**; a relance costs a duplicate at best and a re-run at worst.
+- Ask (§5.1 below) only when a report is **genuinely** absent — nothing received for that scenario.
+
+The cause of the 2026-08-21 loss remains unestablished, so do not encode one. What is established is
+the **symptom** and the **cure**, and the cure is cheap:
 
 1. **Tell each subagent to send its report with `SendMessage`** when it finishes, rather than
    relying on the automatic delivery alone. Belt and braces; the braces cost one sentence.
@@ -177,16 +204,61 @@ subagent, explicitly:
   a shared browser had its selected page stolen ~20 times across one parallel run, and the guard
   is what kept every action off the siblings' apps. Prefer in-page SPA navigation over
   driver-level page navigation, which is the operation that lands on the wrong page.
-- **Its own browser context**, and a re-assert of viewport and emulated colour scheme before
-  trusting any measurement.
+- **Its own browser instance — a private one, as the DEFAULT and not the fallback** (measured
+  2026-08-23, and this is the run's strongest operational finding). On the parallel HP fan-out the
+  shared devtools browser stole the selected page from **all three** scenarios: ~7 steals over half
+  of one agent's calls, 2 within the first 3 calls of another, 7 of 12 consecutive calls of the
+  third — where one early `take_snapshot` returned **a sibling's full accessibility tree** before any
+  guard could fire. Two of the three abandoned the shared browser mid-run and finished against their
+  own Chrome; both reported zero theft afterwards. So do that from the start:
+  - launch the bundled Chrome directly (on this host:
+    `~/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome`), with **its own `userDataDir`** and
+    **its own `--remote-debugging-port`**, and drive it with `puppeteer-core`;
+  - **`--no-sandbox` is required on this host** — the bundled Chrome aborts with "No usable sandbox"
+    otherwise;
+  - do **not** expect to re-attach to an MCP page from a script: `browserContexts()` does not expose
+    the MCP's isolated contexts, so `pages()` sees only the default context.
+- **Re-assert viewport and emulated colour scheme before trusting any measurement** — and assert the
+  theme *inside* the audited script, failing loudly when it is wrong. Measured 2026-08-23: the MCP's
+  `emulate colorScheme` **did not survive page-selection churn** (a page emulated `light` later
+  measured `prefers-color-scheme: dark` with nothing having asked for it). A theme audit that trusts
+  the theme it requested can silently audit one theme twice.
 - **Teardown by pid, and NEVER `pkill` by pattern.** `pkill node` kills every sibling's server
   mid-run. Also: a dev wrapper often **orphans its listener** — killing the pid the package
   manager returned can leave the real server still serving. Verify the port is actually free
-  (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours (e.g. via `/proc/<pid>/environ`)
-  before killing it. Two agents on one run believed they had stopped an app that was still up, and
+  (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours before killing it. `/proc/<pid>/environ`
+  is the first proof, but it is **often empty of anything identifying** — measured 2026-08-23 (FP),
+  where neither the vite nor the Chrome pid carried a scratch path in `environ`. `/proc/<pid>/cmdline`
+  is the second proof and worked where `environ` did not: the worktree path, `--strictPort <your
+  port>`, `--user-data-dir` under your own scratch. Use whichever actually names you; do not treat an
+  uninformative `environ` as evidence that a pid is not yours. Two agents on one run believed they had stopped an app that was still up, and
   one of them copied a database out from under it.
+- **`npx` interposes a wrapper, so the listener is usually a GRANDCHILD** (re-confirmed by three
+  agents on 2026-08-23). Killing the pid you spawned leaves the real server listening. Kill the
+  tree, then check the port — every agent on that run had to come back for a grandchild, and each
+  one found it because it verified rather than assumed.
+- **Kill the watcher, not just the listener — and prefer no watcher at all** (measured
+  2026-08-22, US-15a FP). Killing the listener under a `tsx watch` wrapper leaves the **wrapper**
+  alive, and a *free port is not proof of a stopped app*: the next edit to a source file makes the
+  watcher **resurrect a server on that port**. On this run the port was verified free at 09:57, a
+  commit touched the sources at 09:59, and the relaunch then failed `EADDRINUSE` against a server
+  nobody had started. Worse than the nuisance: what is then serving is **code the agent never
+  meant to test**. So kill the whole tree (wrapper included), and for a run that is *validating a
+  specific commit* start the server **without watch** (`npx tsx src/main.ts`) — one pid, no
+  resurrection, and no doubt about which code answered.
+- **Ports are not necessarily free just because they were assigned to you** (2026-08-22): two
+  orphans from the previous day still held the assigned pair. A subagent should **not** kill
+  processes it cannot prove are its own — it should shift to a free pair, say which, and report the
+  orphans for their owner.
 - **Restore state before starting the server**, not after: a server usually creates its database
   file on open, so a copy made afterwards is overwritten by a live process.
+- **But *seed* AFTER the server is up** (measured 2026-08-23, games-table-wide FP) — restoring and
+  seeding are not the same operation and want opposite orders. An agent copied the database, wrote
+  `analyzed = 1` into the copy, started the server, and read the rows back as **0**: the copied
+  `-wal`/`-shm` sidecars and the open-time checkpoint discarded the write. The same `UPDATE` against
+  the running server took immediately. So: **copy the database, start the server, then seed** — and
+  read the seeded rows back through the app before trusting them. Note that seeding is a fallback:
+  prefer state the UI can produce, and say in the report what you seeded and why the UI could not.
 
 ### 5.5 What to tell every subagent
 
@@ -214,14 +286,41 @@ settle any of it.
 
 Answer these, and write the answers down:
 
-- **Did any report arrive on its own**, as a completion notification, with no prompting? That is the
-  documented behaviour and it is the single most important thing to re-check. If it now works,
-  §5.1's incident becomes history rather than a live warning, and the belt-and-braces can relax.
-- **Did the `SendMessage`-on-idle relance work?** For how many agents?
+- **Did any report arrive on its own**, as a completion notification, with no prompting?
+  *(**Answered 2026-08-23**: yes — **4 of 4**, unprompted, including the three-way parallel fan-out
+  that is the shape which lost reports on 2026-08-21. Two consecutive runs now say delivery works.
+  This question is closed unless a run contradicts it; if one does, say so here rather than
+  reverting the section wholesale. **Re-confirmed 2026-08-23 (games-table FP)**: the report arrived
+  **twice** — once via the subagent's own `SendMessage`, once as the completion notification, with
+  identical content. Three consecutive runs. The belt-and-braces instruction of §5.1 is what produces
+  the duplicate; it is worth the cost, but expect the double delivery rather than reading the second
+  copy as a second report.)*
+- **Did the `SendMessage`-on-idle relance work?** For how many agents? *(2026-08-23: **not needed
+  once** — nothing to relance. Separately confirmed the same day that `SendMessage` **resumes a
+  completed subagent** with its environment knowledge intact: the games-table FP agent was sent back
+  to re-verify one failed step on a new commit rather than a fresh agent being dispatched. That is
+  the cheap path after a fix — it already knows its ports, its database copy and its browser.)*
 - **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
+  *(2026-08-23: **not needed**, twice over. The path is therefore still **unverified** since it was
+  written — the one claim in §5.2 nobody has exercised. Do not delete it, but do not trust it blind
+  either: check the directory exists before relying on it in an emergency.)*
 - **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
-  document, the shared browser stealing the selected page? Any of these may have been fixed
-  upstream, and a warning about a bug that no longer exists costs real time on every future run.
+  document, the shared browser stealing the selected page? *(2026-08-23: the orphaned listener and
+  the page theft both hold and are **worse** than they were written; the theft is now the default
+  expectation on a parallel run, which is why §5.4 makes a private browser the default rather than
+  the fallback. `emulate` was found to lose its setting across page churn, which is a different
+  failure from reloading the document. **2026-08-23 (games-table FP)**: with a private browser from
+  the very start and every script port-guarded, **zero page thefts and no theme or viewport loss** —
+  the single-subagent case, so it says nothing about the parallel one, but it does say the private
+  browser removes the symptom rather than merely reducing it. The `npx` grandchild listener was
+  confirmed again on both servers.)*
+- **Did any driver produce a false finding?** *(2026-08-23: **five**, across three agents — a
+  progress observer read only its first 40 of 1488 samples, a board parser keyed on `img` where the
+  pieces are `div` backgrounds, a breadcrumb predicate assuming one parent, a candidate lookup
+  matching non-clickable ancestors. Every one was caught by re-measuring before reporting. That rule
+  has now caught more would-be defects than the app has produced. **2026-08-23 (games-table FP):
+  zero** — one candidate (a badge that looked right-aligned) dissolved on re-measuring the computed
+  `text-align`. The rule keeps paying for itself.)*
 
 **Then correct the skill in the same run**, as a doc commit alongside the suite result. Three rules
 for that edit:
@@ -269,8 +368,10 @@ not findings about the app, and a reviewer must not have to work out which is wh
 Before sending a scenario to a subagent, confirm its prompt carries all eight. The first is the
 one that silently loses runs.
 
-- [ ] **Deliver the report via `SendMessage`** on completion — do not rely on automatic delivery alone
-- [ ] Its own ports, its own `DB_FILE`, its own browser context
+- [ ] **Deliver the report via `SendMessage`** on completion — cheap belt-and-braces; delivery itself
+      is now demonstrated working, parallel included (§5.1, 2026-08-23)
+- [ ] Its own ports, its own `DB_FILE`, and **its own private browser instance** — not the shared one
+      (§5.4: all three scenarios of the 2026-08-23 run had their page stolen)
 - [ ] Restore state **before** starting the server
 - [ ] A `location.port` guard on every injected script
 - [ ] Teardown **by pid**, never `pkill` by pattern; verify the port is free afterwards

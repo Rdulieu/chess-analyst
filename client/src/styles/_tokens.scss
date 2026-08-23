@@ -64,6 +64,15 @@
   // 0.19–0.23, which no eyeballed value hits by chance.
   --curve-equality: #7e7e7e;
   --curve-cursor: #d45a25;
+  // The `Best line` arrows drawn ON the board — same family, same reason: an
+  // arrow laid over the two square colours must hold in both themes, so it does
+  // not vary with the theme. Each clears 3:1 against BOTH squares (best line
+  // 10.59 / 3.83, refutation 12.01 / 4.34). They are close in luminance to each
+  // other, which is acceptable **here and only here**: the two arrows start from
+  // different squares, and the panel names each line in text — the colour is
+  // never what tells them apart (the rule since US-3's finding).
+  --arrow-best-line: #08351a;
+  --arrow-refutation: #4a0d08;
 
   // --- scales ---------------------------------------------------------------
   --space-1: 0.25rem;

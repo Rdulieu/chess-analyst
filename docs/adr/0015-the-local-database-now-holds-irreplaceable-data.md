@@ -51,3 +51,27 @@ simply have arrived on an empty database. Under this one it arrives with a scrip
   its "throwaway local data" framing no longer describes reality.
 - The absence of any backup means a bad migration is unrecoverable. Migrations run against a copy
   first; that is a practice, not tooling we are building here.
+
+## Note (US-15a, 2026-08-22): one exception taken, and the argument it exposed
+
+US-15a required a `pv` on every `evaluations` row (ADR-0016). The 1199 Evaluations already stored
+cannot get one — a line is not recoverable by replay, unlike ADR-0012's FENs — so this decision
+pointed at carrying them forward behind a synthetic pass, with a null `pv`. **That was rejected and
+those rows were discarded instead.**
+
+The reason is a cost this ADR did not weigh. It compared a **bounded** migration against an
+**unbounded, recurring** engine cost, and concluded rightly. But rows that can never be completed
+are not carried by a migration script — they are carried by a **permanent branch in the code**: a
+degraded state in every reader, a message explaining it, and tests for both, for as long as the rows
+exist. Here that meant a forever-branch serving **20 Games worth ~11 minutes** of engine time. The
+recurring cost had moved from the engine to the code, which inverts this ADR's own arithmetic.
+
+So the rule stands as written, with its boundary sharpened: **the freedom to lose data is still
+withdrawn, and any exception must be named — as this one is.** What is *not* a migration burden is a
+schema change whose old rows are **structurally incompletable**; that case is decided on the cost of
+the permanent code path, not on the cost of the script. Every other change still owes its migration.
+
+The scope of this exception was kept deliberately narrow: the `evaluations` rows of the analyzed
+Games, **not the database**. Profiles, Games, PGNs, openings and `move_habits` were untouched, and
+rebuilding was a Player-triggered pass over Games already imported — which is what makes the loss
+recoverable in practice, and is exactly the distinction this ADR drew for Import.

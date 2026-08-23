@@ -1,6 +1,7 @@
-import { inArray, count, desc, eq, isNull } from "drizzle-orm";
+import { and, inArray, count, desc, eq, isNull } from "drizzle-orm";
 import type { Db } from "../db";
 import type { Engine } from "../engine/types";
+import { ANALYSIS_REGIME } from "../engine/types";
 import { analysisPasses, evaluations, type Game } from "../db/schema";
 import { getGame } from "../repository";
 import { gamePositions } from "../chess/positions";
@@ -46,6 +47,35 @@ function evaluatedPositions(db: Db, gameIds: number[]): number {
 }
 
 /**
+ * Whether a pass under the current `Search regime` has work to do on this Game:
+ * either it was never analyzed, or its stored `Evaluation`s came from a
+ * **different** regime, in which case the Game is re-evaluated whole
+ * (CONTEXT.md, `Search regime`).
+ *
+ * The regime is consulted here and not only inside `analyzeGame`, because this
+ * is where the selection is made: filtering on the `analyzed` flag alone was
+ * enough, on its own, to make the rule unreachable — a Game analyzed at another
+ * depth was dropped from the pass before anything could compare anything.
+ */
+function needsAnalysis(db: Db, game: Game): boolean {
+  if (!game.analyzed) return true;
+  return (
+    (db
+      .select({ n: count() })
+      .from(evaluations)
+      .innerJoin(analysisPasses, eq(evaluations.passId, analysisPasses.id))
+      .where(
+        and(
+          eq(evaluations.gameId, game.id),
+          eq(analysisPasses.depth, ANALYSIS_REGIME.depth),
+          eq(analysisPasses.lines, ANALYSIS_REGIME.lines),
+        ),
+      )
+      .get()?.n ?? 0) === 0
+  );
+}
+
+/**
  * A pass was pointed at a Game belonging to **another** `Profile`. Thrown rather
  * than silently dropped: narrowing the selection would spend engine time on a
  * subset while the Player believes their whole selection is covered, and the
@@ -77,7 +107,18 @@ export interface AnalysisJob {
    * where it was pointed (ADR-0014), so a `gameId` belonging to someone else is
    * a caller's mistake to refuse, not a Game to quietly analyze.
    */
-  start(profileId: number, gameIds: number[]): AnalysisStatus & { started: boolean };
+  start(
+    profileId: number,
+    gameIds: number[],
+    /**
+     * `overwrite` — the Player asked for these Games to be analyzed **again**
+     * and confirmed losing their stored `Evaluation`s (US-15a 07). It lifts the
+     * "already analyzed under this regime" filter for **exactly the Games
+     * named**, and never for a wider selection: overwriting is a per-Game act
+     * the Player confirmed by name.
+     */
+    options?: { overwrite?: boolean },
+  ): AnalysisStatus & { started: boolean };
   /** Marks **this Profile's** last pass's summary as seen. Display only. */
   acknowledge(profileId: number): void;
   /** Resolves when the current pass (if any) has finished — for tests/shutdown. */
@@ -150,7 +191,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
   return {
     status: snapshot,
 
-    start(profileId, gameIds) {
+    start(profileId, gameIds, { overwrite = false } = {}) {
       // One engine, so one pass at a time — whichever Profile asked.
       if (runningPassId !== null) return { ...snapshot(profileId), started: false };
 
@@ -165,7 +206,10 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
       const foreign = selected.filter((game) => game.profileId !== profileId);
       if (foreign.length > 0) throw new ForeignGameError(foreign.map((game) => game.id));
 
-      const pending = selected.filter((game) => !game.analyzed);
+      // Everything named, when the Player confirmed the overwrite: the filter
+      // exists to avoid spending engine time twice by accident, and this is the
+      // one path where spending it again is the whole request.
+      const pending = overwrite ? selected : selected.filter((game) => needsAnalysis(db, game));
 
       // Nothing to analyze: no pass is opened at all — an empty pass is not a
       // pass, and must not overwrite the one the Player last ran.
@@ -179,6 +223,10 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
           // Every Position of every pending Game — the initial Position
           // included, which is what the engine actually evaluates.
           total: pending.reduce((sum, game) => sum + gamePositions(game.pgn).length, 0),
+          // The `Search regime` this pass runs under, recorded on the pass
+          // itself: it is what lets a later pass tell whether a Game's stored
+          // Evaluations are comparable with the ones it would add.
+          ...ANALYSIS_REGIME,
           startedAt: new Date().toISOString(),
         })
         .returning()
@@ -188,7 +236,7 @@ export function createAnalysisJob(db: Db, engine: Engine): AnalysisJob {
       current = (async () => {
         try {
           for (const game of pending) {
-            await analyzeGame(db, engine, game);
+            await analyzeGame(db, engine, game, pass, { overwrite });
           }
         } catch (err) {
           // A backend failure (e.g. the engine not being wired up) must not take

@@ -15,8 +15,10 @@ export async function runAnalysis(
   profileId: number,
   gameIds: number[],
   onProgress: (status: AnalysisStatus) => void,
-): Promise<{ started: boolean }> {
-  const start = await startAnalysis(profileId, gameIds);
+  /** The Player confirmed overwriting an existing analysis (US-15a 07). */
+  overwrite = false,
+): Promise<{ started: boolean; blocked: boolean }> {
+  const start = await startAnalysis(profileId, gameIds, overwrite);
   let status: AnalysisStatus = start;
   onProgress(status);
   while (status.running) {
@@ -24,5 +26,11 @@ export async function runAnalysis(
     status = await fetchAnalysisStatus(profileId);
     onProgress(status);
   }
-  return { started: start.started };
+  return {
+    started: start.started,
+    // A pass was refused **because one was already running** — the engine is
+    // single-flighted. A different fact from "nothing to analyze", and the one
+    // case where a Player who just confirmed a re-analysis gets no pass.
+    blocked: !start.started && start.running,
+  };
 }

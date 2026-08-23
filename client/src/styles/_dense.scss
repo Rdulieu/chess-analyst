@@ -260,6 +260,14 @@ section[aria-label="partie"] {
   gap: var(--space-2);
 }
 
+// The `Review mode`'s three levels, at the top of the pane beside the board. A
+// narrower gap than a form's fieldset: this one sits in a 14rem column, and the
+// three levels should read as one control rather than wrap one per line.
+[data-part="review-mode"] {
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}
+
 // The step controls, on one line at the top of the pane beside the board.
 [data-part="stepper"] {
   display: flex;
@@ -331,6 +339,114 @@ section[aria-label="partie"] {
   [data-mark="cursor"] {
     stroke: var(--curve-cursor);
   }
+
+  // A Phase boundary, ruled OVER the areas — the equality line's idiom, never a
+  // background band: the areas are opaque and full height, so anything behind
+  // them is invisible, and a tint laid over them would move the contrast the
+  // markers and the cursor were MEASURED at (ADR-0013).
+  //
+  // It borrows the equality line's colour rather than inventing one: that value
+  // is measured at 3.44 / 3.30 against the two player grounds, and an eyeballed
+  // new one would be a claim nobody checked. The two cannot be confused anyway —
+  // one is horizontal and dashed, the other vertical and solid.
+  [data-mark="phase-boundary"] {
+    stroke: var(--curve-equality);
+  }
+}
+
+// The second drawing: the cumulative trace of what the Player lost. Shorter than
+// the curve — it carries one quantity, not two shares — and landscape for the
+// same reason: squeezed narrow, a trace stops being a time axis and reads as a
+// vertical drip. The geometry is here and not in the component.
+[data-part="drift"] {
+  block-size: 6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  background: var(--ground-sunk);
+
+  > div,
+  svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  // The area under the running total. The **stroke** carries the meaning — a step
+  // against a slope — and the fill is only a hint of accumulation, which is why
+  // it is this faint.
+  //
+  // 0.12 is measured, not chosen by eye. The cursor and the boundary rules are
+  // drawn OVER this fill, so the fill is a third ground nobody had measured: at
+  // the 0.35 it shipped with, both marks fell to about 2:1 inside the area (2.20
+  // / 2.25 light, 2.02 / 1.98 dark) while passing comfortably above it — crisp on
+  // one half of the box and dim on the other. At 0.12 the composite keeps both
+  // marks over 3:1 in BOTH themes (cursor 3.09 light / 3.29 dark, boundary 3.16 /
+  // 3.22). ADR-0013's floor is not waived because a drawing is decorative.
+  polygon {
+    fill: var(--ink-muted);
+    fill-opacity: 0.12;
+    stroke: var(--ink-muted);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  [data-mark="cursor"] {
+    stroke: var(--curve-cursor);
+  }
+
+  [data-mark="phase-boundary"] {
+    stroke: var(--curve-equality);
+  }
+}
+
+// Each drawing's visible label. Small and muted, but real text and never
+// `aria-hidden`: it is the only part of either picture a reader gets, and two
+// drawings that do not say the same thing must not be mistakable for one another.
+[data-part="graph-label"] {
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// The Phase ribbon, on the axis the two drawings share: one segment per Phase,
+// each as wide as the share of the Game it covers (that width is the component's
+// one inline value, being data). Real text, so a Phase is named and not merely
+// bounded.
+[data-part="phase-ribbon"] {
+  display: flex;
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+
+  // The band itself carries NO padding and no gap, and that is load-bearing: a
+  // flex item's fixed parts are taken out of the free space before the
+  // proportional split, so padding here would give every band its true share
+  // PLUS its own padding — the widest losing, the narrow ones gaining. Measured
+  // at 3–9 px of drift against the boundary rules, on a ribbon whose whole job is
+  // to sit on the same axis. The divider is an inset shadow, which costs no
+  // layout at all.
+  > span {
+    flex-basis: 0;
+    min-inline-size: 0;
+    overflow: hidden;
+    background: var(--ground-sunk);
+
+    + span {
+      box-shadow: inset 1px 0 0 var(--border);
+    }
+  }
+
+  // The padding lives one level in, where it cannot disturb the split.
+  span span {
+    display: block;
+    padding-inline: var(--space-1);
+    // A narrow band must not wrap into two lines and shove the drawing below it
+    // down; the ribbon is a scale, and the move list names the Phases in full
+    // where a Player needs to read them.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 // The winning-chances bar: a bar, framed. The frame is what keeps White's light
@@ -346,4 +462,35 @@ section[aria-label="partie"] {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+}
+
+// What the Game contributes, at the head of the panel area and above the Move's
+// own record: it is the claim the Player checks the method against, and what
+// follows is its Move-by-Move proof. Same card and same full width as the record
+// below it — they are read as one panel, in that order.
+[data-part="recap"] {
+  margin-block-start: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// The reviewed Move's record, BELOW the board row and in its own card: its height
+// is whatever its lines need, and everything stacked above the diagram is height
+// the diagram does not get. Full width of the screen's column, because a line of
+// six Moves reads across, not down.
+[data-part="record"] {
+  margin-block-start: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+// One `Best line`, read as a row of Moves: its label, then a button per ply. They
+// wrap rather than scroll — a line is short by construction (the display cap).
+[data-part="line"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
 }

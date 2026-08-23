@@ -1,6 +1,8 @@
 import type { Game } from "../db/schema";
 import { winningChances, type CpOrMate } from "../danger/winning-chances";
 import { classifyMove, type MoveSeverity } from "../danger/move-quality";
+import { phases, type Phase } from "./phase";
+import { chancesLostByMove, countedMoves, type MoveCount } from "./counted";
 
 /** One half-move's annotation (US-7): the `Evaluation` and win% converted to
  *  White-relative (CONTEXT.md — stored values are side-to-move relative), and
@@ -11,6 +13,34 @@ export interface MoveAnnotation {
   whiteEval: CpOrMate;
   whiteWinChances: number;
   severity: MoveSeverity | null;
+  /**
+   * The `Best line` from **this** Position, in UCI (CONTEXT.md). One field
+   * answers both readings the Player needs: the line at ply `n` is what should
+   * have been played there, and the line at ply `n + 1` — starting with the
+   * opponent's best reply — is how the Move actually played is punished.
+   */
+  bestLine: string[];
+  /**
+   * The `Phase` this Move was played in (CONTEXT.md) — derived from the FEN
+   * stored with the `Evaluation`, in the Game's own sequence, so it latches.
+   * No column, no engine call: retunable without re-analysing anything.
+   */
+  phase: Phase;
+  /**
+   * Whether this Move counts in the analysis and, when it does not, why
+   * (CONTEXT.md `Counted Move`). `null` for ply 0 and for the **opponent's**
+   * Moves: nothing is derived for them, which is not the same claim as "not
+   * counted".
+   */
+  counted: MoveCount | null;
+  /**
+   * What this Move cost the Player, in winning-chances points (ADR-0017 — a Game
+   * carries the per-Move delta the aggregate consumes). `null` where nothing is
+   * contributed, `0` for a Move that does not count. The Game's own recap is the
+   * sum of these, so a trace drawn from them cannot disagree with the total
+   * stated beside it.
+   */
+  chancesLost: number | null;
 }
 
 /** One analyzed Game's per-Position FEN, raw `Evaluation` and win% (ply 0 = initial Position). */
@@ -20,6 +50,8 @@ export interface Ply {
   evaluation: CpOrMate;
   /** Winning chances (0–100) for whoever is to move at this Position. */
   winChances: number;
+  /** The `Best line` from this Position, in UCI. */
+  bestLine: string[];
 }
 
 /** One stored `Evaluation` row, as every read path sees it: the Position it is
@@ -29,6 +61,8 @@ export interface StoredEvaluation {
   fen: string;
   cp: number | null;
   mate: number | null;
+  /** The `Best line`, whole, in UCI, space-separated as stored (ADR-0016). */
+  pv: string;
 }
 
 /** A Game's per-Position FENs, raw `Evaluation`s and win% (ply 0 = initial Position), shared by
@@ -44,6 +78,9 @@ export function gamePlies(evals: StoredEvaluation[]): Ply[] {
       fen: evaluation.fen,
       evaluation,
       winChances: winningChances(evaluation),
+      // Split once, here, where the stored column becomes something to read: no
+      // caller should have to know that the line is one space-separated column.
+      bestLine: evaluation.pv === "" ? [] : evaluation.pv.split(" "),
     }));
 }
 
@@ -98,6 +135,11 @@ export function gameAnnotations(
 ): MoveAnnotation[] {
   const plies = gamePlies(evals);
   const severities = moveSeverities(plies, game.playerColor);
+  // Over the whole Game at once, and not Position by Position: the Phase latches,
+  // so it can only be read as a sequence.
+  const phaseOf = phases(plies.map((ply) => ply.fen));
+  const counted = countedMoves(plies, game.playerColor);
+  const lost = chancesLostByMove(plies, game.playerColor);
 
   return plies.map((ply, i) => {
     const mover = moverAt(i);
@@ -106,6 +148,10 @@ export function gameAnnotations(
       whiteEval: toWhiteRelative(ply.evaluation, mover),
       whiteWinChances: mover === "white" ? ply.winChances : 100 - ply.winChances,
       severity: i === 0 ? null : severities[i - 1],
+      bestLine: ply.bestLine,
+      phase: phaseOf[i],
+      counted: counted[i],
+      chancesLost: lost[i],
     };
   });
 }

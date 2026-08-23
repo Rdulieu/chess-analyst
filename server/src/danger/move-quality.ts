@@ -1,6 +1,16 @@
 export type MoveSeverity = "inaccuracy" | "mistake" | "blunder";
 
 /**
+ * The smallest drop this app is willing to call a fault (CONTEXT.md
+ * `Inaccuracy`). Exported because it is also the **`Counted Move`** floor: a
+ * Position with less than this left to lose cannot structurally produce a
+ * flagged Move, so a Move played there can say nothing about the Player. One
+ * published threshold, read in both places — not a second one that happens to
+ * agree.
+ */
+export const INACCURACY_DROP = 10;
+
+/**
  * The Player-relative winning-chances drop for one of their own Moves —
  * `winBefore` from the Position before it (best play), `winAfter` from the
  * Position after (Move actually played), both already Player-relative
@@ -13,6 +23,6 @@ export function classifyMove(winBefore: number, winAfter: number): MoveSeverity 
   const drop = winBefore - winAfter;
   if (drop >= 30) return "blunder";
   if (drop >= 20) return "mistake";
-  if (drop >= 10) return "inaccuracy";
+  if (drop >= INACCURACY_DROP) return "inaccuracy";
   return null;
 }

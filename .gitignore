@@ -1,4 +1,8 @@
-node_modules/
+# No trailing slash, deliberately: `node_modules/` matches **directories only**,
+# and a `node_modules` **symlink** is not a directory. That is how two of them
+# ended up committed — a `git add -A` in a worktree whose dependencies were
+# symlinked to a sibling's, past an ignore rule that did not cover the case.
+node_modules
 dist/
 
 # Embedded SQLite database (created/seeded on first launch — ADR-0003)
