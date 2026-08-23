@@ -109,6 +109,18 @@ reads exactly like the 2026-08-21 symptom. Relancing on it produced a **duplicat
 already received — and the subagent itself believed its first send had been lost, because a sender
 cannot tell whether its message landed.
 
+**What happened on 2026-08-23 (full HP suite: path 0, then three HPs in parallel).** Delivery worked
+**4 out of 4**, every report unprompted, in full — including the **parallel fan-out**, which is the
+exact shape that lost four reports on 2026-08-21. **No `SendMessage` relance was needed. No
+transcript recovery was needed.** Each report was again followed by an empty `idle_notification`,
+confirming that signal means nothing about delivery.
+
+That settles the open question of §5.6 as far as one run can: **treat delivery as working**, in
+parallel included. The 2026-08-21 loss remains unexplained and is now **history rather than a live
+warning** — one incident, never reproduced across two later runs. Keep the ladder below, because it
+costs one sentence in a dispatch prompt and a lost suite costs half an hour of real engine and
+network time; but do not design a run around the assumption that reports vanish.
+
 So the current picture, and it is narrower than the 2026-08-21 incident suggested:
 
 - A report **can** arrive unprompted. Treat delivery as working, not as broken by default.
@@ -192,14 +204,35 @@ subagent, explicitly:
   a shared browser had its selected page stolen ~20 times across one parallel run, and the guard
   is what kept every action off the siblings' apps. Prefer in-page SPA navigation over
   driver-level page navigation, which is the operation that lands on the wrong page.
-- **Its own browser context**, and a re-assert of viewport and emulated colour scheme before
-  trusting any measurement.
+- **Its own browser instance — a private one, as the DEFAULT and not the fallback** (measured
+  2026-08-23, and this is the run's strongest operational finding). On the parallel HP fan-out the
+  shared devtools browser stole the selected page from **all three** scenarios: ~7 steals over half
+  of one agent's calls, 2 within the first 3 calls of another, 7 of 12 consecutive calls of the
+  third — where one early `take_snapshot` returned **a sibling's full accessibility tree** before any
+  guard could fire. Two of the three abandoned the shared browser mid-run and finished against their
+  own Chrome; both reported zero theft afterwards. So do that from the start:
+  - launch the bundled Chrome directly (on this host:
+    `~/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome`), with **its own `userDataDir`** and
+    **its own `--remote-debugging-port`**, and drive it with `puppeteer-core`;
+  - **`--no-sandbox` is required on this host** — the bundled Chrome aborts with "No usable sandbox"
+    otherwise;
+  - do **not** expect to re-attach to an MCP page from a script: `browserContexts()` does not expose
+    the MCP's isolated contexts, so `pages()` sees only the default context.
+- **Re-assert viewport and emulated colour scheme before trusting any measurement** — and assert the
+  theme *inside* the audited script, failing loudly when it is wrong. Measured 2026-08-23: the MCP's
+  `emulate colorScheme` **did not survive page-selection churn** (a page emulated `light` later
+  measured `prefers-color-scheme: dark` with nothing having asked for it). A theme audit that trusts
+  the theme it requested can silently audit one theme twice.
 - **Teardown by pid, and NEVER `pkill` by pattern.** `pkill node` kills every sibling's server
   mid-run. Also: a dev wrapper often **orphans its listener** — killing the pid the package
   manager returned can leave the real server still serving. Verify the port is actually free
   (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours (e.g. via `/proc/<pid>/environ`)
   before killing it. Two agents on one run believed they had stopped an app that was still up, and
   one of them copied a database out from under it.
+- **`npx` interposes a wrapper, so the listener is usually a GRANDCHILD** (re-confirmed by three
+  agents on 2026-08-23). Killing the pid you spawned leaves the real server listening. Kill the
+  tree, then check the port — every agent on that run had to come back for a grandchild, and each
+  one found it because it verified rather than assumed.
 - **Kill the watcher, not just the listener — and prefer no watcher at all** (measured
   2026-08-22, US-15a FP). Killing the listener under a `tsx watch` wrapper leaves the **wrapper**
   alive, and a *free port is not proof of a stopped app*: the next edit to a source file makes the
@@ -242,16 +275,28 @@ settle any of it.
 
 Answer these, and write the answers down:
 
-- **Did any report arrive on its own**, as a completion notification, with no prompting? That is the
-  documented behaviour and it is the single most important thing to re-check. If it now works,
-  §5.1's incident becomes history rather than a live warning, and the belt-and-braces can relax.
-  *(2026-08-22, FP: yes — twice, unprompted. Still unverified for a parallel HP fan-out, which is
-  where the 2026-08-21 loss happened; one subagent is not five.)*
-- **Did the `SendMessage`-on-idle relance work?** For how many agents?
+- **Did any report arrive on its own**, as a completion notification, with no prompting?
+  *(**Answered 2026-08-23**: yes — **4 of 4**, unprompted, including the three-way parallel fan-out
+  that is the shape which lost reports on 2026-08-21. Two consecutive runs now say delivery works.
+  This question is closed unless a run contradicts it; if one does, say so here rather than
+  reverting the section wholesale.)*
+- **Did the `SendMessage`-on-idle relance work?** For how many agents? *(2026-08-23: **not needed
+  once** — nothing to relance.)*
 - **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
+  *(2026-08-23: **not needed**. The path is therefore still **unverified** since it was written —
+  the one claim in §5.2 nobody has exercised. Do not delete it, but do not trust it blind either:
+  check the directory exists before relying on it in an emergency.)*
 - **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
-  document, the shared browser stealing the selected page? Any of these may have been fixed
-  upstream, and a warning about a bug that no longer exists costs real time on every future run.
+  document, the shared browser stealing the selected page? *(2026-08-23: the orphaned listener and
+  the page theft both hold and are **worse** than they were written; the theft is now the default
+  expectation on a parallel run, which is why §5.4 makes a private browser the default rather than
+  the fallback. `emulate` was found to lose its setting across page churn, which is a different
+  failure from reloading the document.)*
+- **Did any driver produce a false finding?** *(2026-08-23: **five**, across three agents — a
+  progress observer read only its first 40 of 1488 samples, a board parser keyed on `img` where the
+  pieces are `div` backgrounds, a breadcrumb predicate assuming one parent, a candidate lookup
+  matching non-clickable ancestors. Every one was caught by re-measuring before reporting. That rule
+  has now caught more would-be defects than the app has produced.)*
 
 **Then correct the skill in the same run**, as a doc commit alongside the suite result. Three rules
 for that edit:
@@ -299,8 +344,10 @@ not findings about the app, and a reviewer must not have to work out which is wh
 Before sending a scenario to a subagent, confirm its prompt carries all eight. The first is the
 one that silently loses runs.
 
-- [ ] **Deliver the report via `SendMessage`** on completion — do not rely on automatic delivery alone
-- [ ] Its own ports, its own `DB_FILE`, its own browser context
+- [ ] **Deliver the report via `SendMessage`** on completion — cheap belt-and-braces; delivery itself
+      is now demonstrated working, parallel included (§5.1, 2026-08-23)
+- [ ] Its own ports, its own `DB_FILE`, and **its own private browser instance** — not the shared one
+      (§5.4: all three scenarios of the 2026-08-23 run had their page stolen)
 - [ ] Restore state **before** starting the server
 - [ ] A `location.port` guard on every injected script
 - [ ] Teardown **by pid**, never `pkill` by pattern; verify the port is free afterwards
