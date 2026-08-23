@@ -263,15 +263,20 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
  */
 describe("the layout inline styles, gone from the components", () => {
   /**
-   * The two exceptions, and both are the same exception: a value computed PER
+   * The exceptions, and every one is the same exception: a value computed PER
    * DATA POINT, which a stylesheet cannot hold. The bar's two shares are sized by
    * the Position's winning chances; the curve's markers are placed at the ply and
-   * the share where the flawed Move was played. `chess/arrows.ts` is the third
-   * (one `hsla` per candidate) and holds no `style` attribute at all.
+   * the share where the flawed Move was played; the Phase ribbon's segments are
+   * each as wide as the share of the Game that Phase covers. `chess/arrows.ts` is
+   * the last (one `hsla` per candidate) and holds no `style` attribute at all.
+   *
+   * The list is a **ceiling**, not a permission: a component joins it only when the
+   * value genuinely comes from the data, and with the exact count it needs.
    */
   const PER_DATA_POINT: Record<string, number> = {
     "components/WinningChancesBar.tsx": 2,
     "components/EvaluationGraph.tsx": 1,
+    "components/PhaseRibbon.tsx": 1,
   };
 
   const inlineStyles = (source: string) => source.match(/style=\{\{/g)?.length ?? 0;

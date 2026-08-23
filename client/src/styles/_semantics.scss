@@ -80,6 +80,34 @@ ol[aria-label="moves"] {
     font-size: var(--text-s);
     color: var(--ink-muted);
   }
+
+  // A flawed Move the analysis does not hold the Player to. Its words are the
+  // cue; the muted ink and the border are emphasis only, and it sits beside the
+  // severity glyph rather than replacing it — the Game still shows the fault,
+  // the analysis just does not count it (ADR-0013).
+  [data-part="uncounted"] {
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding-inline: var(--space-1);
+  }
+
+  // Where a `Phase` begins. It takes the whole row and pushes the Moves after it
+  // onto a new line, because a boundary read mid-row is not a boundary. Its cue
+  // is its own words — never a tint, which would be unreadable aloud and mean
+  // nothing to a Player who does not know the code (ADR-0013). The rule above it
+  // is the drawn part, and it is emphasis only.
+  li[data-part="phase-start"] {
+    flex-basis: 100%;
+    margin-block-start: var(--space-1);
+    padding-block-start: var(--space-1);
+    border-block-start: 1px solid var(--border);
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
 }
 
 // A row flagged FOR REVIEW: the weak `Opening` (win rate under 50%) and the

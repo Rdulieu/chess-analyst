@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fenStringToPositionObject } from "react-chessboard";
 import { Board } from "../src/components/Board";
@@ -102,9 +102,9 @@ describe("Board", () => {
     // "1. e4 e5": ply 1 is White's Move (e4, flagged a blunder here), ply 2 is
     // Black's reply (e5, never flagged regardless of its own Evaluation).
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
-      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null },
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     render(<Board pgn="1. e4 e5" annotations={annotations} />);
 
@@ -118,8 +118,8 @@ describe("Board", () => {
 
   it("shows the current Position's formatted Evaluation next to the status line, updating on navigation", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
@@ -133,8 +133,8 @@ describe("Board", () => {
 
   it("renders a winning-chances balance bar for the current Position, updating on navigation", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
@@ -148,9 +148,9 @@ describe("Board", () => {
 
   it("tints the destination square of the current Position's flawed Move, distinctly per severity", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
-      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy" },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
@@ -172,8 +172,8 @@ describe("Board", () => {
     // NAME: it verifies the wiring, which is what can break, rather than a hue
     // that was judged once on the pilot (ADR-0013).
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4" annotations={annotations} />);
@@ -192,9 +192,9 @@ describe("Board", () => {
 
   it("tints no square when the current Position follows a clean Move, an opponent's Move, or is the start", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null }, // clean
-      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null }, // opponent's Move, never flagged
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null }, // clean
+      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null }, // opponent's Move, never flagged
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
@@ -242,9 +242,9 @@ describe("Evaluation curve", () => {
   }
 
   const three: MoveAnnotation[] = [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null },
-    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder" },
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
   ];
 
   it("draws the Game's curve beside the board once the Game has Evaluations", () => {
@@ -370,8 +370,8 @@ describe("Evaluation curve", () => {
 
   it("says so in text when the Player made no flawed Move, rather than showing nothing", () => {
     const clean: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
-      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     render(<Board pgn="1. e4" annotations={clean} />);
 
@@ -429,12 +429,16 @@ describe("Board orientation", () => {
 describe("the error tally's wording", () => {
   function annotationsWith(severities: MoveAnnotation["severity"][]): MoveAnnotation[] {
     return [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
       ...severities.map((severity, i) => ({
         ply: i + 1,
         whiteEval: { cp: -100, mate: null },
         whiteWinChances: 40,
         severity,
+        bestLine: [],
+        phase: "early" as const,
+        counted: null,
+        chancesLost: null,
       })),
     ];
   }
@@ -446,5 +450,483 @@ describe("the error tally's wording", () => {
     expect(tally).toContain("1 imprécision ?!");
     expect(tally).not.toContain("imprécisions");
     expect(tally).toContain("1 grosse erreur ??");
+  });
+});
+
+describe("Board — where the Phases begin", () => {
+  /** "1. e4 e5 2. Nf3" with a boundary contrived at each of the two Moves. */
+  const withPhases = (...phases: MoveAnnotation["phase"][]): MoveAnnotation[] =>
+    phases.map((phase, ply) => ({
+      counted: null,
+      chancesLost: null,
+      ply,
+      whiteEval: { cp: 0, mate: null },
+      whiteWinChances: 50,
+      severity: null,
+      bestLine: [],
+      phase,
+    }));
+
+  it("marks where each Phase begins IN the move list, in words rather than by a tint", () => {
+    render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={withPhases("early", "early", "middlegame", "endgame")} />,
+    );
+
+    const marks = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")
+      .filter((item) => item.dataset.part === "phase-start");
+    expect(marks.map((mark) => mark.textContent)).toEqual([
+      "Début du milieu de partie",
+      "Début de la finale",
+    ]);
+  });
+
+  it("puts each mark just before the Move that opens the Phase, which is what makes it scannable", () => {
+    render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={withPhases("early", "early", "middlegame", "middlegame")} />,
+    );
+
+    const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+    // e4, then the mark, then e5 — the Move whose Position is the first of the Phase.
+    expect(items[0].textContent).toContain("e4");
+    expect(items[1].dataset.part).toBe("phase-start");
+    expect(items[2].textContent).toContain("e5");
+  });
+
+  it("marks nothing on a Game that never leaves the start", () => {
+    render(<Board pgn="1. e4 e5 2. Nf3" annotations={withPhases("early", "early", "early", "early")} />);
+
+    const items = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+    expect(items.filter((item) => item.dataset.part === "phase-start")).toHaveLength(0);
+  });
+});
+
+describe("Board — the Moves that do not count", () => {
+  const annotated = (
+    severity: MoveAnnotation["severity"],
+    counted: MoveAnnotation["counted"],
+  ): MoveAnnotation[] => [
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "middlegame", counted: null, chancesLost: null },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 10, severity, bestLine: [], phase: "middlegame", counted, chancesLost: 0 },
+    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 10, severity: null, bestLine: [], phase: "middlegame", counted: null, chancesLost: null },
+  ];
+
+  const firstMove = () =>
+    within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")[0];
+
+  it("marks a flawed Move the analysis does not hold the Player to — in text, beside the glyph", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated("blunder", { counted: false, reason: "forced" })} />);
+
+    // The glyph still carries the fault; the mark says the analysis excludes it.
+    expect(within(firstMove()).getByLabelText("blunder")).toBeTruthy();
+    // The mark names its REASON: by construction it can only be a forced Move,
+    // and "non compté" alone would say strictly less on the scanning surface.
+    expect(within(firstMove()).getByLabelText(/coup forcé, non compté/i).textContent).toBe("forcé");
+  });
+
+  it("leaves an uncounted Move that carries no severity unmarked, so a lost Game grows no trail of marks", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated(null, { counted: false, reason: "decided" })} />);
+
+    expect(within(firstMove()).queryByLabelText(/non compté/i)).toBeNull();
+  });
+
+  it("marks nothing on a Move that counts", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated("blunder", { counted: true, reason: null })} />);
+
+    expect(within(firstMove()).queryByLabelText(/non compté/i)).toBeNull();
+  });
+});
+
+describe("Board — the second drawing", () => {
+  const game = (...lost: (number | null)[]): MoveAnnotation[] =>
+    lost.map((chancesLost, ply) => ({
+      ply,
+      whiteEval: { cp: 0, mate: null },
+      whiteWinChances: 50,
+      severity: null,
+      bestLine: [],
+      phase: ply < 2 ? ("early" as const) : ("endgame" as const),
+      counted: chancesLost === null ? null : { counted: true, reason: null },
+      chancesLost,
+    }));
+
+  const boxes = (container: HTMLElement) => ({
+    curve: container.querySelector('[data-part="curve"]'),
+    drift: container.querySelector('[data-part="drift"]'),
+  });
+
+  it("draws its OWN picture rather than a second series on the curve", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    const { curve, drift } = boxes(container);
+    // Two boxes, two svgs: one axis shared, never one drawing carrying two
+    // different quantities (the US-14 condition).
+    expect(curve).not.toBeNull();
+    expect(drift).not.toBeNull();
+    expect(curve!.contains(drift!)).toBe(false);
+  });
+
+  it("labels BOTH drawings visibly, so two pictures that differ cannot be confused", () => {
+    render(<Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />);
+
+    expect(screen.getByText(/avantage au fil de la partie/i)).toBeTruthy();
+    expect(screen.getByText(/chances perdues/i)).toBeTruthy();
+  });
+
+  it("hides the drawing from the reader, whose figures live in the recap's text", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    expect(boxes(container).drift!.querySelector("svg")!.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("names the Phases in real text on the shared axis, between the two drawings", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    const ribbon = screen.getByLabelText("phases de la partie");
+    // The ribbon's own shorter names: a band is only as wide as its Phase's share
+    // of the Game, and "Milieu de pa…" names less than "Milieu".
+    expect(ribbon.textContent).toContain("Début");
+    expect(ribbon.textContent).toContain("Finale");
+    // Between them: after the curve, before the trace.
+    const { curve, drift } = boxes(container);
+    expect(curve!.compareDocumentPosition(ribbon)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(ribbon.compareDocumentPosition(drift!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("rules the boundaries OVER both drawings, and paints no background band", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    const { curve, drift } = boxes(container);
+    for (const box of [curve!, drift!]) {
+      const rules = box.querySelectorAll('[data-mark="phase-boundary"]');
+      expect(rules).toHaveLength(1); // one boundary in this Game
+      // A line, drawn after the area: over it, not behind it.
+      expect(rules[0].tagName.toLowerCase()).toBe("line");
+      expect(box.querySelectorAll("rect")).toHaveLength(0);
+    }
+  });
+
+  it("keeps the second drawing out of Annotated, where its figures exist in no text", () => {
+    const { container } = render(<Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} />);
+
+    expect(boxes(container).curve).not.toBeNull();
+    expect(boxes(container).drift).toBeNull();
+    expect(screen.queryByLabelText("phases de la partie")).toBeNull();
+  });
+});
+
+describe("Board — the Game's recap", () => {
+  const RECAP = {
+    playerMoves: 10,
+    countedMoves: 8,
+    excluded: { forced: 1, decided: 1 },
+    flaggedMoves: 2,
+    countedErrors: 1,
+    chancesLost: 30,
+    flaggedLoss: 20,
+    drift: 10,
+    regime: { depth: 16, lines: 2 },
+  };
+  const annotated: MoveAnnotation[] = [
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: true, reason: null }, chancesLost: 0 },
+  ];
+
+  it("reads at the HEAD of the panel: it is the claim, and everything below it is the proof", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated} detailed recap={RECAP} />);
+
+    const recap = screen.getByRole("region", { name: /ce que cette partie apporte/i });
+    const move = screen.getByRole("region", { name: /relevé/i });
+    expect(recap.compareDocumentPosition(move)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("shows the error tally ONCE in Detailed — inside the recap, not beside it", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated} detailed recap={RECAP} />);
+
+    // Two correct counts disagreeing side by side read as a bug; the recap is the
+    // one that also states why they can differ.
+    expect(screen.queryByLabelText("vos erreurs")).toBeNull();
+    expect(screen.getByRole("region", { name: /ce que cette partie apporte/i })).toBeTruthy();
+  });
+
+  it("leaves the tally exactly where US-14 put it in Annotated, and shows no recap there", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotated} recap={RECAP} />);
+
+    expect(screen.getByLabelText("vos erreurs")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /ce que cette partie apporte/i })).toBeNull();
+  });
+});
+
+describe("Board — the reviewed Move's record", () => {
+  /** "1. e4 e5" annotated so that White's e4 is a Blunder. Ply 0's line is what
+   *  should have been played instead; ply 1's line — from the Position *after*
+   *  e4 — is how e4 is punished (CONTEXT.md, `Best line`). */
+  const annotations: MoveAnnotation[] = [
+    {
+      ply: 0,
+      whiteEval: { cp: 25, mate: null },
+      whiteWinChances: 55,
+      severity: null,
+      bestLine: ["d2d4", "d7d5"],
+      phase: "early",
+      counted: null,
+      chancesLost: null,    },
+    {
+      ply: 1,
+      whiteEval: { cp: -400, mate: null },
+      whiteWinChances: 5,
+      severity: "blunder",
+      bestLine: ["e7e5", "g1f3"],
+      phase: "early",
+      counted: null,
+      chancesLost: null,    },
+    {
+      ply: 2,
+      whiteEval: { cp: -380, mate: null },
+      whiteWinChances: 6,
+      severity: null,
+      bestLine: ["g1f3", "b8c6"],
+      phase: "early",
+      counted: null,
+      chancesLost: null,    },
+  ];
+
+  const record = () => screen.getByRole("region", { name: /relevé/i });
+
+  it("names what should have been played, and its continuation, for the Move being reviewed", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i })); // e4, a Blunder
+
+    // The line of the Position *before* the Move: d4, then its continuation —
+    // the point being to understand *why* it was better, not just that it was.
+    const best = within(record()).getByRole("group", { name: /il fallait jouer/i });
+    expect(within(best).getAllByRole("button").map((b) => b.textContent)).toEqual(["d4", "d5"]);
+  });
+
+  it("shows how the Move played is punished — the opponent's best reply and its continuation", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const refutation = within(record()).getByRole("group", { name: /réfutation/i });
+    expect(within(refutation).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "e5",
+      "Nf3",
+    ]);
+  });
+
+  it("says a line continues past what it shows, rather than passing six plies off as the whole line", async () => {
+    const user = userEvent.setup();
+    const long: MoveAnnotation[] = [
+      {
+        ...annotations[0],
+        // Nine plies of a real line from the starting Position: more than the
+        // display cap, which is exactly the case the engine produces at depth 16.
+        bestLine: ["d2d4", "d7d5", "c2c4", "e7e6", "b1c3", "g8f6", "c1g5", "f8e7", "e2e3"],
+        phase: "early",
+        counted: null,
+        chancesLost: null,      },
+      annotations[1],
+      annotations[2],
+    ];
+    render(<Board pgn="1. e4 e5" annotations={long} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const best = within(record()).getByRole("group", { name: /il fallait jouer/i });
+    expect(within(best).getAllByRole("button")).toHaveLength(6);
+    // In text, not as a bare ellipsis: the count is the honest statement, and it
+    // is what a screen reader reads out.
+    expect(best.textContent).toMatch(/3 coups de plus/i);
+  });
+
+  it("says there is nothing to report on a Move it does not flag, rather than showing the last one's record", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await user.click(screen.getByRole("button", { name: /next/i })); // e5, Black's reply
+
+    expect(within(record()).queryByRole("group", { name: /il fallait jouer/i })).toBeNull();
+    expect(record().textContent).toMatch(/rien à signaler/i);
+  });
+
+  it("draws the first Move of each line on the board, not only in notation", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    // Reading a notation back into a Position is the very skill the Player does
+    // not have yet — which is why they need the tool. `react-chessboard` names
+    // each arrow's head after its squares, which is the only handle it offers.
+    const arrows = [...container.querySelectorAll("marker[id]")].map((m) => m.id);
+    expect(arrows.some((id) => id.endsWith("-d2-d4"))).toBe(true); // what should have been played
+    expect(arrows.some((id) => id.endsWith("-e7-e5"))).toBe(true); // the refutation's first Move
+  });
+
+  it("shows the Position a focused ply of a line leads to, and goes back on blur", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const refutation = within(record()).getByRole("group", { name: /réfutation/i });
+    const [reply, second] = within(refutation).getAllByRole("button");
+
+    fireEvent.focus(reply);
+    expect(pieceAt(container, "e5")).toBe("bP"); // the reply, played on the board
+
+    fireEvent.focus(second);
+    expect(pieceAt(container, "f3")).toBe("wN"); // two plies into the line
+
+    fireEvent.blur(second);
+    expect(pieceAt(container, "e5")).toBeNull(); // back to the Move being reviewed
+    expect(pieceAt(container, "e4")).toBe("wP");
+  });
+
+  it("keeps a focused preview when the pointer leaves — hover is an affordance, not a second mechanism", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const ply = within(record()).getAllByRole("button")[0];
+    fireEvent.focus(ply);
+    fireEvent.mouseEnter(ply);
+    fireEvent.mouseLeave(ply);
+
+    // The pointer moved away; the focus did not. A Player reading the line with
+    // the keyboard must not lose their preview because the mouse happened to be
+    // resting on that button.
+    expect(pieceAt(container, "d4")).toBe("wP");
+  });
+
+  it("never moves the Player's place in the Game while previewing", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    fireEvent.focus(within(record()).getAllByRole("button")[0]);
+
+    // The board shows the previewed Position, but everything that names *where
+    // the Player is* still names the reviewed Move: readout, balance bar, the
+    // move list's current item, the curve's cursor.
+    expect(screen.getByLabelText("current move").textContent).toContain("e4");
+    expect(screen.getByRole("button", { name: "e4", current: true })).toBeTruthy();
+  });
+
+  it("ends a preview when the Player navigates, rather than leaving another Move's line on the board", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.focus(within(record()).getAllByRole("button")[0]);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    // e5 has been played: the board is on the new Move, not on the previous
+    // Move's variation.
+    expect(pieceAt(container, "e5")).toBe("bP");
+    expect(screen.getByLabelText("current move").textContent).toContain("e5");
+  });
+
+  it("puts every ply of a line within reach of the keyboard, previewing on focus", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    // Tabbing walks the line ply by ply: the preview is the only thing that
+    // makes a line readable, so it may not be pointer-only.
+    const plies = within(record()).getAllByRole("button");
+    plies[0].focus();
+    await user.tab();
+
+    expect(document.activeElement).toBe(plies[1]);
+    expect(pieceAt(container, "d5")).toBe("bP"); // two plies in, previewed
+  });
+
+  it("withholds the record below the Detailed level — Annotated is what US-7 and US-14 delivered", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    await user.click(screen.getByRole("button", { name: /next/i })); // e4, a Blunder
+
+    // The annotations themselves are there; only the record is the level above.
+    expect(screen.getByLabelText("blunder")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /relevé/i })).toBeNull();
+  });
+
+  it("points to the record from BESIDE the board, so it is not a panel the Player has to already know about", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+
+    const link = screen.getByRole("link", { name: /relevé/i });
+    // In the side pane — never stacked above the diagram, which must be whole on
+    // arrival — and pointing at the panel's own heading.
+    expect(link.closest('[data-pane="side"]')).not.toBeNull();
+    expect(link.getAttribute("href")).toBe("#move-record-heading");
+    expect(document.getElementById("move-record-heading")).not.toBeNull();
+  });
+
+  it("offers no way to the record at a level that does not show one", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotations} />);
+
+    expect(screen.queryByRole("link", { name: /relevé/i })).toBeNull();
+  });
+
+  it("names the Phase the reviewed Move was played in, on every Move and not only on a flawed one", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+
+    // Ply 0 is the starting Position: nothing to report, but a Phase all the same.
+    expect(record().textContent).toMatch(/début de partie/i);
+
+    await user.click(screen.getByRole("button", { name: /next/i })); // e4, a Blunder
+    expect(record().textContent).toMatch(/début de partie/i);
+  });
+
+  it("says whether the reviewed Move counts, and names the reason in words when it does not", async () => {
+    const user = userEvent.setup();
+    const forced = annotations.map((a, i) =>
+      i === 1 ? { ...a, counted: { counted: false, reason: "forced" as const }, chancesLost: 0 } : a,
+    );
+    render(<Board pgn="1. e4 e5" annotations={forced} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i })); // e4
+
+    expect(record().textContent).toMatch(/ne compte pas/i);
+    expect(record().textContent).toMatch(/forcé/i);
+    // The two reasons are never melted into one: this one is not the other.
+    expect(record().textContent).not.toMatch(/déjà décidée/i);
+  });
+
+  it("says a Move counts, rather than staying silent about the denominator", async () => {
+    const user = userEvent.setup();
+    const counted = annotations.map((a, i) =>
+      i === 1 ? { ...a, counted: { counted: true, reason: null }, chancesLost: 0 } : a,
+    );
+    render(<Board pgn="1. e4 e5" annotations={counted} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(record().textContent).toMatch(/compté dans l'analyse/i);
+  });
+
+  it("asserts NOTHING about the opponent's Moves — not even that they do not count", () => {
+    render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+
+    // Ply 0 carries no `counted` either: it is not a Move.
+    expect(record().textContent).not.toMatch(/compte/i);
+  });
+
+  it("keeps the record BELOW the board row, so nothing above the board moves when the Move changes", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} detailed />);
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const row = container.querySelector('[data-row="board"]')!;
+    expect(row.contains(record())).toBe(false);
+    // Document order: the row, then the record. Its height is variable — that is
+    // exactly why it may not sit above the diagram.
+    expect(row.compareDocumentPosition(record())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

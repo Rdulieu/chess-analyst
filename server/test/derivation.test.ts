@@ -1,13 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { gameAnnotations, gamePlies } from "../src/analysis/derivation";
 import { gamePositions } from "../src/chess/positions";
+import { fixtureBestLine } from "../src/engine/fixture";
 
 /** Stamps each stored `Evaluation` with the FEN of the Position it is of — what
  *  the `Analysis pass` writes (ADR-0012). Irrelevant to the annotations
  *  themselves, but a stored row always carries one. */
 function stored<T extends { ply: number }>(pgn: string, evals: T[]) {
   const fens = gamePositions(pgn);
-  return evals.map((e) => ({ ...e, fen: fens[e.ply] }));
+  // A stored Evaluation always carries its `Best line` (ADR-0016), and the
+  // fixture's is playable from the Position it belongs to.
+  return evals.map((e) => ({ ...e, fen: fens[e.ply], pv: fixtureBestLine(fens[e.ply]).join(" ") }));
 }
 
 describe("gamePlies", () => {
@@ -15,8 +18,8 @@ describe("gamePlies", () => {
     // Deliberately not the FENs of any real Game: if the derivation replayed a
     // PGN it would produce something else entirely (ADR-0012).
     const evals = [
-      { ply: 1, fen: "second", cp: 10, mate: null },
-      { ply: 0, fen: "first", cp: 25, mate: null },
+      { ply: 1, fen: "second", cp: 10, mate: null, pv: "" },
+      { ply: 0, fen: "first", cp: 25, mate: null, pv: "" },
     ];
 
     const plies = gamePlies(evals);
@@ -107,3 +110,52 @@ describe("gameAnnotations", () => {
     expect(annotations[1].whiteEval).toEqual({ cp: null, mate: -3 });
   });
 });
+
+describe("gameAnnotations — the Phase of each Move", () => {
+  it("names the Phase of every Move, derived from the FEN already stored with it", () => {
+    const game = { pgn: "1. e4 e5", playerColor: "white" as const };
+    const evals = stored(game.pgn, [
+      { ply: 0, cp: 25, mate: null },
+      { ply: 1, cp: -10, mate: null },
+      { ply: 2, cp: 5, mate: null },
+    ]);
+
+    const annotations = gameAnnotations(game, evals);
+
+    // No new column and no engine call: the Phase rides on what US-4 already wrote.
+    expect(annotations.map((a) => a.phase)).toEqual(["early", "early", "early"]);
+  });
+
+  it("reads the Phase in the Game's own sequence, so it latches across the Moves", () => {
+    // Two Positions: an Endgame, then one that alone would read as a Middlegame.
+    const evals = [
+      { ply: 0, fen: "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 20", cp: 0, mate: null, pv: "" },
+      { ply: 1, fen: "r2qk2r/pppppppp/2n5/8/8/8/PPPPPPPP/R2QK2R b - - 0 20", cp: 0, mate: null, pv: "" },
+    ];
+
+    const annotations = gameAnnotations({ playerColor: "white" }, evals);
+
+    expect(annotations.map((a) => a.phase)).toEqual(["endgame", "endgame"]);
+  });
+});
+
+describe("gameAnnotations — whether a Move counts", () => {
+  it("says of each of the Player's Moves whether it counts, and asserts nothing about the opponent's", () => {
+    const game = { pgn: "1. e4 e5 2. Nf3", playerColor: "white" as const };
+    const evals = stored(game.pgn, [
+      { ply: 0, cp: 25, mate: null },
+      { ply: 1, cp: -10, mate: null },
+      { ply: 2, cp: 5, mate: null },
+      { ply: 3, cp: 0, mate: null },
+    ]);
+
+    const annotations = gameAnnotations(game, evals);
+
+    expect(annotations.map((a) => a.counted)).toEqual([
+      null, // the starting Position is no Move
+      { counted: true, reason: null },
+      null, // Black's
+      { counted: true, reason: null },
+    ]);
+  });
+})

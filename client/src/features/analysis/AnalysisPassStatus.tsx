@@ -24,12 +24,22 @@ import type { AnalysisStatus } from "../../types";
 export function AnalysisPassStatus({
   status,
   nothingToDo = false,
+  blocked = false,
   onAcknowledge,
 }: {
   status: AnalysisStatus | null;
   nothingToDo?: boolean;
+  /** The last request was refused because a pass was already running. */
+  blocked?: boolean;
   onAcknowledge?: () => void;
 }) {
+  // One engine, one pass at a time. Said as itself rather than folded into
+  // "nothing to analyze": a Player who just confirmed overwriting an analysis
+  // and is told their selection is already analysed is being contradicted about
+  // the act they authorised — and would reasonably conclude the app is broken.
+  if (blocked)
+    return <Live>Une analyse est déjà en cours ; relancez celle-ci quand elle sera terminée.</Live>;
+
   // The Player asked for an analysis and none was needed. Said plainly, so an
   // instantly-finished action does not read as a failure or as a stale summary.
   if (nothingToDo) return <Live>Rien à analyser : la sélection est déjà analysée.</Live>;

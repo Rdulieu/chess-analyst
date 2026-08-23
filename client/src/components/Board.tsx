@@ -4,10 +4,18 @@ import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
 import { EvaluationGraph } from "./EvaluationGraph";
+import { DriftGraph } from "./DriftGraph";
+import { PhaseRibbon } from "./PhaseRibbon";
+import { phaseBands } from "../chess/phaseBands";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
+import { MoveRecord } from "../features/analysis/MoveRecord";
+import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
+import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
+import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
+import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { BOARD_SQUARES } from "../chess/boardTheme";
-import type { MoveAnnotation } from "../types";
+import type { GameRecap, MoveAnnotation } from "../types";
 
 /**
  * Interactive board for a Game: renders a Position, steps through the Game's
@@ -24,20 +32,34 @@ import type { MoveAnnotation } from "../types";
  * index (ply 0 = start) — `annotations[i + 1]` is the Move at `plies[i]`.
  * Drives the move-list glyphs/Evaluations, the current-Position readout and
  * balance bar, and the destination-square tint for the currently-viewed
- * flawed Move. Absent (the toggle off, or a not-yet-analyzed Game) renders
+ * flawed Move. Absent (Unaided, or a not-yet-analyzed Game) renders
  * exactly as without US-7: no glyph, no Evaluation, no bar, no tint.
  */
 export function Board({
   pgn,
   annotations,
+  detailed = false,
+  recap = null,
   orientation = "white",
   controls,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
   /**
-   * A caller's own control over what the board shows — the annotations toggle
-   * today. Taken as a slot rather than left above the board, because everything
+   * The `Review mode`'s **Detailed** level (CONTEXT.md): also show the reviewed
+   * Move's own record. A level above `annotations` and never below it — the
+   * caller passes a point on a scale, so there is no state where the record
+   * appears without the annotations it comments on.
+   */
+  detailed?: boolean;
+  /**
+   * What this Game contributes to the analysis (ADR-0017), read at the head of
+   * the Detailed panel. `null` on a Game with no recap to state.
+   */
+  recap?: GameRecap | null;
+  /**
+   * A caller's own control over what the board shows — the `Review mode`'s
+   * level control today. Taken as a slot rather than left above the board, because everything
    * stacked above the diagram is height the diagram does not get, and the board
    * has to be visible in full. The caller owns the state; this component only
    * decides where it is read, which is beside the board with the rest of the
@@ -55,11 +77,73 @@ export function Board({
 }) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
   const [index, setIndex] = useState(0);
+  /**
+   * A Position shown **temporarily**, while the Player points at (or focuses) a
+   * ply inside a `Best line`. Deliberately a second, separate piece of state:
+   * `index` stays the single source of where the Player *is*, so the readout,
+   * the balance bar, the square tint and the curve's cursor all keep naming the
+   * Move actually being reviewed while the board shows the previewed Position.
+   */
+  const [preview, setPreview] = useState<{ focus: string | null; hover: string | null }>({
+    focus: null,
+    hover: null,
+  });
 
-  const position = index === 0 ? startFen : plies[index - 1].fen;
+  const navigated = index === 0 ? startFen : plies[index - 1].fen;
+  // The focus wins over the pointer: the pointer is the same control's mouse
+  // affordance, and a Player reading the line by keyboard must not lose the
+  // preview because the mouse drifted off the button that still holds focus.
+  const position = preview.focus ?? preview.hover ?? navigated;
   const currentMove = index === 0 ? "Start" : plies[index - 1].san;
   const atStart = index === 0;
   const atEnd = index === plies.length;
+
+  /**
+   * Moves the Player. Navigating also ends any preview: a previewed Position
+   * belongs to the line of the Move that was being read, and would otherwise
+   * outlive it — the board would show one Move's variation while everything
+   * beside it named another.
+   */
+  const goTo = (next: number) => {
+    setIndex(next);
+    setPreview({ focus: null, hover: null });
+  };
+
+  /** Reports one channel's preview without disturbing the other's. */
+  const previewVia = (fen: string | null, via: "focus" | "hover") =>
+    setPreview((current) => ({ ...current, [via]: fen }));
+
+  /**
+   * The reviewed Move's record — computed once, read twice: the panel names its
+   * lines, the board draws their first Move. Two derivations of "the record"
+   * could drift apart; one cannot.
+   */
+  const record = useMemo(
+    () =>
+      annotations
+        ? reviewedMove(
+            annotations,
+            index,
+            index > 1 ? plies[index - 2].fen : startFen,
+            navigated,
+          )
+        : null,
+    [annotations, index, plies, startFen, navigated],
+  );
+
+  /**
+   * Where the `Phase`s begin, by ply — the boundaries marked IN the move list, so
+   * a frontier is something the Player sees while scanning rather than something
+   * they have to click every Move to discover. At most two, because the
+   * derivation latches; none at all on a Game that never leaves the start.
+   */
+  const phaseStartAt = useMemo(
+    () => new Map(annotations ? phaseStarts(annotations).map((s) => [s.ply, s.phase]) : []),
+    [annotations],
+  );
+
+  /** The Phase spans, shared by the two drawings and the ribbon between them. */
+  const bands = useMemo(() => (annotations ? phaseBands(annotations) : []), [annotations]);
 
   const currentAnnotation = annotations?.[index];
   const squareStyles =
@@ -75,6 +159,19 @@ export function Board({
           },
         }
       : undefined;
+
+  /**
+   * The board's arrows for the record: the Move that should have been played,
+   * and the opponent's best reply to the one that was. Only the **first** ply of
+   * each line — an arrow per ply would draw the whole line at once and say
+   * nothing about its order.
+   */
+  const recordArrows = record
+    ? [
+        arrowFor(record.shouldHavePlayed[0], "var(--arrow-best-line)"),
+        arrowFor(record.refutation[0], "var(--arrow-refutation)"),
+      ].filter((arrow): arrow is BoardArrow => arrow !== null)
+    : [];
 
   return (
     <div>
@@ -103,6 +200,11 @@ export function Board({
               allowDragging: false,
               squareStyles,
               showAnimations: false,
+              // The first Move of each of the record's lines, drawn: turning a
+              // notation back into a Position is precisely the skill the Player
+              // has not acquired yet. Each line is also named in the panel's
+              // text, so an arrow's colour is never the only carrier.
+              arrows: recordArrows,
             }}
           />
           {/*
@@ -124,11 +226,20 @@ export function Board({
             height to be visible in full.
           */}
           {controls}
+          {/*
+            The way to the record, from beside the board. The panel itself is
+            BELOW the row — that is deliberate, its height varies and nothing
+            above the diagram may move — so without this the Player would have to
+            already know it exists. Scrolling to reach it is acceptable; not
+            knowing it is there is not. Only in Detailed, because that is the
+            only level at which there is anything to reach.
+          */}
+          {detailed && <a href="#move-record-heading">Aller au relevé du coup</a>}
           <div data-part="stepper">
-            <button type="button" onClick={() => setIndex((i) => i - 1)} disabled={atStart}>
+            <button type="button" onClick={() => goTo(index - 1)} disabled={atStart}>
               Previous
             </button>
-            <button type="button" onClick={() => setIndex((i) => i + 1)} disabled={atEnd}>
+            <button type="button" onClick={() => goTo(index + 1)} disabled={atEnd}>
               Next
             </button>
           </div>
@@ -148,21 +259,60 @@ export function Board({
             <>
               {/* Landscape, and deliberately so: squeezed into a narrow column the
                   curve stops being a time axis and reads as a vertical drip. */}
+              {/* Each drawing is labelled, the curve included — it had none. Two
+                  pictures that do not say the same thing must not be mistakable
+                  for one another, and the label is the only part of either that
+                  is not `aria-hidden`. */}
+              <p data-part="graph-label">Avantage au fil de la partie</p>
               <div data-part="curve">
-                <EvaluationGraph annotations={annotations} currentPly={index} />
+                <EvaluationGraph annotations={annotations} currentPly={index} bands={bands} />
               </div>
-              <ErrorTallyReadout annotations={annotations} />
+              {/*
+                The second drawing is Detailed-only, and that is not a layout
+                preference: it is `aria-hidden` on the grounds that every figure in
+                it is already text in the Game's recap — which is itself Detailed.
+                Shown at a level where the recap is absent, the drawing would carry
+                figures that exist nowhere in words.
+              */}
+              {detailed && (
+                <>
+                  {/* One ribbon for the two drawings, since they share the axis —
+                      and between them, so it reads as belonging to both. */}
+                  <PhaseRibbon bands={bands} lastX={annotations.length - 1} />
+                  <p data-part="graph-label">Chances perdues (cumul)</p>
+                  <div data-part="drift">
+                    <DriftGraph annotations={annotations} currentPly={index} bands={bands} />
+                  </div>
+                </>
+              )}
+              {/*
+                In Annotated this stays exactly where US-14 put it. In Detailed the
+                recap says it — with the counted figure beside it and the reason
+                they can differ — and saying it twice would put two correct counts
+                side by side that disagree, which reads as a bug.
+              */}
+              {!detailed && <ErrorTallyReadout annotations={annotations} />}
             </>
           )}
           <ol aria-label="moves">
-            {plies.map((ply, i) => {
+            {plies.flatMap((ply, i) => {
               const annotation = annotations?.[i + 1];
-              return (
+              const phaseStart = phaseStartAt.get(i + 1);
+              return [
+                // The mark sits in the list, just before the Move that opens the
+                // Phase, and says which Phase in words: a boundary carried by a
+                // tint would be unreadable aloud and invisible to a Player who
+                // does not know the code (ADR-0013).
+                phaseStart && (
+                  <li key={`phase-${i}`} data-part="phase-start">
+                    {PHASE_START_LABEL[phaseStart]}
+                  </li>
+                ),
                 <li key={i}>
                   <button
                     type="button"
                     aria-current={index === i + 1 ? "true" : undefined}
-                    onClick={() => setIndex(i + 1)}
+                    onClick={() => goTo(i + 1)}
                   >
                     {ply.san}
                   </button>
@@ -175,15 +325,58 @@ export function Board({
                       {SEVERITY_GLYPH[annotation.severity]}
                     </span>
                   )}
+                  {annotation && marksUncounted(annotation) && annotation.counted?.reason && (
+                    // Beside the severity glyph, which keeps carrying the fault:
+                    // this says the analysis does not hold the Player to it. In
+                    // text, with its own accessible name — a tint alone could
+                    // only ever mean "something", not "not counted" (ADR-0013) —
+                    // and naming the REASON, because the two reasons are kept
+                    // apart everywhere, this surface included.
+                    <span
+                      data-part="uncounted"
+                      aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
+                    >
+                      {UNCOUNTED_MARK[annotation.counted.reason].text}
+                    </span>
+                  )}
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
-                </li>
-              );
+                </li>,
+              ].filter(Boolean);
             })}
           </ol>
         </div>
       </div>
+      {/*
+        The reviewed Move's record, **below** the row and outside both panes: its
+        height is whatever its lines need, and everything stacked above the
+        diagram is height the diagram does not get (US-14's constraint, held here
+        by the document order). Shown at the `Review mode`'s **Detailed** level only
+        (CONTEXT.md): Annotated is exactly what US-7 and US-14 delivered, and the
+        record is what Detailed adds to it.
+      */}
+      {annotations && detailed && recap && <GameRecapReadout recap={recap} />}
+      {annotations && detailed && (
+        <MoveRecord
+          record={record}
+          phase={currentAnnotation?.phase ?? null}
+          counted={currentAnnotation?.counted ?? null}
+          onPreview={previewVia}
+        />
+      )}
     </div>
   );
+}
+
+/** One board arrow, as `react-chessboard` takes them. */
+interface BoardArrow {
+  startSquare: string;
+  endSquare: string;
+  color: string;
+}
+
+/** The arrow for a line's first ply, or `null` for a line with no ply to draw. */
+function arrowFor(ply: LinePly | undefined, color: string): BoardArrow | null {
+  return ply ? { startSquare: ply.from, endSquare: ply.to, color } : null;
 }

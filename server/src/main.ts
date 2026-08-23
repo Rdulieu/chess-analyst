@@ -11,12 +11,7 @@ const PORT = Number(process.env.PORT ?? 3001);
 const here = dirname(fileURLToPath(import.meta.url));
 const DB_FILE = process.env.DB_FILE ?? resolve(here, "..", "chess-analyst.db");
 
-const { db, repairedEvaluations } = openDb(DB_FILE);
-// A repair replays PGNs and can hold the launch for seconds on a large history
-// (ADR-0012). Silent, it just looks like a slow start.
-if (repairedEvaluations > 0) {
-  console.log(`repaired ${repairedEvaluations} evaluations missing their FEN`);
-}
+const { db } = openDb(DB_FILE);
 
 // One adapter per supported Platform (ADR-0016); base URLs overridable by
 // environment (CHESSCOM_BASE_URL, LICHESS_BASE_URL) so the agentic Feature Path

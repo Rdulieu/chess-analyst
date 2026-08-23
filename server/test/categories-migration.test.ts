@@ -103,23 +103,29 @@ describe("the upgrade to five Time control categories", () => {
     );
   });
 
-  it("carries the analyzed Games and their Evaluations across untouched — engine time nothing rebuilds", () => {
+  it("carries the analyzed Games across, and leaves their Evaluations to the migration that owns them", () => {
     const file = fourCategoryDb();
     seedHistory(file);
     run(
       file,
       `INSERT INTO evaluations (game_id, ply, fen, cp) VALUES (2, 0, 'fen-0', 15), (2, 1, 'fen-1', -30);`,
     );
-    const before = query(file, "SELECT * FROM evaluations ORDER BY game_id, ply");
 
     openDb(file).sqlite.close();
 
-    expect(query(file, "SELECT * FROM evaluations ORDER BY game_id, ply")).toEqual(before);
-    expect(query(file, "SELECT id, analyzed FROM games ORDER BY id")).toEqual([
-      { id: 1, analyzed: 1 },
-      { id: 2, analyzed: 1 },
-      { id: 3, analyzed: 0 },
+    // The Games themselves survive the recategorisation, which is what this
+    // migration is about. Their Evaluations do **not** survive the open: a later
+    // migration drops the rows that carry no `Best line` (ADR-0016, the named
+    // exception to ADR-0015), and clears the flag that would otherwise call a
+    // Game with no Evaluations analyzed. Asserted where it happens
+    // (`best-line-migration.test.ts`). Amended rather than worked around: this
+    // suite used to assert those rows were untouched, and that stopped being true.
+    expect(query(file, "SELECT id FROM games ORDER BY id")).toEqual([
+      { id: 1 },
+      { id: 2 },
+      { id: 3 },
     ]);
+    expect(query(file, "SELECT * FROM evaluations")).toEqual([]);
   });
 
   it("preserves the Move habit counters value-for-value under the renamed column", () => {
