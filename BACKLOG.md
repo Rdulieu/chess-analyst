@@ -236,16 +236,70 @@
   >   **Piste, et le vocabulaire existe déjà** : la tranche 04 a construit le cas « **montré par la
   >   partie, non retenu par l'analyse** » — glyphe affiché, coup hors dénominateur, motif en mots — et
   >   personne ne l'a jamais atteint (seuls les coups forcés pouvaient, et un coup forcé n'est jamais
-  >   signalé, cf. plus haut). Un **second critère de sévérité fondé sur les centipions** (par exemple
-  >   « chute ≥ 1,5 pion »), **signalé mais non compté**, remplirait exactement ce trou : le Player voit
-  >   son `Ke6`, le dénominateur ne bouge pas, les taux de 15c restent comparables, et l'écart
-  >   « la partie en montre 3, l'analyse en retient 1 » est expliqué par la phrase que le récapitulatif
-  >   sait déjà écrire. **Arbitrage du demandeur** : cela ajoute un seuil, et US-15a avait tenu à n'en
-  >   ajouter aucun.
+  >   signalé, cf. plus haut). Le Player verrait ses coups marqués avec « ne compte pas : la position
+  >   était déjà décidée », le dénominateur ne bougerait pas, et l'écart serait expliqué par la phrase
+  >   que le récapitulatif sait déjà écrire. **Arbitrage du demandeur** : cela ajoute un seuil, et
+  >   US-15a avait tenu à n'en ajouter aucun.
+  >   **Mais attention : abaisser un seuil ne suffit PAS.** Voir la section de comparaison ci-dessous —
+  >   le coup `Kc7` de la même partie coûte 0,36 pion et chess.com le signale quand même. Il faut un
+  >   critère qui ne soit **pas** une chance de gain.
   > - **Un coup forcé n'est jamais signalé** sur ce corpus (mesuré : sept parties, tous les coups
   >   forcés non signalés — avant/après sont deux lectures de la **même** recherche). Le motif
   >   d'exclusion « forcé » existe donc surtout pour le dénominateur ; vérifier qu'il vaut encore la
   >   peine d'être distingué à l'écran.
+  >
+  > ### Comparaison avec chess.com sur la partie 51 — rapport complet
+  >
+  > Le demandeur a fourni le bilan chess.com de la **même partie** (2026-08-23). Le rapport complet —
+  > méthodologie des deux systèmes, avantages, inconvénients, angles morts, options d'arbitrage,
+  > sources — est dans **`.scratch/per-game-analysis/COMPARISON-CHESSCOM.md`**. L'essentiel :
+  >
+  > **Sur les mêmes 22 coups : chess.com en signale 6, nous en signalons 1.** Précision annoncée 77,7
+  > chez eux ; chez nous 57,2 % de chances perdues dont 29,7 de dérive. Avec la formule **lichess
+  > publiée** sur nos données, la partie vaut 83,5 — ils sont donc **plus sévères** que lichess, ce qui
+  > est cohérent avec un moteur plus fort.
+  >
+  > **Leur méthode n'est pas auditable** : CAPS2 est un secret commercial, et leur centre d'aide dit
+  > explicitement ne divulguer ni la formule, ni la profondeur du moteur, ni les seuils. Les seuils
+  > qu'on trouve en ligne (7-10 / 10-20 / 20+ sur les chances de gain, avec une escalade en centipions)
+  > sont de **tierce partie**, pas officiels.
+  >
+  > **Les quatre coups qu'ils mettent en avant, avec nos chiffres :**
+  >
+  > | Coup | Éval avant → après (nous) | Chances du Player | Notre chute | Nous | chess.com |
+  > | --- | --- | --- | --- | --- | --- |
+  > | **12. Nd7** | +0,39 → +3,96 | 46,4 → 18,9 % | **27,5** | erreur `?` | **gaffe `??`** |
+  > | **13. Kc7** | +4,09 → +4,45 | 18,2 → 16,3 % | **1,9** | *rien* | signalé |
+  > | **16. Ke6** | +4,26 → +5,84 | 17,2 → 10,4 % | **6,8** | *rien* | signalé |
+  > | **20. Bxb2** | +7,17 → +10,01 | 6,7 → 2,4 % | 4,3 | **exclu** | signalé |
+  >
+  > Ce que cet alignement établit, et qui doit guider la décision :
+  >
+  > 1. **Les trois coups qu'ils voient et que nous manquons sont tous dans la zone où notre métrique
+  >    s'est éteinte** (chances entre 18 % et 6 %). Le seul que les deux systèmes signalent est le seul
+  >    joué dans une position encore disputée. Ce n'est pas un hasard : c'est **la forme de la
+  >    différence** — notre analyse est fine tant que la partie est vivante, aveugle dès qu'elle est
+  >    jouée.
+  > 2. **`Kc7` falsifie « il suffit d'abaisser un seuil »** : 0,36 pion, 1,9 point de chances, signalé
+  >    chez eux. La position dit pourquoi — après `13.Nxf7+ Kc7?`, `14.Nxh8` emporte la tour ; l'éval ne
+  >    bouge pas parce qu'ils gagnaient déjà de quatre pions, mais du matériel a changé de camp.
+  >    **Inférence, pas fait** : leur classifieur garde une notion **concrète** (matériel, séquence
+  >    forcée) que les chances de gain effacent.
+  > 3. **`Nd7` n'est qu'un désaccord de calibrage** : même coup, même meilleur coup (`Ke8`), 27,5 points
+  >    perdus. Notre ligne « gaffe » est à 30, la leur à 20.
+  > 4. **Test de transposition** : leurs seuils appliqués à **nos** évaluations, sans plancher ni
+  >    exclusion, donnent **2** coups signalés, pas 6. Les seuils n'expliquent donc pas l'écart seuls.
+  > 5. **La fin de partie vaut zéro, pas « peu »** : `22. Bd4` fait passer le mat de sept coups à un
+  >    coup, et notre métrique enregistre **exactement 0**.
+  >
+  > **Un angle mort qui n'avait pas encore été nommé : l'attribution.** L'adversaire a joué à **96,1**,
+  > niveau estimé 1800, zéro faute. Notre app ne l'analyse pas du tout (les sévérités sont Player-only
+  > par décision) et ne peut donc **jamais** dire « en face c'était très bien joué ». Le Player ne peut
+  > pas distinguer *je me suis effondré* de *il a été trop fort* — deux conclusions opposées sur ce
+  > qu'il faut travailler. C'est ce qui menace le plus le verdict de **15d**.
+  >
+  > **Ce qui reste à faire** : un cas n'est pas un échantillon. Refaire cet alignement sur les dix
+  > parties de la revue déjà prévue, avant de trancher.
   >
   > **À vérifier en premier, parce que la prémisse en dépend : le récapitulatif est-il
   > reproductible ?** En recollant les rapports de FP, la **même partie 51** ressort à **60,6 %** de
