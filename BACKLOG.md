@@ -13,6 +13,9 @@
   > - **US-15a** — Comprendre l'analyse sur **une** partie. **Sortie de l'EPIC : story autonome
   >   ci-dessous**, sur sa propre branche d'intégration, mergée dès qu'elle est finie.
   > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
+  > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
+  >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
+  >   du récapitulatif par partie (ADR-0017), tout approximatif se propage.
   > - **US-15c** — L'agrégat sur tout l'historique ; c'est là que se tranche « taux marginaux vs
   >   conditionnels », avec de vraies données sous les yeux.
   > - **US-15d** — Le verdict « sur quoi travailler » (et le sort de `/openings` et `/danger`).
@@ -153,6 +156,55 @@
   > - `06-the-drift-trace` — bloquée par 05 ; **écrite pour être supprimable** (point de contrôle des
   >   dix parties)
   > - `07-relaunch-the-analysis-from-the-review` — bloquée par 01
+  >
+  > **Livrée** (2026-08-23) : les sept tranches sont mergées dans
+  > `integration/US-15a-per-game-analysis`. Jugement du demandeur : « pas mal pour un premier jet ».
+  > La suite est **US-15a-bis**, ci-dessous, qui doit passer **avant** l'agrégat de 15c.
+
+- **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
+  corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
+  > **Pas encore grillée.** Demandée par le demandeur le 2026-08-23 après la livraison d'US-15a :
+  > la feature « paraît pas mal pour un premier jet », mais elle mérite une passe d'analyse plus
+  > poussée **avant** d'être étendue à l'analyse globale.
+  >
+  > **Elle bloque US-15c.** C'est la raison d'être de la story : ADR-0017 fait de l'agrégat la
+  > **somme du récapitulatif par partie**, donc tout ce qui est approximatif ici est approximatif à
+  > l'échelle du corpus, en pire — et corrigé après coup, il faudrait réécrire les deux côtés.
+  > Corollaire heureux : rien de ce qui suit ne coûte de temps moteur, tout est **dérivé** (ADR-0009)
+  > et donc retunable sans ré-analyse ni migration. C'est exactement pour cette passe que la
+  > dérivation a été gardée hors du schéma.
+  >
+  > **Matière première déjà identifiée** — les points laissés ouverts par les sept FP, à instruire
+  > sur de vraies parties plutôt qu'à trancher sur le papier :
+  > - **Les seuils de `Phase`.** Annoncés « heuristiques, pas des faits » et affichés exprès pour
+  >   être contestés. Le cap « coup 15 » est implémenté comme *le 15e coup des Blancs est le premier
+  >   hors début de partie* ; l'autre lecture décale d'un coup entier. Et « développement achevé »
+  >   est exigé **des deux camps** — lecture retenue, jamais validée sur des parties.
+  > - **Le tracé de dérive est en probation** (point de contrôle des dix parties, déjà prévu par la
+  >   tranche 06). Constat de la FP : sur une partie à grosse erreur unique, la falaise de la courbe
+  >   et la marche du tracé sont **le même événement dessiné deux fois** ; sur une partie grignotée,
+  >   le tracé montre ce que la courbe cache. La question n'est pas « joli ou pas » mais « ce partage
+  >   justifie-t-il le dessin ». La tranche est **écrite pour être supprimable**.
+  > - **L'échelle des y du tracé est par partie** : chaque tracé finit en haut de sa boîte, donc les
+  >   hauteurs ne sont pas comparables d'une partie à l'autre. Trancher avant que dix parties ne
+  >   soient feuilletées côte à côte.
+  > - **Le plancher `Counted Move` à 10 %** n'a jamais été regardé sur des données : combien de coups
+  >   une vraie partie perd-elle réellement par « position déjà décidée » ? Si la part est grosse, le
+  >   dénominateur de 15c l'est aussi.
+  > - **Un coup forcé n'est jamais signalé** sur ce corpus (mesuré : sept parties, tous les coups
+  >   forcés non signalés — avant/après sont deux lectures de la **même** recherche). Le motif
+  >   d'exclusion « forcé » existe donc surtout pour le dénominateur ; vérifier qu'il vaut encore la
+  >   peine d'être distingué à l'écran.
+  >
+  > **Bug antérieur à ticketer au passage** (hors tranche, vu par la FP de la 05) : « Analyser cette
+  > partie » est **silencieusement avalé** tant qu'une bannière de pass non acquittée est affichée —
+  > rien ne se passe, aucun message — et l'écran montre pendant ce temps la progression d'une **autre**
+  > partie comme si elle concernait celle qu'on regarde. Le chemin de réanalyse de la tranche 07 n'est
+  > **pas** touché (re-testé), mais le chemin ordinaire l'est.
+  >
+  > À grillier avec de vraies parties sous les yeux, pas en salle : c'est une story de **mesure et
+  > d'arbitrage**, pas de construction.
+
 ## Doing
 
 ## In review
