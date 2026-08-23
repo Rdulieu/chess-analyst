@@ -282,7 +282,19 @@
   > référence : c'est le premier point de mesure réel d'US-18, dont les chiffres sont aujourd'hui
   > déduits.
   >
-  > Suite : `/to-prd`. **Constat mesuré** (import de référence `Metalyst`, 2026-08-21) : sur les
+  > **PRD** : `.scratch/lichess-fetch-window/PRD.md` (`ready-for-agent`, 31 user stories).
+  > **Cinq sous-issues**, toutes AFK, dans `.scratch/lichess-fetch-window/issues/` — en chaîne, chacune
+  > bloquée par la précédente :
+  > 1. `01-a-truncated-stream-is-not-a-finished-one` — **en tête parce qu'elle bouche un trou déjà
+  >    présent** : un ndjson coupé en vol s'importe partiellement et se rapporte à zéro. Tout le reste
+  >    de l'US repose sur une coupure détectable.
+  > 2. `02-the-port-speaks-a-range` — le refactor sans rien à montrer ; chess.com absorbe sa boucle,
+  >    aucun changement de comportement.
+  > 3. `03-lichess-asks-once-for-the-whole-range` — le gain, plus la correction de la fausseté IPv6.
+  > 4. `04-an-interruption-says-where-it-stopped` — le message retapable et le dernier mois non couvert.
+  > 5. `05-path-zero-measures-the-gain` — la requête unique assérée et **la durée chiffrée**.
+  >
+  > **Constat mesuré** (import de référence `Metalyst`, 2026-08-21) : sur les
   > **71 mois** du span, **51 étaient vides** — on a payé **72 % des requêtes pour zéro partie**,
   > soit ~2,4 min de vide sur ~3,5 min d'import. Et les comptes creux sont la norme sur Lichess,
   > pas l'exception : `Monado_Boy`, c'est 86 parties réparties sur ~80 mois.
