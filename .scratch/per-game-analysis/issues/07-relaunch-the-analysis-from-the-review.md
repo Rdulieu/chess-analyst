@@ -1,4 +1,25 @@
-Status: ready-for-agent
+Status: `done` — mergée dans `integration/US-15a-per-game-analysis` le 2026-08-23 : build +
+543 tests client / 269 serveur verts, **FP 6/6 verte au second passage**, aucune constatation
+bloquante.
+
+**La FP a d'abord été ROUGE, et à juste titre** : la confirmation avertissait d'une destruction que
+le serveur refusait ensuite d'exécuter. `startPass` filtre la sélection par `needsAnalysis`, qui
+écarte une partie déjà analysée sous le régime courant — l'IHM avait été construite sans jamais
+dire au serveur que l'écrasement était autorisé. La confirmation traverse maintenant toute la
+chaîne et lève le filtre pour **exactement les parties nommées**. Corrigé aussi : « Rien à
+analyser : la sélection est déjà analysée » ne répond plus à un écrasement confirmé, et les deux
+refus (rien à faire / une analyse tourne déjà) sont distingués.
+
+Re-vérifié sur l'app réelle : pas de doublons (19 lignes après deux écrasements, toutes sur le
+dernier pass), les parties non nommées gardent leurs propres évaluations (275, 44, 51 sur leurs
+passes d'origine), et le bug antérieur « clic avalé tant qu'une bannière est affichée » **ne mord
+pas** sur ce chemin. Estimation de coût confirmée : 1,0–1,2 s par position (annoncé « environ
+1 minute », mesuré 21 à 47 s selon la partie).
+
+**Constatation ouverte, mineure** : le message « Une analyse est déjà en cours » n'est **pas
+atteignable par l'IHM** — le bouton est désactivé pendant un pass, donc le Player ne peut pas
+confirmer pendant ce temps. C'est un garde-fou correct pour une course, mais seul le test unitaire
+le couvre.
 
 ## Parent
 
