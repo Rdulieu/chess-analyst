@@ -226,8 +226,12 @@ subagent, explicitly:
 - **Teardown by pid, and NEVER `pkill` by pattern.** `pkill node` kills every sibling's server
   mid-run. Also: a dev wrapper often **orphans its listener** — killing the pid the package
   manager returned can leave the real server still serving. Verify the port is actually free
-  (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours (e.g. via `/proc/<pid>/environ`)
-  before killing it. Two agents on one run believed they had stopped an app that was still up, and
+  (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours before killing it. `/proc/<pid>/environ`
+  is the first proof, but it is **often empty of anything identifying** — measured 2026-08-23 (FP),
+  where neither the vite nor the Chrome pid carried a scratch path in `environ`. `/proc/<pid>/cmdline`
+  is the second proof and worked where `environ` did not: the worktree path, `--strictPort <your
+  port>`, `--user-data-dir` under your own scratch. Use whichever actually names you; do not treat an
+  uninformative `environ` as evidence that a pid is not yours. Two agents on one run believed they had stopped an app that was still up, and
   one of them copied a database out from under it.
 - **`npx` interposes a wrapper, so the listener is usually a GRANDCHILD** (re-confirmed by three
   agents on 2026-08-23). Killing the pid you spawned leaves the real server listening. Kill the
@@ -279,24 +283,37 @@ Answer these, and write the answers down:
   *(**Answered 2026-08-23**: yes — **4 of 4**, unprompted, including the three-way parallel fan-out
   that is the shape which lost reports on 2026-08-21. Two consecutive runs now say delivery works.
   This question is closed unless a run contradicts it; if one does, say so here rather than
-  reverting the section wholesale.)*
+  reverting the section wholesale. **Re-confirmed 2026-08-23 (games-table FP)**: the report arrived
+  **twice** — once via the subagent's own `SendMessage`, once as the completion notification, with
+  identical content. Three consecutive runs. The belt-and-braces instruction of §5.1 is what produces
+  the duplicate; it is worth the cost, but expect the double delivery rather than reading the second
+  copy as a second report.)*
 - **Did the `SendMessage`-on-idle relance work?** For how many agents? *(2026-08-23: **not needed
-  once** — nothing to relance.)*
+  once** — nothing to relance. Separately confirmed the same day that `SendMessage` **resumes a
+  completed subagent** with its environment knowledge intact: the games-table FP agent was sent back
+  to re-verify one failed step on a new commit rather than a fresh agent being dispatched. That is
+  the cheap path after a fix — it already knows its ports, its database copy and its browser.)*
 - **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
-  *(2026-08-23: **not needed**. The path is therefore still **unverified** since it was written —
-  the one claim in §5.2 nobody has exercised. Do not delete it, but do not trust it blind either:
-  check the directory exists before relying on it in an emergency.)*
+  *(2026-08-23: **not needed**, twice over. The path is therefore still **unverified** since it was
+  written — the one claim in §5.2 nobody has exercised. Do not delete it, but do not trust it blind
+  either: check the directory exists before relying on it in an emergency.)*
 - **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
   document, the shared browser stealing the selected page? *(2026-08-23: the orphaned listener and
   the page theft both hold and are **worse** than they were written; the theft is now the default
   expectation on a parallel run, which is why §5.4 makes a private browser the default rather than
   the fallback. `emulate` was found to lose its setting across page churn, which is a different
-  failure from reloading the document.)*
+  failure from reloading the document. **2026-08-23 (games-table FP)**: with a private browser from
+  the very start and every script port-guarded, **zero page thefts and no theme or viewport loss** —
+  the single-subagent case, so it says nothing about the parallel one, but it does say the private
+  browser removes the symptom rather than merely reducing it. The `npx` grandchild listener was
+  confirmed again on both servers.)*
 - **Did any driver produce a false finding?** *(2026-08-23: **five**, across three agents — a
   progress observer read only its first 40 of 1488 samples, a board parser keyed on `img` where the
   pieces are `div` backgrounds, a breadcrumb predicate assuming one parent, a candidate lookup
   matching non-clickable ancestors. Every one was caught by re-measuring before reporting. That rule
-  has now caught more would-be defects than the app has produced.)*
+  has now caught more would-be defects than the app has produced. **2026-08-23 (games-table FP):
+  zero** — one candidate (a badge that looked right-aligned) dissolved on re-measuring the computed
+  `text-align`. The rule keeps paying for itself.)*
 
 **Then correct the skill in the same run**, as a doc commit alongside the suite result. Three rules
 for that edit:

@@ -13,28 +13,36 @@ import { compileStylesheet, declarationsFor, topLevelRules } from "./support/tok
  */
 const css = compileStylesheet();
 
-describe("the Game list, laid out as rows", () => {
-  const row = declarationsFor(css, 'ul[aria-label="games"] li');
-
-  it("puts the checkbox, the description and the badge in constant columns", () => {
-    // A grid on the row, not a flow: the three named parts land in the same
-    // three columns on every entry, so eighty Games can be swept down a column.
-    expect(row.get("display")).toBe("grid");
-    expect(row.get("grid-template-columns")).toBe("auto 1fr auto");
-    expect(row.get("align-items")).toBe("center");
+describe("the Game table", () => {
+  it("adds no rule of its own — it is a table and inherits the table rules", () => {
+    // The reversal of US-13's "what is a list stays a list" pays off here: the
+    // Game list used to carry its own grid, its own hairline and its own button
+    // sizing. As a table it carries none of that, and a figure on /stats and a
+    // date on / now share one rhythm because one set of rules draws both.
+    for (const stale of [
+      'ul[aria-label="games"] li',
+      'ul[aria-label="games"] li [data-part=description] button',
+    ]) {
+      expect(declarationsFor(css, stale).size).toBe(0);
+    }
   });
 
-  it("separates the rows by spacing and a hairline, never by a heavy rule", () => {
-    expect(row.get("border-block-end")).toBe("1px solid var(--border)");
+  it("leaves its last three columns aligned to the start — they are words, not figures", () => {
+    // Résultat, Cadence and État happen to be the last three cells, which is
+    // exactly what the figure rule counts. Words pushed right leave a ragged
+    // left edge down the column, so the Game table is excluded by name.
+    expect(declarationsFor(css, 'tr > :nth-last-child(-n+3):not([scope="colgroup"])').size).toBe(0);
   });
 
-  it("gives the row's description a comfortable target the width of its column", () => {
-    // The description is a button: it must fill its column and be tall enough to
-    // hit, rather than being a word-sized target in the middle of a wide row.
-    const target = declarationsFor(css, 'ul[aria-label="games"] li [data-part=description] button');
-    expect(target.get("inline-size")).toBe("100%");
-    expect(target.get("min-block-size")).toBe("2.25rem");
-    expect(target.get("text-align")).toBe("start");
+  it("styles the 'analysée' badge by its own label, not by the cell around it", () => {
+    // The badge moved from a list row's `state` part to an `État` cell. A
+    // selector naming its container stopped matching without one test failing —
+    // jsdom does not load the sheet — so it is pinned to the one thing that did
+    // not change: its accessible name.
+    const badge = declarationsFor(css, '[aria-label="analysée"]');
+    expect(badge.get("background")).toBe("var(--tint-ok)");
+    expect(badge.get("border")).toBe("1px solid var(--tint-ok-ink)");
+    expect(badge.get("border-radius")).toBe("var(--radius-pill)");
   });
 });
 
@@ -93,7 +101,7 @@ describe("the tabular screens (Stats, Weak opening)", () => {
     // rule and no class — and the group header, which spans, is left out.
     const figures = declarationsFor(
       css,
-      'tr > :nth-last-child(-n+3):not([scope="colgroup"])',
+      'table:not([aria-label=parties]) tr > :nth-last-child(-n+3):not([scope="colgroup"])',
     );
     expect(figures.get("text-align")).toBe("end");
   });

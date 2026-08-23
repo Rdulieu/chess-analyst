@@ -29,6 +29,14 @@ export const CADENCE_LABEL: Record<TimeControlCategory, string> = {
   correspondence: "Correspondance",
 };
 
+/**
+ * How a Player-relative `result` is named on screen. One map, one home — beside
+ * the cadence labels, because both answer the same question: how is a stored
+ * value read out loud. Two screens name a result today (the Game list and the
+ * Game header), and they must not disagree.
+ */
+export const RESULT_LABEL = { win: "Victoire", loss: "Défaite", draw: "Nulle" } as const;
+
 /** The `Game` glossary term as delivered by the local API (Player-relative). */
 export interface Game {
   id: number;
