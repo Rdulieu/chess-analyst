@@ -10,8 +10,8 @@
   > et `Analysis pass` amendée. Branche `integration/US-15-weakness-profile`.
   >
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
-  > - **US-15a** — Comprendre l'analyse sur **une** partie. **Sortie de l'EPIC : story autonome
-  >   ci-dessous**, sur sa propre branche d'intégration, mergée dès qu'elle est finie.
+  > - **US-15a** — Comprendre l'analyse sur **une** partie. Sortie de l'EPIC en story autonome, sur
+  >   sa propre branche d'intégration : **livrée et mergée** (PR #58, 2026-08-23), voir `## Done`.
   > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
   > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
   >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
@@ -101,65 +101,6 @@
   >   moteur d'analyse suppose que le joueur a raison. Un désaccord révèle une **divergence**, jamais
   >   **qui se trompe**. C'est un signal utile (où regarder) et non un oracle de validation — à écrire
   >   noir sur blanc, sinon la story promet une garantie qu'elle ne peut pas tenir.
-
-- **US-15a**: Comprendre, sur **une** partie, comment l'analyse juge mes coups — pour pouvoir croire
-  (ou contester) ce que l'app me dira plus tard sur mes faiblesses.
-  > **Front grillé** (2026-08-22) : décisions **F1→F12** dans
-  > `.scratch/per-game-analysis/GRILL-FRONT.md`. `CONTEXT.md` gagne **`Review mode`** (Unaided /
-  > Annotated / Detailed, **Unaided par défaut** — changement de comportement : les annotations étaient
-  > affichées par défaut depuis US-7, donc **HP-01 et quatre suites client sont à amender**). Coutures
-  > de test validées : `.scratch/per-game-analysis/SEAMS.md`. **Pas d'ADR pour le front** (tout est bon
-  > marché à défaire) ; en revanche **ADR-0016 est amendée** et **ADR-0015 reçoit une note** : on
-  > **jette** les 1199 `Evaluation`s existantes plutôt que de porter à jamais une branche `pv` null.
-  > Deux points laissés à vérifier sur pièces plutôt qu'affirmés : la **valeur réelle du tracé de
-  > dérive** (dix parties, puis on garde ou on supprime) et la **lisibilité de l'empilement** du
-  > panneau latéral (à regarder dans le FP). **Prête pour `/to-prd`.**
-  >
-  > **Grillée (modèle) avec l'EPIC US-15** (2026-08-21) : décisions D1→D14 dans
-  > `.scratch/weakness-profile/GRILL-NOTES.md`, glossaire dans `CONTEXT.md`, **ADR-0016** et
-  > **ADR-0017**. **Isolée de l'EPIC** (choix du demandeur) : branche d'intégration propre,
-  > `integration/US-15a-per-game-analysis`, PR vers `develop` **dès la fin de 15a** — une autre
-  > feature passe avant le reste de l'EPIC, et l'analyse partie par partie ne doit pas l'attendre.
-  >
-  > **Aucun agrégat, aucune page de verdict.** La valeur de cette story se juge à « je peux évaluer
-  > la méthode », pas à « je sais sur quoi travailler » (ADR-0017).
-  >
-  > Contenu :
-  > - Stocker la **`Best line`** (PV entière, UCI, une seule colonne) et le score de la 2e ligne
-  >   (`cp2`/`mate2`) — **zéro temps moteur** : `uci-driver.ts` collecte déjà toutes les lignes `info`
-  >   et jette la variante.
-  > - **MultiPV=2**, avec la **mesure** due : < 1,5× on garde, 1,5–2× on revient au demandeur, > 2× on
-  >   revoit la méthode. La profondeur 16 n'est **pas** la variable d'ajustement (ADR-0009).
-  > - `evaluations.pass_id` + le **`Search regime`** porté par le pass, et la reprise restreinte au
-  >   même régime (ADR-0016).
-  > - **Migration** (ADR-0015 : plus de wipe) : un pass synthétique portant profondeur 16 / une ligne,
-  >   auquel on rattache les 1199 `Evaluation`s existantes, `pv` null assumé — aucun rejeu ne
-  >   reconstitue une variante. Ré-analyser les 20 parties = choix du joueur, ~11 min.
-  > - Dérivation (jamais stockée, retunable sans moteur) : **`Phase`** (seuils de départ à ajuster en
-  >   regardant de vraies parties), **`Counted Move`** + le motif d'exclusion, **`Drift`** en résidu,
-  >   et le **récapitulatif par partie** qui sommera vers l'agrégat de 15c.
-  > - Sur la page Analyse : le relevé par Move (`Best line` + réfutation, delta, phase, compté ou
-  >   non et pourquoi) et le **tracé cumulé** de la dérive. Mise en page libre — **l'UI ne décide pas
-  >   du modèle** (ADR-0017) ; la page est déjà la plus dense de l'app.
-  >
-  > Story grosse : voudra des tranches internes. Balle traçante : schéma + régime + PV stockée → le
-  > relevé par Move à l'écran → le tracé de dérive → le récapitulatif.
-  >
-  > **PRD** : `.scratch/per-game-analysis/PRD.md`. **Sept tranches** (à jouer **séquentiellement**,
-  > choix du demandeur), dans `.scratch/per-game-analysis/issues/` :
-  > - `01-the-best-line-end-to-end` — **HITL** (la mesure MultiPV peut revenir au demandeur ; c'est
-  >   aussi la tranche qui jette les analyses existantes)
-  > - `02-review-mode` — bloquée par 01 ; porte l'amendement de **HP-01** et des suites client
-  > - `03-the-phase-of-a-move` — bloquée par 02
-  > - `04-which-moves-count` — bloquée par 02
-  > - `05-what-this-game-contributes` — bloquée par 03 et 04 ; la fonction que **15c pliera**
-  > - `06-the-drift-trace` — bloquée par 05 ; **écrite pour être supprimable** (point de contrôle des
-  >   dix parties)
-  > - `07-relaunch-the-analysis-from-the-review` — bloquée par 01
-  >
-  > **Livrée** (2026-08-23) : les sept tranches sont mergées dans
-  > `integration/US-15a-per-game-analysis`. Jugement du demandeur : « pas mal pour un premier jet ».
-  > La suite est **US-15a-bis**, ci-dessous, qui doit passer **avant** l'agrégat de 15c.
 
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
@@ -387,8 +328,112 @@
 
 ## In review
 
+## Done
+
+- **Liste des parties en tableau** (drive-by, sans numéro de story) : les parties les plus récentes
+  en premières, sous forme de tableau.
+  > **Livrée** (2026-08-23), en **deux PR vers `develop`** — #59 (`e1ff6aa`) et #60 (`1328ec8`).
+  > Née d'une demande directe, sans passer par une story ni par un grill : elle est consignée ici
+  > **après coup**, parce qu'US-19 y renvoie et qu'une story livrée qui n'apparaît nulle part est
+  > une story qu'on refera.
+  >
+  > **PR #59** — `listGames` ordonne `date DESC, id DESC` (l'ordre appartient au `Game list`, pas à
+  > un écran) et `GameList` passe de `ul` à `table`, six colonnes, un fait par cellule. Ceci
+  > **renverse la décision US-13 « what is a list stays a list »**, à la demande du demandeur : le
+  > commentaire de `_lists.scss` qui l'affirmait est retiré avec sa date. Sept comportements en TDD,
+  > FP **12/12**.
+  >
+  > **PR #60** — `GamesPage` prend `data-width="wide"`. Un attribut, parce que la FP de #59 avait
+  > mesuré que le tableau demande **788 px** dans une colonne de **659** : sa dernière colonne
+  > `État`, celle qui porte la pastille « analysée » que #59 venait d'ajouter, était **hors écran à
+  > 1440, 900 et 600 px**. FP **10/10**.
+  >
+  > **Ce que ça a appris, et qui vaut au-delà de cette story** : les deux régressions étaient
+  > **invisibles à tous les tiers inférieurs** — jsdom ne charge pas la feuille de style et ne fait
+  > pas de mise en page. La première (la *page* défilait latéralement) et la seconde (une colonne
+  > entière hors champ) n'ont existé que sous l'œil du tier agentique. Un passage liste → tableau
+  > coûte **deux tranches**, pas une : le markup, puis la place.
+  >
+  > Quatre décisions produit restent ouvertes — **US-19**.
+
+- **US-15a**: Comprendre, sur **une** partie, comment l'analyse juge mes coups — pour pouvoir croire
+  (ou contester) ce que l'app me dira plus tard sur mes faiblesses.
+  > **Front grillé** (2026-08-22) : décisions **F1→F12** dans
+  > `.scratch/per-game-analysis/GRILL-FRONT.md`. `CONTEXT.md` gagne **`Review mode`** (Unaided /
+  > Annotated / Detailed, **Unaided par défaut** — changement de comportement : les annotations étaient
+  > affichées par défaut depuis US-7, donc **HP-01 et quatre suites client sont à amender**). Coutures
+  > de test validées : `.scratch/per-game-analysis/SEAMS.md`. **Pas d'ADR pour le front** (tout est bon
+  > marché à défaire) ; en revanche **ADR-0016 est amendée** et **ADR-0015 reçoit une note** : on
+  > **jette** les 1199 `Evaluation`s existantes plutôt que de porter à jamais une branche `pv` null.
+  > Deux points laissés à vérifier sur pièces plutôt qu'affirmés : la **valeur réelle du tracé de
+  > dérive** (dix parties, puis on garde ou on supprime) et la **lisibilité de l'empilement** du
+  > panneau latéral (à regarder dans le FP). **Prête pour `/to-prd`.**
+  >
+  > **Grillée (modèle) avec l'EPIC US-15** (2026-08-21) : décisions D1→D14 dans
+  > `.scratch/weakness-profile/GRILL-NOTES.md`, glossaire dans `CONTEXT.md`, **ADR-0016** et
+  > **ADR-0017**. **Isolée de l'EPIC** (choix du demandeur) : branche d'intégration propre,
+  > `integration/US-15a-per-game-analysis`, PR vers `develop` **dès la fin de 15a** — une autre
+  > feature passe avant le reste de l'EPIC, et l'analyse partie par partie ne doit pas l'attendre.
+  >
+  > **Aucun agrégat, aucune page de verdict.** La valeur de cette story se juge à « je peux évaluer
+  > la méthode », pas à « je sais sur quoi travailler » (ADR-0017).
+  >
+  > Contenu :
+  > - Stocker la **`Best line`** (PV entière, UCI, une seule colonne) et le score de la 2e ligne
+  >   (`cp2`/`mate2`) — **zéro temps moteur** : `uci-driver.ts` collecte déjà toutes les lignes `info`
+  >   et jette la variante.
+  > - **MultiPV=2**, avec la **mesure** due : < 1,5× on garde, 1,5–2× on revient au demandeur, > 2× on
+  >   revoit la méthode. La profondeur 16 n'est **pas** la variable d'ajustement (ADR-0009).
+  > - `evaluations.pass_id` + le **`Search regime`** porté par le pass, et la reprise restreinte au
+  >   même régime (ADR-0016).
+  > - **Migration** (ADR-0015 : plus de wipe) : un pass synthétique portant profondeur 16 / une ligne,
+  >   auquel on rattache les 1199 `Evaluation`s existantes, `pv` null assumé — aucun rejeu ne
+  >   reconstitue une variante. Ré-analyser les 20 parties = choix du joueur, ~11 min.
+  > - Dérivation (jamais stockée, retunable sans moteur) : **`Phase`** (seuils de départ à ajuster en
+  >   regardant de vraies parties), **`Counted Move`** + le motif d'exclusion, **`Drift`** en résidu,
+  >   et le **récapitulatif par partie** qui sommera vers l'agrégat de 15c.
+  > - Sur la page Analyse : le relevé par Move (`Best line` + réfutation, delta, phase, compté ou
+  >   non et pourquoi) et le **tracé cumulé** de la dérive. Mise en page libre — **l'UI ne décide pas
+  >   du modèle** (ADR-0017) ; la page est déjà la plus dense de l'app.
+  >
+  > Story grosse : voudra des tranches internes. Balle traçante : schéma + régime + PV stockée → le
+  > relevé par Move à l'écran → le tracé de dérive → le récapitulatif.
+  >
+  > **PRD** : `.scratch/per-game-analysis/PRD.md`. **Sept tranches** (à jouer **séquentiellement**,
+  > choix du demandeur), dans `.scratch/per-game-analysis/issues/` :
+  > - `01-the-best-line-end-to-end` — **HITL** (la mesure MultiPV peut revenir au demandeur ; c'est
+  >   aussi la tranche qui jette les analyses existantes)
+  > - `02-review-mode` — bloquée par 01 ; porte l'amendement de **HP-01** et des suites client
+  > - `03-the-phase-of-a-move` — bloquée par 02
+  > - `04-which-moves-count` — bloquée par 02
+  > - `05-what-this-game-contributes` — bloquée par 03 et 04 ; la fonction que **15c pliera**
+  > - `06-the-drift-trace` — bloquée par 05 ; **écrite pour être supprimable** (point de contrôle des
+  >   dix parties)
+  > - `07-relaunch-the-analysis-from-the-review` — bloquée par 01
+  >
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #58, mergée le
+  > 2026-08-23). Les **sept tranches** auto-mergées sur FP verte : 02 (7/7), 03 (6/6), 06 (6/6),
+  > 07 (rouge au premier passage, corrigé, 6/6 au second) ; 04 (4/5) et 05 (5/6) portent chacune
+  > **une étape structurellement inexerçable sur ce corpus**, documentée sur l'issue — pas un rouge.
+  > La 01 a été validée par le demandeur. **543 tests client, 269 serveur, build vert.**
+  >
+  > **Suite HP rejouée au gate** (2026-08-23) : path 0 ✅ 10/10, HP-01 ✅, HP-02 ✅ 10/10, HP-03 ✅
+  > 7/7, **aucune constatation bloquante**. 48 audits de thème (8 écrans × 2 thèmes × 3 scénarios) :
+  > zéro couleur non résolue, zéro débordement horizontal, zéro erreur console, les huit tokens
+  > invariants **identiques au bit** entre thèmes.
+  >
+  > **Le changement de comportement a été exercé pour de vrai** (HP-01), et c'est ce qui comptait :
+  > la partie analysée s'ouvre **Sans aide** — ni glyphe, ni évaluation, ni barre, ni courbe ;
+  > **Annoté** fait apparaître la courbe et « Vos erreurs : 1 grosse erreur ?? » ; **Détaillé**
+  > ajoute le récapitulatif (10/10 coups comptés, 55,6 % de chances perdues, profondeur 16 / 2
+  > lignes), le ruban de phases et le second dessin. Le niveau survit au rechargement et au
+  > changement de partie.
+  >
+  > Jugement du demandeur : « **pas mal pour un premier jet** » — d'où **US-15a-bis**, qui doit
+  > passer **avant** l'agrégat de 15c.
+
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
-  > **Livrée**, en attente du merge humain (PR #52). Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
+  > **Livrée.** Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
   > une abstraction neutre : `ChessComClient` (`server/src/chesscom.ts`) est **injectable mais
   > modelé sur chess.com** — `fetchMonth(username, year, month)` (archives mensuelles),
   > `time_class`, `rules` pour écarter les variantes, codes de résultat maison, et l'`Opening` est
@@ -493,15 +538,17 @@
   > - Une ADR est probable (port multi-plateforme, en regard d'ADR-0002 qui fait du relais local le
   >   seul interlocuteur des sources externes).
   >
-  > **En review** (2026-08-22) — PR #52 vers `develop` : https://github.com/Rdulieu/chess-analyst/pull/52
-  > Suite HP **verte** (path 0 + 3/3), zéro finding bloquant. `Metalyst` (lichess.org) rejoint
-  > path 0 sur ses 71 mois réels — 403 récupérées, **351** importées, 38 `classical`, 37
-  > `correspondence` — et HP-01 gagne une étape qui **bascule de plateforme** : la suite reste à
-  > trois HP. Limite assumée : pas de partie `ultraBullet` ni abandonnée sur ce compte, ces deux
-  > règles restent sur fixtures.
+  > **Fusionnée dans `develop`** (décision humaine `integration → develop`, PR #52, mergée le
+  > 2026-08-22). Trace de la revue : les sept tranches sur `integration/US-12-lichess-import`,
+  > **path 0 + HP-01 + HP-02 + HP-03 tous verts**, zéro finding bloquant, build et tests verts
+  > (659). Path 0 porte désormais un **troisième profil de référence sur l'autre plateforme**,
+  > `Metalyst` (lichess.org), importé sur ses 71 mois réels — 403 récupérées, **351** importées,
+  > 38 `classical`, 37 `correspondence` — et HP-01 gagne une étape qui **bascule de plateforme** :
+  > bannière et chiffres suivent la `Platform`, la suite reste à **trois** HP.
+  > Limite de couverture assumée : ce compte n'a ni partie `ultraBullet` ni partie abandonnée,
+  > ces deux règles restent couvertes par fixtures. Suite : **US-17** (le mois vide coûte une
+  > requête pour rien côté Lichess).
 
-
-## Done
 
 - **US-11**: Choisir mon profil et retrouver les parties importées et analysées sous ce profil.
   > **Grillée** (2026-08-17) — branche `integration/US-11-profiles`.
