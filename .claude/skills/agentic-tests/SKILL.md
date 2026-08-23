@@ -252,6 +252,13 @@ subagent, explicitly:
   orphans for their owner.
 - **Restore state before starting the server**, not after: a server usually creates its database
   file on open, so a copy made afterwards is overwritten by a live process.
+- **But *seed* AFTER the server is up** (measured 2026-08-23, games-table-wide FP) — restoring and
+  seeding are not the same operation and want opposite orders. An agent copied the database, wrote
+  `analyzed = 1` into the copy, started the server, and read the rows back as **0**: the copied
+  `-wal`/`-shm` sidecars and the open-time checkpoint discarded the write. The same `UPDATE` against
+  the running server took immediately. So: **copy the database, start the server, then seed** — and
+  read the seeded rows back through the app before trusting them. Note that seeding is a fallback:
+  prefer state the UI can produce, and say in the report what you seeded and why the UI could not.
 
 ### 5.5 What to tell every subagent
 
