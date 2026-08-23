@@ -71,6 +71,18 @@ export interface ImportedGame {
 }
 
 /**
+ * One month, the unit an Import **reports** by (`CONTEXT.md`, `Monthly import`).
+ * It lives here, in the port's vocabulary, because it is what a fetch is asked
+ * for and what every event is tagged with — no longer what a fetch is *sliced*
+ * into, which is each Platform's own business (ADR-0018, as amended).
+ */
+export interface MonthRef {
+  year: number;
+  /** 1-12. */
+  month: number;
+}
+
+/**
  * One month as the Platform answered it. `totalFetched` is **everything the
  * Platform returned** — out-of-scope games (variants, and whatever else the
  * adapter drops) included — so the summary's headline figure keeps meaning
@@ -82,6 +94,29 @@ export interface MonthFetch {
 }
 
 /**
+ * What a range fetch tells its caller, as it goes. A **stream of events** rather
+ * than a stream of Games, because three things have to cross the port and only
+ * one of them is a Game:
+ *
+ * - the Games themselves, each tagged with the month it **counts toward**;
+ * - the end of a month, carrying what the Platform **had** that month
+ *   (out-of-scope games included), which is what keeps a month full of variants
+ *   from reading as an empty one;
+ * - a month the Platform could not answer for — which must **not** end the
+ *   range: one unanswerable month has never aborted an Import (ADR-0010), and
+ *   now that the month loop lives inside the adapter, only the adapter can say
+ *   "this month failed, carry on".
+ *
+ * Every month of the asked-for range gets exactly one `month-done` **or** one
+ * `month-failed`, in order — that is what lets the Import draw a line per month,
+ * including for months holding nothing.
+ */
+export type RangeEvent =
+  | { kind: "game"; month: MonthRef; game: ImportedGame }
+  | { kind: "month-done"; month: MonthRef; totalFetched: number }
+  | { kind: "month-failed"; month: MonthRef; reason: string };
+
+/**
  * Raised when the Platform's answer **ended before it was finished** — the
  * connection died mid-body. It exists because the alternative is silence: a
  * games stream read line by line simply stops yielding, the month imports
@@ -90,16 +125,13 @@ export interface MonthFetch {
  * history" the per-month lines exist to prevent (`CONTEXT.md`, `Monthly
  * import`).
  *
- * It carries the `partial` fetch rather than discarding it: the break is no
- * reason to throw away what already arrived. Re-running is free (dedup by URL),
- * so keeping the Games costs nothing and losing them is silent.
+ * It carries **no payload**. It used to hand back what had arrived, because the
+ * port materialised a whole month before answering and the break would otherwise
+ * have discarded it. The port now *yields*, so those Games are already through
+ * and already kept — there is nothing left to carry.
  */
 export class TruncatedStreamError extends Error {
-  constructor(
-    platform: Platform,
-    /** Everything that arrived before the break — kept, never rolled back. */
-    readonly partial: MonthFetch,
-  ) {
+  constructor(platform: Platform) {
     super(
       `${platformLabel(platform)} a interrompu sa réponse avant la fin : le mois est incomplet. Relancez l'import pour le compléter.`,
     );
@@ -125,13 +157,21 @@ export interface PlatformClient {
    * ask", since only the first is the user's mistake (US-11).
    */
   fetchPlayer(username: string): Promise<PlatformAccount | null>;
-  /** The account's games for the given year/month (empty when none). */
-  fetchMonth(
+  /**
+   * The account's games over a **range** of months, both bounds included,
+   * **yielded as they arrive** in date order.
+   *
+   * The range, not the month, is what the port is asked for: how many requests
+   * that takes is the Platform's business (one per month for chess.com, which
+   * has no range endpoint; one for the whole span on Lichess). The month remains
+   * the unit every event is reported by.
+   */
+  fetchRange(
     username: string,
-    year: number,
-    month: number,
+    from: MonthRef,
+    to: MonthRef,
     hooks?: FetchHooks,
-  ): Promise<MonthFetch>;
+  ): AsyncGenerator<RangeEvent, void>;
 }
 
 /**

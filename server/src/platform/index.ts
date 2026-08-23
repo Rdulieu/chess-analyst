@@ -11,8 +11,11 @@ export {
   type PlatformAccount,
   type ImportedGame,
   type MonthFetch,
+  type MonthRef,
+  type RangeEvent,
   type PlatformClient,
   type PlatformRegistry,
 } from "./types";
+export { monthsInRange, monthOf, monthOrdinal } from "./months";
 export { createHttpChessComClient } from "./chesscom/client";
 export { createHttpLichessClient } from "./lichess/client";

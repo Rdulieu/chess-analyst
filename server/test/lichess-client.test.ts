@@ -3,7 +3,8 @@ import express from "express";
 import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
 import { createHttpLichessClient } from "../src/platform/lichess/client";
-import { TruncatedStreamError } from "../src/platform";
+import { collectMonth } from "./fixtures";
+import type { PlatformClient } from "../src/platform";
 
 /**
  * A tiny stand-in for the Lichess API, so the real client is exercised end to
@@ -194,7 +195,7 @@ describe("the Lichess adapter's month fetch", () => {
   it("reads the ndjson stream line by line and answers our shapes", async () => {
     const client = createHttpLichessClient(baseUrl);
 
-    const month = await client.fetchMonth("Metalyst", 2024, 1);
+    const month = await collectMonth(client, "Metalyst", 2024, 1);
 
     // Everything the Platform returned is "fetched", the variant included; only
     // what we study is handed over.
@@ -218,7 +219,7 @@ describe("the Lichess adapter's month fetch", () => {
     exportCalls.length = 0;
     const client = createHttpLichessClient(baseUrl);
 
-    await client.fetchMonth("Metalyst", 2024, 2);
+    await collectMonth(client, "Metalyst", 2024, 2);
 
     expect(exportCalls).toHaveLength(1);
     const { username, query } = exportCalls[0];
@@ -239,7 +240,7 @@ describe("a month Lichess answered, of which we keep nothing", () => {
     // what tells the Player that, instead of quietly narrowing the number.
     const client = createHttpLichessClient(baseUrl);
 
-    const month = await client.fetchMonth("excluded", 2024, 1);
+    const month = await collectMonth(client, "excluded", 2024, 1);
 
     expect(month.totalFetched).toBe(3);
     expect(month.games).toEqual([]);
@@ -254,8 +255,8 @@ describe("a game straddling a month boundary", () => {
     // re-import and no deduplication would ever reveal.
     const client = createHttpLichessClient(baseUrl);
 
-    const august = await client.fetchMonth("straddler", 2024, 8);
-    const september = await client.fetchMonth("straddler", 2024, 9);
+    const august = await collectMonth(client, "straddler", 2024, 8);
+    const september = await collectMonth(client, "straddler", 2024, 9);
 
     expect(august.games).toHaveLength(1);
     expect(august.games[0].date).toBe("2024-08-27");
@@ -276,7 +277,7 @@ describe("a 429 from Lichess", () => {
     await arm(1);
     const client = withFastRetry();
 
-    const month = await client.fetchMonth("throttled", 2024, 1);
+    const month = await collectMonth(client, "throttled", 2024, 1);
 
     expect(month.games.map((g) => g.gameUrl)).toEqual(["https://lichess.org/after429"]);
     expect(await attempts()).toBe(2); // the refusal, then the replay
@@ -287,7 +288,7 @@ describe("a 429 from Lichess", () => {
     const said: string[] = [];
     const client = withFastRetry();
 
-    await client.fetchMonth("throttled", 2024, 1, { onWaiting: (m) => said.push(m) });
+    await collectMonth(client, "throttled", 2024, 1, { onWaiting: (m) => said.push(m) });
 
     expect(said).toHaveLength(1);
     expect(said[0]).toMatch(/lichess\.org/i);
@@ -300,7 +301,7 @@ describe("a 429 from Lichess", () => {
     await arm(2);
     const client = withFastRetry();
 
-    await expect(client.fetchMonth("throttled", 2024, 1)).rejects.toThrow(/429/);
+    await expect(collectMonth(client, "throttled", 2024, 1)).rejects.toThrow(/429/);
     expect(await attempts()).toBe(2);
   });
 
@@ -309,7 +310,7 @@ describe("a 429 from Lichess", () => {
     // a Platform that is already failing.
     const client = withFastRetry();
 
-    await expect(client.fetchMonth("broken", 2024, 1)).rejects.toThrow(/500/);
+    await expect(collectMonth(client, "broken", 2024, 1)).rejects.toThrow(/500/);
 
     const { calls } = (await fetch(`${baseUrl}/__broken-calls`).then((r) => r.json())) as {
       calls: number;
@@ -318,42 +319,55 @@ describe("a 429 from Lichess", () => {
   });
 });
 
+/** Every event of a one-month range, in order. */
+async function eventsFor(client: PlatformClient, username: string, month: number) {
+  const events = [];
+  for await (const e of client.fetchRange(username, { year: 2024, month }, { year: 2024, month })) {
+    events.push(e);
+  }
+  return events;
+}
+
 describe("a truncated games stream", () => {
-  it("raises instead of quietly answering with what arrived", async () => {
+  it("fails the month instead of quietly ending it as covered", async () => {
     // The hole this closes: the reader stops yielding when the body dies
     // mid-flight, so a half-imported month would be indistinguishable from a
     // month the Player was inactive in. Silence here becomes a permanent,
     // invisible gap in the history.
     const client = createHttpLichessClient(baseUrl);
 
-    await expect(client.fetchMonth("truncated", 2024, 1)).rejects.toThrow(TruncatedStreamError);
+    const events = await eventsFor(client, "truncated", 1);
+
+    expect(events.map((e) => e.kind)).not.toContain("month-done");
+    expect(events.at(-1)).toMatchObject({
+      kind: "month-failed",
+      month: { year: 2024, month: 1 },
+    });
   });
 
-  it("raises even when the cut lands exactly on a line boundary", async () => {
+  it("fails the month even when the cut lands exactly on a line boundary", async () => {
     // Nothing partial is left to fail a parse, so detecting this cannot rest on
     // the leftovers: the stream itself has to be known to have ended early.
     const client = createHttpLichessClient(baseUrl);
 
-    await expect(client.fetchMonth("truncated-clean", 2024, 1)).rejects.toThrow(
-      TruncatedStreamError,
-    );
+    const events = await eventsFor(client, "truncated-clean", 1);
+
+    expect(events.map((e) => e.kind)).not.toContain("month-done");
+    expect(events.at(-1)).toMatchObject({ kind: "month-failed" });
   });
 
-  it("carries the games that did arrive, so they are not lost with the break", async () => {
-    // The break is not a reason to throw away what was already received: a
-    // re-run costs nothing (dedup by URL), but a Game silently dropped here is
-    // one the Player never gets back without noticing it was missing.
+  it("has already yielded the games that arrived, so nothing is lost with the break", async () => {
+    // They come through BEFORE the failure — which is why nothing has to carry
+    // them any more. A re-run costs nothing (dedup by URL), but a Game silently
+    // dropped here is one the Player never gets back.
     const client = createHttpLichessClient(baseUrl);
 
-    const error = await client
-      .fetchMonth("truncated", 2024, 1)
-      .then(() => null, (e: unknown) => e as TruncatedStreamError);
+    const events = await eventsFor(client, "truncated", 1);
 
-    expect(error).toBeInstanceOf(TruncatedStreamError);
-    expect(error?.partial.games.map((g) => g.gameUrl)).toEqual([
-      "https://lichess.org/arrived1",
-    ]);
-    expect(error?.partial.totalFetched).toBe(1);
+    const games = events.filter((e) => e.kind === "game");
+    expect(games).toHaveLength(1);
+    expect(games[0]).toMatchObject({ game: { gameUrl: "https://lichess.org/arrived1" } });
+    expect(events.indexOf(games[0])).toBeLessThan(events.length - 1);
   });
 
   it("says the stream ended early, in words a Player can act on", async () => {
@@ -362,8 +376,28 @@ describe("a truncated games stream", () => {
     // was cut short and that re-running is the way out.
     const client = createHttpLichessClient(baseUrl);
 
-    await expect(client.fetchMonth("truncated", 2024, 1)).rejects.toThrow(
-      /interrompu|incomplet/i,
-    );
+    const events = await eventsFor(client, "truncated", 1);
+
+    expect(events.at(-1)).toMatchObject({
+      kind: "month-failed",
+      reason: expect.stringMatching(/interrompu|incomplet/i),
+    });
+  });
+
+  it("carries on to the next month rather than ending the range", async () => {
+    // One unanswerable month has never aborted an Import (ADR-0010). Now that
+    // the month loop is inside the adapter, only the adapter can honour that.
+    const client = createHttpLichessClient(baseUrl);
+
+    const events = [];
+    for await (const e of client.fetchRange(
+      "truncated",
+      { year: 2024, month: 1 },
+      { year: 2024, month: 2 },
+    )) {
+      events.push(e);
+    }
+
+    expect(events.filter((e) => e.kind === "month-failed")).toHaveLength(2);
   });
 });

@@ -16,6 +16,7 @@ import {
   seedProfile,
   type PlayerAnswer,
 } from "./fixtures";
+import { monthsInRange } from "../src/platform";
 import type { PlatformClient } from "../src/platform";
 
 /** 4-field FEN of the standard starting Position. */
@@ -805,9 +806,12 @@ describe("import API", () => {
     const app = createApp(db, {
       chesscom: {
         fetchPlayer: async (username) => ({ username }),
-        fetchMonth: async () => {
-          monthsFetched++;
-          return { totalFetched: 0, games: [] };
+        // Counts the MONTHS the range covers, which is what the assertion is
+        // about: the generator is started either way, but an empty range asks
+        // for nothing.
+        // eslint-disable-next-line require-yield
+        fetchRange: async function* (_username, from, to) {
+          monthsFetched += monthsInRange(from, to).length;
         },
       },
     });
@@ -853,7 +857,8 @@ describe("import API", () => {
     const { db } = openDb(":memory:");
     const failing: PlatformClient = {
       fetchPlayer: async (username) => ({ username }),
-      fetchMonth: async () => {
+      // eslint-disable-next-line require-yield
+      fetchRange: async function* () {
         throw new Error("chess.com request failed (429)");
       },
     };
