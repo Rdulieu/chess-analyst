@@ -45,7 +45,12 @@ export function GamesPage({ profile }: { profile: Profile }) {
   };
 
   return (
-    <section aria-labelledby="games-heading">
+    // `wide`: six columns, and the last of them — `État`, carrying the "analysée"
+    // badge — was pushed out of sight inside the 72ch reading column (788px of
+    // table for 659px of room). `/openings` carries the same attribute for the
+    // same reason. The table still scrolls in its own container; this only gives
+    // it the room to not need to.
+    <section aria-labelledby="games-heading" data-width="wide">
       <h2 id="games-heading">Mes parties</h2>
 
       {games.state === "loading" && <p role="status">Chargement de vos parties…</p>}
