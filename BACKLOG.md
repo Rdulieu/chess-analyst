@@ -205,6 +205,69 @@
   > À grillier avec de vraies parties sous les yeux, pas en salle : c'est une story de **mesure et
   > d'arbitrage**, pas de construction.
 
+- **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
+  rien céder de ce qu'elle teste.
+  > **Pas encore grillée.** Demandée le 2026-08-23 après la passe HP d'US-15a : la suite est verte
+  > mais lente, et une suite lente est une suite qu'on lance moins souvent — donc une suite qui
+  > protège moins.
+  >
+  > ### Ce que la course du 2026-08-23 a coûté
+  >
+  > | Étape | Durée | Provenance de la mesure | Dont, mesuré |
+  > | --- | --- | --- | --- |
+  > | path 0 (bootstrap) | **~15-20 min** | non instrumenté — borne basse déduite | import Lichess **~10 min** (12:59→13:09), dont **~6 min de pure attente** (6 pauses de 60 s) |
+  > | HP-01 (import + explore) | **~19 min** | déduit des horodatages de fin | import chess.com **6,5 s** · passe moteur 29 positions **34,7 s** · calcul `/danger` **0,9 s** |
+  > | HP-02 (habitudes de coup) | **~13 min** | déduit des horodatages de fin | — |
+  > | HP-03 (ouvertures faibles) | **~12 min** | déduit des horodatages de fin | — |
+  > | **Total mur** | **~35-40 min** | path 0 en série, puis les trois HP en parallèle | |
+  >
+  > **Ces chiffres sont déduits, pas mesurés** — sauf ceux de la dernière colonne. Les trois durées
+  > d'HP viennent de l'écart entre le lancement groupé et l'horodatage de fin de chaque sous-agent ;
+  > le total de path 0 n'a pas de début connu. **C'est la première chose à corriger** : que chaque
+  > scénario rende sa propre durée, et celle de ses phases (import, passe moteur, parcours, passe de
+  > thème). On ne peut pas optimiser ce qu'on déduit.
+  >
+  > ### Ce qui a cessé d'être le coût
+  >
+  > **Le moteur n'est plus le problème** : 29 positions en **34,7 s**. La suite a longtemps été
+  > dominée par lui (« ~3,5 min » traîne encore dans un commentaire de `README.md`, d'avant le
+  > backend natif). Le coût s'est déplacé sur **le réseau** et sur **la longueur des parcours**.
+  >
+  > ### Pistes, à instruire — pas encore des décisions
+  >
+  > - **Le plus gros levier est un jeu de données, comme pressenti.** L'import Lichess de `Metalyst`
+  >   couvre **71 mois dont 51 vides** et paie ~6 min de bridage. Or l'assertion qu'il porte est
+  >   « un mois vide est listé à zéro, donc un trou d'historique se distingue d'un trou de
+  >   récupération » : elle a besoin de **quelques** mois vides entre des mois peuplés, pas de 51.
+  >   Un compte de référence à **span court et troué** tiendrait la même assertion pour une fraction
+  >   des requêtes. `README.md` dit aujourd'hui « ne pas raccourcir le span » — **cette US est
+  >   l'endroit où rediscuter cette règle**, en séparant ce qui est testé de ce qui est payé.
+  > - **Le bridage Lichess est par IP** sur l'export : moins de requêtes, moins de pauses. Le gain
+  >   est donc superlinéaire, pas proportionnel.
+  > - **Réutiliser le snapshot entre deux courses.** Tous les mois des deux plages sont immuables, donc
+  >   le snapshot ne périme pas. Mais `README.md` veut le **contrat réseau réel exercé une fois par
+  >   course** : mettre le snapshot en cache, c'est cesser d'exercer l'adaptateur Lichess en direct.
+  >   **Arbitrage du demandeur**, à poser explicitement — par exemple un cache avec une péremption, ou
+  >   un import live réduit à un mois témoin.
+  > - **Instrumenter avant d'optimiser** (cf. ci-dessus), puis regarder où passent les ~12 min
+  >   d'HP-02 et d'HP-03, qui n'importent rien et n'analysent rien. Sur ces deux scénarios, le
+  >   parcours et la passe de thème sont **tout** le coût.
+  > - **Le pilotage lui-même a coûté cher** : les trois scénarios se sont fait voler leur page par le
+  >   navigateur partagé, deux ont dû rebasculer sur leur propre Chrome **en cours de route**. Partir
+  >   directement sur un navigateur privé (déjà consigné dans le skill) supprime des reprises.
+  >
+  > ### Ce qui n'est pas à brader
+  >
+  > `docs/test-scenarios/README.md` §« What not to trim » reste la référence, et cette US ne l'annule
+  > pas : **pas** de profondeur moteur abaissée, **pas** d'archive fixture à la place du contrat
+  > chess.com réel, **pas** de second profil supprimé, **pas** d'état hérité d'un autre scénario,
+  > **pas** de passe de thème raccourcie aux écrans déjà traversés. La seule règle que cette US met
+  > explicitement sur la table est la longueur du span Lichess — parce que c'est la seule où le prix
+  > payé et l'assertion tenue se sont visiblement décorrélés.
+  >
+  > **Critère de succès à définir au grill**, mais l'ordre de grandeur visé est « la suite tourne en
+  > moins de dix minutes, et rien de ce qu'elle affirmait n'a disparu ».
+
 ## Doing
 
 ## In review
