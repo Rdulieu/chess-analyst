@@ -94,7 +94,7 @@ export async function importMonth(
   const results = { win: 0, loss: 0, draw: 0 };
   for (const game of monthGames) {
     // Which paces to keep is the PLAYER's choice, not a Platform fact — so it
-    // stays here while the variant filter went into the adapter (ADR-0016).
+    // stays here while the variant filter went into the adapter (ADR-0018).
     if (!wanted.has(game.timeControlCategory)) continue;
     const mapped = { ...game, profileId: params.profileId };
     byCategory[mapped.timeControlCategory]++;

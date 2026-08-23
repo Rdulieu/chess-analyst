@@ -3,7 +3,7 @@ import { toImportedGame, monthWindow, isInScope } from "../src/platform/lichess/
 import type { LichessGame } from "../src/platform/lichess/payload";
 
 /**
- * The Lichess half of ADR-0016: a pure translation, tested as a pure function.
+ * The Lichess half of ADR-0018: a pure translation, tested as a pure function.
  * The richest trap in this feature is asserting on payload shapes — those are
  * precisely what the port exists to hide — so every case below states an
  * externally observable fact about the `Game` that comes out.
@@ -96,7 +96,7 @@ describe("the Lichess translation", () => {
 
 describe("a month as Lichess is asked for it", () => {
   it("becomes the month's UTC boundaries in epoch milliseconds", () => {
-    // The month is OUR unit (ADR-0016): Lichess takes an instant range, so the
+    // The month is OUR unit (ADR-0018): Lichess takes an instant range, so the
     // conversion is where the two meet — and it must be UTC, or a Player's games
     // shift by hours across a boundary depending on where the machine sits.
     expect(monthWindow(2024, 1)).toEqual({

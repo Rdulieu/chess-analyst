@@ -31,7 +31,7 @@ export function chessComGame(over: Partial<ChessComGame> = {}): ChessComGame {
 }
 
 /**
- * A game as the **port** hands it over (ADR-0016): already in our vocabulary,
+ * A game as the **port** hands it over (ADR-0018): already in our vocabulary,
  * with sensible defaults. This is what everything above the adapter fakes —
  * a fake answering a chess.com payload would make the import suite know a
  * Platform by name, which is exactly what the port exists to prevent.
@@ -100,7 +100,7 @@ export function fakeClient(
 }
 
 /**
- * The registry `createApp` is wired with: one adapter per Platform (ADR-0016).
+ * The registry `createApp` is wired with: one adapter per Platform (ADR-0018).
  * Tests that only ever import from chess.com name that Platform alone, so a
  * Profile on another one fails loudly rather than silently fetching elsewhere.
  */

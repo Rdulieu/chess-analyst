@@ -4,7 +4,7 @@ import { isInScope, monthWindow, toImportedGame } from "./mapping";
 import type { LichessGame } from "./payload";
 
 /**
- * The Lichess adapter, answering the `PlatformClient` port's shapes (ADR-0016)
+ * The Lichess adapter, answering the `PlatformClient` port's shapes (ADR-0018)
  * — nothing above it ever sees a Lichess payload. `baseUrl` is configurable
  * (env `LICHESS_BASE_URL`, default the live API), mirroring the chess.com
  * adapter, so tests and the agentic Feature Path can point it at a fixture.
@@ -72,7 +72,7 @@ export function createHttpLichessClient(
     },
 
     async fetchMonth(username, year, month, hooks): Promise<MonthFetch> {
-      // The month is OUR unit (ADR-0016). Lichess could stream a whole range in
+      // The month is OUR unit (ADR-0018). Lichess could stream a whole range in
       // one request; we deliberately ask month by month, because the month is
       // what makes progress countable and a failure local. Months are never
       // fetched in parallel either — already true for memory (ADR-0010), and now

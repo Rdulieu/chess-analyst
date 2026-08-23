@@ -5,7 +5,7 @@ import { toMonthFetch } from "./mapping";
 /**
  * The chess.com adapter: the real client, talking to the public Published-Data
  * API over HTTP (ADR-0002: the relay is the only thing that talks to chess.com)
- * and answering the `PlatformClient` port's shapes (ADR-0016). `baseUrl` is
+ * and answering the `PlatformClient` port's shapes (ADR-0018). `baseUrl` is
  * configurable (env `CHESSCOM_BASE_URL`, default the live API) so tests and the
  * agentic Feature Path can point it at a fixture archive.
  */

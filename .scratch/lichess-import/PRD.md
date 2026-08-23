@@ -2,7 +2,7 @@
 
 Business story: **US-12** — *Importer mes parties depuis un compte Lichess, pas seulement chess.com.*
 Integration branch: `integration/US-12-lichess-import`. Grilling output: `CONTEXT.md` (`Platform`,
-`Time control category`, `Game`, `Monthly import`, `Import`), **ADR-0016** (Platform adapters
+`Time control category`, `Game`, `Monthly import`, `Import`), **ADR-0018** (Platform adapters
 translate into our vocabulary), amendment to **ADR-0007** (the Platform is the classification
 authority).
 
@@ -125,7 +125,7 @@ chess.com's `daily` is renamed **`correspondence`** — the game's own word for 
 
 ## Implementation Decisions
 
-### The port speaks the domain (ADR-0016)
+### The port speaks the domain (ADR-0018)
 
 - A **`PlatformClient`** port replaces `ChessComClient`, exposing `fetchPlayer(username)` and
   `fetchMonth(username, year, month)`. Both answer **our** shapes; no caller ever sees a
@@ -266,7 +266,7 @@ Apex — agentic:
 
 ## Out of Scope
 
-- **Any third Platform.** ADR-0016 is meant to make the next one cheap, not to add it.
+- **Any third Platform.** ADR-0018 is meant to make the next one cheap, not to add it.
 - **An API token**, and with it any secret storage. Additive later.
 - **Consolidating one person's accounts across Platforms.** Two accounts are two Profiles, full
   stop; a grouping *above* Profiles would be a different story entirely.

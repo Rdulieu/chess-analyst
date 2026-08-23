@@ -59,7 +59,7 @@ afterAll(async () => {
 });
 
 describe("the chess.com adapter's HTTP client", () => {
-  it("answers a month in OUR vocabulary, not chess.com's payload (ADR-0016)", async () => {
+  it("answers a month in OUR vocabulary, not chess.com's payload (ADR-0018)", async () => {
     const client = createHttpChessComClient(baseUrl);
 
     const month = await client.fetchMonth("known", 2024, 1);

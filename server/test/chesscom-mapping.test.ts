@@ -108,7 +108,7 @@ describe("toMonthFetch", () => {
 describe("the pace translation", () => {
   it("answers chess.com's `daily` as `correspondence` — the game's own word for it", () => {
     // chess.com's four words are ITS vocabulary; ours has five, and the adapter
-    // is where the two meet (ADR-0016). Nothing above it should ever see "daily".
+    // is where the two meet (ADR-0018). Nothing above it should ever see "daily".
     expect(toImportedGame(chessComGame({ time_class: "daily" }), "me").timeControlCategory).toBe(
       "correspondence",
     );

@@ -20,7 +20,7 @@ value the code reads, instead of a word it hardcodes.
 
 Three moves, end to end:
 
-- **The port speaks the domain** (ADR-0016). `PlatformClient` replaces the chess.com-typed client,
+- **The port speaks the domain** (ADR-0018). `PlatformClient` replaces the chess.com-typed client,
   exposing an account lookup and a month fetch. The month fetch answers `{ totalFetched, games }`
   where the games carry a neutral shape — canonical URL, PGN, opponent, the Player's side, the
   Player-relative result, date, `Time control category`, opening code and name. No caller sees a

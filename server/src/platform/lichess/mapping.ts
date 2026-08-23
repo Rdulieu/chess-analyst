@@ -3,7 +3,7 @@ import { OTHER_OPENING } from "../chesscom/opening";
 import type { LichessGame } from "./payload";
 
 /**
- * Lichess's half of ADR-0016: the pure translation from Lichess's game shape
+ * Lichess's half of ADR-0018: the pure translation from Lichess's game shape
  * into the Player-relative `ImportedGame`. No I/O — the densest, most
  * edge-case-prone part of the adapter, isolated here so it can be unit-tested
  * on its own.

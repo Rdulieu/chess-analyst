@@ -3,7 +3,7 @@ import type { ChessComGame } from "./payload";
 import { parseOpening } from "./opening";
 
 /**
- * chess.com's half of ADR-0016: the pure translation from chess.com's game
+ * chess.com's half of ADR-0018: the pure translation from chess.com's game
  * shape into the Player-relative `ImportedGame` (see CONTEXT.md). No I/O — the
  * densest, most edge-case-prone part of the adapter, isolated here so it can be
  * unit-tested on its own.

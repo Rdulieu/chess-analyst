@@ -262,7 +262,27 @@
   > d'arbitrage**, pas de construction.
 
 - **US-17**: Importer un historique Lichess sans payer une requête par mois vide.
-  > Pas encore grillée. **Constat mesuré** (import de référence `Metalyst`, 2026-08-21) : sur les
+  > **Grillée** (2026-08-23) — décisions **D1→D8** dans
+  > `.scratch/lichess-fetch-window/GRILL-NOTES.md`. Branche
+  > `integration/US-17-lichess-fetch-window`. `CONTEXT.md` : **`Monthly import` amendée** — le mois
+  > reste l'unité de **restitution** et cesse d'être l'unité de **récupération**. **ADR-0018**
+  > (renumérotée depuis 0016, collision de numéros) : décisions 1, 2, 4 et 5 révisées, et sa section
+  > de mesure terrain corrigée — « Lichess refuse l'IPv6 » est **faux**, c'est un throttle par IP sur
+  > l'export.
+  >
+  > Tranché : le port passe de `fetchMonth` à **`fetchRange` qui *yield***, chess.com garde sa boucle
+  > **à l'intérieur de son adaptateur** (aucun changement de comportement), **aucune borne** sur la
+  > plage, retry conservé **avant le premier octet** et aucun après — la reprise étant le rejeu par le
+  > Player, avec un message qui nomme le point d'arrêt et la plage à retaper. **Le span de `Metalyst`
+  > reste à 71 mois** : les ~6 min visées par US-18 étaient six retries 429 causés par la rafale, donc
+  > US-17 les supprime sans toucher à l'assertion des 51 mois vides — **la piste « raccourcir le
+  > span » sort du périmètre d'US-18**.
+  >
+  > Le test agentic final devra **mesurer le temps d'exécution de path 0** et le comparer à la
+  > référence : c'est le premier point de mesure réel d'US-18, dont les chiffres sont aujourd'hui
+  > déduits.
+  >
+  > Suite : `/to-prd`. **Constat mesuré** (import de référence `Metalyst`, 2026-08-21) : sur les
   > **71 mois** du span, **51 étaient vides** — on a payé **72 % des requêtes pour zéro partie**,
   > soit ~2,4 min de vide sur ~3,5 min d'import. Et les comptes creux sont la norme sur Lichess,
   > pas l'exception : `Monado_Boy`, c'est 86 parties réparties sur ~80 mois.
@@ -271,7 +291,7 @@
   > Lichess sert un **flux `since`/`until`** et peut renvoyer tout le span **en une seule requête**.
   > On a plaqué la forme de chess.com sur une API qui n'en a pas besoin. Moins de requêtes
   > *améliorerait* d'ailleurs notre position vis-à-vis de la règle « une requête à la fois » de
-  > Lichess, qui est la contrainte réelle du port (ADR-0016, point 4).
+  > Lichess, qui est la contrainte réelle du port (ADR-0018, point 4).
   >
   > **Ce n'est pas « importer par année ».** Le mois n'est pas une taille de requête, c'est un
   > concept du domaine : `Monthly import` est dans `CONTEXT.md`, et la ligne à zéro est ce qui
@@ -285,9 +305,9 @@
   > zéro et la progression sont préservés (le flux se trie `dateAsc`, chaque ligne se ferme au
   > franchissement de la frontière).
   >
-  > **Ce que le grill devra trancher** — c'est un **amendement à ADR-0016**, dont le point 2 a
+  > **Ce que le grill devra trancher** — c'est un **amendement à ADR-0018**, dont le point 2 a
   > choisi le mois *délibérément* :
-  > - ADR-0016 oppose qu'« un flux unique qui meurt au mois 40 est un problème tout-ou-rien ».
+  > - ADR-0018 oppose qu'« un flux unique qui meurt au mois 40 est un problème tout-ou-rien ».
   >   L'argument est réel mais plus faible qu'il n'y paraît : la reprise est **déjà** « re-jouer la
   >   plage » (US-12/04), la déduplication par URL rendant l'import exactement ce qui manque. La
   >   localité du mois n'achète donc pas la reprise, elle achète la **ligne « en échec »** sur le
@@ -572,7 +592,7 @@
   >
   > **Grillée** (2026-08-21) — branche `integration/US-12-lichess-import`. Les onze points ci-dessous
   > sont tranchés ; doc : `CONTEXT.md` (`Platform`, `Time control category`, `Game`,
-  > `Monthly import`, `Import`), **ADR-0016** (les adaptateurs traduisent vers notre vocabulaire),
+  > `Monthly import`, `Import`), **ADR-0018** (les adaptateurs traduisent vers notre vocabulaire),
   > amendement d'**ADR-0007** (l'autorité de classification est la plateforme d'origine).
   > Décisions : la plateforme est un attribut du `Profile`, jamais un paramètre d'import (mais l'écran
   > d'import la **nomme**) ; le **mois** reste l'unité du port, évolutif plus tard ; ndjson lu en flux

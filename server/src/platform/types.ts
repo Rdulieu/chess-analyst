@@ -1,5 +1,5 @@
 /**
- * The **`PlatformClient` port** (ADR-0016): the only thing the Import knows
+ * The **`PlatformClient` port** (ADR-0018): the only thing the Import knows
  * about the outside world. It answers in **our** vocabulary — no caller ever
  * sees a chess.com or Lichess payload. Each `Platform` owns an adapter under
  * ./<platform>/ that does the translation, so adding a third one is a directory

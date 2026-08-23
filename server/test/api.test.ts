@@ -1039,7 +1039,7 @@ describe("stats API", () => {
 
 /**
  * The `Platform` as a **value the code reads** rather than a word it spells
- * (ADR-0016): which site an operation talks to is resolved from the `Profile`,
+ * (ADR-0018): which site an operation talks to is resolved from the `Profile`,
  * and every message names the site actually asked for. A refusal that says
  * "chess.com" when the Player asked for Lichess is the failure this exists
  * against.

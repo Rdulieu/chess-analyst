@@ -249,14 +249,17 @@ _Avoid_: Sync, Fetch, Backfill
 **Monthly import**:
 One month's slice of an Import — the unit the Player is shown progress and outcome by, and **our**
 unit rather than a `Platform`'s: the calendar month, in UTC (the reference `Game.date` already
-uses). chess.com happens to serve exactly that; a Platform that serves arbitrary date ranges is
-asked for a month's worth. The month is what makes progress countable and a failure local, so it
-holds until something needs finer or coarser slices — nothing in the domain forbids that later.
-An Import covers its months **one at a time, in order**, and reports each as its own line: how many Games it
-brought in, how many were already retained, and whether the `Platform` could be reached for that
-month at all. A month that fails does **not** abort the Import: the remaining months are still covered,
-and the failure is carried on that month's line rather than as a global verdict — an Import whose
-months mostly succeeded is not a failed Import. A month the Player was simply inactive in is
+uses). The month is the unit of **reporting**, not of fetching: it is what the Player is
+shown, and each Platform is asked for a range in whatever shape that Platform actually serves.
+chess.com serves monthly archives and is asked month by month; Lichess serves a date range and is
+asked once for the whole of it. An Import covers its months **in order** and reports each as its own
+line: how many Games it brought in, how many were already retained, and whether the `Platform` could
+be reached for that month at all. A month that fails does **not** abort the Import: the months
+already covered stay covered, and the failure is carried on the affected months' lines rather than as
+a global verdict — an Import whose months mostly succeeded is not a failed Import. Where a Platform
+answers a whole range at once, "which months were covered" is read off the Games as they arrive,
+in date order: every month up to the last Game received is covered, and the months after the
+interruption are the ones reported as not fetched. A month the Player was simply inactive in is
 reported the same way as any other, at zero, which is why the per-month lines exist at all: a gap
 in the history must be distinguishable from a gap in the fetching.
 _Avoid_: Import batch, Chunk, Archive (chess.com's own word for the underlying endpoint)

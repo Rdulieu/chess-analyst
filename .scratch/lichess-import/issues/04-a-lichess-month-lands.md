@@ -21,7 +21,7 @@ The Lichess adapter implements the month fetch of the port:
 - The games export is asked for **ndjson**, with the PGN and the opening included, and the response
   is read **line by line**: a multi-object body is not parseable as a single JSON document.
 - **A month becomes `since`/`until` epoch milliseconds at UTC month boundaries** — the month is our
-  unit, not the Platform's (ADR-0016). Lichess could stream a whole range in one request; we
+  unit, not the Platform's (ADR-0018). Lichess could stream a whole range in one request; we
   deliberately do not, because the month is what makes progress countable and a failure local.
 - **Months are never fetched in parallel.** Already true for memory reasons (ADR-0010); it is now
   also what keeps us inside Lichess's "one request at a time" rule.
