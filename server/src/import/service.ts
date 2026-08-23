@@ -93,7 +93,18 @@ export async function importMonth(
     // to send them. They are persisted before the failure is handed on: the
     // month must not read as covered, but it must not cost the Player what did
     // arrive either (dedup by URL makes the re-run add exactly the rest).
-    if (err instanceof TruncatedStreamError) persist(db, params, err.partial.games);
+    //
+    // The salvage is **best-effort, and never speaks over the truncation**: if it
+    // trips (a malformed PGN among what arrived), the line the Player needs still
+    // says the stream was cut and that re-running fixes it. Letting the salvage's
+    // own error escape would replace an actionable message with an accident.
+    if (err instanceof TruncatedStreamError) {
+      try {
+        persist(db, params, err.partial.games);
+      } catch (salvageFailed) {
+        console.error("partial salvage failed for a truncated month", salvageFailed);
+      }
+    }
     throw err;
   }
   const { totalFetched, games: monthGames } = fetched;

@@ -296,3 +296,33 @@ describe("a month whose stream was cut short", () => {
     expect(listGames(db, profileId)).toHaveLength(2);
   });
 });
+
+describe("a cut month whose salvage itself fails", () => {
+  it("still reports the truncation, not a secondary failure", async () => {
+    // Persisting the partial is best-effort SALVAGE: if it blows up (a bad PGN
+    // in what arrived), the truth the Player needs is still "the stream was cut
+    // short and re-running fixes it" — not whatever the salvage tripped over.
+    const { db, profileId } = testDb();
+    const unparsable = importedGame({
+      gameUrl: "https://lichess.org/broken1",
+      pgn: "1. e4 Qxf7#", // illegal: no queen can move there from the start
+    });
+    const client = fakeClient({
+      "2024-01": new TruncatedStreamError("lichess", {
+        totalFetched: 1,
+        games: [unparsable],
+      }),
+    });
+
+    const result = await importRange(db, client, {
+      profileId,
+      username: "me",
+      platform: "lichess",
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 1 },
+      categories: ["blitz"],
+    });
+
+    expect(result.months[0].failure).toMatch(/interrompu|incomplet/i);
+  });
+});
