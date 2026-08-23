@@ -180,14 +180,32 @@
   >   être contestés. Le cap « coup 15 » est implémenté comme *le 15e coup des Blancs est le premier
   >   hors début de partie* ; l'autre lecture décale d'un coup entier. Et « développement achevé »
   >   est exigé **des deux camps** — lecture retenue, jamais validée sur des parties.
-  > - **Le tracé de dérive est en probation** (point de contrôle des dix parties, déjà prévu par la
-  >   tranche 06). Constat de la FP : sur une partie à grosse erreur unique, la falaise de la courbe
-  >   et la marche du tracé sont **le même événement dessiné deux fois** ; sur une partie grignotée,
-  >   le tracé montre ce que la courbe cache. La question n'est pas « joli ou pas » mais « ce partage
-  >   justifie-t-il le dessin ». La tranche est **écrite pour être supprimable**.
-  > - **L'échelle des y du tracé est par partie** : chaque tracé finit en haut de sa boîte, donc les
-  >   hauteurs ne sont pas comparables d'une partie à l'autre. Trancher avant que dix parties ne
-  >   soient feuilletées côte à côte.
+  > - **Le tracé de dérive reste en l'état pour l'instant — décision du demandeur (2026-08-23).** Le
+  >   graphique est **gardé tel quel**, l'analyse détaillée est reportée à cette story. La tranche 06
+  >   reste **écrite pour être supprimable** (dérivée client, aucun schéma, aucun temps moteur), donc
+  >   rien n'est engagé par ce report.
+  >   Ce qui est acquis pour cette analyse-là, à ne pas redécouvrir :
+  >   - Le **chiffre** de `Drift` n'est pas en cause : c'est le résidu d'ADR-0017, il est en texte dans
+  >     le récapitulatif et 15c le sommera. Seul le **dessin** est en question.
+  >   - L'argument porteur du dessin n'est pas « falaises vs pente » mais **brut contre net** : la
+  >     courbe mélange les pertes du Player et les cadeaux de l'adversaire, le tracé ne compte que les
+  >     coups **comptés** du Player. Deux parties peuvent avoir la même courbe et des tracés très
+  >     différents — c'est ce qui se voit sur la partie 51, où la position ne bougeait pas parce que
+  >     l'adversaire rendait ce que le Player lâchait.
+  >   - Parts de dérive mesurées : **25 %** (partie 41), **24 %** (72), **53 %** (51), **65 %** (86).
+  >     Sur la moitié de cet échantillon la dérive porte la majorité de ce qui a été perdu — mais les
+  >     parties avaient été choisies pour d'autres raisons, ce n'est pas un tirage.
+  > - **L'échelle des y du tracé est par partie**, et c'est le défaut à corriger **avant** la revue des
+  >   dix parties, pas après : `ceiling = total`, donc **tout** tracé finit en haut de sa boîte. Une
+  >   partie à 5 % de pertes dessine la même ascension pleine hauteur qu'une à 191 %. L'œil lit
+  >   « hauteur = gravité », et cette lecture est fausse à chaque fois — donc une revue faite en
+  >   l'état jugerait l'encodage, pas le dessin. Une échelle fixe et partagée rend la hauteur porteuse
+  >   et les parties comparables.
+  >   Option à arbitrer ensuite : ne tracer que **le résidu** plutôt que le cumul total, pour que le
+  >   dessin ne porte que ce que rien d'autre ne montre. Cela cogne contre une décision grillée (« la
+  >   dérive s'y **lit** au lieu d'y être dessinée ») — l'ADR interdisait la dérive en **épisodes
+  >   bornés**, qui double-compterait, et un cumul du résidu reste additif ; mais c'est une décision
+  >   du demandeur, pas de l'agent.
   > - **Le plancher `Counted Move` à 10 %** n'a jamais été regardé sur des données : combien de coups
   >   une vraie partie perd-elle réellement par « position déjà décidée » ? Si la part est grosse, le
   >   dénominateur de 15c l'est aussi.
@@ -195,6 +213,16 @@
   >   forcés non signalés — avant/après sont deux lectures de la **même** recherche). Le motif
   >   d'exclusion « forcé » existe donc surtout pour le dénominateur ; vérifier qu'il vaut encore la
   >   peine d'être distingué à l'écran.
+  >
+  > **À vérifier en premier, parce que la prémisse en dépend : le récapitulatif est-il
+  > reproductible ?** En recollant les rapports de FP, la **même partie 51** ressort à **60,6 %** de
+  > chances perdues chez un agent et **56,5 %** chez un autre, sous le même régime annoncé
+  > (profondeur 16, 2 lignes) ; la partie 86 varie de 31,9 à 32,0. Un troisième agent a en revanche
+  > vérifié qu'une **ré-analyse par lui-même** redonnait des chiffres identiques. **Non vérifié** :
+  > c'est peut-être une lecture croisée de deux rapports produits sur deux bases différentes. Mais si
+  > l'écart est réel, un récapitulatif non reproductible n'est **pas auditable**, et c'est toute la
+  > raison d'être d'ADR-0017 qui tombe. Protocole : analyser deux fois la même partie sous le même
+  > régime, comparer les récapitulatifs au chiffre près, **avant** que 15c ne somme quoi que ce soit.
   >
   > **Bug antérieur à ticketer au passage** (hors tranche, vu par la FP de la 05) : « Analyser cette
   > partie » est **silencieusement avalé** tant qu'une bannière de pass non acquittée est affichée —
