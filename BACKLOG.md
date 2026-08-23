@@ -383,6 +383,67 @@
   > **Critère de succès à définir au grill**, mais l'ordre de grandeur visé est « la suite tourne en
   > moins de dix minutes, et rien de ce qu'elle affirmait n'a disparu ».
 
+- **US-19**: Finir de rendre la liste des parties lisible — la colonne qu'on ne voit pas, l'en-tête
+  qui flotte, et la date qu'il faut décoder.
+  > **Pas encore grillée.** Quatre observations remontées par les **Feature Paths** des PR #59 et
+  > #60 (2026-08-23), qui ont fait passer la liste des parties en tableau six colonnes, les plus
+  > récentes en premières. **Aucune n'est un bug** : les deux tranches sont vertes et mergées. Ce
+  > sont quatre décisions produit que le demandeur n'a pas encore prises, regroupées ici plutôt que
+  > laissées dans des rapports de test.
+  >
+  > Le fil commun : le tableau demande **788 px** de largeur intrinsèque (cellules en
+  > `white-space: nowrap`), et tout ce qui suit découle de ce chiffre.
+  >
+  > ### Les quatre points
+  >
+  > **1. Le bandeau d'en-tête reste sur la mesure étroite pendant que le contenu est large.** Depuis
+  > la PR #60, `/` porte `data-width="wide"` : la colonne de contenu va de 16 à 1408.8 px, alors que
+  > le bandeau nav/titre reste centré sur ~382 → 1042. L'en-tête se lit détaché du tableau qu'il
+  > coiffe. **Préexistant** sur `/openings` et `/profiles`, qui portent le même attribut depuis plus
+  > longtemps — mais `/` est la page d'atterrissage, donc c'est là qu'on le voit. Deux directions
+  > opposées, à trancher : le bandeau suit le contenu, ou la chrome garde délibérément sa propre
+  > mesure et il faut alors l'assumer visuellement.
+  >
+  > **2. Rien ne signale la colonne `État` quand elle déborde.** Le tableau rentre jusqu'à 900 px ;
+  > **entre 900 et 800 px** le conteneur `[data-scroll="x"]` reprend la main (débordement mesuré
+  > 35 px à 800, 135 à 700, 235 à 600). Il fonctionne — la page ne défile jamais latéralement — mais
+  > les barres de défilement sont en **overlay** : à 600 px la pastille « analysée » est hors écran
+  > et **rien à l'écran n'indique qu'une colonne existe à droite**. C'est le finding que les deux FP
+  > ont soulevé indépendamment. Une colonne dont rien n'indique l'existence est une colonne que
+  > personne ne lit. Pistes non instruites : une affordance de défilement visible, un dégradé de
+  > bord, ou reconnaître qu'`État` est la colonne la moins large et la remonter dans l'ordre.
+  >
+  > **3. Les dates s'affichent en ISO brut dans une UI en français.** `2023-08-04` sur les 351
+  > lignes. Ça trie parfaitement (le tri lexicographique de `date` **est** le chronologique, c'est
+  > ce sur quoi repose l'ordre serveur `date DESC, id DESC`) et c'est sans ambiguïté, mais ça se
+  > décode au lieu de se lire. À noter que **la donnée ne porte pas d'heure** — c'est un jour, pas
+  > un instant — donc tout format retenu doit rester un jour, et plusieurs parties le même jour
+  > resteront une vraie égalité. Question ouverte : un format français, un format relatif
+  > (« il y a 3 jours »), ou l'ISO assumé pour sa non-ambiguïté.
+  >
+  > **4. `/stats` est le dernier écran resté sur la mesure étroite.** Après la PR #60, `/`,
+  > `/openings`, `/profiles`, `/analyse`, `/explorer` et `/danger` sont larges ; `/stats` seule
+  > garde 382.9 → 1041.9. Son tableau y tient (c'est bien pour ça qu'elle est étroite), donc ce
+  > n'est **pas** un défaut — mais c'est une exception d'un seul, et une exception d'un seul est
+  > soit une intention à écrire, soit un oubli. À décider, pas à corriger par réflexe.
+  >
+  > ### Ce que cette US n'est pas
+  >
+  > Pas le hors-périmètre du plan d'origine, qui reste hors périmètre tant qu'il n'est pas demandé :
+  > **pas** d'en-têtes de colonne triables, **pas** de `caption`, **pas** de pagination, **pas** de
+  > changement des faits affichés. Et **pas** de retrait du conteneur `[data-scroll="x"]` : il est le
+  > filet qui garantit que c'est le conteneur qui défile et jamais la page (`_tables.scss`), et le
+  > point 2 demande de le **signaler**, pas de le supprimer.
+  >
+  > ### Pourquoi ces quatre-là ensemble
+  >
+  > Aucune n'était visible sous le tier agentique : jsdom ne charge pas la feuille de style et ne
+  > fait pas de mise en page. Les quatre viennent d'une **mesure sur l'app réelle**, et trois
+  > d'entre elles (1, 2, 4) sont des questions de **mesure de colonne** — la même question posée à
+  > trois endroits. Elles se grillent probablement mieux ensemble que séparément.
+  >
+  > **Critère de succès à définir au grill.**
+
 ## Doing
 
 ## In review
