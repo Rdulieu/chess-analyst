@@ -14,20 +14,41 @@ const yyyymm = ({ year, month }: MonthlyImport["month"]) =>
   `${year}-${String(month).padStart(2, "0")}`;
 
 /**
- * One month of the range. The month's own contribution is shown, and a month
- * chess.com could not answer for says so **in words** as well as in style: the
+ * What a month brought in, spelled out. **Zero takes the singular in French** —
+ * `0 déjà présente`, not `0 déjà présentes` — which is why the test is `<= 1`
+ * rather than `=== 1`; the latter made every zero read plural, and put a
+ * singular and a plural in one breath (`1 importée, 0 déjà présentes`).
+ */
+const plural = (n: number) => (n <= 1 ? "" : "s");
+const contribution = (line: MonthlyImport) =>
+  `${line.imported} importée${plural(line.imported)}, ${line.alreadyPresent} déjà présente${plural(line.alreadyPresent)}`;
+
+/**
+ * One month of the range. The month's own contribution is shown, and a month the
+ * Platform could not answer for says so **in words** as well as in style: the
  * tint (`--tint-fail`, applied by the stylesheet on `data-failed`) can never be
  * the only cue, because a failed month must stay distinguishable from a month
  * the Player was inactive in, which reads as a plain zero.
+ *
+ * A month can be **both**: a stream cut mid-month keeps the Games that arrived
+ * (US-17), so the month is incomplete *and* has a contribution. It then says
+ * both — showing only the failure made the line deny Games the headline had
+ * already counted, and a Player adding the lines up could not reach the total.
+ *
+ * But the contribution is shown **only when something arrived**. Printing
+ * `0 importées` beside `échec` would hand back the very ambiguity the failure
+ * cue removes: a zero means "you did not play", a failure means "we do not
+ * know", and the two must not be made to look alike.
  */
 function MonthLine({ line }: { line: MonthlyImport }) {
   const failed = line.failure !== undefined;
+  const arrived = line.imported > 0 || line.alreadyPresent > 0;
   return (
     <li aria-label={yyyymm(line.month)} data-failed={failed ? "true" : undefined}>
       {yyyymm(line.month)} —{" "}
       {failed
-        ? `échec : ${line.failure}`
-        : `${line.imported} importée${line.imported === 1 ? "" : "s"}, ${line.alreadyPresent} déjà présente${line.alreadyPresent === 1 ? "" : "s"}`}
+        ? `${arrived ? `${contribution(line)} · ` : ""}échec : ${line.failure}`
+        : contribution(line)}
     </li>
   );
 }

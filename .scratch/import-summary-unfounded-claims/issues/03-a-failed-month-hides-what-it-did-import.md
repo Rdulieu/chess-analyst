@@ -1,6 +1,6 @@
 # 03 — Un mois en échec cache les parties qu'il a quand même importées
 
-Status: `needs-triage`
+Status: done
 
 ## Constat
 
@@ -35,3 +35,28 @@ le repère non chromatique), mais il n'a pas à effacer le chiffre. Quelque chos
 « incomplet » ? Le vocabulaire suit la réponse. Voir aussi la question ouverte de
 [02](./02-no-games-found-on-a-range-never-read.md) — une plage à moitié réussie mérite-t-elle un
 énoncé global ? — dont celle-ci est la version « par mois ».
+
+## Comments
+
+**2026-08-24 — corrigé, sur demande du demandeur avant le merge d'US-17 (PR #62).**
+
+Un mois en échec **qui a reçu quelque chose** dit désormais les deux faits :
+
+> `2024-04 — 3 importées, 1 déjà présente · échec : lichess.org a interrompu sa réponse avant la fin`
+
+**Le chiffre n'apparaît que si quelque chose est arrivé**, et c'est la vraie décision de ce
+correctif. Écrire `0 importées` à côté de `échec` rendrait exactement l'ambiguïté que le repère
+d'échec supprime : un zéro veut dire « tu n'as pas joué », un échec veut dire « on ne sait pas », et
+les deux ne doivent pas se ressembler. Un mois en échec qui n'a rien reçu se lit donc comme avant.
+
+**La question de vocabulaire est tranchée dans le sens du minimum.** Le mot `échec` est conservé
+plutôt que remplacé par « incomplet » : c'est le repère non chromatique, il est verrouillé par un
+test client (`marks a month … distinguishably from an inactive month`), et le sujet du finding était
+le chiffre manquant, pas le mot. « Incomplet » serait sans doute plus juste pour un mois à moitié
+réussi — si le demandeur le veut, c'est un changement de libellé isolé, sans effet sur cette
+structure.
+
+Reste ouverte, et **non tranchée** : la version « globale » de la même question — une plage à moitié
+réussie mérite-t-elle un énoncé global disant quels mois relancer ? Voir
+[02](./02-no-games-found-on-a-range-never-read.md). Ce correctif rend le cas *par mois* honnête ; il
+ne décide pas du cas *par plage*.
