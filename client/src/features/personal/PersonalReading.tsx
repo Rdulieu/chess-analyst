@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Board } from "../../components/Board";
 import { GameHeader } from "../games/GameHeader";
 import { fetchPersonalAnalysis, savePersonalMark, GameNotThisProfiles } from "../../api";
@@ -25,7 +25,20 @@ import type { DeclaredSeverity, Game, PersonalAnalysis } from "../../types";
  * No engine time is owed: a Game is readable, and annotable, the moment it is
  * imported.
  */
-export function PersonalReading({ game, profileId }: { game: Game; profileId: number }) {
+export function PersonalReading({
+  game,
+  profileId,
+  onwards,
+}: {
+  game: Game;
+  profileId: number;
+  /**
+   * Where the Player goes from here, shown **only when there is a reading to
+   * leave**. A screen that has just told the Player this Game is not theirs must
+   * not, in the same breath, offer them a way into it.
+   */
+  onwards?: ReactNode;
+}) {
   const [reading, setReading] = useState<PersonalAnalysis | null>(null);
   /**
    * Why there is nothing to read, when there is nothing to read. `foreign` is
@@ -84,6 +97,7 @@ export function PersonalReading({ game, profileId }: { game: Game; profileId: nu
 
   return (
     <div>
+      {onwards}
       <GameHeader game={game} />
       <Board
         pgn={game.pgn}

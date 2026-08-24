@@ -51,13 +51,24 @@ function ReadingOfOneGame({ profile }: { profile: Profile }) {
     // densest thing this app draws.
     <section aria-labelledby="reading-heading" data-width="wide">
       <h2 id="reading-heading">Ma lecture</h2>
-      {/* The way back to the engine's side of the same Game. Named as what it is:
-          the Player leaves their own reading to go and see what was found. */}
-      <p>
-        <Link to={`/analyse/${game.id}`}>Retour à l'analyse de cette partie</Link>
-      </p>
       <ErrorBoundary key={game.id}>
-        <PersonalReading game={game} profileId={profile.id} />
+        <PersonalReading
+          game={game}
+          profileId={profile.id}
+          // The way back to the engine's side of the SAME Game, named as what it
+          // is: the Player leaves their own reading to go and see what was found.
+          //
+          // Passed as a slot rather than drawn above, because it must not appear
+          // on a screen that has just refused this Game. `/analyse/:gameId` is
+          // not Profile-scoped, so the link would work — which is precisely what
+          // would make offering it there misleading: the app would refuse a Game
+          // and then point at it.
+          onwards={
+            <p>
+              <Link to={`/analyse/${game.id}`}>Retour à l'analyse de cette partie</Link>
+            </p>
+          }
+        />
       </ErrorBoundary>
     </section>
   );

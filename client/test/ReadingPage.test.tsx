@@ -55,6 +55,8 @@ describe("the reading route belongs to the current Profile", () => {
 
     await waitFor(() => expect(asked.some((u) => u.startsWith("/api/personal/1"))).toBe(true));
     expect(asked.find((u) => u.startsWith("/api/personal/1"))).toContain("profileId=1");
+    // The way onward is offered when the Game IS the Player's to read.
+    await screen.findByRole("link", { name: /retour à l'analyse/i });
   });
 
   it("does NOT show one Profile's reading while another Profile is selected", async () => {
@@ -64,6 +66,10 @@ describe("the reading route belongs to the current Profile", () => {
     // read. Said in words, and the board is not drawn at all.
     await screen.findByText(/n'appartient pas au profil courant/i);
     expect(screen.queryByRole("list", { name: "moves" })).toBeNull();
+    // A screen that has just refused this Game must not invite the Player back
+    // toward it: `/analyse/:gameId` is not Profile-scoped, so the link would
+    // work — which is exactly what makes offering it here misleading.
+    expect(screen.queryByRole("link", { name: /retour à l'analyse/i })).toBeNull();
   });
 
   it("sends the Player to choose a Profile rather than reading under nobody's name", async () => {
