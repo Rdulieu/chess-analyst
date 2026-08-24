@@ -236,7 +236,10 @@ subagent, explicitly:
   where neither the vite nor the Chrome pid carried a scratch path in `environ`. `/proc/<pid>/cmdline`
   is the second proof and worked where `environ` did not: the worktree path, `--strictPort <your
   port>`, `--user-data-dir` under your own scratch. Use whichever actually names you; do not treat an
-  uninformative `environ` as evidence that a pid is not yours. Two agents on one run believed they had stopped an app that was still up, and
+  uninformative `environ` as evidence that a pid is not yours. **Re-confirmed 2026-08-24** on a
+  vite listener started from the project directory: `environ` answered "not mine" about a process
+  that was; `cwd` + `cmdline` + the `API_TARGET` it was given settled it. Note which way this fails —
+  a check that wrongly says "not mine" leaves your own orphan for the next run to trip over. Two agents on one run believed they had stopped an app that was still up, and
   one of them copied a database out from under it.
 - **`npx` interposes a wrapper, so the listener is usually a GRANDCHILD** (re-confirmed by three
   agents on 2026-08-23). Killing the pid you spawned leaves the real server listening. Kill the
