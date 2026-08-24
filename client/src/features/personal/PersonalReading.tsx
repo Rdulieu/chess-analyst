@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Board } from "../../components/Board";
 import { GameHeader } from "../games/GameHeader";
 import {
@@ -10,10 +10,14 @@ import {
 } from "../../api";
 import { DeclaredSeverityControl } from "./DeclaredSeverityControl";
 import { NoteEditor } from "./NoteEditor";
-import { KeyMomentControl, KeyMomentCount } from "./KeyMomentControl";
+import { KeyMomentControl } from "./KeyMomentControl";
 import { SealAction } from "./SealAction";
 import { SealedMarkReadout, SealedReadout } from "./SealedReadout";
 import { engineWasSeen } from "./engineSeen";
+import { MoveMarks } from "./MoveMarks";
+import { ReadingTally } from "./ReadingTally";
+import { WholeGameNote } from "./WholeGameNote";
+import { parseGame } from "../../chess/history";
 import { playersOwnPly } from "./plies";
 import type { DeclaredSeverity, Game, PersonalAnalysis, PersonalMark } from "../../types";
 
@@ -72,6 +76,8 @@ export function PersonalReading({
   /** What the server said when it would not seal — shown as it came. */
   const [sealRefusal, setSealRefusal] = useState<string | null>(null);
   const [sealing, setSealing] = useState(false);
+  /** The Game's half-moves — coverage's denominator, read from the PGN. */
+  const moves = useMemo(() => parseGame(game.pgn).plies.length, [game.pgn]);
 
   useEffect(() => {
     let live = true;
@@ -155,6 +161,10 @@ export function PersonalReading({
         // the whole guarantee this screen can honestly make. `Board`'s engine
         // props were already optional; this is the second caller they were
         // optional for.
+        //
+        // What IS shown in the list is the Player's own marks: a reading has to be
+        // locatable without stepping through every Move to find where one wrote.
+        moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
         controls={(ply) => (
           <div data-part="reading-controls">
             {sealedAt !== null && (
@@ -192,12 +202,10 @@ export function PersonalReading({
               posterior={sealedAt !== null}
               onToggle={(posed) => void write(ply, { keyMoment: posed })}
             />
-            <KeyMomentCount
-              total={
-                reading.marks.filter((m) => m.keyMoment && m.posterior === (sealedAt !== null))
-                  .length
-              }
-            />
+            {/* The Note about the whole Game, legible from inside the Game — it
+                was written at the starting Position, but it is not about it. */}
+            <WholeGameNote marks={reading.marks} ply={ply} />
+            <ReadingTally marks={reading.marks} moves={moves} />
             {sealedAt === null ? (
               <SealAction empty={reading.marks.length === 0} sealing={sealing} onSeal={seal} />
             ) : null}

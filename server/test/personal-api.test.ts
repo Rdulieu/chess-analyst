@@ -279,4 +279,67 @@ describe("sealing over HTTP", () => {
       { ply: 3, declaredSeverity: "blunder", note: null, keyMoment: false, posterior: true },
     ]);
   });
+
+});
+
+describe("a Game says whether it carries a reading", () => {
+  it("reports no reading, a reading in progress, and a sealed one — told apart", async () => {
+    const { app, db, profileId, game: untouched } = appWithGame();
+    const open = db
+      .insert(games)
+      .values({ ...morphyGame(profileId), gameUrl: "https://chess.com/g/personal/open" })
+      .returning()
+      .get();
+    const closed = db
+      .insert(games)
+      .values({ ...morphyGame(profileId), gameUrl: "https://chess.com/g/personal/closed" })
+      .returning()
+      .get();
+
+    for (const game of [open, closed]) {
+      await request(app)
+        .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+        .send({ declaredSeverity: "sound" });
+    }
+    await request(app)
+      .post(`/api/personal/${closed.id}/seal?profileId=${profileId}`)
+      .send({ engineSeen: false });
+
+    const listed = (await request(app).get(`/api/games?profileId=${profileId}`)).body as {
+      id: number;
+      reading: string;
+    }[];
+    const state = new Map(listed.map((g) => [g.id, g.reading]));
+    // Three states, never two: "in progress" and "sealed" are where the Player
+    // resumes versus where they are done, which is the whole point of showing it.
+    expect(state.get(untouched.id)).toBe("none");
+    expect(state.get(open.id)).toBe("open");
+    expect(state.get(closed.id)).toBe("sealed");
+  });
+
+  it("says it on a single Game's detail too, so the Analyse page needs no second request", async () => {
+    const { app, profileId, game } = appWithGame();
+
+    expect((await request(app).get(`/api/games/${game.id}`)).body.reading).toBe("none");
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ keyMoment: true });
+    expect((await request(app).get(`/api/games/${game.id}`)).body.reading).toBe("open");
+  });
+
+  it("counts a reading whose only marks are posterior as still a reading", async () => {
+    // A sealed reading stays sealed whatever is added on top of it.
+    const { app, profileId, game } = appWithGame();
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ declaredSeverity: "sound" });
+    await request(app)
+      .post(`/api/personal/${game.id}/seal?profileId=${profileId}`)
+      .send({ engineSeen: false });
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/9?profileId=${profileId}`)
+      .send({ note: "vu après coup" });
+
+    expect((await request(app).get(`/api/games/${game.id}`)).body.reading).toBe("sealed");
+  });
 });

@@ -609,4 +609,110 @@ describe("sealing a reading", () => {
       .filter((r) => (r as HTMLInputElement).checked);
     expect((posed[0] as HTMLInputElement).value).toBe("blunder");
   });
+
+});
+
+describe("seeing where I stand in a reading", () => {
+  it("marks, in the move list, which Moves carry a verdict, a Note, a Key moment", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "pourquoi", keyMoment: false, posterior: false },
+        { ply: 3, declaredSeverity: null, note: null, keyMoment: true, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    const items = moveItems();
+    // Spotted without opening each Move — and the three kinds told apart, each
+    // with its own accessible name rather than one anonymous dot.
+    expect(within(items[0]).getByLabelText(/verdict/i)).not.toBeNull();
+    expect(within(items[1]).getByLabelText(/note/i)).not.toBeNull();
+    expect(within(items[2]).getByLabelText(/moment clé/i)).not.toBeNull();
+    // And a Move nobody wrote on carries nothing at all.
+    expect(within(items[4]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
+  });
+
+  it("states the coverage — how many Moves examined, out of how many", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [1, 2, 3].map((ply) => ({
+        ply,
+        declaredSeverity: "sound" as const,
+        note: null,
+        keyMoment: false,
+        posterior: false,
+      })),
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    const readout = screen.getByText(/coups examinés/i);
+    // The count beside the share, never the share alone.
+    expect(readout.textContent).toMatch(/3\s*\/\s*33/);
+    expect(readout.textContent).toMatch(/9\s*%/);
+  });
+
+  it("computes no correctness at all — that is US-16b, and it must not leak here", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "blunder", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    expect(document.body.textContent).not.toMatch(/juste|exact|correct à|score|bonne réponse|vous avez trouvé/i);
+  });
+
+  it("groups the reading's own figures together, apart from the explanations", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: "sound", note: null, keyMoment: true, posterior: false },
+        { ply: 2, declaredSeverity: null, note: null, keyMoment: true, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // Coverage and the Key moment count are the reading's tally; they must not
+    // read as a second line of the notice that happens to sit above them.
+    const tally = screen.getByRole("group", { name: /où j'en suis/i });
+    expect(within(tally).getByText(/coups examinés/i)).not.toBeNull();
+    expect(within(tally).getByText(/moments clés/i)).not.toBeNull();
+  });
+
+  it("surfaces the Game-wide Note from anywhere in the Game, not only at the start", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 0, declaredSeverity: null, note: "je subis cette ouverture", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Written at the starting Position, but it is about the whole Game — so it
+    // must be legible from inside the Game, not only from its first Position.
+    const whole = screen.getByRole("group", { name: /note sur la partie/i });
+    expect(whole.textContent).toMatch(/je subis cette ouverture/i);
+  });
+
+  it("says nothing about a Game-wide Note that was never written", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // An empty panel announcing an absence is noise: silence stays silent here too.
+    expect(screen.queryByRole("group", { name: /note sur la partie/i })).toBeNull();
+  });
 });

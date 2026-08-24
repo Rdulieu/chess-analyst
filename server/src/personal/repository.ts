@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "../db";
 import { games, personalAnalyses, personalMarks } from "../db/schema";
 import type { DeclaredSeverity } from "./severity";
@@ -148,6 +148,60 @@ export function writeMark(
   }
 
   return getPersonalAnalysis(db, gameId);
+}
+
+/**
+ * Whether a `Game` carries a `Personal analysis`, and how far along it is —
+ * `none`, `open` (started, not sealed) or `sealed`. Three states and never two:
+ * "in progress" is **where the Player resumes** and "sealed" is where they are
+ * done, which is the entire reason for showing it beside a Game at all.
+ *
+ * A reading with a row but no marks reads as `none`: nothing has been said, so
+ * there is nothing to come back to.
+ */
+export type ReadingState = "none" | "open" | "sealed";
+
+/**
+ * The reading state of every `Game` of one `Profile`, by Game id — one query for
+ * the whole list, so showing the state on eighty rows costs one round trip rather
+ * than eighty. Games with no reading are simply absent from the map; the caller
+ * reads them as `none`.
+ */
+export function readingStates(db: Db, profileId: number): Map<number, ReadingState> {
+  const rows = db
+    .select({
+      gameId: personalAnalyses.gameId,
+      sealedAt: personalAnalyses.sealedAt,
+      marks: sql<number>`count(${personalMarks.analysisId})`,
+    })
+    .from(personalAnalyses)
+    .leftJoin(personalMarks, eq(personalMarks.analysisId, personalAnalyses.id))
+    .where(eq(personalAnalyses.profileId, profileId))
+    .groupBy(personalAnalyses.id)
+    .all();
+
+  return new Map(
+    rows
+      .filter((row) => row.sealedAt !== null || row.marks > 0)
+      .map((row) => [row.gameId, row.sealedAt !== null ? "sealed" : "open"] as const),
+  );
+}
+
+/** The reading state of a single `Game` — the Analyse page's own question. */
+export function readingState(db: Db, gameId: number): ReadingState {
+  const analysis = db
+    .select()
+    .from(personalAnalyses)
+    .where(eq(personalAnalyses.gameId, gameId))
+    .get();
+  if (!analysis) return "none";
+  if (analysis.sealedAt !== null) return "sealed";
+  const marks = db
+    .select({ ply: personalMarks.ply })
+    .from(personalMarks)
+    .where(eq(personalMarks.analysisId, analysis.id))
+    .all();
+  return marks.length > 0 ? "open" : "none";
 }
 
 /**

@@ -42,6 +42,7 @@ export function Board({
   recap = null,
   orientation = "white",
   controls,
+  moveMarks,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
@@ -71,6 +72,13 @@ export function Board({
    * position, it never tracks it.
    */
   controls?: (ply: number) => ReactNode;
+  /**
+   * What the caller wants shown **in the move list**, per ply — the Player's own
+   * marks on the reading route (US-16a). A slot like `controls`, and for the same
+   * reason: the list is this component's, what is worth flagging in it is the
+   * caller's. Absent everywhere else, so the Analyse page's list is untouched.
+   */
+  moveMarks?: (ply: number) => ReactNode;
   /**
    * The `Board orientation` — which side sits at the bottom (CONTEXT.md).
    * Defaults to White so a caller with no side in mind gets the neutral
@@ -321,6 +329,7 @@ export function Board({
                   >
                     {ply.san}
                   </button>
+                  {moveMarks?.(i + 1)}
                   {annotation?.severity && (
                     // The glyph is the signal; `data-severity` only lets the sheet
                     // reinforce it with the severity's own tint and ink. Naming the
