@@ -13,6 +13,7 @@ import { createMoveHabitsRouter } from "./routes/move-habits";
 import { createStatsRouter } from "./routes/stats";
 import { createOpeningsRouter } from "./routes/openings";
 import { createDangerRouter } from "./routes/danger";
+import { createPersonalRouter } from "./routes/personal";
 
 /**
  * Builds the local API server over an already-open database and a **registry of
@@ -43,5 +44,6 @@ export function createApp(
   app.use("/api/stats", createStatsRouter(db));
   app.use("/api/openings", createOpeningsRouter(db));
   app.use("/api/danger", createDangerRouter(db));
+  app.use("/api/personal", createPersonalRouter(db));
   return app;
 }
