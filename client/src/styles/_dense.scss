@@ -268,6 +268,24 @@ section[aria-label="partie"] {
   padding: var(--space-1) var(--space-2) var(--space-2);
 }
 
+// The Player's own verdict on the Move being read (US-16a), in the same 14rem
+// column as the `Review mode`'s control above — so the five values read as one
+// control rather than five stacked lines. No new token: the spacing and the
+// border are the ones every fieldset in this pane already uses.
+[data-part="declared-severity"] {
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}
+
+// "This Move is the opponent's, your verdict is kept but not scored." A muted
+// note and not a warning: it states a rule, it does not refuse anything. In
+// WORDS, so the meaning never rests on the colour (ADR-0013).
+[data-part="uncounted-notice"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0 var(--space-1);
+}
+
 // The step controls, on one line at the top of the pane beside the board.
 [data-part="stepper"] {
   display: flex;

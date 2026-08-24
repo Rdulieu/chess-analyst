@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { fetchGame } from "../api";
 import { GameViewer } from "../features/games/GameViewer";
 import { ErrorBoundary } from "../components/ErrorBoundary";
@@ -33,6 +33,12 @@ export function AnalysePage() {
     // draws and would be cramped inside the reading column.
     <section aria-labelledby="analyse-heading" data-width="wide">
       <h2 id="analyse-heading">Analyse</h2>
+      {/* The way into the Player's own reading of this Game (US-16a). Offered
+          here because the reading route is Game-scoped: it is reached from a
+          Game, never from the `Nav`. */}
+      <p>
+        <Link to={`/analyse/${game.id}/lecture`}>Écrire ma lecture de cette partie</Link>
+      </p>
       <ErrorBoundary key={game.id}>
         <GameViewer game={game} onAnalyzed={refresh} />
       </ErrorBoundary>

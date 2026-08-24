@@ -109,7 +109,7 @@ export function GameViewer({
         // this slot. The not-yet-analysed block is the taller of the two, and
         // leaving it above the board was enough on its own to push the diagram's
         // bottom edge off the screen.
-        controls={
+        controls={() => (
           <div>
             {game.analyzed ? (
               <ReviewModeControl mode={mode} onChange={chooseMode} />
@@ -140,7 +140,7 @@ export function GameViewer({
               onAcknowledge={acknowledge}
             />
           </div>
-        }
+        )}
       />
     </div>
   );

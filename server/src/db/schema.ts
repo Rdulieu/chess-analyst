@@ -1,5 +1,6 @@
 import { sqliteTable, integer, text, primaryKey, unique } from "drizzle-orm/sqlite-core";
 import type { Platform, TimeControlCategory } from "../platform";
+import type { DeclaredSeverity } from "../personal/severity";
 
 /**
  * The `Profile` (CONTEXT.md, ADR-0014): **one account on one platform**, the
@@ -215,3 +216,74 @@ export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
+
+/**
+ * The `Personal analysis` (CONTEXT.md): the Player's own reading of one Game,
+ * written by hand. **One row per Game** (`game_id` unique) and filed under a
+ * `Profile` (ADR-0014) — the reading of a friend's Game belongs to that friend's
+ * Profile and is never merged across Profiles.
+ *
+ * Relational, not an annotated PGN blob (ADR-0019): the confrontation US-16b
+ * builds is a **join** against the engine's per-Move record, which is keyed by
+ * `(game, ply)` — the very key `personal_marks` below uses. An annotated PGN is
+ * an export of this, never the stored form.
+ *
+ * It has **no upstream at all**: nothing can rebuild it, which is why ADR-0015
+ * applies in full and the migration that creates these tables is additive and
+ * re-runnable.
+ *
+ * `sealedAt` / `engineSeenBeforeSeal` are the **seal** and its **provenance**
+ * (US-16a slice 04): null while the reading is still open, and the provenance is
+ * only ever written at the moment of sealing — before that there is nothing to
+ * be honest *about*. The provenance is a label ("read unaided" / "read
+ * informed"), never a claim that the app prevented anyone from looking.
+ */
+export const personalAnalyses = sqliteTable("personal_analyses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  gameId: integer("game_id")
+    .notNull()
+    .unique()
+    .references(() => games.id, { onDelete: "cascade" }),
+  profileId: integer("profile_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull(),
+  sealedAt: text("sealed_at"),
+  engineSeenBeforeSeal: integer("engine_seen_before_seal", { mode: "boolean" }),
+});
+
+export type PersonalAnalysisRow = typeof personalAnalyses.$inferSelect;
+
+/**
+ * One **mark** of a `Personal analysis`, keyed by `(analysis, ply)` — `ply` 0
+ * being the starting Position, exactly as for an `Evaluation`, which is what
+ * carries a `Note` about the Game as a whole.
+ *
+ * Marks exist on **every** ply, the opponent's Moves included: nothing in the
+ * model distinguishes the side. It is the confrontation (US-16b) that only ever
+ * scores the Player's own Moves, and the screen that says so while the Player
+ * judges an opponent's Move.
+ *
+ * **Silence is not a value.** A Move the Player did not examine has no row, or a
+ * row whose columns are null — never a sentinel. That is what lets US-16b keep
+ * **coverage** and **correctness** apart instead of folding one into the other.
+ *
+ * `posterior` marks what was written **after the seal** (US-16a slice 04): kept,
+ * shown as such, and out of the comparison.
+ */
+export const personalMarks = sqliteTable(
+  "personal_marks",
+  {
+    analysisId: integer("analysis_id")
+      .notNull()
+      .references(() => personalAnalyses.id, { onDelete: "cascade" }),
+    ply: integer("ply").notNull(),
+    declaredSeverity: text("declared_severity").$type<DeclaredSeverity>(),
+    note: text("note"),
+    keyMoment: integer("key_moment", { mode: "boolean" }).notNull().default(false),
+    posterior: integer("posterior", { mode: "boolean" }).notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.analysisId, t.ply] })],
+);
+
+export type PersonalMarkRow = typeof personalMarks.$inferSelect;

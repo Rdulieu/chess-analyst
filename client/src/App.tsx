@@ -4,6 +4,7 @@ import { GamesPage } from "./pages/GamesPage";
 import { ProfilesPage } from "./pages/ProfilesPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AnalysePage } from "./pages/AnalysePage";
+import { ReadingPage } from "./pages/ReadingPage";
 import { ExplorerPage } from "./pages/ExplorerPage";
 import { OpeningsPage } from "./pages/OpeningsPage";
 import { DangerPage } from "./pages/DangerPage";
@@ -65,6 +66,9 @@ function Shell() {
             {/* Not scoped: the route names one Game outright, and the Player
                 reached it from a list that was already the right Profile's. */}
             <Route path="/analyse/:gameId" element={<AnalysePage />} />
+            {/* Game-scoped for the same reason, and blind by nature: the Player's
+                own reading of that Game (US-16a). Not in the `Nav` either. */}
+            <Route path="/analyse/:gameId/lecture" element={<ReadingPage />} />
             <Route
               path="/explorer"
               element={<ScopedPage>{(profile) => <ExplorerPage profile={profile} />}</ScopedPage>}
