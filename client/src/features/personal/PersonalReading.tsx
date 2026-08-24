@@ -175,7 +175,7 @@ export function PersonalReading({
                 />
                 {/* What was written on THIS Move when the reading was sealed,
                     beside — never replaced by — what has been written since. */}
-                <SealedMarkReadout mark={markAt(reading, ply, false)} />
+                <SealedMarkReadout mark={markAt(reading, ply, false)} ply={ply} />
                 {/* Writing stays open after the seal: seeing the engine and
                     understanding why is the most fertile moment of the exercise,
                     so forbidding it would be absurd — and counting it would be

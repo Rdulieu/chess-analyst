@@ -628,9 +628,12 @@ describe("seeing where I stand in a reading", () => {
     const items = moveItems();
     // Spotted without opening each Move — and the three kinds told apart, each
     // with its own accessible name rather than one anonymous dot.
-    expect(within(items[0]).getByLabelText(/verdict/i)).not.toBeNull();
-    expect(within(items[1]).getByLabelText(/note/i)).not.toBeNull();
-    expect(within(items[2]).getByLabelText(/moment clé/i)).not.toBeNull();
+    const verdict = within(items[0]).getByLabelText(/verdict/i);
+    const note = within(items[1]).getByLabelText(/note/i);
+    const pivot = within(items[2]).getByLabelText(/moment clé/i);
+    // Told apart by their accessible names AND by what is drawn: three marks the
+    // eye cannot separate would defeat the point of putting them in the list.
+    expect(new Set([verdict.textContent, note.textContent, pivot.textContent]).size).toBe(3);
     // And a Move nobody wrote on carries nothing at all.
     expect(within(items[4]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
   });
