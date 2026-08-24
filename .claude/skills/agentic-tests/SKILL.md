@@ -86,7 +86,14 @@ others instead of being added to them.
 1. **The prerequisite runs first, alone, to completion.** Path 0 builds the snapshots every
    scenario restores; dispatching the HPs before it has finished hands them a state that does not
    exist yet. It is the one step that is never parallel.
-2. **Then all HPs at once**, one subagent each.
+2. **Then the HPs, one subagent each, at most TWO at a time.** Not "all at once" — that was the
+   rule until 2026-08-24, when a three-way fan-out helped wedge the machine: each scenario runs its
+   own full Chrome plus a Vite server plus an app server, so three of them alongside the developer's
+   own desktop saturated an 8-thread laptop and the X11 session had to be killed. Nothing was
+   OOM-killed; the cost was CPU and responsiveness, and a run that freezes the machine is a run
+   lost. Two at a time keeps the overlap that makes fanning out worth it — a scenario's long tail
+   still hides under its neighbour's — while leaving the machine usable. Run the third when a slot
+   frees.
 3. The orchestrator **collects the reports** (§5.1 — do not assume they arrive on their own) and
    consolidates.
 
@@ -396,6 +403,8 @@ one that silently loses runs.
       is now demonstrated working, parallel included (§5.1, 2026-08-23)
 - [ ] Its own ports, its own `DB_FILE`, and **its own private browser instance** — not the shared one
       (§5.4: all three scenarios of the 2026-08-23 run had their page stolen)
+- [ ] **At most two scenarios in flight at once** (§5): one private browser per agent is what makes
+      the fan-out expensive, and three of them wedged the machine on 2026-08-24
 - [ ] Restore state **before** starting the server
 - [ ] A `location.port` guard on every injected script
 - [ ] Teardown **by pid**, never `pkill` by pattern; verify the port is free afterwards
