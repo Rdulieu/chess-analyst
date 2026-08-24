@@ -57,43 +57,6 @@
   > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
   > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
 
-- **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
-  désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
-  > **Grillée le 2026-08-24** (avec US-16b et US-16c). Branche `integration/US-16-my-own-analysis`.
-  > `CONTEXT.md` : `Personal analysis`, `Note`, `Candidate line`, `Key moment`, `Declared severity`,
-  > `Line check`, `Confrontation` ; entrée `Inaccuracy`/`Mistake`/`Blunder` **amendée** (échelle à deux
-  > auteurs). **ADR-0019** : stockage relationnel, PGN annoté en export.
-  >
-  > Périmètre : route dédiée `/analyse/:gameId/lecture`, `Note`s, `Declared severity` sur **tous** les
-  > coups (adverses compris, jamais scorés), `Key moment`s, le **scellement** et sa **provenance**, la
-  > migration due (ADR-0015) et le cloisonnement par `Profile` (ADR-0014). **Aucune dépendance, aucun
-  > temps moteur.**
-  >
-  > Décisions structurantes du grilling :
-  > - **Le scellement, pas le verrou.** L'app ne peut pas rendre aveugle (autre onglet) ; prétendre le
-  >   contraire est la faute que `Review mode` a refusée en écartant le nom *Blind mode*. Donc : un acte
-  >   explicite qui fige ce qui sera confronté, plus un drapeau « le moteur avait-il déjà été montré ».
-  >   Ce qui est écrit **après** la révélation est conservé et hors confrontation.
-  > - **Conséquence assumée** : sur ce seul fait, ce qui a été affiché est **persisté**, alors que
-  >   `Review mode` reste un choix local dont le serveur n'a pas d'opinion. Une confrontation sans
-  >   provenance n'est pas une confrontation. (ADR proposé, **refusé par le demandeur** — la décision
-  >   vit au glossaire.)
-  > - **Route dédiée, et c'est ce qui dissout le problème de l'aveuglement** : dans la page Analyse il
-  >   faudrait écraser le `Review mode` mémorisé du joueur. Une route distincte est aveugle *par nature*.
-  > - **Prémisse du backlog corrigée** : le « toggle d'annotations à `true` par défaut » n'existe plus,
-  >   US-15a a livré `Review mode` avec **Unaided par défaut**.
-  >
-  > **PRD + issues (2026-08-24)** : `.scratch/personal-analysis/PRD.md`, six tranches —
-  > `01-a-reading-exists-and-judges-a-move` (tracer bullet : tables + API + route + `Declared
-  > severity`), `02-i-comment-a-move`, `03-i-mark-where-the-game-turned`, `04-i-seal-my-reading`
-  > (gardée **entière** : scellement + provenance + couche postérieure), `05-i-see-where-i-stand`,
-  > `06-graft-on-hp-01-and-run-the-suite` (**HITL**). Coutures validées : **aucune nouvelle**.
-  > **Pas de 4ᵉ HP** — greffe sur **HP-01 après l'étape 9** (elle asserte déjà « the app does not start
-  > volunteering the engine's verdict » et a déjà ouvert une partie non analysée) ; HP-02 écarté comme
-  > hôte, il n'ouvre une partie que dans sa passe de thème. **Décidé pour US-16b** : fusion HP-02 + HP-03
-  > en « lire mes agrégats », le créneau libéré accueillant une HP dédiée « lire à l'aveugle, sceller,
-  > confronter ».
-
 - **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
   > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
   >
@@ -577,6 +540,82 @@
 ## Doing
 
 ## In review
+
+- **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
+  désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
+  > **Grillée le 2026-08-24** (avec US-16b et US-16c). Branche `integration/US-16-my-own-analysis`.
+  > `CONTEXT.md` : `Personal analysis`, `Note`, `Candidate line`, `Key moment`, `Declared severity`,
+  > `Line check`, `Confrontation` ; entrée `Inaccuracy`/`Mistake`/`Blunder` **amendée** (échelle à deux
+  > auteurs). **ADR-0019** : stockage relationnel, PGN annoté en export.
+  >
+  > Périmètre : route dédiée `/analyse/:gameId/lecture`, `Note`s, `Declared severity` sur **tous** les
+  > coups (adverses compris, jamais scorés), `Key moment`s, le **scellement** et sa **provenance**, la
+  > migration due (ADR-0015) et le cloisonnement par `Profile` (ADR-0014). **Aucune dépendance, aucun
+  > temps moteur.**
+  >
+  > Décisions structurantes du grilling :
+  > - **Le scellement, pas le verrou.** L'app ne peut pas rendre aveugle (autre onglet) ; prétendre le
+  >   contraire est la faute que `Review mode` a refusée en écartant le nom *Blind mode*. Donc : un acte
+  >   explicite qui fige ce qui sera confronté, plus un drapeau « le moteur avait-il déjà été montré ».
+  >   Ce qui est écrit **après** la révélation est conservé et hors confrontation.
+  > - **Conséquence assumée** : sur ce seul fait, ce qui a été affiché est **persisté**, alors que
+  >   `Review mode` reste un choix local dont le serveur n'a pas d'opinion. Une confrontation sans
+  >   provenance n'est pas une confrontation. (ADR proposé, **refusé par le demandeur** — la décision
+  >   vit au glossaire.)
+  > - **Route dédiée, et c'est ce qui dissout le problème de l'aveuglement** : dans la page Analyse il
+  >   faudrait écraser le `Review mode` mémorisé du joueur. Une route distincte est aveugle *par nature*.
+  > - **Prémisse du backlog corrigée** : le « toggle d'annotations à `true` par défaut » n'existe plus,
+  >   US-15a a livré `Review mode` avec **Unaided par défaut**.
+  >
+  > **PRD + issues (2026-08-24)** : `.scratch/personal-analysis/PRD.md`, six tranches —
+  > `01-a-reading-exists-and-judges-a-move` (tracer bullet : tables + API + route + `Declared
+  > severity`), `02-i-comment-a-move`, `03-i-mark-where-the-game-turned`, `04-i-seal-my-reading`
+  > (gardée **entière** : scellement + provenance + couche postérieure), `05-i-see-where-i-stand`,
+  > `06-graft-on-hp-01-and-run-the-suite` (**HITL**). Coutures validées : **aucune nouvelle**.
+  > **Pas de 4ᵉ HP** — greffe sur **HP-01 après l'étape 9** (elle asserte déjà « the app does not start
+  > volunteering the engine's verdict » et a déjà ouvert une partie non analysée) ; HP-02 écarté comme
+  > hôte, il n'ouvre une partie que dans sa passe de thème. **Décidé pour US-16b** : fusion HP-02 + HP-03
+  > en « lire mes agrégats », le créneau libéré accueillant une HP dédiée « lire à l'aveugle, sceller,
+  > confronter ».
+  >
+  > **Livrée le 2026-08-24** — six tranches, PRs **#64 → #69**, toutes auto-mergées sur la branche
+  > d'intégration après FP verte. **Suite HP 3/3 verte** (prérequis path 0 vert d'abord et seul).
+  > PR `integration → develop` : **#70**, en attente du merge humain.
+  >
+  > **Ce que la livraison a appris, et qui n'était pas dans le grilling :**
+  > - **La migration due l'a été deux fois.** La tranche 01 avait lu « un drapeau postérieur au
+  >   scellement » comme un drapeau *sur la ligne*. Le critère « la lecture initiale reste lisible
+  >   telle qu'elle était » l'interdit : avec une seule ligne par ply, une écriture postérieure n'a
+  >   nulle part où aller qu'**au-dessus** de la valeur scellée — ce qui détruit ce que le scellement
+  >   existe pour fixer. `posterior` est donc entré dans la **clef primaire** (migration `0014`) :
+  >   deux couches par ply, plafonnées à deux par construction.
+  > - **`writeMark` confondait « le caller a dit `null` » et « le caller n'a rien dit »** (`??`), ce
+  >   qui rendait l'effacement d'une `Note` impossible — le repli restaurait le texte. Un champ
+  >   **nommé** est ce que le joueur dit ; un champ omis est laissé tel quel.
+  > - **Le silence a une conséquence de stockage** : quand la dernière marque d'un ply est reprise,
+  >   la **ligne part**. Une ligne de nuls serait une marque affirmant « j'ai regardé et rien
+  >   trouvé » — ce qui est exactement le rôle de `Sound`.
+  > - **La greffe HP est placée à l'étape 9b, *avant* l'étape 10** (qui analyse), et pas seulement
+  >   après l'étape 9 comme prévu : jouée avant qu'aucune analyse n'existe, l'étiquette « Lue à
+  >   l'aveugle » est **méritée par la course**. Vérifié à la course : `engine-seen` a fini à
+  >   `[395,407]` — les deux parties de l'étape 10 — et **pas** la partie scellée en 9b.
+  > - **La FP a trouvé ce que les tests ne pouvaient pas.** Une lecture rendue sous un **autre
+  >   `Profile`** (le seul rouge de la story, tranche 01) ; deux crayons quasi identiques que les
+  >   noms accessibles distinguaient et l'œil pas ; les contrôles postérieurs au scellement portant
+  >   les libellés de la couche initiale ; un écran de refus offrant un lien vers la partie qu'il
+  >   venait de refuser.
+  >
+  > **Décisions laissées au demandeur** (dans la PR #70) :
+  > - **Le dénominateur de la couverture** — demi-coups, ply 0 exclu. US-16b calculera la justesse
+  >   sur les coups **du joueur** : les deux chiffres seraient alors rapportés côte à côte sur des
+  >   **bases différentes**. À trancher en 16b, pas ici.
+  > - `DELETE /api/profiles/:id` **répond 500 pour tout `Profile`** (préexistant,
+  >   `.scratch/profile-deletion/`, `needs-triage`) — c'est pourquoi la cascade depuis le `Profile`
+  >   n'a pu être prouvée qu'au niveau du magasin.
+  > - Le niveau de pluriel du nom accessible des résultats (`1 victoires`), trouvé par HP-03.
+  > - La remise à `Départ` du niveau de l'explorateur quand on quitte l'écran, trouvée par HP-02 :
+  >   aucune assertion ne la couvre, et la formulation « après avoir été piloté » de sa passe de
+  >   thème suppose un état que l'app ne garde pas.
 
 ## Done
 
