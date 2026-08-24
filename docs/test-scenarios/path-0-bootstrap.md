@@ -166,7 +166,18 @@ imported, 0 already present" against a database that already holds them.
   against the live API. Record the figures it reports (see *Recorded figures* below).
 - Step 5, the empty months: the per-month lines cover **every** month of the span in order,
   **including the 51 with no game, each listed at zero**. A span that silently skipped its empty
-  months would be indistinguishable from one that failed to fetch them.
+  months would be indistinguishable from one that failed to fetch them. Since US-17 this is a
+  **stronger** assertion than it was: it used to check that 51 requests each answered empty, which
+  is close to tautological; it now checks that **slicing one stream into months** produces 51 zero
+  lines, which is new code and the thing most likely to get this wrong.
+- Step 5, the request count: the whole span costs **one** export request, not 71 — measured, with
+  the instrument below. Without this assertion nothing in the suite tells US-17 delivered from
+  US-17 undelivered: the screen looks identical either way, which is the point of the story (the
+  month stays the unit of reporting) and exactly why the cost has to be observed instead of read.
+- Step 5, the pauses: **no minute-long pause occurs**. The `attente de la plateforme` line must
+  never appear. Six of them was the reference run's dominant cost, and one request is not a burst.
+- Step 5, the duration: the Lichess import is **timed on its own**, separately from the scenario's
+  total, and reported with its delta against the reference (see *Recorded durations*).
 - Step 6: the list holds **three** rows, `DudulSmash` marked "Profil actuel" and the other two
   offering "Sélectionner", and **nothing overflows its container** — with a third row the list is
   taller than the pairing that first caught the overflow, so this is the stricter version of the
@@ -178,6 +189,47 @@ imported, 0 already present" against a database that already holds them.
   entries. Two `Monthly import` lines, in order: `2026-05` at 28, `2026-06` at 54. On `/profiles`,
   `Nonomoho` still reads **`0 parties · 0 analysées`** and `Metalyst` still reads the count step 5
   recorded.
+
+### Counting the requests — the instrument
+
+The count is what makes this scenario able to observe US-17 at all, so how it is obtained is part of
+the scenario rather than left to the runner.
+
+**Put a logging reverse proxy in front of Lichess** and point the app at it with
+`LICHESS_BASE_URL=http://127.0.0.1:<port>`. The proxy forwards to `https://lichess.org`, logging one
+line per request with its path and its timestamps. The **contract under test is still the live one**
+— real API, real ndjson, real throttle; only the base URL moved, and that is an already-supported
+knob (`server/src/platform/lichess/client.ts`). Pin the proxy's own outbound hop to IPv4 to keep the
+determinism the app's own pin buys.
+
+The proxy log is also what yields the Lichess import's **own** duration — first request out to last
+byte in — which is the figure US-18 needs and which the wall-clock of a UI-driven step cannot give.
+
+> **Do not count connections, and do not use `NODE_DEBUG`.** Both were tried and both lie. Node's
+> global agent keeps connections alive, so a connection count reports **1** for a burst of 71
+> requests — the exact false green this assertion exists to prevent. `NODE_DEBUG=http` was measured
+> directly: three sequential export requests emitted **one** `call onSocket` and **one**
+> `createConnection` line, so its output cannot be counted either. Measured on 2026-08-24, on the
+> code under test — recorded here so the next run does not re-derive it.
+
+### Recorded durations — step 5, `Metalyst` over 71 months
+
+The reference is the **month-by-month** run, before US-17: the Lichess import took **~3.5 min**, of
+which **~2.4 min was pure waiting** across **six one-minute pauses** — `429`s provoked by the burst
+of 71 requests, each answered by a one-minute sleep and one replay.
+
+| Figure | Reference (71 requests) | This run |
+| --- | --- | --- |
+| Export requests | 71 | *measured* |
+| One-minute pauses | 6 | *measured* |
+| Lichess import, own duration | ~3.5 min | *measured* |
+| of which waiting | ~2.4 min | *measured* |
+| Scenario total | *not recorded* | *measured* |
+
+**Report the measured figures and the delta, never "it is faster".** This table is the first real
+datum US-18 has: its own entry says plainly that its figures are *deduced, not measured*, so a run
+that reports an impression instead of a number hands it nothing. Fill the right column from the run
+and state the delta against the left one.
 
 ### Recorded figures — `Metalyst`, 2017-10 → 2023-08
 
