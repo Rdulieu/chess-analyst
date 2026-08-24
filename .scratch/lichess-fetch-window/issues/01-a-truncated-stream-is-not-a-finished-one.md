@@ -1,6 +1,6 @@
 # 01 — A truncated stream is not a finished one
 
-Status: `ready-for-agent`
+Status: `done` — mergée dans l'intégration le 2026-08-23 (merge `943de82`).
 
 > **Implemented on the business-story integration branch `integration/US-17-lichess-fetch-window`.**
 > Branch from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a
