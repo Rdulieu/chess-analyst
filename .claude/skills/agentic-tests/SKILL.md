@@ -86,13 +86,8 @@ others instead of being added to them.
 1. **The prerequisite runs first, alone, to completion.** Path 0 builds the snapshots every
    scenario restores; dispatching the HPs before it has finished hands them a state that does not
    exist yet. It is the one step that is never parallel.
-2. **Then the HPs, one subagent each, at most TWO at a time.** Not "all at once" — that was the
-   rule until 2026-08-24, when a three-way fan-out helped wedge the machine: each scenario runs its
-   own full Chrome plus a Vite server plus an app server, so three of them alongside the developer's
-   own desktop saturated an 8-thread laptop and the X11 session had to be killed. Nothing was
-   OOM-killed; the cost was CPU and responsiveness, and a run that freezes the machine is a run
-   lost. Two at a time keeps the overlap that makes fanning out worth it — a scenario's long tail
-   still hides under its neighbour's — while leaving the machine usable. Run the third when a slot
+2. **Then the HPs, one subagent each — but not all at once. Derive how many from the machine**
+   (§5.7). On the 8-thread laptop this suite runs on that is **two**; run the third when a slot
    frees.
 3. The orchestrator **collects the reports** (§5.1 — do not assume they arrive on their own) and
    consolidates.
@@ -367,6 +362,47 @@ for that edit:
 > that is knowingly written ahead of its evidence, and it stays honest only if each run pays a few
 > minutes to re-check it.
 
+### 5.7 What an agent costs, and how many fit
+
+**Isolation and parallelism pull against each other, and §5.4 only argues one side.** Everything
+there — a private browser each, its own ports, its own database — was written to stop agents landing
+in each other's app, and it works. What it never says is that **it is also what makes a fan-out
+expensive**: one scenario is no longer one process, it is a **full Chrome (multi-process) plus a Vite
+dev server plus an app server**, and for HP-01 an engine pass on top. Three scenarios is three of
+those trios, next to the developer's own desktop — their browser, their IDE, their terminals — on the
+same machine.
+
+That bill came due. On **2026-08-24** a three-way fan-out (after path 0, itself a fourth such trio)
+left the machine wedged: the X11 session had to be killed and the requester held the power button.
+The requester reports the same freeze **several times over three days**, and `/var/log/apport.log`
+corroborates crashes on **2026-08-23 16:23**, **2026-08-24 00:29** and **2026-08-24 16:49**. So this
+is a recurrence, not an anecdote — which is why it earns a rule rather than a warning.
+
+**What the diagnosis found, and what it did not.** No OOM kill, `systemd-oomd` inactive, nothing
+thermal, no `MCE`, no i915 GPU hang logged. The two crash dumps (Chrome, VS Code, both `SIGTRAP`)
+are dated *after* the session began its orderly exit, so they are collateral of the teardown rather
+than its cause. The honest reading is **CPU and responsiveness starvation**, not memory exhaustion —
+and the trigger of the session exit is **not established**. Do not write a mechanism here that
+nobody has demonstrated; this section exists to bound the load, not to explain the freeze.
+
+**The budget, in threads.** Sustained, an agent's trio behaves like roughly **four threads' worth**
+of work. So:
+
+```
+concurrent agents = min(3, floor(nproc / 4))
+```
+
+Three because the suite is three scenarios — above that the cap is moot, not virtuous. `floor(nproc
+/ 4)` because that is what leaves the machine answering. Read `nproc` and decide; do not carry a
+number over from another machine. On the 8-thread laptop this suite runs on: **2**. On 4 threads: run
+them **in series**. Leave the developer's own desktop out of the arithmetic — it is already the
+reason for the divisor rather than a share to be subtracted.
+
+**Do not "optimise" this by sharing the browser again.** That is the tempting move once the cost is
+named, and it walks straight back into the page theft of 2026-08-23, where one `take_snapshot`
+returned a sibling's entire accessibility tree. The private browser is the expensive half of a
+trade that was made deliberately. **Pay it in serialisation, not in isolation.**
+
 ## 6. Execution rules (agent)
 
 - **Retry on different data before raising a data-related finding.** If a step fails on a
@@ -403,8 +439,9 @@ one that silently loses runs.
       is now demonstrated working, parallel included (§5.1, 2026-08-23)
 - [ ] Its own ports, its own `DB_FILE`, and **its own private browser instance** — not the shared one
       (§5.4: all three scenarios of the 2026-08-23 run had their page stolen)
-- [ ] **At most two scenarios in flight at once** (§5): one private browser per agent is what makes
-      the fan-out expensive, and three of them wedged the machine on 2026-08-24
+- [ ] **Concurrency derived from the machine**, `min(3, floor(nproc / 4))` — §5.7. One private
+      browser per agent is what makes a fan-out expensive, and three trios wedged this machine
+      repeatedly between 2026-08-22 and 2026-08-24. Never carry a number over from another host
 - [ ] Restore state **before** starting the server
 - [ ] A `location.port` guard on every injected script
 - [ ] Teardown **by pid**, never `pkill` by pattern; verify the port is free afterwards
