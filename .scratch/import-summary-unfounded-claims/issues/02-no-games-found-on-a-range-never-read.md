@@ -60,10 +60,15 @@ Import is not a failed one » (`import-range.test.ts`, « consolidates only the 
 covered »). C'est une décision, pas un détail, et elle ne fait partie d'aucun des deux findings — le
 correctif ne remplace donc la phrase que **quand rien n'est entré**, le cas où elle était fausse.
 
-**Question laissée ouverte au demandeur**, consignée en commentaire dans `range.ts` : une plage à
-moitié réussie mérite-t-elle aussi une ligne globale disant quels mois relancer ? Aujourd'hui ses
-échecs ne vivent que sur leurs lignes de mois. C'est la même famille de silence que ce finding, un
-cas plus loin.
+~~**Question laissée ouverte au demandeur**~~ → **tranchée par le demandeur le 2026-08-24 : oui.**
+Une plage dont un mois n'a pas répondu nomme désormais la période à relancer **quoi qu'il arrive**,
+que d'autres mois aient ramené des parties ou non.
+
+Cela **renverse** la règle « a partly successful Import is not a failed one », qui gardait ce cas
+globalement silencieux et qui avait arrêté un premier jet allant dans ce sens. Le motif du
+renversement : le silence laissait le Player déduire le trou depuis les lignes de mois, ce qui est
+exactement le travail que l'énoncé global existe pour faire. Le test qui portait l'ancienne règle
+porte maintenant la nouvelle, datée et motivée, plutôt que d'avoir été supprimé.
 
 Le message a été **traduit en français** au passage : il était le seul texte anglais que le Player
 pouvait lire, alors que celui de la tranche 04 est en français.

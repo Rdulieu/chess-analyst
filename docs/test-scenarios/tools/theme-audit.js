@@ -195,9 +195,14 @@ function themeAudit() {
       holds: (el) => /\?/.test(el.textContent || ""),
     },
     {
-      cue: "a failed month states its failure in words",
+      // Two words, not one: a month that received some Games and stopped is
+      // `incomplet`, one that received none is `échec` (2026-08-24). Keying this
+      // on `échec` alone would silently drop the rule on a summary whose failed
+      // months are all partial — the rule would report "no subject" and read as
+      // a pass.
+      cue: "a failed or incomplete month says so in words",
       subjects: tinted("[data-failed='true']"),
-      holds: (el) => /échec/i.test(el.textContent || ""),
+      holds: (el) => /échec|incomplet/i.test(el.textContent || ""),
     },
     {
       // Targets the badge by its accessible name, NOT by `[data-part='state']`:

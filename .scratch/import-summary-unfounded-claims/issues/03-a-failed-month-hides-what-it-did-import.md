@@ -49,14 +49,19 @@ correctif. Écrire `0 importées` à côté de `échec` rendrait exactement l'am
 d'échec supprime : un zéro veut dire « tu n'as pas joué », un échec veut dire « on ne sait pas », et
 les deux ne doivent pas se ressembler. Un mois en échec qui n'a rien reçu se lit donc comme avant.
 
-**La question de vocabulaire est tranchée dans le sens du minimum.** Le mot `échec` est conservé
-plutôt que remplacé par « incomplet » : c'est le repère non chromatique, il est verrouillé par un
-test client (`marks a month … distinguishably from an inactive month`), et le sujet du finding était
-le chiffre manquant, pas le mot. « Incomplet » serait sans doute plus juste pour un mois à moitié
-réussi — si le demandeur le veut, c'est un changement de libellé isolé, sans effet sur cette
-structure.
+**La question de vocabulaire a été tranchée par le demandeur le 2026-08-24 : « incomplet ».** Un mois
+partiellement rempli se lit désormais `2024-03 — 2 importées, 0 déjà présente · incomplet : …`, et
+`échec` est réservé au mois qui n'a **rien** reçu. Deux mots pour deux états, et la différence est ce
+que le Player a déjà en main : `incomplet` = il en a une partie, `échec` = il n'en a rien. Les
+confondre jetterait une information sur laquelle il peut agir, et les deux restent distincts du zéro
+franc d'un mois sans partie.
 
-Reste ouverte, et **non tranchée** : la version « globale » de la même question — une plage à moitié
-réussie mérite-t-elle un énoncé global disant quels mois relancer ? Voir
-[02](./02-no-games-found-on-a-range-never-read.md). Ce correctif rend le cas *par mois* honnête ; il
-ne décide pas du cas *par plage*.
+**Le contrecoup n'était pas dans le code mais dans l'outil d'audit.** La règle de repère non
+chromatique de `theme-audit.js` était calée sur `/échec/` seul : sur un résumé dont les mois en
+défaut sont tous partiels, elle n'aurait trouvé **aucun sujet** et se serait lue comme un succès.
+Elle accepte les deux mots depuis, et les trois scénarios qui citaient « échec » sont corrigés avec
+elle.
+
+La version « globale » de la même question est tranchée aussi, dans
+[02](./02-no-games-found-on-a-range-never-read.md) : oui, une plage à moitié réussie nomme la période
+à relancer.

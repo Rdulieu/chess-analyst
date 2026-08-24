@@ -330,7 +330,7 @@ names the right one.
   expected to show; the duration is *measured and recorded* by path 0 itself rather than asserted
   here. It stays a cost paid **once** per suite run — what the snapshots exist to avoid re-paying.
 - **Real network dependency**: needs chess.com and Lichess reachable (see the Preconditions — a
-  `429` on the export points at a recent burst, not at an address family). A month marked in **échec** here means
+  `429` on the export points at a recent burst, not at an address family). A month marked in **échec** or **incomplet** here means
   the snapshot is incomplete and the scenarios restoring it would assert against a partial range —
   re-run path 0 rather than continuing, since a failed month is a legitimate environment finding
   but a poisoned shared state.

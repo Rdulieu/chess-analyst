@@ -35,10 +35,19 @@ const contribution = (line: MonthlyImport) =>
  * both — showing only the failure made the line deny Games the headline had
  * already counted, and a Player adding the lines up could not reach the total.
  *
- * But the contribution is shown **only when something arrived**. Printing
- * `0 importées` beside `échec` would hand back the very ambiguity the failure
- * cue removes: a zero means "you did not play", a failure means "we do not
- * know", and the two must not be made to look alike.
+ * **Two words, for two different states**, and the difference is what the Player
+ * already has in hand:
+ *
+ * - `incomplet` — some Games arrived and the month is not finished. They have
+ *   part of it.
+ * - `échec` — nothing arrived at all. They have none of it.
+ *
+ * Collapsing the two under one word would throw away something they can act on,
+ * and both stay distinct from the **plain zero** of a month they were simply
+ * inactive in. Which is also why the contribution is printed **only when
+ * something arrived**: `0 importée` beside either word would hand back the very
+ * ambiguity these cues remove — a zero means "you did not play", a failure means
+ * "we do not know", and the two must not be made to look alike.
  */
 function MonthLine({ line }: { line: MonthlyImport }) {
   const failed = line.failure !== undefined;
@@ -47,7 +56,9 @@ function MonthLine({ line }: { line: MonthlyImport }) {
     <li aria-label={yyyymm(line.month)} data-failed={failed ? "true" : undefined}>
       {yyyymm(line.month)} —{" "}
       {failed
-        ? `${arrived ? `${contribution(line)} · ` : ""}échec : ${line.failure}`
+        ? arrived
+          ? `${contribution(line)} · incomplet : ${line.failure}`
+          : `échec : ${line.failure}`
         : contribution(line)}
     </li>
   );

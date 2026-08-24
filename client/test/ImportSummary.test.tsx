@@ -116,8 +116,26 @@ describe("ImportSummary", () => {
     // Both facts, not one: what got in, and that the month is not complete.
     expect(line.textContent).toMatch(/3 importée/);
     expect(line.textContent).toMatch(/1 déjà présente/);
-    expect(line.textContent).toMatch(/échec/i);
+    // **Named `incomplet`, not `échec`** (requester, 2026-08-24): the Player has
+    // part of this month, and "échec" says they have none of it. Two words for
+    // two different states, both distinct from a plain zero.
+    expect(line.textContent).toMatch(/incomplet/i);
+    expect(line.textContent).not.toMatch(/échec/i);
     expect(line.getAttribute("data-failed")).toBe("true");
+  });
+
+  it("still calls a month that received NOTHING a failure, not an incomplete one", async () => {
+    // The distinction the two words buy: `incomplet` means "you have part of
+    // it", `échec` means "you have none of it". Collapsing them would throw away
+    // information the Player can act on — and both stay distinct from the plain
+    // zero of a month they were simply inactive in.
+    render(<ImportSummary result={result} />);
+
+    const [, , failed] = screen.getAllByRole("listitem", { name: /2024-\d\d/ });
+
+    expect(failed.textContent).toMatch(/échec/i);
+    expect(failed.textContent).not.toMatch(/incomplet/i);
+    expect(failed.getAttribute("data-failed")).toBe("true");
   });
 
   it("does not print a bare zero beside a failure, which is what an inactive month reads as", () => {
