@@ -135,8 +135,12 @@ export function createHttpLichessClient(
         if (err instanceof TruncatedStreamError && open < months.length) {
           yield { kind: "stream-cut", month: months[open] };
         }
+        // The month it died in carries what HAD arrived; the months after it
+        // never got a byte. Only the adapter can say this — it is the only thing
+        // that counted the lines, out-of-scope ones included.
         for (; open < months.length; open++) {
-          yield { kind: "month-failed", month: months[open], reason };
+          yield { kind: "month-failed", month: months[open], reason, totalFetched };
+          totalFetched = 0;
         }
         return;
       }

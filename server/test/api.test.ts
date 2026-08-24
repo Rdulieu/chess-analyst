@@ -830,7 +830,7 @@ describe("import API", () => {
     // No phantom months reported at zero — the range simply covers nothing.
     expect(monthsFetched).toBe(0);
     expect(final.result.months).toEqual([]);
-    expect(final.result.message).toMatch(/no games found/i);
+    expect(final.result.message).toMatch(/aucune partie trouvée/i);
   });
 
   it("POST /api/import imposes no cap on how long a range may be", async () => {
@@ -912,7 +912,7 @@ describe("import API", () => {
       classical: 0,
       correspondence: 0,
     });
-    expect(final.result.message).toMatch(/no games found/i);
+    expect(final.result.message).toMatch(/aucune partie trouvée/i);
   });
 
   it("POST /api/import reports zero with a message covering the whole range", async () => {
@@ -931,7 +931,7 @@ describe("import API", () => {
 
     const final = await importDone(app);
     expect(final.result).toMatchObject({ imported: 0, alreadyPresent: 0 });
-    expect(final.result.message).toMatch(/no games found/i);
+    expect(final.result.message).toMatch(/aucune partie trouvée/i);
   });
 });
 

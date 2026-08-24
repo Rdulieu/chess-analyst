@@ -138,12 +138,19 @@ export function fakeClient(
           // further request to make, so every month still owed fails with it —
           // which is exactly what the real adapter does since slice 03.
           yield { kind: "stream-cut", month };
-          for (const owed of span.slice(index)) {
-            yield { kind: "month-failed", month: owed, reason: failure!.message };
+          // The month it died in carries what arrived; the months behind it got
+          // nothing, exactly as a real adapter reports them.
+          for (const [offset, owed] of span.slice(index).entries()) {
+            yield {
+              kind: "month-failed",
+              month: owed,
+              reason: failure!.message,
+              totalFetched: offset === 0 ? totalFetched : 0,
+            };
           }
           return;
         }
-        if (failure) yield { kind: "month-failed", month, reason: failure.message };
+        if (failure) yield { kind: "month-failed", month, reason: failure.message, totalFetched: 0 };
         else yield { kind: "month-done", month, totalFetched };
       }
     },

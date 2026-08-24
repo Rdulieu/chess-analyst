@@ -102,6 +102,11 @@ export interface MonthFetch {
  * - the end of a month, carrying what the Platform **had** that month
  *   (out-of-scope games included), which is what keeps a month full of variants
  *   from reading as an empty one;
+ * - a month the Platform could not answer for — which still carries what the
+ *   Platform **did** deliver before failing (usually nothing; not nothing when a
+ *   stream died mid-month), because those Games are already through and already
+ *   kept, and a summary that counted them as imported without counting them as
+ *   fetched would report keeping more than it received;
  * - a month the Platform could not answer for — which must **not** end the
  *   range: one unanswerable month has never aborted an Import (ADR-0010), and
  *   now that the month loop lives inside the adapter, only the adapter can say
@@ -123,7 +128,7 @@ export interface MonthFetch {
 export type RangeEvent =
   | { kind: "game"; month: MonthRef; game: ImportedGame }
   | { kind: "month-done"; month: MonthRef; totalFetched: number }
-  | { kind: "month-failed"; month: MonthRef; reason: string }
+  | { kind: "month-failed"; month: MonthRef; reason: string; totalFetched: number }
   | { kind: "stream-cut"; month: MonthRef };
 
 /**

@@ -64,6 +64,10 @@ export function createHttpChessComClient(
             kind: "month-failed",
             month,
             reason: err instanceof Error ? err.message : String(err),
+            // Always zero here: chess.com serves a month as one archive, so a
+            // month that failed delivered nothing. It is stated rather than
+            // omitted so the port has no optional field to forget.
+            totalFetched: 0,
           };
           continue;
         }

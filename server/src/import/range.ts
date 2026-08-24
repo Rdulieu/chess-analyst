@@ -69,6 +69,10 @@ export async function importRange(
   // FULL — the two facts the Player needs to finish the job themselves.
   let cutIn: MonthRef | null = null;
   let lastCovered: MonthRef | null = null;
+  // The months the Platform never answered for. Kept because "nothing was
+  // found" is a claim about what the range HELD, and an unanswered month was
+  // never read — so it cannot back that claim, and it is what has to be re-run.
+  const unanswered: MonthRef[] = [];
 
   for await (const event of client.fetchRange(params.username, params.from, params.to, {
     onWaiting: params.onWaiting,
@@ -106,11 +110,16 @@ export async function importRange(
     // (ADR-0010) and whatever DID arrive has already been persisted above — the
     // port yields, so a partial month is partial rather than lost. Recovery is
     // replaying the range, which dedup by URL makes exact.
-    if (event.kind === "month-done") total.totalFetched += event.totalFetched;
+    // Both kinds carry it: a month that failed after some Games had arrived DID
+    // receive them, and they are already persisted. Counting them as imported
+    // without counting them as fetched made the summary claim it kept more than
+    // the Platform gave.
+    total.totalFetched += event.totalFetched;
     const failure = event.kind === "month-failed" ? event.reason : unstorable;
     // "Covered" means the month came through in full — a month whose own Game
     // could not be stored has NOT, so it must not become the resume point.
     if (failure === null) lastCovered = event.month;
+    else unanswered.push(event.month);
     total.imported += running.imported;
     total.alreadyPresent += running.alreadyPresent;
     total.months.push({
@@ -123,14 +132,56 @@ export async function importRange(
     onMonthDone?.(snapshot(total));
   }
 
-  // An interruption outranks "no games found": the latter is a statement about
-  // what the range HELD, and a range whose answer was cut short was never fully
-  // read. Saying it found nothing would be a claim we have no grounds for.
+  // Three statements, in order of what the run actually established.
+  //
+  // An interruption outranks the rest: it is the only one that says where the
+  // answer stopped coming. Then any unanswered month, because "nothing was
+  // found" is a claim about what the range HELD and an unanswered month was
+  // never read — the Player's one available wrong conclusion being "I did not
+  // play in those months", which is exactly what the per-month lines exist to
+  // prevent. Only when **every** month came through is an empty range a fact.
   if (cutIn !== null) total.message = interrupted(cutIn, params.to, lastCovered);
   else if (total.imported === 0 && total.alreadyPresent === 0) {
-    total.message = `No games found for ${yyyymm(params.from)} to ${yyyymm(params.to)} in the selected time control categories.`;
+    // Nothing came in — so this is where the range gets described, and where
+    // describing it wrongly was possible. An unanswered month means the range
+    // was never fully read, and "nothing found" would be a claim about contents
+    // nobody looked at.
+    total.message =
+      unanswered.length > 0
+        ? incomplete(unanswered, params.to)
+        : `Aucune partie trouvée de ${yyyymm(params.from)} à ${yyyymm(params.to)} dans les cadences sélectionnées.`;
   }
   return total;
+}
+
+/**
+ * What the Player is told when the Platform did not answer for part of the
+ * range. Same three facts as an interruption, for the same reason: what went
+ * wrong, that nothing already in hand is lost, and the exact range to re-run —
+ * in the import form's own `YYYY-MM` vocabulary so it can be retyped as-is.
+ *
+ * It replaces the "nothing found" sentence **only when nothing came in at all**,
+ * which is the case that sentence was wrong about. A *partly* successful Import
+ * stays globally silent, its failures carried by their own month lines — that is
+ * a standing decision ("a partly successful Import is not a failed one"), and
+ * this fix deliberately does not reopen it. Whether such a range should also get
+ * a global "N months to re-run" line is a separate question, and a real one.
+ *
+ * The re-run starts at the **first** unanswered month and ends at the range's own
+ * end — not at the last unanswered one. Re-fetching a month that already
+ * succeeded costs nothing (dedup by URL); leaving one out risks a permanent hole.
+ */
+function incomplete(unanswered: MonthRef[], to: MonthRef): string {
+  const first = unanswered[0];
+  const count = unanswered.length;
+  const head =
+    count === 1
+      ? `Le mois ${yyyymm(first)} n'a pas pu être récupéré.`
+      : `${count} mois n'ont pas pu être récupérés.`;
+  return (
+    `${head} Les parties déjà récupérées sont conservées. ` +
+    `Pour compléter, relancez un import de ${yyyymm(first)} à ${yyyymm(to)}.`
+  );
 }
 
 /**

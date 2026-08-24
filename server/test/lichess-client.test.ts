@@ -530,11 +530,18 @@ describe("a Lichess range", () => {
         kind: "month-failed",
         month: { year: 2024, month: 3 },
         reason: expect.stringMatching(/interrompu|incomplet/i),
+        // The March Game DID arrive before the cut, so the month it died in
+        // reports it: it is already persisted, and a summary that counted it as
+        // imported without counting it as fetched would claim to keep more than
+        // it received.
+        totalFetched: 1,
       },
       {
         kind: "month-failed",
         month: { year: 2024, month: 4 },
         reason: expect.stringMatching(/interrompu|incomplet/i),
+        // Never got a byte.
+        totalFetched: 0,
       },
     ]);
     // And both Games are through before any of it — nothing is lost with the cut.

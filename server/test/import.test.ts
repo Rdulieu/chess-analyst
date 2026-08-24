@@ -256,7 +256,7 @@ describe("importing one month", () => {
 
     expect(result.imported).toBe(0);
     expect(result.alreadyPresent).toBe(0);
-    expect(result.message).toMatch(/no games found/i);
+    expect(result.message).toMatch(/aucune partie trouvée/i);
     expect(result.message).toContain("2024-03");
     expect(listGames(db, profileId)).toHaveLength(0);
   });
