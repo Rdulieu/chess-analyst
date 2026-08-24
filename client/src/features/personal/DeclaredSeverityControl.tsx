@@ -20,6 +20,7 @@ export function DeclaredSeverityControl({
   playersOwnMove,
   disabled = false,
   onPose,
+  onWithdraw,
 }: {
   /** The ply being read — 0 is the starting Position, which has no Move to judge. */
   ply: number;
@@ -33,6 +34,13 @@ export function DeclaredSeverityControl({
   playersOwnMove: boolean;
   disabled?: boolean;
   onPose: (severity: DeclaredSeverity) => void;
+  /**
+   * Returns the Move to **silence**. Five exclusive radios can change a verdict
+   * but never unsay one, so without this a verdict posed by mistake would be
+   * permanent — while a `Note` can always be erased. Silence is a state of the
+   * reading, not an accident of the control.
+   */
+  onWithdraw: () => void;
 }) {
   if (ply === 0) return null;
 
@@ -62,6 +70,9 @@ export function DeclaredSeverityControl({
           {DECLARED_SEVERITY_LABEL[severity]}
         </label>
       ))}
+      <button type="button" disabled={disabled || posed === null} onClick={onWithdraw}>
+        Retirer mon verdict
+      </button>
     </fieldset>
   );
 }

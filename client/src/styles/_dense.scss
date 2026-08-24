@@ -308,6 +308,15 @@ section[aria-label="partie"] {
     white-space: pre-wrap;
     overflow-wrap: break-word;
     font: inherit;
+    // The app's palette, not the browser's (ADR-0013). Without these the field
+    // renders in the UA's own form colours — measured in dark as #fff on
+    // rgb(18,18,18) against a page surface of rgb(22,24,26), which is legible but
+    // is the one element on the pane whose theme is not the app's.
+    color: var(--ink);
+    background: var(--ground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-1) var(--space-2);
   }
 }
 
@@ -325,6 +334,24 @@ section[aria-label="partie"] {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+// The `Key moment` (US-16a): a checkbox and its two lines of text, in the same
+// column as the verdict above it.
+[data-part="key-moment"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// "Neither a good Move nor a fault: a pivot." Muted like the other notices — it
+// states what the control is, in words, so nothing rests on its position beside
+// the five verdicts.
+[data-part="pivot-notice"],
+[data-part="key-moment-count"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
 }
 
 // The step controls, on one line at the top of the pane beside the board.

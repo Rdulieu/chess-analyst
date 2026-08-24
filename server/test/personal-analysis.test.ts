@@ -201,4 +201,70 @@ describe("Personal analysis store", () => {
 
     expect(getPersonalAnalysis(db, game.id)?.marks[0].note).toBe("première ligne\n\nseconde");
   });
+
+  it("marks a Move as where the Game turned, and unmarks it", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 21, { keyMoment: true });
+    expect(getPersonalAnalysis(db, game.id)?.marks).toEqual([
+      { ply: 21, declaredSeverity: null, note: null, keyMoment: true, posterior: false },
+    ]);
+
+    writeMark(db, game.id, 21, { keyMoment: false });
+    // Unmarked and nothing else said there, so the ply is silent again — no row.
+    expect(getPersonalAnalysis(db, game.id)?.marks).toEqual([]);
+  });
+
+  it("holds SEVERAL Key moments, with no order and none of them the one", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    // A Game can turn twice; the Player is not asked to pick.
+    for (const ply of [9, 21, 4]) writeMark(db, game.id, ply, { keyMoment: true });
+
+    const marks = getPersonalAnalysis(db, game.id)?.marks ?? [];
+    expect(marks.map((m) => m.ply)).toEqual([4, 9, 21]);
+    // Nothing in a mark ranks it: there is no rank to store, so none can leak.
+    expect(marks.every((m) => m.keyMoment)).toBe(true);
+    expect(Object.keys(marks[0]).sort()).toEqual(
+      ["declaredSeverity", "keyMoment", "note", "ply", "posterior"].sort(),
+    );
+  });
+
+  it("imposes no ceiling on how many Key moments a reading may hold", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    for (let ply = 1; ply <= 30; ply++) writeMark(db, game.id, ply, { keyMoment: true });
+
+    // Marking twelve Moves out of thirty is not forbidden; it is visible, which
+    // is what the displayed count is for.
+    expect(getPersonalAnalysis(db, game.id)?.marks.filter((m) => m.keyMoment)).toHaveLength(30);
+  });
+
+  it("keeps a Key moment, a verdict and a Note on one ply, each independent of the others", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 21, { keyMoment: true });
+    writeMark(db, game.id, 21, { declaredSeverity: "mistake" });
+    writeMark(db, game.id, 21, { note: "c'est ici que je perds le fil" });
+    expect(getPersonalAnalysis(db, game.id)?.marks[0]).toEqual({
+      ply: 21,
+      declaredSeverity: "mistake",
+      note: "c'est ici que je perds le fil",
+      keyMoment: true,
+      posterior: false,
+    });
+
+    // Taking one back leaves the other two exactly as they were: a pivot is not
+    // a verdict, and neither is a reason.
+    writeMark(db, game.id, 21, { keyMoment: false });
+    expect(getPersonalAnalysis(db, game.id)?.marks[0]).toMatchObject({
+      keyMoment: false,
+      declaredSeverity: "mistake",
+      note: "c'est ici que je perds le fil",
+    });
+  });
 });
