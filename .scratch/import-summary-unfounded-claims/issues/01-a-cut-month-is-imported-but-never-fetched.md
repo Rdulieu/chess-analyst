@@ -1,6 +1,6 @@
 # 01 — Un mois coupé est importé sans avoir été « récupéré »
 
-Status: `needs-triage`
+Status: done
 
 ## Constat
 
@@ -48,3 +48,21 @@ le seul à savoir combien de lignes il a lues.
 Un mois dont **toutes** les parties sont hors périmètre se lit `0 importées` avec un `totalFetched`
 global non nul : c'est **voulu** (le résumé montre fetched > imported pour le dire), et c'est un
 autre sujet.
+
+## Comments
+
+**2026-08-24 — corrigé, sur demande du demandeur avant le merge d'US-17 (PR #62).**
+
+Retenu la première piste : **l'adaptateur porte le compte partiel sur `month-failed`**. La seconde
+(l'Import compte les parties qu'il voit défiler) est en réalité **impossible** sans changer le port :
+l'adaptateur écarte variantes, positions arbitraires et parties contre la machine **sans rien yielder
+pour elles**, donc l'Import ne peut pas voir les lignes hors périmètre — et `totalFetched` veut
+précisément dire « tout ce que la plateforme a rendu, hors périmètre compris ». Seul l'adaptateur a
+compté les lignes.
+
+`totalFetched` est **requis** sur `month-failed`, pas optionnel : un champ facultatif est un champ
+qu'un émetteur oublie. Le mois de la coupure porte ce qui était arrivé, ceux d'après zéro, et
+chess.com toujours zéro — un mois y est une archive unique, un mois en échec n'a rien rendu.
+
+Le test affirme l'**invariant** plutôt que l'arithmétique (`totalFetched >= imported`) : la
+plateforme ne peut pas nous avoir donné moins que ce que nous gardons.
