@@ -78,4 +78,44 @@ describe("ImportSummary", () => {
     expect(failed.getAttribute("style")).toBeNull();
     expect(inactive.getAttribute("data-failed")).toBeNull();
   });
+
+  it("says what a failed month DID bring in, so the lines still add up to the headline", () => {
+    // A month can fail after some Games arrived — a stream cut mid-month keeps
+    // what it received (US-17). Showing only the failure made the month
+    // under-report: the headline counted those Games and the line denied them,
+    // so a Player adding the lines up could not reach the total.
+    const partial = {
+      ...result,
+      months: [
+        {
+          month: { year: 2024, month: 4 },
+          imported: 3,
+          alreadyPresent: 1,
+          failure: "lichess.org a interrompu sa réponse avant la fin",
+        },
+      ],
+    };
+    render(<ImportSummary result={partial} />);
+
+    const line = screen.getByRole("listitem", { name: "2024-04" });
+
+    // Both facts, not one: what got in, and that the month is not complete.
+    expect(line.textContent).toMatch(/3 importée/);
+    expect(line.textContent).toMatch(/1 déjà présente/);
+    expect(line.textContent).toMatch(/échec/i);
+    expect(line.getAttribute("data-failed")).toBe("true");
+  });
+
+  it("does not print a bare zero beside a failure, which is what an inactive month reads as", () => {
+    // The distinction the whole readout exists for: a month at zero means the
+    // Player did not play, a failed month means we do not know. Writing
+    // "0 importées" next to "échec" hands back exactly the ambiguity the failure
+    // cue removes — so the counts appear only when something actually arrived.
+    render(<ImportSummary result={result} />);
+
+    const [, , failed] = screen.getAllByRole("listitem", { name: /2024-\d\d/ });
+
+    expect(failed.textContent).toMatch(/échec/i);
+    expect(failed.textContent).not.toMatch(/0 importée/);
+  });
 });
