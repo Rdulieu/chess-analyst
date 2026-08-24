@@ -154,6 +154,12 @@ flagged either — it barely moves the chances (this is why the winning-chances 
 than raw centipawns). `Mistake` is also used as the **umbrella** for "a flaw worth counting" where a
 coarser notion is needed (e.g. `Danger position`); which severities that umbrella spans is stated
 where it is used.
+The three names are a **scale with two authors**. The bands above define the **measured** value —
+the engine's, computed from the `Evaluation`s. The `Player` may also **declare** one of the same
+three, by hand, in their `Personal analysis` (see `Declared severity`), and the shared vocabulary is
+deliberate: setting the two side by side is only meaningful on identical labels. The bands define
+how the measured value is obtained, never what the word means.
+
 _Avoid_: Error, Bévue (use Blunder), Score (ambiguous with the game's result)
 
 **Win rate**:
@@ -359,3 +365,176 @@ A Review mode governs **display only**. It changes nothing about what was comput
 is not a guarantee about what the Player has already seen — a Player who read the annotations and
 then switched to Unaided has still seen them.
 _Avoid_: Blind mode (describes a restriction this does not enforce), View, Display level, Verbosity
+
+**Personal analysis** (fr. « Analyse personnelle »):
+What the `Player` themself reads in a `Game`, written down — as opposed to what the engine found.
+One `Game` carries **at most one** Personal analysis, **scoped to its `Profile`** (ADR-0014): the
+reading of a friend's Game belongs to that friend's Profile, and readings are never merged across
+Profiles.
+It is deliberately **not** a kind of `Analysis pass`, and the two share nothing but the word: a pass
+is the engine's, is mechanical, is re-runnable, and its output can always be rebuilt by spending
+engine time again. A Personal analysis is the Player's, is written by hand, and has **no upstream at
+all** — nothing can rebuild it (ADR-0015 applies in full).
+Its purpose is to make the Player **work**: the reading is done first and unaided, and only then set
+against the engine's. Which is why it states a reading, never a truth — where it disagrees with the
+engine, what stands is a **divergence**, never a ruling on who is wrong.
+A Personal analysis is **sealed**, by an explicit act of the Player: *this is my reading, now show me
+the engine's*. Sealing does two things and only two — it opens the confrontation, and it **fixes what
+is confronted**. What the Player writes afterwards is kept as a layer **posterior to the reveal**,
+shown as such, and never part of the comparison: seeing the engine and understanding why is the most
+fertile moment of the exercise, so forbidding it would be absurd — and counting it would be
+dishonest.
+Beside the seal, a Personal analysis carries whether the engine's findings **had already been shown
+for that Game** before it was sealed, so a comparison is always labelled — read **unaided**, or read
+**informed**. That is a **provenance, not a lock**: the app cannot make anyone blind (the Player can
+open another tab), and claiming otherwise would sell a guarantee it cannot keep — the very mistake
+`Review mode` refused when it rejected the name *Blind mode*. The consequence is deliberate and worth
+naming: on this one fact, and only this one, what was displayed is **persisted**, where `Review mode`
+itself stays a local display choice the server has no opinion on. A comparison with no provenance is
+not a comparison.
+
+_Avoid_: Analysis (bare — it is the `Analysis pass`'s forbidden shortening), Annotation (the
+engine's per-Move record), Review (that is the `Review mode`'s display level), Study (Lichess's own
+word for a shared, multi-game object)
+
+**Note**:
+Free text the `Player` attaches to a `Move` (or to a Game's starting Position) inside their
+`Personal analysis` — where they say *why*. It is the part of a Personal analysis that is
+**deliberately not comparable** to anything the engine produces, and that is its worth: it is where
+the Player thinks, not where they are scored. Nothing ever grades a Note.
+_Avoid_: Comment (PGN's own word for the container we may store it in), Remark, Annotation (the
+engine's per-Move record)
+
+**Candidate line**:
+A continuation the `Player` proposes from a Position inside their `Personal analysis` — what they
+believe should have been played instead of a Move of theirs, or how they would have met a Move of
+the opponent's. It is the deliberate counterpart of `Best line`: **same shape** (a line from a
+Position), **different author**. That symmetry is the whole point — it makes the confrontation a
+comparison of two lines from the same Position, needing no further apparatus.
+A Candidate line is confronted **by what it costs, never by whether it matches**. Textual
+coincidence with the `Best line` — same first Move? — would be free, and would declare an idea wrong
+for losing 2% of the winning chances while declaring a copied Move right. It would teach imitation.
+So the Position a Candidate line reaches is evaluated and set against the one the Best line reaches,
+on the same winning-chances scale everything else here uses (see `Line check`). A Move that is not
+the best but drops less than 10% is not a fault — the glossary already says so of Moves *played*, and
+an idea merely *proposed* cannot be judged more harshly than one played for real.
+_Avoid_: Variation (PGN's structural word for the same thing — kept for the storage format, not for
+the concept), My line, Alternative
+
+**Key moment**:
+A `Move` the `Player` declares, in their `Personal analysis`, to be **where the Game turned**. Not
+"a good Move" and not "a flawed Move": a pivot. It is attached to a Move rather than floating
+between them, so that two readings of the same Game can be set side by side at all.
+It is the one part of a Personal analysis that confronts the engine on a **place** rather than on a
+judgement: what the engine's figures situate (the cliffs of the `Evaluation curve`, where the
+`Drift` accumulated) can be set against where the Player situates it, and a disagreement is a
+disagreement about **where to look** — which is teachable — rather than a verdict on who is right.
+It collides with nothing already defined: a `Danger position` is a **recurrence** across Games, a
+`Move habit` a **frequency**, a `Counted Move` a **mechanical eligibility**. A Key moment is a
+**claim by the Player about one Game**.
+A Personal analysis may hold **several** Key moments, and they are not ranked: the Player is not
+asked to pick one.
+
+Key moments are confronted against **the Player's own flawed Moves**, ranked by the winning chances
+they lost — never against the Game's biggest swing, which may well be the *opponent*'s blunder and
+would fault the Player for missing a gift. The measure is **what share of the damage they found**:
+the chances lost by the flawed Moves the Key moments point at, over the chances lost by **all** the
+Player's flawed Moves in that Game. One division, in the currency everything else here already uses,
+and no new scale.
+That quotient carries partial credit by construction — pointing at the worst fault scores much, at a
+small one little, at a Move that cost nothing zero — which is why several Key moments need no special
+rule: a Move counts **once**, so adding markers cannot inflate the score beyond what they genuinely
+name.
+Its denominator excludes `Drift`, deliberately: Drift **has no Move to point at**, so counting it
+would put 100% out of reach of a perfect reading. Drift is reported **beside** the score instead,
+which is where it teaches the most — a Game lost by bleeding had no fault to find, and saying so is
+the lesson. Where the Player flagged nothing at all, there is **no score**, not a zero: a zero would
+make a sound reading look like a failed one.
+There is **no tolerance window**. A Key moment one Move away from the loss earns no approximate
+credit; the **distance is shown** instead ("your marker is on 21.Rd1, which cost nothing — the loss is
+on 22.Nxe5, one Move later"). That says more than silent partial credit, and it keeps the score
+additive and free of any magic constant — the clarity of the calculation to the Player being a
+requirement of its own here.
+_Avoid_: Important move, Critical position, Turning point (rejected in grilling), Highlight
+
+**Declared severity**:
+The `Player`'s own verdict on a `Move`, by hand, inside their `Personal analysis` — on the same
+scale as the measured severities plus two values the engine has no band for:
+`Blunder` / `Mistake` / `Inaccuracy` / **`Sound`** ("I looked, and I find nothing to fault") /
+**`Good`** ("better than it looks").
+
+- **`Sound` is what makes the confrontation possible at all.** Without it, "I said nothing here" and
+  "I say this Move is fine" would be the same absence, and a comparison could only ever expose the
+  Player's misses, never their hits. Same discipline as `Counted Move`: not-faulted **with its
+  reason** is a fact; no data is not.
+- **Silence stays silence.** A Move with no Declared severity means *not examined*, and that is
+  itself worth knowing — a Personal analysis may be partial, and how much of a Game it covers is a
+  fact about the reading.
+- **`Good` is kept but never scored**: the engine flags flawed Moves only and has no band for merit,
+  so there is nothing to set it against. It exists because the Player needs it to read their Game.
+- **The Player may declare a severity on an opponent's Move too**, and it is kept and shown like any
+  other. It is **never scored** — not for want of the means (the `Evaluation`s are there) but **by
+  decision**: severities are computed for the Player's own Moves only, because this tool is about the
+  Player's own improvement. Only the Player's own Moves ever meet a measured severity.
+_Avoid_: Player severity (reads as a severity belonging to the Player rather than one they assert),
+Self-assessment, Guess, Rating
+
+**Line check**:
+Running the engine on the Position a `Candidate line` reaches, so the Player's idea can be priced
+rather than matched. **Triggered by the Player, never implicit** — like `Import` and `Analysis pass`
+before it.
+It is emphatically **not an `Analysis pass`**, and the distinction is load-bearing: a pass produces one
+`Evaluation` per Position **of a Game**, and the Position a Candidate line reaches belongs to **no
+Game** — no Game ever reached it. Folding line checks into passes would corrupt what "this Game is
+analyzed" means and what a pass counts its progress in.
+It carries its `Search regime` all the same. Without that, a deep `Best line` would be set against a
+shallow reading of the Player's line and the verdict would be an artefact of depth: the comparison is
+only honest at equal regime.
+_Avoid_: Analysis pass (it is not one), Evaluating (too vague), Verification
+
+**Confrontation**:
+Setting a sealed `Personal analysis` against what the engine found, on the same Game. It reports
+**three readings side by side and never a single score**: the Player's `Declared severity`s against
+the measured ones, their `Key moment`s against the share of the damage they name, their
+`Candidate line`s against what those lines cost (`Line check`). A composite would need weights — how
+much is *judging well* worth against *looking in the right place*? — and any answer is an arbitrary
+constant. Worse, one number can be optimised, and the only way to optimise it is to **imitate the
+engine**, which is the one outcome this whole story exists against. The three are tracked over time as
+three figures.
+The three readings are also not substitutable, and **their disagreement is the diagnosis**: high on
+Key moments and low on Declared severities means the Player sees *where* a Game turns but cannot yet
+name *what* happens there. A single 60% would have erased that — and "my strengths and weaknesses **in
+analysis**" is plural on purpose.
+The Declared-severity reading is taken over the Player's **`Counted Move`s**, which is not a new
+choice but a consequence of an old one: a Counted Move is already "the denominator of everything this
+tool concludes about where the Player goes wrong", and how justly the Player judges is such a
+conclusion. It also settles a case that would otherwise be scored backwards — a **forced** Move that
+is a catastrophic recapture measures as a `Blunder` yet is "nobody's mistake", so a Player calling it
+`Sound` is **right**, and a naive matrix would count them wrong. Moves that are not counted are shown
+all the same, with their reason: recognising that a Position is already decided, or that a Move had no
+alternative, is itself a thing to learn in analysis.
+Two figures, never merged: **coverage** (what share of the Counted Moves the Player examined at all —
+silence is not a verdict) and **accuracy** (over those, how justly). A Player who annotates three
+Moves and judges them perfectly has 100% accuracy and 10% coverage, and both are true.
+Every Confrontation is labelled by the provenance its Personal analysis carries — read **unaided** or
+read **informed**.
+Across Games, Confrontations **fold** (ADR-0017): a Game's Confrontation carries everything the
+aggregate consumes, and the aggregate is a sum — which is what keeps the method auditable one Game at
+a time. Two deliberate restraints there. **No axis**: the three figures are folded whole and cut by
+nothing. A Personal analysis is written by hand, so the sample is tens of Games where the play
+aggregates have thousands, and slicing a handful of readings would say nothing. `Phase` is the axis
+that will earn its place first — "I read middlegames well and endgames badly" is actionable, and Phase
+is already computed — but only once Phase detection is trusted, which it is not yet. `Opening` and
+`Time control category` are not candidates at all: the second confuses playing with analysing, since a
+Game is read cold, long after the clock stopped.
+The one further fact worth folding costs nothing, because the matrix already holds it: **the direction
+of the bias**. The confusion matrix is not symmetric, and its asymmetry reads in a sentence — "what you
+call a Blunder, the engine calls a Mistake, seven times in ten". Over-reading danger and under-reading
+it are opposite faults of analysis, and none of the three figures separates them alone.
+A Confrontation is also, as a **side benefit**, a way to look at *our own* analysis — and the limit of
+that has to be stated rather than discovered later. Using Player/engine agreement to judge the engine
+assumes the Player is right, which is exactly what is not established. So a disagreement is a
+**divergence**: it says *where to look*, never *who is wrong*. It is a signal for us — a Move where a
+careful human reader and our figures part ways is worth opening — and never a validation of anything.
+Any stronger claim would be one this method cannot keep.
+_Avoid_: Comparison (too vague), Correction, Grade, Score (there is no single one)

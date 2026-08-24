@@ -57,50 +57,86 @@
   > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
   > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
 
-- **US-16**: Analyser moi-même une de mes parties — commenter, explorer des variations, désigner les
-  coups qui me semblent importants — puis confronter mon analyse à celle du moteur pour progresser en
-  analyse.
-  > Pas encore grillée. Le but n'est **pas** de mieux montrer l'analyse moteur (c'est US-15a) mais de
-  > faire **travailler le joueur** : d'abord analyser **sans moteur**, pour exercer sa capacité
-  > d'analyse et sa compréhension du jeu ; ensuite seulement, confronter son analyse à celle du moteur
-  > et de notre moteur d'analyse (US-15) pour en évaluer la pertinence, et faire ressortir ses points
-  > forts et faibles **en analyse** (et non plus seulement en jeu).
-  > **Bonus visé par le demandeur** : c'est aussi une manière d'évaluer la pertinence de *notre*
-  > moteur d'analyse.
+- **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
+  désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
+  > **Grillée le 2026-08-24** (avec US-16b et US-16c). Branche `integration/US-16-my-own-analysis`.
+  > `CONTEXT.md` : `Personal analysis`, `Note`, `Candidate line`, `Key moment`, `Declared severity`,
+  > `Line check`, `Confrontation` ; entrée `Inaccuracy`/`Mistake`/`Blunder` **amendée** (échelle à deux
+  > auteurs). **ADR-0019** : stockage relationnel, PGN annoté en export.
   >
-  > État vérifié : **ADR-0004 a déjà payé pour cette US, en US-1.** `cm-chess` a été choisi *contre*
-  > `chess.js`, malgré une communauté bien plus petite, précisément pour son **historique en arbre
-  > (variations)** et ses **annotations PGN natives (NAG, commentaires)** — « branching analysis lines
-  > are of real interest for this project ». Rien n'exploite encore cette capacité : `history.ts`
-  > aplatit le PGN en une liste linéaire de plys.
+  > Périmètre : route dédiée `/analyse/:gameId/lecture`, `Note`s, `Declared severity` sur **tous** les
+  > coups (adverses compris, jamais scorés), `Key moment`s, le **scellement** et sa **provenance**, la
+  > migration due (ADR-0015) et le cloisonnement par `Profile` (ADR-0014). **Aucune dépendance, aucun
+  > temps moteur.**
   >
-  > Points à trancher au grilling :
-  > - **Terminologie** : « commentaire », « variation », « coup important » n'existent pas au
-  >   glossaire, et « important » demande un terme propre qui ne collide ni avec `Danger position`
-  >   (récurrence, agrégat) ni avec `Move habit`. L'analyse du joueur elle-même est un objet à nommer.
-  > - **Le problème de l'aveuglement, structurel.** La page Analyse montre aujourd'hui l'info moteur
-  >   **en permanence** : `WinningChancesBar` et `EvaluationGraph` sont dans `Board.tsx`, et le toggle
-  >   d'annotations est **à `true` par défaut** (`GameViewer.tsx:27`). US-15a en ajoutera encore. Or
-  >   analyser « sans moteur » n'est pas un simple interrupteur : **une fois vu, on ne peut pas ne pas
-  >   avoir vu**. Il faut donc un **ordre** (analyser → révéler), pas seulement un affichage
-  >   conditionnel — et décider ce qui se passe si le joueur révèle puis modifie son analyse.
-  > - **Ce que « pertinent » veut dire**, et c'est le cœur : comparer les coups désignés importants aux
-  >   Moves signalés / `Counted Move` d'US-15a ? Les variations proposées à la `Best line` ? Les
-  >   commentaires à rien du tout (non comparables) ? Chaque réponse est un critère de notation
-  >   différent, et un mauvais critère apprendra au joueur à imiter le moteur plutôt qu'à comprendre.
-  > - **Découpage / dépendance** : la moitié « annoter en aveugle » est constructible **tout de
-  >   suite** ; la moitié « confronter » dépend d'**US-15a** (le relevé par Move). Donc probablement
-  >   deux stories, et c'est ce qui permet de commencer celle-ci avant le reste de l'EPIC.
-  > - **Persistance** : l'analyse du joueur est une donnée **irremplaçable** (elle n'a aucun amont) —
-  >   ADR-0015 s'applique pleinement, migration due, et elle est à **cloisonner par `Profile`**
-  >   (ADR-0014). Stockage sous forme de **PGN annoté** (ce que `cm-chess` sait lire et écrire nativement,
-  >   donc exportable vers d'autres outils) ou en modèle relationnel ? Vrai arbitrage, **ADR probable**.
-  > - **Où ça vit** : dans la page Analyse ou dans un parcours dédié « exercice » (ADR-0006 : une page
-  >   par parcours) ? La page Analyse est déjà la plus dense de l'app.
-  > - **La circularité du bonus, à assumer** : utiliser l'accord joueur/moteur pour juger *notre*
-  >   moteur d'analyse suppose que le joueur a raison. Un désaccord révèle une **divergence**, jamais
-  >   **qui se trompe**. C'est un signal utile (où regarder) et non un oracle de validation — à écrire
-  >   noir sur blanc, sinon la story promet une garantie qu'elle ne peut pas tenir.
+  > Décisions structurantes du grilling :
+  > - **Le scellement, pas le verrou.** L'app ne peut pas rendre aveugle (autre onglet) ; prétendre le
+  >   contraire est la faute que `Review mode` a refusée en écartant le nom *Blind mode*. Donc : un acte
+  >   explicite qui fige ce qui sera confronté, plus un drapeau « le moteur avait-il déjà été montré ».
+  >   Ce qui est écrit **après** la révélation est conservé et hors confrontation.
+  > - **Conséquence assumée** : sur ce seul fait, ce qui a été affiché est **persisté**, alors que
+  >   `Review mode` reste un choix local dont le serveur n'a pas d'opinion. Une confrontation sans
+  >   provenance n'est pas une confrontation. (ADR proposé, **refusé par le demandeur** — la décision
+  >   vit au glossaire.)
+  > - **Route dédiée, et c'est ce qui dissout le problème de l'aveuglement** : dans la page Analyse il
+  >   faudrait écraser le `Review mode` mémorisé du joueur. Une route distincte est aveugle *par nature*.
+  > - **Prémisse du backlog corrigée** : le « toggle d'annotations à `true` par défaut » n'existe plus,
+  >   US-15a a livré `Review mode` avec **Unaided par défaut**.
+
+- **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
+  > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
+  >
+  > **Trois lectures côte à côte, jamais un score composite** — un total exigerait des poids
+  > arbitraires, et un chiffre unique s'optimise en **imitant le moteur**, le seul résultat contre
+  > lequel la story existe. On suit trois valeurs dans le temps.
+  > 1. `Declared severity` vs mesurée : **couverture** (part des coups examinés — le silence n'est pas
+  >    un verdict) et **justesse**, jamais fondues.
+  > 2. `Key moment` : **part des dégâts trouvée** = chances de gain perdues par les coups flagués
+  >    désignés / perdues par **tous** les coups flagués du joueur. Une seule division, dans la monnaie
+  >    déjà utilisée. Crédit partiel par construction, `Key moment`s multiples **additifs et non
+  >    trichables** (un coup compte une fois). Dénominateur **hors `Drift`** (le Drift n'a aucun coup à
+  >    désigner) mais Drift **rapporté à côté** : « tu as cherché une faute, il n'y en avait pas ».
+  >    Dénominateur nul = **pas de score**, pas un zéro. **Aucune fenêtre de tolérance** : l'écart est
+  >    **affiché** au lieu d'être crédité.
+  > 3. Le **sens du biais**, gratuit (l'asymétrie de la matrice) : sur-estimer ou sous-estimer le danger
+  >    sont deux défauts opposés qu'aucun des trois scores ne distingue seul.
+  >
+  > **À vérifier à l'usage** (accepté provisoirement par le demandeur, jugé « un peu compliqué ») : la
+  > matrice se lit sur les **`Counted Move`s** seulement. Le cas qui l'impose : un coup **forcé**
+  > catastrophique mesure une `Blunder` mais n'est « nobody's mistake », donc un joueur qui le déclare
+  > `Sound` **a raison** et une matrice naïve le compterait faux. Si à l'usage la complexité ne paye
+  > pas, c'est ce point-là qu'on rouvre.
+  >
+  > **Agrégat en dernière tranche** (ADR-0017, repliement) + entrée de Nav. **Aucun axe en v1** :
+  > l'échantillon est de quelques dizaines de lectures écrites à la main. L'axe `Phase` est le premier
+  > qui méritera sa place, mais il est **exclu tant que la détection des phases n'est pas fiable**
+  > (terrain d'US-15a-bis) — décision explicite du demandeur. `Opening` (échantillon nul) et
+  > `Time control category` (confond jouer et analyser : une partie est lue à froid) ne sont pas
+  > candidats.
+  >
+  > **La circularité du bonus, assumée** : juger *notre* moteur d'analyse par l'accord joueur/moteur
+  > suppose le joueur juste. Un désaccord est une **divergence** — où regarder, jamais qui se trompe.
+
+- **US-16c**: Explorer mes variantes et savoir ce qu'elles valent.
+  > **Grillée le 2026-08-24.** Sort **en dernier** : c'est la partie la plus chère (éditer un arbre sur
+  > l'échiquier), la seule qui coûte du temps moteur, et la seule abandonnable si l'exercice ne prend
+  > pas. Elle est verticalement complète seule (éditeur + `Line check` + sa lecture dans la
+  > `Confrontation`), donc la différer ne laisse rien d'inachevé.
+  >
+  > - **Une `Candidate line` est jugée par ce qu'elle coûte, jamais par la coïncidence** avec la
+  >   `Best line` : le critère textuel est gratuit mais **apprend l'imitation** — il déclarerait fausse
+  >   une idée qui perd 2 %. On évalue la Position atteinte (`Line check`), **temps moteur assumé**, à
+  >   la demande.
+  > - **`Line check` n'est pas une `Analysis pass`** : la Position atteinte n'appartient à **aucun**
+  >   `Game`. Les confondre corromprait « cette partie est analysée » et les compteurs de progression.
+  >   Le `Search regime` est porté quand même, sinon le verdict est un artefact de profondeur.
+  > - **Ligne plate, pas un arbre** : symétrie avec `Best line` ; une variante dans une variante n'a
+  >   personne en face.
+  > - **C'est ici qu'ADR-0004 est enfin exploité** — `cm-chess` tient l'arbre **en mémoire** pendant
+  >   l'édition et **écrit** le PGN annoté en export ; `history.ts` continue d'aplatir pour le replay.
+  >
+  > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
+  > et c'est voulu.
 
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
