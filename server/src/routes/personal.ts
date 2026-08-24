@@ -56,7 +56,7 @@ export function createPersonalRouter(db: Db): Router {
       return;
     }
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const { declaredSeverity, note } = body;
+    const { declaredSeverity, note, keyMoment } = body;
     // The five values are the vocabulary (CONTEXT.md); anything else is a caller
     // bug, refused rather than stored as a sixth severity nothing can read.
     if (declaredSeverity !== undefined && declaredSeverity !== null && !isDeclaredSeverity(declaredSeverity)) {
@@ -69,12 +69,19 @@ export function createPersonalRouter(db: Db): Router {
       res.status(400).json({ error: "Une note est du texte." });
       return;
     }
+    // A `Key moment` is posed or it is not (CONTEXT.md): there is no third state,
+    // so anything but a boolean is a caller bug rather than a value to coerce.
+    if (keyMoment !== undefined && typeof keyMoment !== "boolean") {
+      res.status(400).json({ error: "Un moment clé est posé ou ne l'est pas." });
+      return;
+    }
     // Only the fields the request actually named are passed on: a field the
     // caller left out must be left as it was, and one it sent as `null` is a
     // deliberate erasure. Collapsing the two would make erasing impossible.
     const patch: MarkPatch = {};
     if ("declaredSeverity" in body) patch.declaredSeverity = declaredSeverity as MarkPatch["declaredSeverity"];
     if ("note" in body) patch.note = note as MarkPatch["note"];
+    if ("keyMoment" in body) patch.keyMoment = keyMoment as boolean;
     res.json(writeMark(db, scoped.gameId, ply, patch));
   });
 

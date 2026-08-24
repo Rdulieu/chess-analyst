@@ -125,4 +125,37 @@ describe("Personal analysis API", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("takes a Key moment, takes it back, and leaves the verdict and Note beside it alone", async () => {
+    const { app, profileId, game } = appWithGame();
+    const mark = (body: Record<string, unknown>) =>
+      request(app).put(`/api/personal/${game.id}/marks/21?profileId=${profileId}`).send(body);
+
+    await mark({ declaredSeverity: "mistake", note: "je perds le fil ici" });
+    const pivot = await mark({ keyMoment: true });
+    expect(pivot.body.marks[0]).toEqual({
+      ply: 21,
+      declaredSeverity: "mistake",
+      note: "je perds le fil ici",
+      keyMoment: true,
+      posterior: false,
+    });
+
+    const removed = await mark({ keyMoment: false });
+    expect(removed.body.marks[0]).toMatchObject({
+      keyMoment: false,
+      declaredSeverity: "mistake",
+      note: "je perds le fil ici",
+    });
+  });
+
+  it("refuses a Key moment that is not a yes or a no", async () => {
+    const { app, profileId, game } = appWithGame();
+
+    const res = await request(app)
+      .put(`/api/personal/${game.id}/marks/21?profileId=${profileId}`)
+      .send({ keyMoment: "oui" });
+
+    expect(res.status).toBe(400);
+  });
 });

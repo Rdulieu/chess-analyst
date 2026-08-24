@@ -4,6 +4,7 @@ import { GameHeader } from "../games/GameHeader";
 import { fetchPersonalAnalysis, savePersonalMark, GameNotThisProfiles } from "../../api";
 import { DeclaredSeverityControl } from "./DeclaredSeverityControl";
 import { NoteEditor } from "./NoteEditor";
+import { KeyMomentControl, KeyMomentCount } from "./KeyMomentControl";
 import { playersOwnPly } from "./plies";
 import type { DeclaredSeverity, Game, PersonalAnalysis, PersonalMark } from "../../types";
 
@@ -127,7 +128,16 @@ export function PersonalReading({
               posed={markAt(reading, ply)?.declaredSeverity ?? null}
               playersOwnMove={playersOwnPly(ply, game.playerColor)}
               onPose={(severity) => void write(ply, { declaredSeverity: severity })}
+              // `null` reaches the server as `null`: an omitted field would leave
+              // the verdict exactly where it was.
+              onWithdraw={() => void write(ply, { declaredSeverity: null })}
             />
+            <KeyMomentControl
+              ply={ply}
+              posed={markAt(reading, ply)?.keyMoment ?? false}
+              onToggle={(posed) => void write(ply, { keyMoment: posed })}
+            />
+            <KeyMomentCount total={reading.marks.filter((m) => m.keyMoment).length} />
             <NoteEditor
               ply={ply}
               note={markAt(reading, ply)?.note ?? null}

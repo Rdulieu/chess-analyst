@@ -315,4 +315,106 @@ describe("the reading route", () => {
     const box = screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement;
     expect(box.value).toBe("première\nseconde");
   });
+
+  it("marks the Move being read as where the Game turned, and says it is not a verdict", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const pivot = screen.getByRole("checkbox", { name: /moment clé/i });
+    expect((pivot as HTMLInputElement).checked).toBe(false);
+    await user.click(pivot);
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await waitFor(() =>
+      expect((screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement).checked).toBe(true),
+    );
+    // A pivot is neither a good Move nor a fault, and the screen must say so —
+    // otherwise the Player reads it as a sixth verdict, sitting right beside the
+    // five real ones.
+    expect(screen.getByText(/ni un bon coup ni une faute|pas un jugement/i)).not.toBeNull();
+  });
+
+  it("counts the Key moments posed, and imposes no ceiling on them", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [4, 9, 21].map((ply) => ({
+        ply,
+        declaredSeverity: null,
+        note: null,
+        keyMoment: true,
+        posterior: false,
+      })),
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // The count beside the marks, the project's constant habit — marking twelve
+    // Moves out of thirty is not forbidden, it is visible.
+    expect(screen.getByText(/3 moments clés/i)).not.toBeNull();
+  });
+
+  it("takes a Key moment back without disturbing the verdict on the same Move", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: true, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(screen.getByRole("checkbox", { name: /moment clé/i }));
+
+    await waitFor(() =>
+      expect((screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement).checked).toBe(false),
+    );
+    const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked);
+    expect((posed[0] as HTMLInputElement).value).toBe("mistake");
+  });
+
+  it("lets the Player take a verdict back, returning the Move to silence", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "good", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Five exclusive radios can change a verdict but never unsay one, so silence
+    // needs its own control — otherwise a misplaced verdict is permanent while a
+    // Note is not.
+    await user.click(screen.getByRole("button", { name: /retirer mon verdict/i }));
+
+    await waitFor(() => {
+      const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+        .getAllByRole("radio")
+        .filter((r) => (r as HTMLInputElement).checked);
+      expect(posed).toEqual([]);
+    });
+  });
+
+  it("does not offer to take back a verdict that was never posed", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(
+      (screen.getByRole("button", { name: /retirer mon verdict/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
 });
