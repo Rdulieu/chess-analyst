@@ -458,6 +458,8 @@
 
 ## In review
 
+## Done
+
 - **US-17**: Importer un historique Lichess sans payer une requête par mois vide.
   > **Grillée** (2026-08-23) — décisions **D1→D8** dans
   > `.scratch/lichess-fetch-window/GRILL-NOTES.md`. Branche
@@ -531,14 +533,34 @@
   >
   > Sortie de l'exploitation de US-12, mergée depuis (PR #52, 2026-08-22).
   >
-  > **Livrée** (2026-08-24) — cinq tranches, **PR #62** vers `develop`, en attente de la revue
-  > humaine. Gain **mesuré** contre l'API réelle : **1 requête d'export au lieu de 71**, **0 pause**
-  > au lieu de 6, **34,4 s au lieu de ~210 s** (−175,6 s, ~6,1×). Suite HP **3/3 vertes** plus le
-  > prérequis, aucun finding bloquant. La suite reste à trois HP : le parcours du Player ne change
-  > pas, c'est son coût qui change — l'assertion revient donc à `path 0`, sans quoi rien ne
-  > distinguerait la story livrée de la story non livrée.
-
-## Done
+  > **Livrée et mergée** (2026-08-24) — cinq tranches, **PR #62** (`9290492`) vers `develop`. Gain
+  > **mesuré** contre l'API réelle : **1 requête d'export au lieu de 71**, **0 pause** au lieu de 6,
+  > **34,4 s au lieu de ~210 s** (−175,6 s, ~6,1×). Suite HP **3/3 vertes** plus le prérequis, aucun
+  > finding bloquant.
+  >
+  > La suite reste à **trois HP** : le parcours du Player ne change pas, c'est son coût qui change —
+  > l'assertion revient donc à `path 0`, sans quoi rien ne distinguerait la story livrée de la story
+  > non livrée. C'est aussi de là que sort le premier chiffre réel attendu par **US-18**, dont
+  > l'entrée disait ses durées *déduites* : il est consigné dans `path-0-bootstrap.md`, pas seulement
+  > dans une PR.
+  >
+  > **Cinq findings sont sortis de la story, tous antérieurs à elle**, rendus visibles parce qu'une
+  > coupure de flux est devenue détectable. Trois corrigés dans la même PR, à la demande du
+  > demandeur : un mois coupé compté dans ce qui a été récupéré ; « aucune partie trouvée » qui ne
+  > s'affirme plus d'une plage jamais lue ; un mois en échec qui dit désormais ce qu'il a ramené.
+  > **Deux décisions produit ont été tranchées en route** — une plage à moitié réussie nomme la
+  > période à relancer (ce qui **renverse** la règle « a partly successful Import is not a failed
+  > one »), et un mois partiellement rempli s'appelle **incomplet**, `échec` restant au mois qui n'a
+  > rien reçu.
+  >
+  > **Restent ouverts, non tranchés**, sous `.scratch/import-summary-unfounded-claims/` : l'en-tête
+  > du résumé encore en anglais au-dessus de lignes françaises (issue 04), et l'accord du pluriel du
+  > tally d'`/openings` (issue 05). Les deux sont les symptômes d'une **règle absente** sur les
+  > textes destinés au Player — langue d'un côté, accord de l'autre — et se corrigent mieux ensemble
+  > qu'un par un.
+  >
+  > La passe HP a par ailleurs fait geler le poste, d'où **US-20** (reprendre la main sur les
+  > processus des tests agentiques) et un plafond de concurrence dans la skill.
 
 - **Liste des parties en tableau** (drive-by, sans numéro de story) : les parties les plus récentes
   en premières, sous forme de tableau.
