@@ -432,9 +432,153 @@
   >
   > **Critère de succès à définir au grill.**
 
+- **US-20**: Reprendre la main sur les processus des tests agentiques — pour qu'un run interrompu ne
+  laisse ni serveur qui sert dans le vide, ni machine à genoux.
+  > **Pas encore grillée.** Demandée le 2026-08-24, après que le poste a gelé pendant la passe HP
+  > d'US-17 et qu'il a fallu l'arrêter au bouton.
+  >
+  > ### Le constat : il n'existe aucun mécanisme, seulement une consigne
+  >
+  > La skill `agentic-tests` dit « teardown by pid, jamais `pkill` par motif », et chaque agent
+  > l'applique lui-même. **Aucun hook n'est configuré**, ni côté projet ni côté utilisateur : rien
+  > n'est automatique. Ça tient tant que l'agent **termine**. Le trou est là — un agent tué en cours
+  > de route laisse tout tourner, et ce n'est pas un cas d'école : c'est arrivé **deux fois le
+  > 2026-08-24**.
+  >
+  > | Incident | Ce qui a survécu | Comment ça s'est réglé |
+  > | --- | --- | --- |
+  > | Sortie de session pendant la FP d'US-17-05 | un **Vite orphelin sur 5271**, servant un backend mort | tué à la main, après identification par `/proc/<pid>/environ` |
+  > | Gel du poste pendant la suite HP | tous les processus des 4 agents | **le reboot** — nettoyage par accident, pas par conception |
+  >
+  > « Libérer la mémoire » n'a pas d'existence séparée : ce sont les processus qui la retiennent, et
+  > les tuer *est* le mécanisme. À côté, sur disque, les scratchpads accumulent des bases `.db` de
+  > run et des `node_modules` posés en `--no-save` — 55 Mo au moment du constat, négligeable en soi
+  > mais sur une partition à **86 %**.
+  >
+  > ### Le piège du grand-enfant, redécouvert à chaque run
+  >
+  > `npx` interpose un wrapper : **le processus qui écoute n'est pas celui qu'on a lancé**. Tuer le
+  > pid retourné laisse le vrai serveur debout. C'est re-confirmé sur **absolument chaque run** —
+  > encore sur le dernier (listener 7965 sous wrapper 7954). Aujourd'hui chaque agent le
+  > redécouvre, le contourne à la main, et le consigne. C'est du travail répété qui devrait être
+  > structurel.
+  >
+  > ### Pistes, par ordre d'efficacité (à trancher au grill)
+  >
+  > 1. **`systemd-run --user --scope --unit=…` autour de chaque processus lancé.** Correction à la
+  >    racine : `systemctl --user stop <unit>` tue **l'arbre entier**, grand-enfants compris. Le
+  >    piège ci-dessus disparaît structurellement. Demande de toucher la recette de lancement de la
+  >    skill.
+  > 2. **Un script de récupération** dans `docs/test-scenarios/tools/`, **`--dry-run` par défaut**,
+  >    identifiant les processus de test par signature (port dans la plage agentique, `cwd` sous
+  >    `.claude/worktrees/`, `DB_FILE` pointant un scratchpad, Chrome en `--user-data-dir` sous
+  >    `/tmp/claude-*`). Filet pour les orphelins, purement additif.
+  >
+  > ### Une piste explicitement déconseillée, et pourquoi
+  >
+  > **Un hook Claude Code qui nettoie automatiquement.** C'est le réflexe tentant et c'est un
+  > piège : un hook `Stop` se déclenche à la fin du tour de l'agent principal, or **les sous-agents
+  > tournent en arrière-plan** — il tuerait l'app d'un agent en pleine FP. Le nettoyage automatique
+  > et les runs en arrière-plan s'opposent, sauf à savoir précisément quels processus appartiennent
+  > à un agent encore vivant, ce qui est le problème même qu'on cherche à résoudre. Préférer un
+  > outil explicite qu'on lance en connaissance de cause.
+  >
+  > ### Tension à arbitrer avec US-18
+  >
+  > Le gel a produit une contre-mesure immédiate : la skill plafonne désormais la concurrence à
+  > `min(3, floor(nproc / 4))`, soit **2** sur ce poste (§5.7). C'est **la direction opposée à
+  > US-18**, qui veut accélérer la suite. Les deux ne s'excluent pas — reprendre la main sur les
+  > processus pourrait permettre de **remonter** le plafond en sécurité — mais l'ordre compte, et
+  > c'est un sujet de grill commun aux deux stories. Les mesures et le diagnostic sont dans la
+  > skill §5.7, avec leurs limites : aucun kill OOM, `systemd-oomd` inactif, rien de thermique,
+  > aucun *GPU hang* — donc **famine CPU** plutôt que mémoire, et **le déclencheur de la sortie de
+  > session n'est pas établi**.
+  >
+  > Le demandeur signale que le gel s'est produit **plusieurs fois en trois jours**, corroboré par
+  > `/var/log/apport.log` (2026-08-23 16:23, 2026-08-24 00:29, 2026-08-24 16:49). L'un d'eux ne
+  > coïncide avec aucun run d'agent : **il pourrait donc exister une cause seconde, indépendante**,
+  > que cette story ne corrigerait pas.
+  >
+  > **Critère de succès à définir au grill.**
+
+- **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
+  ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
+  > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
+  > réel du dépôt. **Relevé complet, avec les commandes de vérification :**
+  > [`docs/factory-coherence-audit-2026-08-24.md`](docs/factory-coherence-audit-2026-08-24.md) —
+  > 11 incohérences, 6 points d'incomplétude, et ce qu'il ne faut pas casser.
+  >
+  > ### Le constat : l'usine a évolué plus vite que sa propre documentation
+  >
+  > Rien de cassé au sens d'une panne. Le problème est plus insidieux : **la méthode décrit un
+  > projet qui n'est plus tout à fait celui-ci**, et un agent obéit à ce qu'il lit. Trois exemples,
+  > du plus grave au plus visible :
+  >
+  > | Constat | Ce que ça coûte |
+  > | --- | --- |
+  > | Le gabarit `CLAUDE.md` de `build-factory` a divergé du vrai (il ignore « Dev phase » et tout l'orchestrateur HP) | rejouer `/build-factory` **régresse** la méthode — c'est la seule incohérence qui détruit du travail |
+  > | `agentic-tests` §4 dit « limite de 20 sous-agents », §5.7 dit `min(3, floor(nproc/4))` = **2** | un agent qui s'arrête à la §4 refige le poste (cf. US-20) |
+  > | 17 PRD livrés lisent encore `ready-for-agent`, et `done` (55 fichiers) n'existe pas dans les cinq rôles canoniques | la file censée piloter l'autonomie est **majoritairement du bruit** |
+  >
+  > Le cas de `done` n'est pas un oubli de mise à jour mais **un manque dans le modèle** : la machine
+  > à états du triage n'a jamais eu d'état terminal, donc la pratique en a inventé un hors
+  > vocabulaire, et la glose de merge s'est logée dans le champ de statut faute d'un endroit pour
+  > elle. Le grill devra trancher : ajouter un sixième rôle, ou séparer l'état du triage de l'état
+  > de livraison.
+  >
+  > ### La lacune la plus coûteuse n'est pas une incohérence
+  >
+  > Quatre recettes **load-bearing** ne vivent que dans la mémoire personnelle de l'agent, pas dans
+  > le dépôt : le worktree obligatoire avant toute modification, les trois symlinks `node_modules`
+  > d'un worktree frais, la recette de migration `NOT NULL` SQLite (`foreign_keys OFF`,
+  > `defer_foreign_keys` inopérant), et le throttle Lichess **par IP**. Un agent frais — ou tout
+  > autre contributeur — **repaie chaque piège**. C'est la seule dette de l'audit que l'usine ne peut
+  > pas découvrir seule.
+  >
+  > ### Pistes, à trancher au grill
+  >
+  > 1. **Faire de l'hygiène ce qu'on peut mécaniser.** Les `_Avoid_` de `CONTEXT.md` sont une liste
+  >    explicite : un grep sur le code, les issues et les scénarios en ferait un test. Même logique
+  >    pour la colonne `Covers` du README HP, qui se régénère depuis les frontmatters `covers:` ou
+  >    disparaît — aujourd'hui elle est **conservée avec un avertissement disant qu'elle est fausse**.
+  > 2. **Séparer les règles des preuves dans `agentic-tests`** (550 lignes, dont cinq paragraphes
+  >    datés qui disent la même chose). Les règles impératives dans la skill, le journal daté à côté.
+  >    **Attention** : le mécanisme d'auto-audit de la §5.6 est la meilleure invention de l'usine —
+  >    ses défauts sont d'**application**, pas de conception. L'alléger sans le casser.
+  > 3. **Rapatrier les quatre recettes** dans le dépôt, à l'endroit où un agent les lit sans les
+  >    chercher.
+  > 4. **Supprimer l'outillage mort** : tout le triage vise GitHub (`gh issue list --label`, « posté
+  >    sur une issue GitHub », le disclaimer IA sur chaque commentaire) alors que le tracker est
+  >    markdown local et que `gh issue list` renvoie zéro. Ces instructions occupent du contexte à
+  >    chaque session et désignent le mauvais endroit.
+  >
+  > ### Deux tensions à nommer plutôt qu'à trancher ici
+  >
+  > - **`/tdd` exige « get user approval on the plan »** alors que `ready-for-agent` signifie « an
+  >   agent can pick this up with no human context ». Les deux ne tiennent pas ensemble ; en pratique
+  >   c'est le TDD qui plie, mais rien ne l'écrit, donc chaque agent tranche seul et différemment.
+  >   C'est une **décision de méthode**, pas un nettoyage.
+  > - **Le plafond de concurrence appartient aussi à US-18 et US-20.** Corriger la contradiction
+  >   documentaire (20 vs 2) est de l'hygiène et revient ici. Décider de la **valeur** du plafond est
+  >   un arbitrage commun aux deux autres stories et **n'appartient pas à celle-ci**.
+  >
+  > ### Réserves consignées
+  >
+  > Que `/build-factory` régresse effectivement le `CLAUDE.md` est un constat de **divergence
+  > textuelle** — ce n'est pas testé, et ça ne devrait l'être que sur une branche jetable. Les HP
+  > (47 Ko) et les 76 issues n'ont pas été relus ligne à ligne : l'audit compte des statuts et des
+  > tailles, il ne juge pas leur contenu. Enfin, une partie du chantier est de la suppression, donc
+  > **le risque est de jeter un garde-fou qu'on croyait mort** : l'audit liste explicitement ce qui
+  > tient bien, à lire avant de couper.
+  >
+  > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
+  > rien d'autre, ne prenne aucune décision que le dépôt contredit.
+
 ## Doing
 
 ## In review
+
+## Done
 
 - **US-17**: Importer un historique Lichess sans payer une requête par mois vide.
   > **Grillée** (2026-08-23) — décisions **D1→D8** dans
@@ -509,14 +653,34 @@
   >
   > Sortie de l'exploitation de US-12, mergée depuis (PR #52, 2026-08-22).
   >
-  > **Livrée** (2026-08-24) — cinq tranches, **PR #62** vers `develop`, en attente de la revue
-  > humaine. Gain **mesuré** contre l'API réelle : **1 requête d'export au lieu de 71**, **0 pause**
-  > au lieu de 6, **34,4 s au lieu de ~210 s** (−175,6 s, ~6,1×). Suite HP **3/3 vertes** plus le
-  > prérequis, aucun finding bloquant. La suite reste à trois HP : le parcours du Player ne change
-  > pas, c'est son coût qui change — l'assertion revient donc à `path 0`, sans quoi rien ne
-  > distinguerait la story livrée de la story non livrée.
-
-## Done
+  > **Livrée et mergée** (2026-08-24) — cinq tranches, **PR #62** (`9290492`) vers `develop`. Gain
+  > **mesuré** contre l'API réelle : **1 requête d'export au lieu de 71**, **0 pause** au lieu de 6,
+  > **34,4 s au lieu de ~210 s** (−175,6 s, ~6,1×). Suite HP **3/3 vertes** plus le prérequis, aucun
+  > finding bloquant.
+  >
+  > La suite reste à **trois HP** : le parcours du Player ne change pas, c'est son coût qui change —
+  > l'assertion revient donc à `path 0`, sans quoi rien ne distinguerait la story livrée de la story
+  > non livrée. C'est aussi de là que sort le premier chiffre réel attendu par **US-18**, dont
+  > l'entrée disait ses durées *déduites* : il est consigné dans `path-0-bootstrap.md`, pas seulement
+  > dans une PR.
+  >
+  > **Cinq findings sont sortis de la story, tous antérieurs à elle**, rendus visibles parce qu'une
+  > coupure de flux est devenue détectable. Trois corrigés dans la même PR, à la demande du
+  > demandeur : un mois coupé compté dans ce qui a été récupéré ; « aucune partie trouvée » qui ne
+  > s'affirme plus d'une plage jamais lue ; un mois en échec qui dit désormais ce qu'il a ramené.
+  > **Deux décisions produit ont été tranchées en route** — une plage à moitié réussie nomme la
+  > période à relancer (ce qui **renverse** la règle « a partly successful Import is not a failed
+  > one »), et un mois partiellement rempli s'appelle **incomplet**, `échec` restant au mois qui n'a
+  > rien reçu.
+  >
+  > **Restent ouverts, non tranchés**, sous `.scratch/import-summary-unfounded-claims/` : l'en-tête
+  > du résumé encore en anglais au-dessus de lignes françaises (issue 04), et l'accord du pluriel du
+  > tally d'`/openings` (issue 05). Les deux sont les symptômes d'une **règle absente** sur les
+  > textes destinés au Player — langue d'un côté, accord de l'autre — et se corrigent mieux ensemble
+  > qu'un par un.
+  >
+  > La passe HP a par ailleurs fait geler le poste, d'où **US-20** (reprendre la main sur les
+  > processus des tests agentiques) et un plafond de concurrence dans la skill.
 
 - **Liste des parties en tableau** (drive-by, sans numéro de story) : les parties les plus récentes
   en premières, sous forme de tableau.
@@ -619,6 +783,24 @@
   >
   > Jugement du demandeur : « **pas mal pour un premier jet** » — d'où **US-15a-bis**, qui doit
   > passer **avant** l'agrégat de 15c.
+  >
+  > **Trois arbitrages de la tranche 01 sont restés ouverts**, et ne figuraient jusqu'ici nulle part
+  > dans `develop` : ils avaient été consignés le 2026-08-22 dans un commit posé sur
+  > `feature/US-15a-01-best-line` **après** que cette branche avait déjà été fusionnée dans
+  > l'intégration (`84ed264`), donc sur un chemin qui ne menait plus à `develop`. Rapatriés ici parce
+  > qu'un point produit ouvert qu'on ne voit nulle part est un point qu'on redécouvre :
+  >
+  > 1. **Le clamp de défilement quand le panneau rétrécit** — comportement à trancher, jamais tranché.
+  > 2. **Le bandeau ne dit pas qu'une passe était une *ré*analyse.** À ne pas confondre avec le bug
+  >    voisin relevé par US-15a-bis (« Analyser cette partie » silencieusement avalé sous une bannière
+  >    non acquittée) : celui-ci porte sur le **libellé** d'une passe qui aboutit, celui-là sur une
+  >    action qui n'aboutit pas.
+  > 3. **L'a11y préexistante de la liste des parties** — antérieure à la story, laissée en l'état.
+  >
+  > Le reste de cette note orpheline était **déjà couvert ailleurs**, vérifié avant de la rapatrier :
+  > la mesure MultiPV vit dans **ADR-0016** avec plus de détail que le backlog n'en portait (`2.11×`
+  > à une ligne d'abord, `2.19×` à deux, les deux runs et le protocole), et le rejet des 1199
+  > `Evaluation`s héritées est déjà dit plus haut. Seuls ces trois arbitrages manquaient.
 
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > **Livrée.** Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière

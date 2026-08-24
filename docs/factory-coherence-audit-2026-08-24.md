@@ -1,0 +1,265 @@
+# Audit de cohérence de l'usine agentique — 2026-08-24
+
+Relevé de l'état de l'**usine logicielle** (les 7 skills de `.claude/skills/`, leurs 15 fichiers de
+référence, les 4 `docs/agents/`, l'inventaire HP de `docs/test-scenarios/`) confronté à **l'état
+réel du dépôt** plutôt qu'à ce que la documentation affirme.
+
+Ce document est une **source**, pas une décision : il alimente **US-21**. Chaque constat porte sa
+vérification, pour qu'un lecteur ultérieur puisse la refaire plutôt que de me croire. Les chiffres
+sont ceux du 2026-08-24 et **vieilliront** — les commandes sont données pour cela.
+
+> **Périmètre.** Cet audit porte sur la **cohérence des documents et du tracker**, pas sur le cycle
+> de vie des processus (c'est **US-20**) ni sur le coût de la suite HP (c'est **US-18**). Les trois
+> se recoupent en un point, nommé au §3.
+
+## 1. Incohérences constatées
+
+Une incohérence = deux affirmations de l'usine qui ne peuvent pas être vraies ensemble, ou une
+affirmation que le dépôt contredit.
+
+### 1.1 `done` n'existe pas dans la machine à états — et c'est le statut majoritaire
+
+`docs/agents/triage-labels.md` définit **cinq** rôles canoniques ; `triage/SKILL.md` exige
+« exactement un rôle de catégorie et un rôle d'état ». **Aucun des cinq n'est un état terminal.**
+
+```bash
+grep -rh '^Status:' .scratch --include=*.md | sed 's/`//g;s/Status: *//' | sort | uniq -c | sort -rn
+```
+
+Au moment de l'audit : **55 fichiers** portent `done` (20 nus, 35 suivis d'une glose de merge),
+contre 23 `ready-for-agent` et 4 `needs-triage`. La machine à états n'a jamais eu de sortie, donc
+la pratique en a inventé une, **hors vocabulaire**, et la glose de merge s'est logée dans le champ
+de statut faute d'un endroit pour elle.
+
+> C'est l'incohérence la plus profonde de la liste : ce n'est pas un oubli de mise à jour, c'est un
+> **manque dans le modèle**. Le triage sait qualifier du travail à faire, pas du travail fait.
+
+### 1.2 Dix-sept PRD livrés lisent encore `ready-for-agent`
+
+`to-prd/SKILL.md` applique `ready-for-agent` au PRD (« no need for additional triage »).
+`docs/agents/business-backlog.md` pose que **l'agent ne pioche que dans cette file**.
+
+```bash
+grep -rl 'Status: *`\?ready-for-agent' .scratch --include=*.md | cut -d/ -f2 | sort | uniq -c
+```
+
+24 fichiers, répartis sur 17 features — dont les PRD de `app-skeleton`, `nav-skeleton`,
+`weak-openings`, livrés et mergés depuis des semaines. **Aucune étape du pipeline ne referme un
+PRD** : `to-issues` le découpe et ne le touche plus, le merge d'intégration ne le voit pas.
+
+Conséquence directe : la file censée piloter l'autonomie est **majoritairement du bruit**. Un agent
+qui l'interroge honnêtement propose de réimplémenter le squelette de l'application.
+
+### 1.3 `agentic-tests` se contredit sur le parallélisme
+
+| Où | Ce qui est écrit |
+| --- | --- |
+| §4, étape 3 | « le parallélisme tient largement dans la limite de sous-agents concurrents (**20** par défaut) » |
+| §5.7 | `min(3, floor(nproc / 4))`, soit **2** sur ce poste |
+
+La §5.7 a été écrite après les gels des 22–24 août ; la §4 n'a pas suivi. Un agent qui lit la §4 et
+s'arrête là refige le poste.
+
+> C'est exactement l'« avertissement périmé qui est **obéi** » que la §5.6 interdit — la skill se
+> viole elle-même sur sa propre règle d'hygiène.
+
+### 1.4 Le gabarit `CLAUDE.md` de `build-factory` a divergé du `CLAUDE.md` réel
+
+`build-factory/SKILL.md` §3.1(a) porte le bloc de méthode à recopier dans `CLAUDE.md`. Le
+`CLAUDE.md` réel a depuis gagné :
+
+- toute la section **« Dev phase (current) »** (les règles de migration, ADR-0015 : « every schema
+  change owes a migration », le retrait de « wipe and re-import ») ;
+- tout le paragraphe **orchestrateur HP** (le prérequis seul d'abord, un sous-agent par scénario,
+  la collecte des rapports par `SendMessage`).
+
+Le gabarit, lui, en est resté à « *Building richer orchestrations on top (parallel/adversarial
+reviewers…)* ». **Rejouer `/build-factory` réinstallerait une version antérieure de la méthode** —
+et `build-factory` est précisément la skill qu'on relance pour changer de backlog.
+
+C'est la seule incohérence de la liste qui **détruit** du travail au lieu de le gêner.
+
+### 1.5 Deux sources de vérité pour les quatre docs de configuration
+
+`build-factory` écrit `docs/agents/*.md` depuis ses seeds `.claude/skills/build-factory/*.md`. Les
+deux copies coexistent, et **ont déjà divergé** : le seed `domain.md` décrit la variante
+multi-contexte (`CONTEXT-MAP.md`), la copie de `docs/agents/` l'a supprimée au profit du seul cas
+mono-contexte. Rien n'indique laquelle fait foi si l'on édite l'une.
+
+### 1.6 Tout l'outillage de triage vise GitHub, alors que le tracker est local
+
+`docs/agents/issue-tracker.md` déclare le tracker **markdown local sous `.scratch/`**. Mais :
+
+- `triage/AGENT-BRIEF.md` : « un commentaire structuré **posté sur une issue GitHub** » ;
+- `triage/SKILL.md` impose un disclaimer `> *This was generated by AI during triage.*` sur **chaque
+  commentaire** posté, et illustre ses requêtes par `gh issue list --label` ;
+- `gh issue list` renvoie **zéro** issue sur ce dépôt.
+
+Ces instructions sont **mortes** : ni applicables, ni appliquées. Elles occupent de la place dans le
+contexte de chaque session et donnent une fausse indication sur l'endroit où vit le travail.
+
+Noter la nuance : les **PR** sont bien sur GitHub (62 à ce jour) et `git-flow` a raison de parler de
+`gh pr`. C'est le **triage** qui parle d'un support qui n'est pas le nôtre.
+
+### 1.7 `<reviewer to define>` n'a jamais été renseigné
+
+`git-flow/SKILL.md` : « PR vers la branche d'origine, en assignant le **reviewer responsable**
+(`<reviewer to define>`) ». Le placeholder est toujours là après 62 PR. L'étape est donc soit sautée
+en silence, soit improvisée à chaque fois — dans les deux cas, la skill décrit une procédure qui
+n'a jamais eu lieu telle qu'écrite.
+
+### 1.8 `SCENARIO-FORMAT.md` ne décrit plus le contenu de `docs/test-scenarios/`
+
+Le format prescrit un gabarit d'une page, sections courtes, et qualifie l'inventaire de « format
+suggéré ». Le dossier réel :
+
+| Fichier | Taille | Prévu par le format ? |
+| --- | --- | --- |
+| `HP-01-import-and-explore.md` | 24 Ko | oui, mais sans rapport avec le gabarit d'une page |
+| `HP-02-explore-move-habits.md` | 12 Ko | idem |
+| `HP-03-weak-openings.md` | 10 Ko | idem |
+| `path-0-bootstrap.md` | 24 Ko | **non** |
+| `theme-pass.md` | 11 Ko | **non** |
+| `tools/theme-audit.js` | — | **non** |
+| `README.md` | 13 Ko | « format suggéré » d'un tableau à 4 colonnes |
+
+Trois conventions structurantes — le prérequis, l'étape finale partagée, le dossier d'outils — ont
+été inventées à l'usage et **ne sont écrites nulle part** dans le format qui prétend les régir.
+
+### 1.9 Le plafond de 3 HP est contourné par construction
+
+« **Au plus 3 HP** » est défendu activement (fusionner deux parcours, en supprimer un, greffer en
+drive-by). Mais la suite est de fait **cinq documents** : 3 HP + un prérequis de 24 Ko + une étape
+finale partagée, les deux derniers déclarés « hors plafond » au motif qu'ils ne sont pas des
+parcours de valeur.
+
+Le raisonnement est défendable. Ce qui l'est moins : **le plafond protège le compte, pas le coût** —
+et c'est le coût qui a figé le poste (cf. US-18 et US-20). Un plafond qui n'atteint pas la variable
+qui fait mal mérite d'être requalifié.
+
+### 1.10 Le README HP documente sa propre péremption
+
+> « La colonne `Covers` est un résumé ; chaque scénario porte son propre `covers:` en frontmatter,
+> qui a déjà dérivé devant elle. Regardez les fichiers, pas ce tableau. »
+
+Un tableau **su faux** est laissé en place avec un avertissement — là où la §5.6 de la même skill
+exige de « supprimer ce qui a cessé d'être vrai ». Soit le tableau est la vérité et il se
+régénère, soit il ne l'est pas et il disparaît.
+
+### 1.11 `/tdd` exige l'accord humain sur un flux déclaré AFK
+
+`tdd/SKILL.md`, phase Planning : « **Get user approval on the plan** », « Confirm with user which
+behaviors to test », « Confirm with user what interface changes are needed ».
+
+Or `ready-for-agent` signifie, mot pour mot dans `build-factory`, « **an agent can pick this up with
+no human context** ». Les deux ne peuvent pas tenir ensemble. En pratique c'est le TDD qui plie —
+mais **rien ne l'écrit**, donc chaque agent tranche seul, et le fait différemment.
+
+## 2. Points à améliorer
+
+Ce ne sont pas des contradictions : l'usine est cohérente sur ces points, elle est incomplète.
+
+### 2.1 Le savoir opérationnel critique ne vit pas dans le dépôt
+
+C'est **la lacune la plus coûteuse de tout l'audit**. Quatre recettes load-bearing vivent
+uniquement dans la mémoire personnelle de l'agent :
+
+| Savoir | Ce que coûte de le redécouvrir |
+| --- | --- |
+| Worktree obligatoire avant toute modification de fichier (agents concurrents) | édition dans le checkout principal, travail d'autrui écrasé |
+| Les `node_modules` d'un worktree frais : trois symlinks, `npm install` bloqué, jamais `git add -A` | un `npm install` de plusieurs minutes, ou des `node_modules` commités |
+| Migration `NOT NULL` SQLite : drizzle à la main, `foreign_keys OFF`, `defer_foreign_keys` **inopérant** | une migration qui échoue à moitié sur des données non reconstructibles |
+| L'export Lichess est throttlé **par IP**, pas par compte | un blocage lu comme une panne, une FP déclarée rouge à tort |
+
+Un agent frais sur ce poste — ou n'importe quel autre contributeur — **repaie chacun de ces
+pièges**. L'usine ne peut pas les découvrir seule : ils sont dans la tête d'un agent, pas dans le
+code.
+
+### 2.2 `agentic-tests/SKILL.md` devient un journal (550 lignes)
+
+La §5.1 empile **cinq** paragraphes datés dont trois disent la même chose (« la livraison des
+rapports fonctionne »). L'incident du 2026-08-21, **jamais reproduit sur trois suites
+ultérieures**, occupe encore plus de place que la règle qui en découle.
+
+La §5.6 impose de supprimer le périmé et de dater ce qu'on garde. Elle ne s'applique pas à
+elle-même. La séparation naturelle : les **règles** (courtes, impératives) dans la skill, les
+**preuves** (datées, cumulatives) dans un fichier adjacent.
+
+> À nuancer : ce mécanisme d'auto-audit est **la meilleure invention de l'usine** (cf. §4). Le
+> problème est sa mise en œuvre, pas son principe — il ne faut pas le casser en l'allégeant.
+
+### 2.3 Le portail d'auto-merge n'est pas auditable après coup
+
+Pas de CI, par décision assumée : « build + tests + FP verts » est une **affirmation de l'agent**
+consignée dans un `Status:`. Personne ne peut la rejouer, ni distinguer un run réellement vert d'un
+run abrégé. `git-flow` le nomme d'ailleurs comme un choix — reste que la porte la plus automatique
+de l'usine est la moins vérifiable.
+
+Un artefact minimal (sortie de test horodatée à côté de l'issue) rendrait la porte vérifiable
+**sans introduire de CI**.
+
+### 2.4 Le glossaire n'a aucun garde-fou automatique
+
+`docs/agents/domain.md` demande d'employer les termes de `CONTEXT.md` et de ne pas dériver vers les
+`_Avoid_`. Rien ne le vérifie — alors que c'est la règle la plus mécanisable de l'usine : les
+`_Avoid_` sont une liste explicite, un grep sur le code, les issues et les scénarios en ferait un
+test.
+
+### 2.5 `ready-for-agent` mélange AFK et HITL
+
+`to-issues` distingue les tranches **HITL** et **AFK** à la conception, et c'est une distinction
+qui décide de l'auto-merge. Mais le tracker n'a pas de champ pour elle : l'information se réfugie
+dans la glose du statut — on lit `Status: ready-for-agent — **HITL**: touche la vraie API
+Lichess`. Une décision structurante logée dans du texte libre.
+
+### 2.6 Rien ne clôt une feature dans `.scratch/`
+
+24 répertoires, 76 issues, aucun archivage. Le tracker ne distingue le travail en vol du travail
+historique qu'en lisant les statuts un par un — ce qui est précisément ce que §1.1 et §1.2 rendent
+peu fiable.
+
+## 3. Le point de recoupement avec US-18 et US-20
+
+Un seul constat appartient aux trois stories : **le plafond de concurrence** (§1.3 / §1.9).
+
+- **US-20** l'a posé comme contre-mesure aux gels ;
+- **US-18** veut accélérer la suite, donc le remonter ;
+- le présent audit constate qu'il **coexiste avec la limite de 20** dans le même fichier.
+
+L'ordre importe : corriger la contradiction documentaire (§1.3) est immédiat et sans arbitrage —
+c'est de l'hygiène. Décider de la **valeur** du plafond est un sujet de grill commun à US-18 et
+US-20, et n'appartient pas à US-21.
+
+## 4. Ce qui tient remarquablement bien
+
+À ne pas casser en corrigeant le reste. Trois choses, rares :
+
+1. **La §5.6 de `agentic-tests`** — une skill qui se déclare *knowingly written ahead of its
+   evidence* et fait de son propre audit une étape de chaque exécution, avec trois règles pour
+   l'édition (dater, supprimer le périmé, ne jamais énoncer un mécanisme non établi). Les défauts
+   relevés en §1.3 et §2.2 sont des défauts d'**application**, pas de conception.
+2. **`tools/theme-audit.js`** — défend son agnosticisme dans son propre en-tête : « émuler
+   `prefers-color-scheme` est le travail du driver ; le faire depuis la page testerait un autre
+   mécanisme que celui qui part en production ». Plus rigoureux que la skill qui l'encadre.
+3. **« Payer en sérialisation, pas en isolation »** (§5.7) — un arbitrage coûteux, assumé, et
+   argumenté par la mesure plutôt que par le confort. Et la règle de résolution de conflit de
+   `git-flow` : « la ligne de partage n'est ni le fichier ni la taille du diff — c'est de savoir si
+   résoudre exige une **décision** ».
+
+## 5. Méthode et limites de cet audit
+
+**Ce qui a été fait.** Lecture intégrale des 7 skills et de leurs fichiers de référence, des 4
+`docs/agents/`, de l'inventaire HP. Chaque affirmation de la documentation confrontée au dépôt par
+commande (`grep` sur les statuts, `gh issue list`, `git worktree list`, inspection de
+`.scratch/`). Les constats non vérifiables ont été écartés plutôt que supposés.
+
+**Ce qui n'a pas été fait, et qui pourrait changer les conclusions.**
+
+- Les **HP eux-mêmes** n'ont pas été relus ligne à ligne (47 Ko) : §1.8 juge leur taille et leur
+  écart au format, pas leur qualité.
+- Les **76 issues** n'ont pas été lues : §1.1 et §1.2 comptent des statuts, ils ne jugent pas si le
+  contenu est bon.
+- Aucune skill n'a été **exécutée** pour vérifier son comportement réel. §1.4 en particulier est un
+  constat de divergence textuelle : que `/build-factory` régresse effectivement le `CLAUDE.md`
+  n'a pas été **testé** — et ne devrait l'être que sur une branche jetable.
+- Les chiffres sont datés du **2026-08-24** et bougeront à chaque merge.
