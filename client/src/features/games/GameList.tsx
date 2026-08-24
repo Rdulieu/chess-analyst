@@ -1,4 +1,4 @@
-import { CADENCE_LABEL, RESULT_LABEL } from "../../types";
+import { CADENCE_LABEL, READING_STATE_LABEL, RESULT_LABEL } from "../../types";
 import type { Game } from "../../types";
 
 /**
@@ -44,6 +44,11 @@ export function GameList({
             <th scope="col">Résultat</th>
             <th scope="col">Cadence</th>
             <th scope="col">État</th>
+            {/* The Player's own reading, in its own column — the state the Player
+                sweeps to choose the next Game to work on (US-16a). Beside the
+                engine's `analysée`, never merged into it: one is the machine's
+                work, the other is theirs. */}
+            <th scope="col">Lecture</th>
           </tr>
         </thead>
         <tbody>
@@ -73,6 +78,17 @@ export function GameList({
                   // meaning, so the tint is never the only cue.
                   <span aria-label="analysée">✓ analysée</span>
                 )}
+              </td>
+              <td>
+                {/* In WORDS. A tint alone could only ever mean "something", never
+                    "started" as against "sealed" (ADR-0013) — and those two are
+                    exactly what the Player needs told apart: one is where they
+                    resume, the other where they are done. A Game with no reading
+                    says so plainly rather than leaving an empty cell to be read
+                    as a rendering fault. */}
+                <span data-reading={g.reading ?? "none"}>
+                  {READING_STATE_LABEL[g.reading ?? "none"]}
+                </span>
               </td>
             </tr>
           ))}

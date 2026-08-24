@@ -52,12 +52,23 @@ export function SealedReadout({
  * Read-only by construction: there is no control here, because the sealed layer
  * takes no more writing.
  */
-export function SealedMarkReadout({ mark }: { mark: PersonalMark | undefined }) {
+export function SealedMarkReadout({
+  mark,
+  ply,
+}: {
+  mark: PersonalMark | undefined;
+  /** The ply being read — 0 is the starting Position, which is no Move at all. */
+  ply: number;
+}) {
   if (!mark) return null;
 
+  // At the starting Position there is no Move to have read: what was sealed there
+  // is what the Player had written about the **Game**.
+  const name = ply === 0 ? "Ma lecture scellée de la partie" : "Ma lecture scellée de ce coup";
+
   return (
-    <fieldset data-part="sealed-mark" aria-label="Ma lecture scellée de ce coup">
-      <legend>Ma lecture scellée de ce coup</legend>
+    <fieldset data-part="sealed-mark" aria-label={name}>
+      <legend>{name}</legend>
       {mark.declaredSeverity && (
         <p>
           Verdict : <strong>{DECLARED_SEVERITY_LABEL[mark.declaredSeverity]}</strong>
@@ -68,7 +79,9 @@ export function SealedMarkReadout({ mark }: { mark: PersonalMark | undefined }) 
           what they wrote, and this is the layer that must read as it was. */}
       {mark.note && <p data-part="sealed-note">{mark.note}</p>}
       {!mark.declaredSeverity && !mark.keyMoment && !mark.note && (
-        <p>Rien n'avait été écrit sur ce coup avant le scellement.</p>
+        <p>
+          Rien n'avait été écrit {ply === 0 ? "sur la partie" : "sur ce coup"} avant le scellement.
+        </p>
       )}
     </fieldset>
   );

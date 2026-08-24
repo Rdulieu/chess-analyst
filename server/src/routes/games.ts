@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Db } from "../db";
 import { listGames, getGame } from "../repository";
 import { getGameAnnotations } from "../annotations/repository";
+import { readingState, readingStates } from "../personal/repository";
 import { scopedProfile } from "./scope";
 
 /**
@@ -15,7 +16,16 @@ export function createGamesRouter(db: Db): Router {
   router.get("/", (req, res) => {
     const profile = scopedProfile(db, req, res);
     if (!profile) return;
-    res.json(listGames(db, profile.id));
+    // The reading state travels **with** the Game, like `analyzed` does: showing
+    // it on eighty rows must not cost eighty requests, and the list is already
+    // the place this app hands over a Game's full detail.
+    const states = readingStates(db, profile.id);
+    res.json(
+      listGames(db, profile.id).map((game) => ({
+        ...game,
+        reading: states.get(game.id) ?? "none",
+      })),
+    );
   });
 
   router.get("/:id", (req, res) => {
@@ -25,7 +35,7 @@ export function createGamesRouter(db: Db): Router {
       res.status(404).json({ error: "Game not found" });
       return;
     }
-    res.json(game);
+    res.json({ ...game, reading: readingState(db, game.id) });
   });
 
   router.get("/:id/annotations", (req, res) => {

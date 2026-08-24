@@ -396,6 +396,37 @@ section[aria-label="partie"] {
   overflow-wrap: break-word;
 }
 
+// The Player's own marks IN the move list (US-16a) — a reading has to be
+// locatable without stepping through every Move. Glyphs, each with its own
+// accessible name; the tint is never the cue, so none is set here.
+[data-part="move-marks"] {
+  display: inline-flex;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+}
+
+// Where the reading stands — its own figures, grouped. Set apart from the
+// notices above by a legend and a rule rather than by a tint, so the numbers read
+// as numbers and not as a third line of an explanation.
+[data-part="tally"],
+[data-part="whole-game-note"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+
+  p {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+}
+
+// The coverage line: the count beside the share, plain body ink — it is a figure
+// the Player acts on, not a caveat.
+[data-part="coverage"] {
+  margin-block: 0;
+}
+
 // The step controls, on one line at the top of the pane beside the board.
 [data-part="stepper"] {
   display: flex;
