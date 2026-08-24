@@ -1,7 +1,16 @@
 import type { Db } from "../src/db";
 import type { NewGame, UnownedGame } from "../src/db/schema";
 import { resolveProfile } from "../src/profiles/repository";
-import type { ImportedGame, Platform, PlatformClient, PlatformRegistry } from "../src/platform";
+import { monthsInRange } from "../src/platform";
+import type {
+  FetchHooks,
+  ImportedGame,
+  MonthRef,
+  RangeEvent,
+  Platform,
+  PlatformClient,
+  PlatformRegistry,
+} from "../src/platform";
 import type { ChessComGame } from "../src/platform/chesscom/payload";
 
 let urlSeq = 0;
@@ -54,19 +63,46 @@ export function importedGame(over: Partial<ImportedGame> = {}): ImportedGame {
 /**
  * What a fake month may answer: the games as such, a `MonthFetch` when a test
  * needs `totalFetched` to differ from them, a **function of the username** when
- * the answer is Player-relative (the adapter's job in real life), or an Error.
+ * the answer is Player-relative (the adapter's job in real life), an Error for a
+ * month the Platform could not answer for, or — for a stream that dies in flight
+ * — some games **followed by** a failure.
  */
 export type FakeMonth =
   | ImportedGame[]
   | { totalFetched: number; games: ImportedGame[] }
   | ((username: string) => ImportedGame[])
-  | Error;
+  | Error
+  | { games: ImportedGame[]; cutShortWith: Error };
+
+/** The games a fake month hands over, and what the Platform HAD that month. */
+function resolveMonth(
+  entry: FakeMonth | undefined,
+  username: string,
+): { games: ImportedGame[]; totalFetched: number; failure?: Error } {
+  if (entry === undefined) return { games: [], totalFetched: 0 };
+  if (entry instanceof Error) return { games: [], totalFetched: 0, failure: entry };
+  if (typeof entry === "function") {
+    const games = entry(username);
+    return { games, totalFetched: games.length };
+  }
+  if (Array.isArray(entry)) return { games: entry, totalFetched: entry.length };
+  if ("cutShortWith" in entry) {
+    // A stream cut mid-month: what arrived comes through, THEN the failure — the
+    // ordering slices 03 and 04 turn on.
+    return { games: entry.games, totalFetched: entry.games.length, failure: entry.cutShortWith };
+  }
+  return { games: entry.games, totalFetched: entry.totalFetched };
+}
 
 /**
  * A `PlatformClient` stubbed with one month per key `YYYY-MM` — an Import spans
  * a range, so a fake that answers the same games whatever the month cannot tell
  * one month's contribution from another's. A month with no entry answers empty,
  * like a Platform with no archive that month.
+ *
+ * It **yields**, like the real port: games as they arrive, then the month's
+ * `month-done` — or `month-failed`, which does not end the range, exactly as a
+ * real adapter's own month loop behaves.
  *
  * `totalFetched` mirrors the games given, which is the nominal case; a test
  * about "the Platform returned more than we kept" states it explicitly by
@@ -86,15 +122,14 @@ export function fakeClient(
       // was asked for; `true` means "known, spelled as typed".
       return { username: typeof player === "string" ? player : username };
     },
-    fetchMonth: async (username, year, month) => {
-      const raw = months[`${year}-${String(month).padStart(2, "0")}`];
-      const entry = typeof raw === "function" ? raw(username) : raw;
-      // An Error entry stands for a month the Platform could not answer for
-      // (unreachable, 5xx, rate-limited) — the failure an Import must survive.
-      if (entry instanceof Error) throw entry;
-      if (entry === undefined) return { totalFetched: 0, games: [] };
-      if (Array.isArray(entry)) return { totalFetched: entry.length, games: entry };
-      return entry;
+    async *fetchRange(username, from, to): AsyncGenerator<RangeEvent, void> {
+      for (const month of monthsInRange(from, to)) {
+        const key = `${month.year}-${String(month.month).padStart(2, "0")}`;
+        const { games, totalFetched, failure } = resolveMonth(months[key], username);
+        for (const game of games) yield { kind: "game", month, game };
+        if (failure) yield { kind: "month-failed", month, reason: failure.message };
+        else yield { kind: "month-done", month, totalFetched };
+      }
     },
   };
 }
@@ -158,4 +193,64 @@ export function seedProfile(
 /** The Opera Game, filed under a Profile. */
 export function morphyGame(profileId: number): NewGame {
   return { ...MORPHY_GAME, profileId };
+}
+
+/**
+ * Folds a **one-month** range fetch back into the `{ totalFetched, games }` shape
+ * the port used to answer directly. It exists so the adapters' behaviour tests
+ * keep asserting exactly what they asserted before the port became range-shaped:
+ * the call site had to change (the port no longer has a per-month method), the
+ * expectations did not. A `month-failed` is re-raised, because that is what the
+ * old per-month method did.
+ */
+export async function collectMonth(
+  client: PlatformClient,
+  username: string,
+  year: number,
+  month: number,
+  hooks?: FetchHooks,
+): Promise<{ totalFetched: number; games: ImportedGame[] }> {
+  const games: ImportedGame[] = [];
+  let totalFetched = 0;
+  for await (const event of client.fetchRange(
+    username,
+    { year, month },
+    { year, month },
+    hooks,
+  )) {
+    if (event.kind === "game") games.push(event.game);
+    else if (event.kind === "month-done") totalFetched = event.totalFetched;
+    else throw new Error(event.reason);
+  }
+  return { totalFetched, games };
+}
+
+/**
+ * Wraps a client so `at` runs **when each month's first event is about to be
+ * relayed** — the range-shaped replacement for overriding a per-month method.
+ * Tests use it to hold a month back (checking the summary fills in as it goes)
+ * or to record which months were asked for.
+ *
+ * The inner generator is lazy, so nothing runs ahead of the interception: the
+ * months before the held one have already been fully relayed, and the ones after
+ * it have not started.
+ */
+export function interceptMonths(
+  client: PlatformClient,
+  at: (month: MonthRef, hooks?: FetchHooks) => Promise<void> | void,
+): PlatformClient {
+  return {
+    ...client,
+    async *fetchRange(username, from, to, hooks): AsyncGenerator<RangeEvent, void> {
+      let seen: string | null = null;
+      for await (const event of client.fetchRange(username, from, to, hooks)) {
+        const key = `${event.month.year}-${event.month.month}`;
+        if (key !== seen) {
+          seen = key;
+          await at(event.month, hooks);
+        }
+        yield event;
+      }
+    },
+  };
 }

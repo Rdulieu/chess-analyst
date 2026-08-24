@@ -2,10 +2,13 @@ import {
   platformLabel,
   TruncatedStreamError,
   type FetchHooks,
-  type MonthFetch,
+  type ImportedGame,
+  type MonthRef,
   type PlatformAccount,
   type PlatformClient,
+  type RangeEvent,
 } from "../types";
+import { monthsInRange } from "../months";
 import { discard, lichessGet, readNdjson, readText } from "./request";
 import { isInScope, monthWindow, toImportedGame } from "./mapping";
 import type { LichessGame } from "./payload";
@@ -78,55 +81,90 @@ export function createHttpLichessClient(
       return { username: user.username ?? username };
     },
 
-    async fetchMonth(username, year, month, hooks): Promise<MonthFetch> {
-      // The month is OUR unit (ADR-0018). Lichess could stream a whole range in
-      // one request; we deliberately ask month by month, because the month is
-      // what makes progress countable and a failure local. Months are never
-      // fetched in parallel either — already true for memory (ADR-0010), and now
-      // also what keeps us inside Lichess's "one request at a time" rule.
-      const { since, until } = monthWindow(year, month);
-      const query = new URLSearchParams({
-        since: String(since),
-        until: String(until),
-        // Both are what spare us a second request and a classification of our
-        // own (ADR-0007's amendment).
-        pgnInJson: "true",
-        opening: "true",
-        sort: "dateAsc",
-      });
-      const { status, body } = await exportMonth(
-        `${root}/api/games/user/${encodeURIComponent(username)}?${query}`,
-        retryAfterMs,
-        hooks,
-      );
-      if (status < 200 || status >= 300) {
-        discard(body);
-        throw new Error(`Lichess request failed (${status})`);
-      }
-
-      let totalFetched = 0;
-      const games = [];
-      try {
-        for await (const line of readNdjson(body)) {
-          const game = line as LichessGame;
-          // `totalFetched` says what Lichess HAD, out-of-scope games included, so
-          // a month mostly out of scope never reads as an empty one.
-          totalFetched++;
-          if (isInScope(game)) games.push(toImportedGame(game, username));
+    /**
+     * **Still one request per month** — collapsing the range into a single
+     * export is the next slice's whole point, and this one must not change any
+     * request count. What changes here is that the Games are *yielded* as the
+     * ndjson arrives instead of being piled into an array first: `readNdjson`
+     * was already an `AsyncGenerator`, and `fetchMonth` was the thing breaking
+     * the flow.
+     *
+     * A month whose stream is cut short is reported as a **failed month** and the
+     * loop carries on. The Games that arrived have already been yielded — so they
+     * are already kept, without anything having to carry them (slice 01 had to,
+     * because the port materialised the month; it no longer does).
+     */
+    async *fetchRange(username, from, to, hooks): AsyncGenerator<RangeEvent, void> {
+      for (const month of monthsInRange(from, to)) {
+        let totalFetched = 0;
+        try {
+          for await (const fetched of exportOneMonth(root, username, month, retryAfterMs, hooks)) {
+            // `totalFetched` says what Lichess HAD, out-of-scope games included,
+            // so a month mostly out of scope never reads as an empty one.
+            totalFetched++;
+            if (fetched !== null) yield { kind: "game", month, game: fetched };
+          }
+        } catch (err) {
+          yield {
+            kind: "month-failed",
+            month,
+            reason: err instanceof Error ? err.message : String(err),
+          };
+          continue;
         }
-      } catch (err) {
-        // The stream died mid-body. Node raises here (`aborted`, ECONNRESET) —
-        // measured, not assumed — but its word names a socket, not something the
-        // Player can act on, so it is restated. What arrived rides along.
-        if (isPrematureEnd(body, err)) throw new TruncatedStreamError("lichess", { totalFetched, games });
-        throw err;
+        yield { kind: "month-done", month, totalFetched };
       }
-      // The iteration can also end cleanly on a boundary while the message was
-      // never completed; `complete` is Node's own account of that.
-      if (!body.complete) throw new TruncatedStreamError("lichess", { totalFetched, games });
-      return { totalFetched, games };
     },
   };
+}
+
+/**
+ * One month's export, **streamed**: yields the in-scope Game for each line, or
+ * `null` for a line that counts as fetched but is not ours to study. Raises
+ * `TruncatedStreamError` when the body ends before the Platform finished.
+ */
+async function* exportOneMonth(
+  root: string,
+  username: string,
+  { year, month }: MonthRef,
+  retryAfterMs: number,
+  hooks?: FetchHooks,
+): AsyncGenerator<ImportedGame | null, void> {
+  // The month is still what is ASKED for here; that it need not be is slice 03.
+  const { since, until } = monthWindow(year, month);
+  const query = new URLSearchParams({
+    since: String(since),
+    until: String(until),
+    // Both are what spare us a second request and a classification of our own
+    // (ADR-0007's amendment).
+    pgnInJson: "true",
+    opening: "true",
+    sort: "dateAsc",
+  });
+  const { status, body } = await exportMonth(
+    `${root}/api/games/user/${encodeURIComponent(username)}?${query}`,
+    retryAfterMs,
+    hooks,
+  );
+  if (status < 200 || status >= 300) {
+    discard(body);
+    throw new Error(`Lichess request failed (${status})`);
+  }
+  try {
+    for await (const line of readNdjson(body)) {
+      const game = line as LichessGame;
+      yield isInScope(game) ? toImportedGame(game, username) : null;
+    }
+  } catch (err) {
+    // The stream died mid-body. Node raises here (`aborted`, ECONNRESET) —
+    // measured, not assumed — but its word names a socket, not something the
+    // Player can act on, so it is restated.
+    if (isPrematureEnd(body, err)) throw new TruncatedStreamError("lichess");
+    throw err;
+  }
+  // The iteration can also end cleanly on a boundary while the message was never
+  // completed; `complete` is Node's own account of that.
+  if (!body.complete) throw new TruncatedStreamError("lichess");
 }
 
 /**

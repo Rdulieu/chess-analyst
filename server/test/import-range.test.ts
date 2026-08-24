@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
 import { listGames } from "../src/repository";
 import { importRange } from "../src/import";
-import { importedGame, fakeClient, seedProfile } from "./fixtures";
+import { importedGame, fakeClient, interceptMonths, seedProfile } from "./fixtures";
 import type { ImportRangeParams } from "../src/import";
 
 /** A fresh database with the one `Profile` these tests import under. */
@@ -43,13 +43,9 @@ describe("importRange", () => {
         importedGame({ timeControlCategory: "rapid", playerColor: "black", result: "loss" }),
       ],
     });
-    const spying = {
-      ...client,
-      fetchMonth: (username: string, year: number, month: number) => {
-        asked.push(`${year}-${String(month).padStart(2, "0")}`);
-        return client.fetchMonth(username, year, month);
-      },
-    };
+    const spying = interceptMonths(client, ({ year, month }) => {
+      asked.push(`${year}-${String(month).padStart(2, "0")}`);
+    });
 
     const result = await importRange(db, spying, {
       ...params(profileId),

@@ -3,6 +3,7 @@ import express from "express";
 import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
 import { createHttpChessComClient } from "../src/platform/chesscom/client";
+import { collectMonth } from "./fixtures";
 
 /**
  * A tiny stand-in for chess.com's public API, so the real fetch-based client is
@@ -25,6 +26,8 @@ const ARCHIVE = {
 
 let server: Server;
 let baseUrl: string;
+/** Every monthly-archive request the stand-in received, in order. */
+const archiveCalls: string[] = [];
 
 beforeAll(async () => {
   const app = express();
@@ -36,6 +39,7 @@ beforeAll(async () => {
     } else res.status(404).json({ code: 0, message: "not found" });
   });
   app.get("/pub/player/:username/games/:year/:month", (req, res) => {
+    archiveCalls.push(`${req.params.username}/${req.params.year}/${req.params.month}`);
     if (
       req.params.username === "known" &&
       req.params.year === "2024" &&
@@ -62,7 +66,7 @@ describe("the chess.com adapter's HTTP client", () => {
   it("answers a month in OUR vocabulary, not chess.com's payload (ADR-0018)", async () => {
     const client = createHttpChessComClient(baseUrl);
 
-    const month = await client.fetchMonth("known", 2024, 1);
+    const month = await collectMonth(client, "known", 2024, 1);
 
     expect(month.totalFetched).toBe(1);
     expect(month.games).toHaveLength(1);
@@ -79,7 +83,7 @@ describe("the chess.com adapter's HTTP client", () => {
   it("returns an empty month rather than throwing when the archive is absent", async () => {
     const client = createHttpChessComClient(baseUrl);
 
-    await expect(client.fetchMonth("known", 2025, 12)).resolves.toEqual({
+    await expect(collectMonth(client, "known", 2025, 12)).resolves.toEqual({
       totalFetched: 0,
       games: [],
     });
@@ -103,5 +107,35 @@ describe("the chess.com adapter's HTTP client", () => {
 
     const unreachable = createHttpChessComClient("http://127.0.0.1:1/pub-does-not-listen");
     await expect(unreachable.fetchPlayer("known")).rejects.toThrow();
+  });
+});
+
+describe("the chess.com adapter over a range", () => {
+  it("keeps issuing one monthly-archive request per month, in order", async () => {
+    // The month loop MOVED into the adapter; it did not disappear. chess.com has
+    // no range endpoint, so the requests it makes must be exactly what they were
+    // — same URLs, same order, same count (ADR-0018's amendment).
+    archiveCalls.length = 0;
+    const client = createHttpChessComClient(baseUrl);
+
+    const events = [];
+    for await (const event of client.fetchRange("known", { year: 2023, month: 12 }, { year: 2024, month: 2 })) {
+      events.push(event);
+    }
+
+    expect(archiveCalls).toEqual(["known/2023/12", "known/2024/01", "known/2024/02"]);
+    // One month-done per month of the range, in order, empty months included.
+    expect(events.filter((e) => e.kind === "month-done").map((e) => e.month)).toEqual([
+      { year: 2023, month: 12 },
+      { year: 2024, month: 1 },
+      { year: 2024, month: 2 },
+    ]);
+    // The one Game the stand-in has, tagged with the month it counts toward.
+    const games = events.filter((e) => e.kind === "game");
+    expect(games).toHaveLength(1);
+    expect(games[0]).toMatchObject({
+      month: { year: 2024, month: 1 },
+      game: { gameUrl: "https://www.chess.com/game/live/42" },
+    });
   });
 });

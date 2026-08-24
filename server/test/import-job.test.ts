@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { openDb } from "../src/db";
 import { listGames } from "../src/repository";
 import { createImportJob } from "../src/import";
-import { importedGame, fakeClient, seedProfile } from "./fixtures";
+import { importedGame, fakeClient, interceptMonths, seedProfile } from "./fixtures";
 import type { ImportRangeParams } from "../src/import";
 
 /** A fresh database with the one `Profile` these tests import under. */
@@ -28,13 +28,9 @@ describe("createImportJob", () => {
     let release!: () => void;
     const secondMonth = new Promise<void>((r) => (release = r));
     const client = fakeClient({ "2024-01": [importedGame()], "2024-02": [importedGame()] });
-    const slow = {
-      ...client,
-      fetchMonth: async (u: string, y: number, m: number) => {
-        if (m === 2) await secondMonth;
-        return client.fetchMonth(u, y, m);
-      },
-    };
+    const slow = interceptMonths(client, async ({ month }) => {
+      if (month === 2) await secondMonth;
+    });
     const job = createImportJob(db, { chesscom: slow });
 
     job.start({ ...rangeFor(profileId), to: { year: 2024, month: 2 } });
@@ -100,10 +96,11 @@ describe("createImportJob", () => {
   it("ends the pass cleanly when the fetch fails unexpectedly, without taking the relay down", async () => {
     const { db, profileId } = testDb();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const client = fakeClient({});
-    client.fetchMonth = async () => {
+    // The whole fetch blowing up, not one month failing: the range ends there,
+    // and the relay must stay up.
+    const client = interceptMonths(fakeClient({}), () => {
       throw new Error("chess.com unreachable");
-    };
+    });
     const job = createImportJob(db, { chesscom: client });
 
     job.start(rangeFor(profileId));
@@ -122,16 +119,12 @@ describe("an Import waiting on the Platform", () => {
     let release!: () => void;
     const held = new Promise<void>((r) => (release = r));
     const client = fakeClient({ "2024-01": [importedGame()] });
-    const waiting = {
-      ...client,
-      fetchMonth: async (u: string, y: number, m: number, hooks?: { onWaiting?: (s: string) => void }) => {
-        if (m === 1) {
-          hooks?.onWaiting?.("lichess.org demande d'attendre.");
-          await held;
-        }
-        return client.fetchMonth(u, y, m);
-      },
-    };
+    const waiting = interceptMonths(client, async ({ month }, hooks) => {
+      if (month === 1) {
+        hooks?.onWaiting?.("lichess.org demande d'attendre.");
+        await held;
+      }
+    });
     const job = createImportJob(db, { chesscom: waiting });
 
     job.start(rangeFor(profileId));
@@ -163,22 +156,18 @@ describe("an Import waiting on the Platform", () => {
     let holdSecond!: () => void;
     const secondReached = new Promise<void>((r) => (holdSecond = r));
     const client = fakeClient({ "2024-01": [importedGame()], "2024-02": [importedGame()] });
-    const waiting = {
-      ...client,
-      fetchMonth: async (u: string, y: number, m: number, hooks?: { onWaiting?: (s: string) => void }) => {
-        if (m === 1) {
-          hooks?.onWaiting?.("lichess.org demande d'attendre.");
-          await held;
-        } else {
-          // Park inside the second month so the status can be read between the
-          // first month completing and the Import finishing — the window the
-          // previous test never looks at.
-          holdSecond();
-          await new Promise((r) => setTimeout(r, 50));
-        }
-        return client.fetchMonth(u, y, m);
-      },
-    };
+    const waiting = interceptMonths(client, async ({ month }, hooks) => {
+      if (month === 1) {
+        hooks?.onWaiting?.("lichess.org demande d'attendre.");
+        await held;
+      } else {
+        // Park inside the second month so the status can be read between the
+        // first month completing and the Import finishing — the window the
+        // previous test never looks at.
+        holdSecond();
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    });
     const job = createImportJob(db, { chesscom: waiting });
 
     job.start({ ...rangeFor(profileId), to: { year: 2024, month: 2 } });
