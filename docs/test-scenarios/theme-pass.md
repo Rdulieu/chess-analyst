@@ -116,6 +116,16 @@ would have reported a green light theme it never saw. Emulate `light` for the fi
 trusting the default, and check the audit's own `dark:` readout — and the ground it measured —
 against the half you believe you are running. A pass over one theme twice is a pass over nothing.
 
+**And the emulation can revert under you, which is a second way into the same trap.** Measured
+2026-08-24, independently by **two** agents of the same run: `Emulation.setEmulatedMedia` sent over a
+**freshly created CDP session that is then detached** silently loses its effect. Both agents' first
+full pass reported `dark: true` on all sixteen audits — the dark palette audited twice, a green light
+theme that never ran. Both were caught by the in-script assertion above, and both fixed it the same
+way: set the preference on the page object that stays alive (`page.emulateMediaFeatures(...)` under
+puppeteer) rather than on a session you close. So the rule is not merely "do not trust the browser
+default" — it is **do not trust the emulation you set either; assert it inside the audited script,
+every screen, every half.** That assertion is the only thing that has ever caught this.
+
 Contrast is **blocking**, not a report: US-3 shipped a highlight that was invisible for want of any
 CSS, and the point of a stylesheet is not to replay that finding in reverse.
 

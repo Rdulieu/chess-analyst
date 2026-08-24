@@ -115,7 +115,12 @@ exact shape that lost four reports on 2026-08-21. **No `SendMessage` relance was
 transcript recovery was needed.** Each report was again followed by an empty `idle_notification`,
 confirming that signal means nothing about delivery.
 
-That settles the open question of §5.6 as far as one run can: **treat delivery as working**, in
+**What happened on 2026-08-24 (full HP suite again: path 0, then three HPs in parallel).** Delivery
+worked **4 of 4** again, every report unprompted and in full, parallel fan-out included — and each
+report arrived **twice**, once by `SendMessage` and once as the completion notification. Three full
+suites and one FP now agree. Expect the double delivery; do not read the second copy as a new report.
+
+That settles the open question of §5.6 as far as these runs can: **treat delivery as working**, in
 parallel included. The 2026-08-21 loss remains unexplained and is now **history rather than a live
 warning** — one incident, never reproduced across two later runs. Keep the ladder below, because it
 costs one sentence in a dispatch prompt and a lost suite costs half an hour of real engine and
@@ -294,7 +299,8 @@ Answer these, and write the answers down:
   **twice** — once via the subagent's own `SendMessage`, once as the completion notification, with
   identical content. Three consecutive runs. The belt-and-braces instruction of §5.1 is what produces
   the duplicate; it is worth the cost, but expect the double delivery rather than reading the second
-  copy as a second report.)*
+  copy as a second report. **2026-08-24 (full suite): 4 of 4, every one delivered twice.** The
+  question stays closed.)*
 - **Did the `SendMessage`-on-idle relance work?** For how many agents? *(2026-08-23: **not needed
   once** — nothing to relance. Separately confirmed the same day that `SendMessage` **resumes a
   completed subagent** with its environment knowledge intact: the games-table FP agent was sent back
@@ -303,7 +309,10 @@ Answer these, and write the answers down:
 - **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
   *(2026-08-23: **not needed**, twice over. The path is therefore still **unverified** since it was
   written — the one claim in §5.2 nobody has exercised. Do not delete it, but do not trust it blind
-  either: check the directory exists before relying on it in an emergency.)*
+  either: check the directory exists before relying on it in an emergency. **2026-08-24: not needed
+  a third time**, so §5.2 stays unexercised. This run's orchestrator was handed each subagent's
+  transcript path directly by the harness, which is a likelier recovery route than §5.2's glob — but
+  it is equally unexercised, so neither is a promise.)*
 - **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
   document, the shared browser stealing the selected page? *(2026-08-23: the orphaned listener and
   the page theft both hold and are **worse** than they were written; the theft is now the default
@@ -313,14 +322,26 @@ Answer these, and write the answers down:
   the very start and every script port-guarded, **zero page thefts and no theme or viewport loss** —
   the single-subagent case, so it says nothing about the parallel one, but it does say the private
   browser removes the symptom rather than merely reducing it. The `npx` grandchild listener was
-  confirmed again on both servers.)*
+  confirmed again on both servers. **2026-08-24 — the parallel case the line above could not speak
+  to: zero page theft across all four agents**, each on its own Chrome with its own `--user-data-dir`
+  and CDP port, and no port guard ever tripped. So the private-browser default holds **in the exact
+  shape** that produced the theft on 2026-08-23. The grandchild listener held again (an `npx` wrapper
+  killed while its Vite child kept listening — twice, on two different agents), and the **WAL trap
+  fired again** on path 0: 2.56 MB of `.db` beside 4.14 MB of `-wal`, so checkpoint-before-copy is
+  load-bearing rather than ceremonial. The colour-scheme failure gained a **second mechanism**:
+  emulation set over a CDP session that is then **detached** reverts silently, hit independently by
+  two agents of this run, each auditing the dark palette twice until an in-script assertion caught
+  it. Written up in `theme-pass.md`.)*
 - **Did any driver produce a false finding?** *(2026-08-23: **five**, across three agents — a
   progress observer read only its first 40 of 1488 samples, a board parser keyed on `img` where the
   pieces are `div` backgrounds, a breadcrumb predicate assuming one parent, a candidate lookup
   matching non-clickable ancestors. Every one was caught by re-measuring before reporting. That rule
   has now caught more would-be defects than the app has produced. **2026-08-23 (games-table FP):
   zero** — one candidate (a badge that looked right-aligned) dissolved on re-measuring the computed
-  `text-align`. The rule keeps paying for itself.)*
+  `text-align`. The rule keeps paying for itself. **2026-08-24: three more** — an arrow parser
+  filtering on `rgba(` that missed the fully opaque top candidate, plus the two reverted theme
+  emulations above, each of which would have reported a green pass over a theme that never rendered.
+  Caught by re-measuring or by an in-script assertion; none reached a report as a defect.)*
 
 **Then correct the skill in the same run**, as a doc commit alongside the suite result. Three rules
 for that edit:
