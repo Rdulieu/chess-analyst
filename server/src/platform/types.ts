@@ -110,11 +110,21 @@ export interface MonthFetch {
  * Every month of the asked-for range gets exactly one `month-done` **or** one
  * `month-failed`, in order — that is what lets the Import draw a line per month,
  * including for months holding nothing.
+ *
+ * `stream-cut` is the fourth, and it is **not** one of those per-month lines: it
+ * is yielded **once**, naming the month the Platform's answer died in, just
+ * before the `month-failed` lines that close the rest of the range. It exists
+ * because "this month failed" and "the answer stopped coming" are different
+ * facts and only the second one tells the Player *where to resume*. The Import
+ * could not tell them apart otherwise — it would have to recognise a failure by
+ * the wording of its `reason`, which is a message meant for a human to read, not
+ * a thing to branch on.
  */
 export type RangeEvent =
   | { kind: "game"; month: MonthRef; game: ImportedGame }
   | { kind: "month-done"; month: MonthRef; totalFetched: number }
-  | { kind: "month-failed"; month: MonthRef; reason: string };
+  | { kind: "month-failed"; month: MonthRef; reason: string }
+  | { kind: "stream-cut"; month: MonthRef };
 
 /**
  * Raised when the Platform's answer **ended before it was finished** — the

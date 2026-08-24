@@ -78,7 +78,7 @@ export type FakeMonth =
 function resolveMonth(
   entry: FakeMonth | undefined,
   username: string,
-): { games: ImportedGame[]; totalFetched: number; failure?: Error } {
+): { games: ImportedGame[]; totalFetched: number; failure?: Error; cut?: true } {
   if (entry === undefined) return { games: [], totalFetched: 0 };
   if (entry instanceof Error) return { games: [], totalFetched: 0, failure: entry };
   if (typeof entry === "function") {
@@ -89,7 +89,12 @@ function resolveMonth(
   if ("cutShortWith" in entry) {
     // A stream cut mid-month: what arrived comes through, THEN the failure — the
     // ordering slices 03 and 04 turn on.
-    return { games: entry.games, totalFetched: entry.games.length, failure: entry.cutShortWith };
+    return {
+      games: entry.games,
+      totalFetched: entry.games.length,
+      failure: entry.cutShortWith,
+      cut: true,
+    };
   }
   return { games: entry.games, totalFetched: entry.totalFetched };
 }
@@ -123,10 +128,21 @@ export function fakeClient(
       return { username: typeof player === "string" ? player : username };
     },
     async *fetchRange(username, from, to): AsyncGenerator<RangeEvent, void> {
-      for (const month of monthsInRange(from, to)) {
+      const span = monthsInRange(from, to);
+      for (const [index, month] of span.entries()) {
         const key = `${month.year}-${String(month.month).padStart(2, "0")}`;
-        const { games, totalFetched, failure } = resolveMonth(months[key], username);
+        const { games, totalFetched, failure, cut } = resolveMonth(months[key], username);
         for (const game of games) yield { kind: "game", month, game };
+        if (cut) {
+          // A cut stream ends the ANSWER, not just this month: there is no
+          // further request to make, so every month still owed fails with it —
+          // which is exactly what the real adapter does since slice 03.
+          yield { kind: "stream-cut", month };
+          for (const owed of span.slice(index)) {
+            yield { kind: "month-failed", month: owed, reason: failure!.message };
+          }
+          return;
+        }
         if (failure) yield { kind: "month-failed", month, reason: failure.message };
         else yield { kind: "month-done", month, totalFetched };
       }
@@ -220,7 +236,10 @@ export async function collectMonth(
   )) {
     if (event.kind === "game") games.push(event.game);
     else if (event.kind === "month-done") totalFetched = event.totalFetched;
-    else throw new Error(event.reason);
+    // `stream-cut` says WHERE the answer died; the `month-failed` right behind it
+    // is what this helper raises. Ignoring it here keeps the raised error the
+    // Platform's own wording rather than a marker with no message.
+    else if (event.kind === "month-failed") throw new Error(event.reason);
   }
   return { totalFetched, games };
 }

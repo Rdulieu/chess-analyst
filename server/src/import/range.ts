@@ -65,6 +65,10 @@ export async function importRange(
   let running = { imported: 0, alreadyPresent: 0 };
   // A Game the store refused, remembered until the month it belongs to closes.
   let unstorable: string | null = null;
+  // Where the Platform's answer died, and the last month that came through in
+  // FULL — the two facts the Player needs to finish the job themselves.
+  let cutIn: MonthRef | null = null;
+  let lastCovered: MonthRef | null = null;
 
   for await (const event of client.fetchRange(params.username, params.from, params.to, {
     onWaiting: params.onWaiting,
@@ -88,6 +92,13 @@ export async function importRange(
       }
       continue;
     }
+    if (event.kind === "stream-cut") {
+      // Not a month line: the month it died in gets its own `month-failed` just
+      // after this. What this carries is WHERE to resume, which no per-month
+      // failure can say.
+      cutIn = event.month;
+      continue;
+    }
     // The month is over, one way or another: draw its line.
     //
     // A month carries a `failure` if the Platform could not answer it, or if a
@@ -97,6 +108,9 @@ export async function importRange(
     // replaying the range, which dedup by URL makes exact.
     if (event.kind === "month-done") total.totalFetched += event.totalFetched;
     const failure = event.kind === "month-failed" ? event.reason : unstorable;
+    // "Covered" means the month came through in full — a month whose own Game
+    // could not be stored has NOT, so it must not become the resume point.
+    if (failure === null) lastCovered = event.month;
     total.imported += running.imported;
     total.alreadyPresent += running.alreadyPresent;
     total.months.push({
@@ -109,10 +123,40 @@ export async function importRange(
     onMonthDone?.(snapshot(total));
   }
 
-  if (total.imported === 0 && total.alreadyPresent === 0) {
+  // An interruption outranks "no games found": the latter is a statement about
+  // what the range HELD, and a range whose answer was cut short was never fully
+  // read. Saying it found nothing would be a claim we have no grounds for.
+  if (cutIn !== null) total.message = interrupted(cutIn, params.to, lastCovered);
+  else if (total.imported === 0 && total.alreadyPresent === 0) {
     total.message = `No games found for ${yyyymm(params.from)} to ${yyyymm(params.to)} in the selected time control categories.`;
   }
   return total;
+}
+
+/**
+ * What the Player is told when the answer stopped coming. Three facts, none
+ * decorative: **where** it stopped, that nothing already fetched is lost, and
+ * the **exact range** left to run — spelled in the import form's own `YYYY-MM`
+ * vocabulary so it can be retyped as-is rather than worked out from a list of
+ * month lines.
+ *
+ * The range starts at the month the stream died **in**, never after it: that
+ * month is partial, and re-fetching it costs nothing (dedup by URL) while
+ * announcing it covered would be a silent, permanent hole. We over-declare
+ * incompleteness, never completeness.
+ *
+ * Without the "conservées" clause the Player assumes the whole Import has to be
+ * redone — which is the one wrong conclusion available here.
+ */
+function interrupted(cutIn: MonthRef, to: MonthRef, lastCovered: MonthRef | null): string {
+  const where =
+    lastCovered === null
+      ? "Le flux s'est interrompu avant qu'aucun mois ne soit couvert."
+      : `Le flux s'est interrompu après ${yyyymm(lastCovered)}.`;
+  return (
+    `${where} Les parties récupérées sont conservées. ` +
+    `Pour couvrir le reste, relancez un import de ${yyyymm(cutIn)} à ${yyyymm(to)}.`
+  );
 }
 
 /** Files one Game under the Profile. `false` when that URL was already there. */
