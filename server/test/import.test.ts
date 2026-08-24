@@ -3,7 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { openDb } from "../src/db";
 import { moveHabits } from "../src/db/schema";
 import { listGames } from "../src/repository";
-import { importMonth } from "../src/import";
+import { importRange } from "../src/import";
+import { TruncatedStreamError } from "../src/platform";
 import { importedGame, fakeClient, seedProfile } from "./fixtures";
 
 /** A fresh database with the one `Profile` these tests import under. */
@@ -15,15 +16,35 @@ function testDb() {
 /** 4-field FEN of the standard starting Position. */
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
-/** The archive of the single month these importMonth tests all work on. */
+/** The archive of the single month these tests all work on. */
 const januaryOf = (games: ReturnType<typeof importedGame>[]) => fakeClient({ "2024-01": games });
 
-describe("importMonth", () => {
+/**
+ * One month, as a range of one. `importMonth` is gone — the Import asks the port
+ * for a range now — but "what one month's import does" is still exactly what
+ * these tests are about, so they say it in one line rather than spelling the same
+ * degenerate range out eight times.
+ */
+const importOneMonth = (
+  db: Parameters<typeof importRange>[0],
+  client: Parameters<typeof importRange>[1],
+  p: { profileId: number; username: string; year: number; month: number; categories: string[] },
+) =>
+  importRange(db, client, {
+    profileId: p.profileId,
+    username: p.username,
+    platform: "chesscom",
+    from: { year: p.year, month: p.month },
+    to: { year: p.year, month: p.month },
+    categories: p.categories as Parameters<typeof importRange>[2]["categories"],
+  });
+
+describe("importing one month", () => {
   it("imports and maps a month's games into the Player's Game shape", async () => {
     const { db, profileId } = testDb();
     const client = januaryOf([importedGame({ gameUrl: "https://www.chess.com/game/live/100" })]);
 
-    const result = await importMonth(db, client, {
+    const result = await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -64,7 +85,7 @@ describe("importMonth", () => {
       }),
     ]);
 
-    await importMonth(db, client, {
+    await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -93,7 +114,7 @@ describe("importMonth", () => {
       importedGame({ gameUrl: "https://www.chess.com/game/live/r", timeControlCategory: "rapid" }),
     ]);
 
-    const result = await importMonth(db, client, {
+    const result = await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -121,7 +142,7 @@ describe("importMonth", () => {
       },
     });
 
-    const result = await importMonth(db, client, {
+    const result = await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -150,8 +171,8 @@ describe("importMonth", () => {
       categories: ["blitz" as const],
     };
 
-    const first = await importMonth(db, client, params);
-    const second = await importMonth(db, client, params);
+    const first = await importOneMonth(db, client, params);
+    const second = await importOneMonth(db, client, params);
 
     expect(first).toMatchObject({ imported: 2, alreadyPresent: 0 });
     expect(second).toMatchObject({ imported: 0, alreadyPresent: 2 });
@@ -178,7 +199,7 @@ describe("importMonth", () => {
       },
     });
 
-    const result = await importMonth(db, client, {
+    const result = await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -205,7 +226,7 @@ describe("importMonth", () => {
       importedGame({ pgn: "1. e4 e5", playerColor: "white", result: "win" }),
     ]);
 
-    await importMonth(db, client, {
+    await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -225,7 +246,7 @@ describe("importMonth", () => {
     const { db, profileId } = testDb();
     const client = fakeClient({}); // player exists, but no games that month
 
-    const result = await importMonth(db, client, {
+    const result = await importOneMonth(db, client, {
       profileId,
       username: "me",
       year: 2024,
@@ -235,8 +256,118 @@ describe("importMonth", () => {
 
     expect(result.imported).toBe(0);
     expect(result.alreadyPresent).toBe(0);
-    expect(result.message).toMatch(/no games found/i);
+    expect(result.message).toMatch(/aucune partie trouvée/i);
     expect(result.message).toContain("2024-03");
     expect(listGames(db, profileId)).toHaveLength(0);
+  });
+});
+
+describe("a month whose stream was cut short", () => {
+  it("keeps the Games that arrived and still reports the month a failure", async () => {
+    // Two things that must hold together: the Player does not lose what already
+    // came in, AND the month is not allowed to read as done. The port yields, so
+    // what arrived is already through before the failure is announced.
+    const { db, profileId } = testDb();
+    const arrived = importedGame({ gameUrl: "https://lichess.org/arrived1" });
+    const client = fakeClient({
+      "2024-01": { games: [arrived], cutShortWith: new TruncatedStreamError("lichess") },
+    });
+
+    const result = await importOneMonth(db, client, {
+      profileId,
+      username: "me",
+      year: 2024,
+      month: 1,
+      categories: ["blitz"],
+    });
+
+    expect(result.months[0].failure).toMatch(/interrompu|incomplet/i);
+    expect(listGames(db, profileId).map((g) => g.gameUrl)).toEqual([
+      "https://lichess.org/arrived1",
+    ]);
+  });
+
+  it("does not count a cut month as covered, while the whole months around it are", async () => {
+    // The line the Player reads. An empty month reads as a plain zero; this one
+    // has to say the fetch broke, or the two collapse into one.
+    const { db, profileId } = testDb();
+    const client = fakeClient({
+      "2024-01": [importedGame({ gameUrl: "https://lichess.org/full1" })],
+      "2024-02": {
+        games: [importedGame({ gameUrl: "https://lichess.org/half1" })],
+        cutShortWith: new TruncatedStreamError("lichess"),
+      },
+    });
+
+    const result = await importRange(db, client, {
+      profileId,
+      username: "me",
+      platform: "lichess",
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 2 },
+      categories: ["blitz"],
+    });
+
+    expect(result.months[0].failure).toBeUndefined();
+    expect(result.months[1].failure).toMatch(/interrompu|incomplet/i);
+    // Kept: both the whole month's Game and the half month's.
+    expect(listGames(db, profileId)).toHaveLength(2);
+  });
+
+  it("counts the Games a cut month did deliver on that month's line", async () => {
+    // Reporting the month as a failure must not also report it as empty: one
+    // Game arrived, and the line says so alongside the failure.
+    const { db, profileId } = testDb();
+    const client = fakeClient({
+      "2024-01": {
+        games: [importedGame({ gameUrl: "https://lichess.org/half1" })],
+        cutShortWith: new TruncatedStreamError("lichess"),
+      },
+    });
+
+    const result = await importOneMonth(db, client, {
+      profileId,
+      username: "me",
+      year: 2024,
+      month: 1,
+      categories: ["blitz"],
+    });
+
+    expect(result.months[0]).toMatchObject({ imported: 1, alreadyPresent: 0 });
+    expect(result.imported).toBe(1);
+  });
+});
+
+describe("a Game that cannot be stored", () => {
+  it("fails its own month without taking the rest of the range down", async () => {
+    // ADR-0010's tolerance, which the month loop moving into the adapter must not
+    // cost us: a Game whose PGN cannot be replayed used to fail its month and
+    // leave the following ones importable. Persisting game-by-game as the stream
+    // arrives, an unguarded throw would now kill the whole range.
+    const { db, profileId } = testDb();
+    const client = fakeClient({
+      "2024-01": [importedGame({ gameUrl: "https://lichess.org/bad1", pgn: "1. e4 Qxf7#" })],
+      "2024-02": [importedGame({ gameUrl: "https://lichess.org/good1" })],
+    });
+
+    const result = await importRange(db, client, {
+      profileId,
+      username: "me",
+      platform: "lichess",
+      from: { year: 2024, month: 1 },
+      to: { year: 2024, month: 2 },
+      categories: ["blitz"],
+    });
+
+    expect(result.months[0].failure).toBeDefined();
+    expect(result.months[1]).toMatchObject({ imported: 1 });
+    expect(result.months[1].failure).toBeUndefined();
+    // The row itself did land — `recordMoveHabits` runs after the insert, so the
+    // Game is stored and only its habits are missing. That partial write is
+    // pre-existing and not this slice's to change; what matters here is that the
+    // month says it is incomplete and the next month still imported.
+    expect(listGames(db, profileId).map((g) => g.gameUrl)).toContain(
+      "https://lichess.org/good1",
+    );
   });
 });

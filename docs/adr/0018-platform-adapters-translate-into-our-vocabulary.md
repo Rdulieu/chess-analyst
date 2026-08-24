@@ -1,6 +1,13 @@
 # The domain owns its vocabulary; a Platform adapter translates into it
 
 Date: 2026-08-21 — US-12 (import from Lichess as well as chess.com)
+**Renumbered 0016 → 0018 on 2026-08-23**: two ADRs had been filed as 0016 (this one and "An
+`Analysis pass` records what it searched under"), so every "ADR-0016" in the codebase was ambiguous.
+The analysis-pass one keeps 0016; this one moves to 0018 and all 60 call sites were disambiguated in
+the same commit.
+**Amended 2026-08-23 — US-17.** Decisions 1, 2, 4 and 5 and the field-measurement section below are
+revised; see "What US-17's grilling changed" at the end. Read that section before relying on
+decisions 1 and 2: **the month is no longer the unit a Platform is asked in.**
 
 ## Context
 
@@ -100,6 +107,78 @@ and neither is one:
 - **The throughput figure, on the other hand, checks out**: 403 games streamed in 16.7 s ≈ 24
   games/s against a documented anonymous limit of 20/s. The "no token" decision holds for the
   reason originally given.
+
+## What US-17's grilling changed (2026-08-23)
+
+US-17 asked why importing 71 Lichess months costs 71 requests when the API can stream the whole range
+in one. Grilling it revised four decisions above. **Nothing here changes chess.com's behaviour**: it
+serves monthly archives, so its adapter keeps asking month by month — the loop simply moves inside
+the adapter, where it describes chess.com rather than constraining everyone.
+
+- **Decision 1 is widened: the port speaks a *range*, and it streams.** `fetchMonth(username, year,
+  month): Promise<MonthFetch>` becomes `fetchRange(username, since, until): AsyncGenerator<…>`. Each
+  adapter satisfies it in the shape its Platform actually serves — chess.com loops its months
+  internally, Lichess makes one request. The neutral `ImportedGame` shape is untouched; what changes
+  is the *unit asked for*, not the vocabulary answered in.
+
+  The generator is not a style choice. `readNdjson` was **already** an `AsyncGenerator`; it was
+  `fetchMonth` that broke the stream by materialising it into an array. Streaming end to end is what
+  keeps a partial import partial rather than lost (see decision 2), keeps a 50 000-game account out
+  of memory, and makes the sign of life continuous — which is why **no bound on the range was
+  added**: slicing the range into yearly requests would rebuild the very burst US-17 removes, to buy
+  a guarantee streaming already gives.
+
+- **Decision 2 is corrected on a point of fact, not of taste.** It justified monthly fetching with
+  "a single stream that dies at month 40 is an Import entirely in failure". **That was already false
+  of this code**: `importMonth` inserts game by game, deduped by URL, so a stream dying at month 40
+  leaves months 1–39 persisted. What a break costs is the *account* of what was covered, not the
+  data.
+
+  And that account is derivable. The export is requested `sort=dateAsc`, so months arrive in order:
+  every month before the last Game received is covered, the rest are reported as not fetched. **The
+  month therefore survives as the unit of reporting and stops being the unit of fetching** —
+  `CONTEXT.md`'s `Monthly import` is amended to say exactly that. Failure locality is not lost; it
+  moves from the month to the stream's stopping point, which is *finer*, not coarser.
+
+  **The last month received is declared NOT covered**, deliberately. A stream dying mid-March leaves
+  March partial, and re-fetching a half-imported month is free (dedup by URL) while announcing it
+  covered is a silent, permanent hole — precisely the "gap in the fetching disguised as a gap in the
+  history" the per-month lines exist to prevent. We over-declare incompleteness, never completeness.
+
+- **Decision 4 is unaffected in substance and stronger in fact.** One request per Import respects
+  "only make one request at a time" better than 71 sequential ones did. The ban on parallelising
+  stands; there is simply almost nothing left to parallelise.
+
+- **Decision 5 splits in two, along the first byte.** *Before* it: a `429` on the response still
+  earns one wait-and-replay — kept, though it becomes nearly dead code, because the cascade it
+  prevented no longer exists but a throttled IP still can. Its message must name the **range**, not
+  "the month". *After* it: a stream that breaks mid-flight is **not retried**, per ADR-0010's
+  standing no-retry rule. Recovery is the Player re-running, which dedup makes cheap and correct.
+
+  The Player is told, in the summary's own `message`, where it stopped and what to re-run — **in the
+  import form's own `YYYY-MM` vocabulary, so the range can be retyped as-is**:
+  "Le flux s'est interrompu après 2020-03. Les parties récupérées sont conservées. Pour couvrir le
+  reste, relancez un import de 2020-04 à 2023-08." The months after the stop carry their existing
+  per-month `failure` line. The Import does not throw: it returns its summary, as a failed month has
+  never aborted an Import.
+
+- **The field-measurement section above is wrong about IPv6, and stays as a cautionary example.** It
+  concluded that Lichess refuses IPv6 on the export endpoint, from measurements taken in one
+  direction only. On **2026-08-22 the exact opposite reproduced**: IPv4 → `429`, IPv6 → `200`, on two
+  accounts seconds apart — after the previous day's reference import had sent its 71 requests over
+  the pinned IPv4. The explanation covering both observations is a **per-IP throttle on the export
+  endpoint**, keyed to a recent burst, not a property of the address family; `/api/user` keeps
+  answering 200 while `/api/games/user` refuses, so the budget is the endpoint's.
+
+  **The IPv4 pin is kept and demoted.** It is no longer a "correctness requirement" — it never was —
+  but a determinism choice: one variable less when diagnosing a 429, and `node:http` is wanted anyway
+  for the stream. `request.ts`'s comment, `path-0-bootstrap.md`'s precondition and PR #52's body all
+  repeat the IPv6 claim and are corrected with it. US-17 largely dissolves the question: one request
+  is not a burst.
+
+- **Scope note, recorded rather than compensated.** After US-17 nothing exercises "one month fails
+  mid-range" on the Lichess side, because there are no longer isolated months to fail. That path
+  stays covered on chess.com, which keeps its loop, and by the import service's unit tests.
 
 ## Consequences
 

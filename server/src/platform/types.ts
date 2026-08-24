@@ -1,5 +1,5 @@
 /**
- * The **`PlatformClient` port** (ADR-0016): the only thing the Import knows
+ * The **`PlatformClient` port** (ADR-0018): the only thing the Import knows
  * about the outside world. It answers in **our** vocabulary — no caller ever
  * sees a chess.com or Lichess payload. Each `Platform` owns an adapter under
  * ./<platform>/ that does the translation, so adding a third one is a directory
@@ -71,6 +71,18 @@ export interface ImportedGame {
 }
 
 /**
+ * One month, the unit an Import **reports** by (`CONTEXT.md`, `Monthly import`).
+ * It lives here, in the port's vocabulary, because it is what a fetch is asked
+ * for and what every event is tagged with — no longer what a fetch is *sliced*
+ * into, which is each Platform's own business (ADR-0018, as amended).
+ */
+export interface MonthRef {
+  year: number;
+  /** 1-12. */
+  month: number;
+}
+
+/**
  * One month as the Platform answered it. `totalFetched` is **everything the
  * Platform returned** — out-of-scope games (variants, and whatever else the
  * adapter drops) included — so the summary's headline figure keeps meaning
@@ -79,6 +91,67 @@ export interface ImportedGame {
 export interface MonthFetch {
   totalFetched: number;
   games: ImportedGame[];
+}
+
+/**
+ * What a range fetch tells its caller, as it goes. A **stream of events** rather
+ * than a stream of Games, because three things have to cross the port and only
+ * one of them is a Game:
+ *
+ * - the Games themselves, each tagged with the month it **counts toward**;
+ * - the end of a month, carrying what the Platform **had** that month
+ *   (out-of-scope games included), which is what keeps a month full of variants
+ *   from reading as an empty one;
+ * - a month the Platform could not answer for — which still carries what the
+ *   Platform **did** deliver before failing (usually nothing; not nothing when a
+ *   stream died mid-month), because those Games are already through and already
+ *   kept, and a summary that counted them as imported without counting them as
+ *   fetched would report keeping more than it received;
+ * - a month the Platform could not answer for — which must **not** end the
+ *   range: one unanswerable month has never aborted an Import (ADR-0010), and
+ *   now that the month loop lives inside the adapter, only the adapter can say
+ *   "this month failed, carry on".
+ *
+ * Every month of the asked-for range gets exactly one `month-done` **or** one
+ * `month-failed`, in order — that is what lets the Import draw a line per month,
+ * including for months holding nothing.
+ *
+ * `stream-cut` is the fourth, and it is **not** one of those per-month lines: it
+ * is yielded **once**, naming the month the Platform's answer died in, just
+ * before the `month-failed` lines that close the rest of the range. It exists
+ * because "this month failed" and "the answer stopped coming" are different
+ * facts and only the second one tells the Player *where to resume*. The Import
+ * could not tell them apart otherwise — it would have to recognise a failure by
+ * the wording of its `reason`, which is a message meant for a human to read, not
+ * a thing to branch on.
+ */
+export type RangeEvent =
+  | { kind: "game"; month: MonthRef; game: ImportedGame }
+  | { kind: "month-done"; month: MonthRef; totalFetched: number }
+  | { kind: "month-failed"; month: MonthRef; reason: string; totalFetched: number }
+  | { kind: "stream-cut"; month: MonthRef };
+
+/**
+ * Raised when the Platform's answer **ended before it was finished** — the
+ * connection died mid-body. It exists because the alternative is silence: a
+ * games stream read line by line simply stops yielding, the month imports
+ * partially and is reported at zero, indistinguishable from a month the Player
+ * was inactive in. That is the "gap in the fetching disguised as a gap in the
+ * history" the per-month lines exist to prevent (`CONTEXT.md`, `Monthly
+ * import`).
+ *
+ * It carries **no payload**. It used to hand back what had arrived, because the
+ * port materialised a whole month before answering and the break would otherwise
+ * have discarded it. The port now *yields*, so those Games are already through
+ * and already kept — there is nothing left to carry.
+ */
+export class TruncatedStreamError extends Error {
+  constructor(platform: Platform) {
+    super(
+      `${platformLabel(platform)} a interrompu sa réponse avant la fin : le mois est incomplet. Relancez l'import pour le compléter.`,
+    );
+    this.name = "TruncatedStreamError";
+  }
 }
 
 /**
@@ -99,13 +172,21 @@ export interface PlatformClient {
    * ask", since only the first is the user's mistake (US-11).
    */
   fetchPlayer(username: string): Promise<PlatformAccount | null>;
-  /** The account's games for the given year/month (empty when none). */
-  fetchMonth(
+  /**
+   * The account's games over a **range** of months, both bounds included,
+   * **yielded as they arrive** in date order.
+   *
+   * The range, not the month, is what the port is asked for: how many requests
+   * that takes is the Platform's business (one per month for chess.com, which
+   * has no range endpoint; one for the whole span on Lichess). The month remains
+   * the unit every event is reported by.
+   */
+  fetchRange(
     username: string,
-    year: number,
-    month: number,
+    from: MonthRef,
+    to: MonthRef,
     hooks?: FetchHooks,
-  ): Promise<MonthFetch>;
+  ): AsyncGenerator<RangeEvent, void>;
 }
 
 /**

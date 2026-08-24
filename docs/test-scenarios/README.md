@@ -160,7 +160,10 @@ seconds per run and are simultaneously too slow and too flaky. Wait for the elem
 - **Do not drop the Lichess Profile, and do not shorten its span.** It is the suite's only live
   Lichess contract, and the 51 empty months in the span are what distinguish *a gap in the history*
   from *a gap in the fetching*. A populated-months-only range would import the same Games and stop
-  testing that. Note also what it does **not** cover: `Metalyst` has no `ultraBullet` and no aborted
+  testing that. **US-17 does not reopen this rule** — it removed the span's *cost* (one export
+  request instead of 71) without touching the assertion, and in fact sharpened it: the 51 zeros used
+  to mean "51 requests each answered empty", nearly a tautology, and now mean "one stream sliced into
+  months yielded 51 zero lines", which is real code with a real way to be wrong. Note also what it does **not** cover: `Metalyst` has no `ultraBullet` and no aborted
   game, so those two rules stay fixture-only — state that rather than implying the run covers them.
 - **Do not drop the second Profile.** An empty second Profile is what makes a scoping leak
   observable — a global aggregate shows 82 games for an account that owns none — and what keeps the

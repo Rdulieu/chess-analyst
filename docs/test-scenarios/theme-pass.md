@@ -85,7 +85,8 @@ in both themes like any other.
 3. **No horizontal overflow**: the page does not scroll sideways, and no box is wider than its own
    container unless it is a declared horizontal scroller.
 4. **Non-chromatic cues are present wherever a tint carries meaning** — the weak-opening ⚠, the
-   danger card's ⚠, the severity glyphs `?!` `?` `??`, the failed month's word "échec", the
+   danger card's ⚠, the severity glyphs `?!` `?` `??`, the failed month's word ("échec" when nothing arrived, "incomplet" when
+   some Games did and the month stopped short), the
    "analysée" badge's word and checkmark, the current tab's weight/border beside its
    `aria-current`, and — since US-11 — the banner's spelled-out "Profil courant :" and the profiles
    list's "Profil actuel" on the current row, which carries the state in words beside the
@@ -115,6 +116,16 @@ dark` on the 2026-08-19 run, so the walk labelled "light" rendered the dark pale
 would have reported a green light theme it never saw. Emulate `light` for the first half rather than
 trusting the default, and check the audit's own `dark:` readout — and the ground it measured —
 against the half you believe you are running. A pass over one theme twice is a pass over nothing.
+
+**And the emulation can revert under you, which is a second way into the same trap.** Measured
+2026-08-24, independently by **two** agents of the same run: `Emulation.setEmulatedMedia` sent over a
+**freshly created CDP session that is then detached** silently loses its effect. Both agents' first
+full pass reported `dark: true` on all sixteen audits — the dark palette audited twice, a green light
+theme that never ran. Both were caught by the in-script assertion above, and both fixed it the same
+way: set the preference on the page object that stays alive (`page.emulateMediaFeatures(...)` under
+puppeteer) rather than on a session you close. So the rule is not merely "do not trust the browser
+default" — it is **do not trust the emulation you set either; assert it inside the audited script,
+every screen, every half.** That assertion is the only thing that has ever caught this.
 
 Contrast is **blocking**, not a report: US-3 shipped a highlight that was invisible for want of any
 CSS, and the point of a stylesheet is not to replay that finding in reverse.

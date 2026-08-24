@@ -1,11 +1,7 @@
-import type { Db } from "../db";
-import { games } from "../db/schema";
-import { gameExistsByUrl } from "../repository";
-import { recordMoveHabits } from "../move-habits/precompute";
 import {
   TIME_CONTROL_CATEGORIES,
   type FetchHooks,
-  type PlatformClient,
+  type MonthRef,
   type TimeControlCategory,
 } from "../platform";
 
@@ -20,8 +16,6 @@ export interface ImportParams {
   /** The `Profile` the imported Games belong to — never another's (ADR-0014). */
   profileId: number;
   username: string;
-  year: number;
-  month: number;
   categories: TimeControlCategory[];
   /**
    * Told when the Platform asks us to wait rather than answering. It travels
@@ -39,7 +33,7 @@ export interface ImportParams {
  * distinguishable from a gap in the fetching.
  */
 export interface MonthlyImport {
-  month: { year: number; month: number };
+  month: MonthRef;
   imported: number;
   alreadyPresent: number;
   /** Set only when the month could not be fetched; absent means covered. */
@@ -70,53 +64,8 @@ export interface ImportResult extends ImportFigures {
 }
 
 /**
- * Imports the Player's games for one month from the Profile's `Platform`, filing
- * each under the Profile and persisting it (incrementally, deduped by URL).
- *
- * The username is **not** validated here: an Import spans a range of months and
- * the check is made once by the route, before any month is fetched (ADR-0010).
+ * The month stopped being a unit of *fetching* here too. There is no
+ * `importMonth` any more: the Import asks the port for a range and folds the
+ * event stream (see ./range.ts). What lives in this file is the **shapes** an
+ * Import reports in, and the empty tally they start from.
  */
-export async function importMonth(
-  db: Db,
-  client: PlatformClient,
-  params: ImportParams,
-): Promise<ImportFigures> {
-  const { totalFetched, games: monthGames } = await client.fetchMonth(
-    params.username,
-    params.year,
-    params.month,
-    { onWaiting: params.onWaiting },
-  );
-  const wanted = new Set(params.categories);
-  let imported = 0;
-  let alreadyPresent = 0;
-  const byCategory = emptyTally();
-  const results = { win: 0, loss: 0, draw: 0 };
-  for (const game of monthGames) {
-    // Which paces to keep is the PLAYER's choice, not a Platform fact — so it
-    // stays here while the variant filter went into the adapter (ADR-0016).
-    if (!wanted.has(game.timeControlCategory)) continue;
-    const mapped = { ...game, profileId: params.profileId };
-    byCategory[mapped.timeControlCategory]++;
-    results[mapped.result]++;
-    if (gameExistsByUrl(db, params.profileId, game.gameUrl)) {
-      alreadyPresent++;
-      continue;
-    }
-    const inserted = db.insert(games).values(mapped).returning().get();
-    recordMoveHabits(db, inserted);
-    imported++;
-  }
-  const summary: ImportFigures = {
-    totalFetched,
-    imported,
-    alreadyPresent,
-    byCategory,
-    results,
-  };
-  if (imported === 0 && alreadyPresent === 0) {
-    const yyyymm = `${params.year}-${String(params.month).padStart(2, "0")}`;
-    summary.message = `No games found for ${yyyymm} in the selected time control categories.`;
-  }
-  return summary;
-}

@@ -3,6 +3,8 @@ import express from "express";
 import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
 import { createHttpLichessClient } from "../src/platform/lichess/client";
+import { collectMonth } from "./fixtures";
+import type { MonthRef, PlatformClient } from "../src/platform";
 
 /**
  * A tiny stand-in for the Lichess API, so the real client is exercised end to
@@ -100,6 +102,75 @@ beforeAll(async () => {
   });
   app.get("/__broken-calls", (_req, res) => res.json({ calls: brokenCalls.length }));
 
+  /**
+   * A stream **cut mid-body**: one whole game, then half of the next line, then
+   * the socket destroyed. Served chunked (no `Content-Length`), exactly like the
+   * real export — so the premature end is something the client can notice.
+   */
+  const truncatedCalls: number[] = [];
+  app.get("/__truncated-calls", (_req, res) => res.json({ calls: truncatedCalls.length }));
+  app.get("/api/games/user/truncated", (_req, res) => {
+    truncatedCalls.push(1);
+    res.type("application/x-ndjson");
+    res.flushHeaders();
+    res.write(JSON.stringify(game({ id: "arrived1" })) + "\n");
+    res.write('{"id":"cutoff","spe');
+    // Destroyed only once the bytes are actually on the wire: killing it sooner
+    // is a connect-level reset, not the mid-body cut this is about. Not
+    // res.end() — a chunked body abandoned without its terminating chunk is what
+    // a dropped connection really looks like.
+    setTimeout(() => res.socket?.destroy(), 50);
+  });
+
+  /**
+   * The nastier cut: the socket dies **exactly on a line boundary**, so nothing
+   * partial is left over. This is the case a tail-parse cannot catch — the
+   * reader simply runs out of chunks and returns, and the month reads as a clean
+   * (short) success.
+   */
+  app.get("/api/games/user/truncated-clean", (_req, res) => {
+    res.type("application/x-ndjson");
+    res.flushHeaders();
+    res.write(JSON.stringify(game({ id: "arrived1" })) + "\n");
+    setTimeout(() => res.socket?.destroy(), 50);
+  });
+
+  /**
+   * A range stream cut **after crossing a month boundary**: a January game, a
+   * March game, then the socket dies. The months the Games proved past are
+   * settled; the rest never got its answer.
+   */
+  app.get("/api/games/user/truncated-span", (_req, res) => {
+    res.type("application/x-ndjson");
+    res.flushHeaders();
+    res.write(JSON.stringify(game({ id: "jan01", createdAt: Date.UTC(2024, 0, 5) })) + "\n");
+    res.write(JSON.stringify(game({ id: "mar01", createdAt: Date.UTC(2024, 2, 11) })) + "\n");
+    setTimeout(() => res.socket?.destroy(), 50);
+  });
+
+  /**
+   * An account with a real history: games in January and March 2024, **nothing
+   * in February**. Filters on `since`/`until` exactly like the real export, and
+   * serves in `dateAsc` order — the two properties deriving month coverage from
+   * the Games depends on.
+   */
+  const SPANNING = [
+    game({ id: "jan01", createdAt: Date.UTC(2024, 0, 5) }),
+    game({ id: "jan02", createdAt: Date.UTC(2024, 0, 20), speed: "ultraBullet" }),
+    // Counted as fetched in March, never a Game: a month can be busy and still
+    // keep nothing, and that must not read as an empty one.
+    game({ id: "mar99", createdAt: Date.UTC(2024, 2, 3), variant: "chess960" }),
+    game({ id: "mar01", createdAt: Date.UTC(2024, 2, 11) }),
+  ];
+  app.get("/api/games/user/spanning", (req, res) => {
+    exportCalls.push({ username: "spanning", query: req.query });
+    const since = Number(req.query.since);
+    const until = Number(req.query.until);
+    const lines = SPANNING.filter((g) => g.createdAt >= since && g.createdAt <= until);
+    res.type("application/x-ndjson");
+    res.send(lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  });
+
   app.get("/api/games/user/:username", (req, res) => {
     exportCalls.push({ username: req.params.username, query: req.query });
     // ndjson: one JSON document per line, which is exactly why the body cannot
@@ -163,7 +234,7 @@ describe("the Lichess adapter's month fetch", () => {
   it("reads the ndjson stream line by line and answers our shapes", async () => {
     const client = createHttpLichessClient(baseUrl);
 
-    const month = await client.fetchMonth("Metalyst", 2024, 1);
+    const month = await collectMonth(client, "Metalyst", 2024, 1);
 
     // Everything the Platform returned is "fetched", the variant included; only
     // what we study is handed over.
@@ -187,7 +258,7 @@ describe("the Lichess adapter's month fetch", () => {
     exportCalls.length = 0;
     const client = createHttpLichessClient(baseUrl);
 
-    await client.fetchMonth("Metalyst", 2024, 2);
+    await collectMonth(client, "Metalyst", 2024, 2);
 
     expect(exportCalls).toHaveLength(1);
     const { username, query } = exportCalls[0];
@@ -208,7 +279,7 @@ describe("a month Lichess answered, of which we keep nothing", () => {
     // what tells the Player that, instead of quietly narrowing the number.
     const client = createHttpLichessClient(baseUrl);
 
-    const month = await client.fetchMonth("excluded", 2024, 1);
+    const month = await collectMonth(client, "excluded", 2024, 1);
 
     expect(month.totalFetched).toBe(3);
     expect(month.games).toEqual([]);
@@ -223,8 +294,8 @@ describe("a game straddling a month boundary", () => {
     // re-import and no deduplication would ever reveal.
     const client = createHttpLichessClient(baseUrl);
 
-    const august = await client.fetchMonth("straddler", 2024, 8);
-    const september = await client.fetchMonth("straddler", 2024, 9);
+    const august = await collectMonth(client, "straddler", 2024, 8);
+    const september = await collectMonth(client, "straddler", 2024, 9);
 
     expect(august.games).toHaveLength(1);
     expect(august.games[0].date).toBe("2024-08-27");
@@ -245,7 +316,7 @@ describe("a 429 from Lichess", () => {
     await arm(1);
     const client = withFastRetry();
 
-    const month = await client.fetchMonth("throttled", 2024, 1);
+    const month = await collectMonth(client, "throttled", 2024, 1);
 
     expect(month.games.map((g) => g.gameUrl)).toEqual(["https://lichess.org/after429"]);
     expect(await attempts()).toBe(2); // the refusal, then the replay
@@ -256,10 +327,25 @@ describe("a 429 from Lichess", () => {
     const said: string[] = [];
     const client = withFastRetry();
 
-    await client.fetchMonth("throttled", 2024, 1, { onWaiting: (m) => said.push(m) });
+    await collectMonth(client, "throttled", 2024, 1, { onWaiting: (m) => said.push(m) });
 
     expect(said).toHaveLength(1);
     expect(said[0]).toMatch(/lichess\.org/i);
+  });
+
+  it("names the RANGE as what resumes, not the month", async () => {
+    // There is one request for the whole span now, so what the wait holds up is
+    // the range. Saying "reprise du mois" would misname it — and would tell a
+    // Player watching a 71-month import that one month of it is being retried.
+    await arm(1);
+    const said: string[] = [];
+
+    await collectMonth(withFastRetry(), "throttled", 2024, 1, {
+      onWaiting: (m) => said.push(m),
+    });
+
+    expect(said[0]).toMatch(/plage/i);
+    expect(said[0]).not.toMatch(/du mois/i);
   });
 
   it("gives up after a second refusal, as an ordinary month failure — no hammering", async () => {
@@ -269,7 +355,7 @@ describe("a 429 from Lichess", () => {
     await arm(2);
     const client = withFastRetry();
 
-    await expect(client.fetchMonth("throttled", 2024, 1)).rejects.toThrow(/429/);
+    await expect(collectMonth(client, "throttled", 2024, 1)).rejects.toThrow(/429/);
     expect(await attempts()).toBe(2);
   });
 
@@ -278,11 +364,214 @@ describe("a 429 from Lichess", () => {
     // a Platform that is already failing.
     const client = withFastRetry();
 
-    await expect(client.fetchMonth("broken", 2024, 1)).rejects.toThrow(/500/);
+    await expect(collectMonth(client, "broken", 2024, 1)).rejects.toThrow(/500/);
 
     const { calls } = (await fetch(`${baseUrl}/__broken-calls`).then((r) => r.json())) as {
       calls: number;
     };
     expect(calls).toBe(1);
+  });
+});
+
+/** Every event of a one-month range, in order. */
+async function eventsFor(client: PlatformClient, username: string, month: number) {
+  const events = [];
+  for await (const e of client.fetchRange(username, { year: 2024, month }, { year: 2024, month })) {
+    events.push(e);
+  }
+  return events;
+}
+
+describe("a truncated games stream", () => {
+  it("fails the month instead of quietly ending it as covered", async () => {
+    // The hole this closes: the reader stops yielding when the body dies
+    // mid-flight, so a half-imported month would be indistinguishable from a
+    // month the Player was inactive in. Silence here becomes a permanent,
+    // invisible gap in the history.
+    const client = createHttpLichessClient(baseUrl);
+
+    const events = await eventsFor(client, "truncated", 1);
+
+    expect(events.map((e) => e.kind)).not.toContain("month-done");
+    expect(events.at(-1)).toMatchObject({
+      kind: "month-failed",
+      month: { year: 2024, month: 1 },
+    });
+  });
+
+  it("fails the month even when the cut lands exactly on a line boundary", async () => {
+    // Nothing partial is left to fail a parse, so detecting this cannot rest on
+    // the leftovers: the stream itself has to be known to have ended early.
+    const client = createHttpLichessClient(baseUrl);
+
+    const events = await eventsFor(client, "truncated-clean", 1);
+
+    expect(events.map((e) => e.kind)).not.toContain("month-done");
+    expect(events.at(-1)).toMatchObject({ kind: "month-failed" });
+  });
+
+  it("has already yielded the games that arrived, so nothing is lost with the break", async () => {
+    // They come through BEFORE the failure — which is why nothing has to carry
+    // them any more. A re-run costs nothing (dedup by URL), but a Game silently
+    // dropped here is one the Player never gets back.
+    const client = createHttpLichessClient(baseUrl);
+
+    const events = await eventsFor(client, "truncated", 1);
+
+    const games = events.filter((e) => e.kind === "game");
+    expect(games).toHaveLength(1);
+    expect(games[0]).toMatchObject({ game: { gameUrl: "https://lichess.org/arrived1" } });
+    expect(events.indexOf(games[0])).toBeLessThan(events.length - 1);
+  });
+
+  it("says the stream ended early, in words a Player can act on", async () => {
+    // What lands on the month's line. `aborted` — Node's own word — names a
+    // socket, not a thing the Player can do; the message has to say the answer
+    // was cut short and that re-running is the way out.
+    const client = createHttpLichessClient(baseUrl);
+
+    const events = await eventsFor(client, "truncated", 1);
+
+    expect(events.at(-1)).toMatchObject({
+      kind: "month-failed",
+      reason: expect.stringMatching(/interrompu|incomplet/i),
+    });
+  });
+
+  it("carries on to the next month rather than ending the range", async () => {
+    // One unanswerable month has never aborted an Import (ADR-0010). Now that
+    // the month loop is inside the adapter, only the adapter can honour that.
+    const client = createHttpLichessClient(baseUrl);
+
+    const events = [];
+    for await (const e of client.fetchRange(
+      "truncated",
+      { year: 2024, month: 1 },
+      { year: 2024, month: 2 },
+    )) {
+      events.push(e);
+    }
+
+    expect(events.filter((e) => e.kind === "month-failed")).toHaveLength(2);
+  });
+});
+
+describe("a Lichess range", () => {
+  /** Every event of a range, in order. */
+  const eventsOver = async (username: string, from: MonthRef, to: MonthRef) => {
+    const events = [];
+    for await (const e of createHttpLichessClient(baseUrl).fetchRange(username, from, to)) {
+      events.push(e);
+    }
+    return events;
+  };
+
+  it("is asked for in a single export request, whatever the number of months", async () => {
+    // The whole payoff of US-17: 71 requests became one. The month stays the
+    // unit of REPORTING and stops being the unit of FETCHING — so this count
+    // must not follow the length of the range.
+    exportCalls.length = 0;
+
+    await eventsOver("spanning", { year: 2024, month: 1 }, { year: 2024, month: 4 });
+
+    expect(exportCalls).toHaveLength(1);
+    const { query } = exportCalls[0];
+    expect(Number(query.since)).toBe(Date.UTC(2024, 0, 1));
+    expect(Number(query.until)).toBe(Date.UTC(2024, 4, 1) - 1);
+    // Still ordered, because coverage is read off the Games in date order.
+    expect(query.sort).toBe("dateAsc");
+  });
+  it("still draws one line per month, the empty ones at zero", async () => {
+    // The assertion the whole story must not break: a month the Player was
+    // inactive in reads as a plain zero, so a gap in the HISTORY stays
+    // distinguishable from a gap in the FETCHING. February was never asked for
+    // on its own any more — it is covered because a March Game proved it past.
+    const events = await eventsOver("spanning", { year: 2024, month: 1 }, { year: 2024, month: 4 });
+
+    expect(events.filter((e) => e.kind !== "game")).toEqual([
+      { kind: "month-done", month: { year: 2024, month: 1 }, totalFetched: 2 },
+      { kind: "month-done", month: { year: 2024, month: 2 }, totalFetched: 0 },
+      // Two fetched, one kept: the variant counts as fetched, so a busy month
+      // that yields nothing never reads as an empty one.
+      { kind: "month-done", month: { year: 2024, month: 3 }, totalFetched: 2 },
+      // Past the last Game, and still covered — not omitted, not failed.
+      { kind: "month-done", month: { year: 2024, month: 4 }, totalFetched: 0 },
+    ]);
+  });
+
+  it("tags each Game with the month it counts toward, in date order", async () => {
+    const events = await eventsOver("spanning", { year: 2024, month: 1 }, { year: 2024, month: 4 });
+
+    expect(events.filter((e) => e.kind === "game").map((e) => [e.month.month, e.game.gameUrl]))
+      .toEqual([
+        [1, "https://lichess.org/jan01"],
+        [1, "https://lichess.org/jan02"],
+        [3, "https://lichess.org/mar01"],
+      ]);
+  });
+  it("keeps the months a Game proved past when the stream is cut, and fails only the rest", async () => {
+    // With one request there is no next request to carry on to, so a cut has to
+    // say WHERE it stopped. January and February were settled by the March Game
+    // arriving — re-failing them would send the Player back over months that
+    // were answered in full. March and April never got their answer.
+    const events = await eventsOver(
+      "truncated-span",
+      { year: 2024, month: 1 },
+      { year: 2024, month: 4 },
+    );
+
+    expect(events.filter((e) => e.kind !== "game")).toEqual([
+      { kind: "month-done", month: { year: 2024, month: 1 }, totalFetched: 1 },
+      { kind: "month-done", month: { year: 2024, month: 2 }, totalFetched: 0 },
+      // Said once, naming the month the answer died IN — that is what tells the
+      // Player where to resume, which no per-month failure line can say.
+      { kind: "stream-cut", month: { year: 2024, month: 3 } },
+      {
+        kind: "month-failed",
+        month: { year: 2024, month: 3 },
+        reason: expect.stringMatching(/interrompu|incomplet/i),
+        // The March Game DID arrive before the cut, so the month it died in
+        // reports it: it is already persisted, and a summary that counted it as
+        // imported without counting it as fetched would claim to keep more than
+        // it received.
+        totalFetched: 1,
+      },
+      {
+        kind: "month-failed",
+        month: { year: 2024, month: 4 },
+        reason: expect.stringMatching(/interrompu|incomplet/i),
+        // Never got a byte.
+        totalFetched: 0,
+      },
+    ]);
+    // And both Games are through before any of it — nothing is lost with the cut.
+    expect(events.filter((e) => e.kind === "game")).toHaveLength(2);
+  });
+  it("is not retried once the first byte has arrived", async () => {
+    // ADR-0010's no-retry rule, applied rather than excepted. The 429 exception
+    // is pre-first-byte and stays there: once bytes are on the wire we cannot
+    // know what was already persisted, so replaying is guesswork. Recovery is
+    // the Player re-running the stated range, which dedup by URL makes exact.
+    await fetch(`${baseUrl}/__truncated-calls`); // read, then measure the delta
+    const before = ((await fetch(`${baseUrl}/__truncated-calls`).then((r) => r.json())) as {
+      calls: number;
+    }).calls;
+
+    await eventsOver("truncated", { year: 2024, month: 1 }, { year: 2024, month: 3 });
+
+    const after = ((await fetch(`${baseUrl}/__truncated-calls`).then((r) => r.json())) as {
+      calls: number;
+    }).calls;
+    expect(after - before).toBe(1);
+  });
+
+  it("does not call a refusal an interruption: a 429 or a 500 cuts nothing", async () => {
+    // Nothing was interrupted — the answer never started. Emitting a stop here
+    // would tell the Player to resume from a month the stream never reached, and
+    // would name a break that did not happen.
+    const refused = await eventsOver("broken", { year: 2024, month: 1 }, { year: 2024, month: 2 });
+
+    expect(refused.map((e) => e.kind)).not.toContain("stream-cut");
+    expect(refused.filter((e) => e.kind === "month-failed")).toHaveLength(2);
   });
 });

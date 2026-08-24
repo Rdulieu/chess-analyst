@@ -17,7 +17,7 @@ import { createDangerRouter } from "./routes/danger";
 /**
  * Builds the local API server over an already-open database and a **registry of
  * `PlatformClient`s**, one per supported Platform (ADR-0002: this relay is the
- * only thing that talks to the outside; ADR-0016: each adapter answers in our
+ * only thing that talks to the outside; ADR-0018: each adapter answers in our
  * vocabulary). The clients are injected so tests and the agentic Feature Path
  * can drive imports against a fixture archive instead of the live API, and the
  * one an Import uses is resolved from its `Profile`'s Platform. The `Engine` is

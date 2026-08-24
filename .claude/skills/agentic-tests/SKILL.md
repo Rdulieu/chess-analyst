@@ -86,7 +86,9 @@ others instead of being added to them.
 1. **The prerequisite runs first, alone, to completion.** Path 0 builds the snapshots every
    scenario restores; dispatching the HPs before it has finished hands them a state that does not
    exist yet. It is the one step that is never parallel.
-2. **Then all HPs at once**, one subagent each.
+2. **Then the HPs, one subagent each — but not all at once. Derive how many from the machine**
+   (§5.7). On the 8-thread laptop this suite runs on that is **two**; run the third when a slot
+   frees.
 3. The orchestrator **collects the reports** (§5.1 — do not assume they arrive on their own) and
    consolidates.
 
@@ -115,7 +117,12 @@ exact shape that lost four reports on 2026-08-21. **No `SendMessage` relance was
 transcript recovery was needed.** Each report was again followed by an empty `idle_notification`,
 confirming that signal means nothing about delivery.
 
-That settles the open question of §5.6 as far as one run can: **treat delivery as working**, in
+**What happened on 2026-08-24 (full HP suite again: path 0, then three HPs in parallel).** Delivery
+worked **4 of 4** again, every report unprompted and in full, parallel fan-out included — and each
+report arrived **twice**, once by `SendMessage` and once as the completion notification. Three full
+suites and one FP now agree. Expect the double delivery; do not read the second copy as a new report.
+
+That settles the open question of §5.6 as far as these runs can: **treat delivery as working**, in
 parallel included. The 2026-08-21 loss remains unexplained and is now **history rather than a live
 warning** — one incident, never reproduced across two later runs. Keep the ladder below, because it
 costs one sentence in a dispatch prompt and a lost suite costs half an hour of real engine and
@@ -231,7 +238,10 @@ subagent, explicitly:
   where neither the vite nor the Chrome pid carried a scratch path in `environ`. `/proc/<pid>/cmdline`
   is the second proof and worked where `environ` did not: the worktree path, `--strictPort <your
   port>`, `--user-data-dir` under your own scratch. Use whichever actually names you; do not treat an
-  uninformative `environ` as evidence that a pid is not yours. Two agents on one run believed they had stopped an app that was still up, and
+  uninformative `environ` as evidence that a pid is not yours. **Re-confirmed 2026-08-24** on a
+  vite listener started from the project directory: `environ` answered "not mine" about a process
+  that was; `cwd` + `cmdline` + the `API_TARGET` it was given settled it. Note which way this fails —
+  a check that wrongly says "not mine" leaves your own orphan for the next run to trip over. Two agents on one run believed they had stopped an app that was still up, and
   one of them copied a database out from under it.
 - **`npx` interposes a wrapper, so the listener is usually a GRANDCHILD** (re-confirmed by three
   agents on 2026-08-23). Killing the pid you spawned leaves the real server listening. Kill the
@@ -294,7 +304,8 @@ Answer these, and write the answers down:
   **twice** — once via the subagent's own `SendMessage`, once as the completion notification, with
   identical content. Three consecutive runs. The belt-and-braces instruction of §5.1 is what produces
   the duplicate; it is worth the cost, but expect the double delivery rather than reading the second
-  copy as a second report.)*
+  copy as a second report. **2026-08-24 (full suite): 4 of 4, every one delivered twice.** The
+  question stays closed.)*
 - **Did the `SendMessage`-on-idle relance work?** For how many agents? *(2026-08-23: **not needed
   once** — nothing to relance. Separately confirmed the same day that `SendMessage` **resumes a
   completed subagent** with its environment knowledge intact: the games-table FP agent was sent back
@@ -303,7 +314,10 @@ Answer these, and write the answers down:
 - **Was transcript recovery needed at all?** If yes, was the path in §5.2 still correct?
   *(2026-08-23: **not needed**, twice over. The path is therefore still **unverified** since it was
   written — the one claim in §5.2 nobody has exercised. Do not delete it, but do not trust it blind
-  either: check the directory exists before relying on it in an emergency.)*
+  either: check the directory exists before relying on it in an emergency. **2026-08-24: not needed
+  a third time**, so §5.2 stays unexercised. This run's orchestrator was handed each subagent's
+  transcript path directly by the harness, which is a likelier recovery route than §5.2's glob — but
+  it is equally unexercised, so neither is a promise.)*
 - **Do the isolation findings still hold** — the orphaned listener, `emulate` reloading the
   document, the shared browser stealing the selected page? *(2026-08-23: the orphaned listener and
   the page theft both hold and are **worse** than they were written; the theft is now the default
@@ -313,14 +327,26 @@ Answer these, and write the answers down:
   the very start and every script port-guarded, **zero page thefts and no theme or viewport loss** —
   the single-subagent case, so it says nothing about the parallel one, but it does say the private
   browser removes the symptom rather than merely reducing it. The `npx` grandchild listener was
-  confirmed again on both servers.)*
+  confirmed again on both servers. **2026-08-24 — the parallel case the line above could not speak
+  to: zero page theft across all four agents**, each on its own Chrome with its own `--user-data-dir`
+  and CDP port, and no port guard ever tripped. So the private-browser default holds **in the exact
+  shape** that produced the theft on 2026-08-23. The grandchild listener held again (an `npx` wrapper
+  killed while its Vite child kept listening — twice, on two different agents), and the **WAL trap
+  fired again** on path 0: 2.56 MB of `.db` beside 4.14 MB of `-wal`, so checkpoint-before-copy is
+  load-bearing rather than ceremonial. The colour-scheme failure gained a **second mechanism**:
+  emulation set over a CDP session that is then **detached** reverts silently, hit independently by
+  two agents of this run, each auditing the dark palette twice until an in-script assertion caught
+  it. Written up in `theme-pass.md`.)*
 - **Did any driver produce a false finding?** *(2026-08-23: **five**, across three agents — a
   progress observer read only its first 40 of 1488 samples, a board parser keyed on `img` where the
   pieces are `div` backgrounds, a breadcrumb predicate assuming one parent, a candidate lookup
   matching non-clickable ancestors. Every one was caught by re-measuring before reporting. That rule
   has now caught more would-be defects than the app has produced. **2026-08-23 (games-table FP):
   zero** — one candidate (a badge that looked right-aligned) dissolved on re-measuring the computed
-  `text-align`. The rule keeps paying for itself.)*
+  `text-align`. The rule keeps paying for itself. **2026-08-24: three more** — an arrow parser
+  filtering on `rgba(` that missed the fully opaque top candidate, plus the two reverted theme
+  emulations above, each of which would have reported a green pass over a theme that never rendered.
+  Caught by re-measuring or by an in-script assertion; none reached a report as a defect.)*
 
 **Then correct the skill in the same run**, as a doc commit alongside the suite result. Three rules
 for that edit:
@@ -335,6 +361,47 @@ for that edit:
 > A runner's instructions describe a system that moves. This section is the only part of the skill
 > that is knowingly written ahead of its evidence, and it stays honest only if each run pays a few
 > minutes to re-check it.
+
+### 5.7 What an agent costs, and how many fit
+
+**Isolation and parallelism pull against each other, and §5.4 only argues one side.** Everything
+there — a private browser each, its own ports, its own database — was written to stop agents landing
+in each other's app, and it works. What it never says is that **it is also what makes a fan-out
+expensive**: one scenario is no longer one process, it is a **full Chrome (multi-process) plus a Vite
+dev server plus an app server**, and for HP-01 an engine pass on top. Three scenarios is three of
+those trios, next to the developer's own desktop — their browser, their IDE, their terminals — on the
+same machine.
+
+That bill came due. On **2026-08-24** a three-way fan-out (after path 0, itself a fourth such trio)
+left the machine wedged: the X11 session had to be killed and the requester held the power button.
+The requester reports the same freeze **several times over three days**, and `/var/log/apport.log`
+corroborates crashes on **2026-08-23 16:23**, **2026-08-24 00:29** and **2026-08-24 16:49**. So this
+is a recurrence, not an anecdote — which is why it earns a rule rather than a warning.
+
+**What the diagnosis found, and what it did not.** No OOM kill, `systemd-oomd` inactive, nothing
+thermal, no `MCE`, no i915 GPU hang logged. The two crash dumps (Chrome, VS Code, both `SIGTRAP`)
+are dated *after* the session began its orderly exit, so they are collateral of the teardown rather
+than its cause. The honest reading is **CPU and responsiveness starvation**, not memory exhaustion —
+and the trigger of the session exit is **not established**. Do not write a mechanism here that
+nobody has demonstrated; this section exists to bound the load, not to explain the freeze.
+
+**The budget, in threads.** Sustained, an agent's trio behaves like roughly **four threads' worth**
+of work. So:
+
+```
+concurrent agents = min(3, floor(nproc / 4))
+```
+
+Three because the suite is three scenarios — above that the cap is moot, not virtuous. `floor(nproc
+/ 4)` because that is what leaves the machine answering. Read `nproc` and decide; do not carry a
+number over from another machine. On the 8-thread laptop this suite runs on: **2**. On 4 threads: run
+them **in series**. Leave the developer's own desktop out of the arithmetic — it is already the
+reason for the divisor rather than a share to be subtracted.
+
+**Do not "optimise" this by sharing the browser again.** That is the tempting move once the cost is
+named, and it walks straight back into the page theft of 2026-08-23, where one `take_snapshot`
+returned a sibling's entire accessibility tree. The private browser is the expensive half of a
+trade that was made deliberately. **Pay it in serialisation, not in isolation.**
 
 ## 6. Execution rules (agent)
 
@@ -372,6 +439,9 @@ one that silently loses runs.
       is now demonstrated working, parallel included (§5.1, 2026-08-23)
 - [ ] Its own ports, its own `DB_FILE`, and **its own private browser instance** — not the shared one
       (§5.4: all three scenarios of the 2026-08-23 run had their page stolen)
+- [ ] **Concurrency derived from the machine**, `min(3, floor(nproc / 4))` — §5.7. One private
+      browser per agent is what makes a fan-out expensive, and three trios wedged this machine
+      repeatedly between 2026-08-22 and 2026-08-24. Never carry a number over from another host
 - [ ] Restore state **before** starting the server
 - [ ] A `location.port` guard on every injected script
 - [ ] Teardown **by pid**, never `pkill` by pattern; verify the port is free afterwards

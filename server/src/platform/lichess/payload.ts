@@ -1,6 +1,6 @@
 /**
  * The Lichess games-export surface, and **nothing above this directory knows
- * it** (ADR-0016): these shapes stop at the adapter, which translates them into
+ * it** (ADR-0018): these shapes stop at the adapter, which translates them into
  * `ImportedGame`.
  */
 

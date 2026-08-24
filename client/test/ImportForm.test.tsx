@@ -221,3 +221,56 @@ describe("ImportForm", () => {
     );
   });
 });
+
+describe("an Import whose stream broke", () => {
+  it("shows the interruption's statement, with a range the Player can retype", async () => {
+    // The three facts have to be READABLE, not merely returned: where it
+    // stopped, that nothing fetched is lost, and the range left to run — in the
+    // same `YYYY-MM` form the field above accepts, so it can be typed back
+    // rather than worked out from the month lines.
+    const message =
+      "Le flux s'est interrompu après 2024-02. Les parties récupérées sont conservées. " +
+      "Pour couvrir le reste, relancez un import de 2024-03 à 2024-05.";
+    stubRelay([
+      {
+        running: false,
+        total: 5,
+        done: 5,
+        result: {
+          ...emptyResult,
+          message,
+          months: [
+            { month: { year: 2024, month: 1 }, imported: 2, alreadyPresent: 0 },
+            { month: { year: 2024, month: 2 }, imported: 1, alreadyPresent: 0 },
+            { month: { year: 2024, month: 3 }, imported: 0, alreadyPresent: 0, failure: "le flux a été interrompu" },
+          ],
+        },
+      },
+    ]);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /import/i }));
+
+    const said = await screen.findByRole("status", { name: /import status/i });
+    expect(said.textContent).toContain("2024-02");
+    expect(said.textContent).toMatch(/conserv/i);
+    // The range, in the form's own vocabulary — the two bounds it accepts.
+    expect(said.textContent).toContain("2024-03");
+    expect(said.textContent).toContain("2024-05");
+    // And the summary is there beside it: a break gives a summary, not an error.
+    expect(screen.getByRole("region", { name: /import summary/i })).toBeTruthy();
+  });
+
+  it("leaves the form's own range untouched, so the stated one can be typed over it", async () => {
+    // The Player is being asked to retype a range; the field must not have been
+    // rewritten under them in the meantime.
+    stubRelay([{ running: false, total: 1, done: 1, result: emptyResult }]);
+    render(<ImportForm profile={PROFILE} onImported={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /import/i }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Du").getAttribute("value")).toBe(thisMonth()),
+    );
+  });
+});

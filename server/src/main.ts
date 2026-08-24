@@ -13,7 +13,7 @@ const DB_FILE = process.env.DB_FILE ?? resolve(here, "..", "chess-analyst.db");
 
 const { db } = openDb(DB_FILE);
 
-// One adapter per supported Platform (ADR-0016); base URLs overridable by
+// One adapter per supported Platform (ADR-0018); base URLs overridable by
 // environment (CHESSCOM_BASE_URL, LICHESS_BASE_URL) so the agentic Feature Path
 // can point at a fixture archive. The engine backend is selected the same way
 // (ENGINE_BACKEND / STOCKFISH_PATH) — ADR-0008.

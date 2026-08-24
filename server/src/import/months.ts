@@ -1,12 +1,11 @@
-/** One bound of an Import's month range: a chess.com monthly archive's year/month. */
-export interface MonthRef {
-  year: number;
-  /** 1-12. */
-  month: number;
-}
+import { monthOrdinal as ordinal, monthsInRange } from "../platform/months";
+import type { MonthRef } from "../platform/types";
 
-/** Months since year 0 — the one ordering every range comparison needs. */
-const ordinal = ({ year, month }: MonthRef) => year * 12 + month;
+// `MonthRef` and the month arithmetic now live beside the PORT: the adapters walk
+// months too (chess.com issues one request each, Lichess slices one stream back
+// into them). What stays here is the Import's own POLICY about a range.
+export type { MonthRef };
+export { monthsInRange };
 
 /**
  * Validates and normalizes an Import's range against the current month.
@@ -31,20 +30,4 @@ export function normalizeRange(
 ): { from: MonthRef; to: MonthRef } | null {
   if (ordinal(from) > ordinal(to)) return null;
   return { from, to: ordinal(to) > ordinal(now) ? { ...now } : to };
-}
-
-/** The months an Import covers, in order, both bounds included. */
-export function monthsInRange(from: MonthRef, to: MonthRef): MonthRef[] {
-  const months: MonthRef[] = [];
-  let { year, month } = from;
-  while (year < to.year || (year === to.year && month <= to.month)) {
-    months.push({ year, month });
-    if (month === 12) {
-      year++;
-      month = 1;
-    } else {
-      month++;
-    }
-  }
-  return months;
 }

@@ -16,6 +16,7 @@ import {
   seedProfile,
   type PlayerAnswer,
 } from "./fixtures";
+import { monthsInRange } from "../src/platform";
 import type { PlatformClient } from "../src/platform";
 
 /** 4-field FEN of the standard starting Position. */
@@ -805,9 +806,12 @@ describe("import API", () => {
     const app = createApp(db, {
       chesscom: {
         fetchPlayer: async (username) => ({ username }),
-        fetchMonth: async () => {
-          monthsFetched++;
-          return { totalFetched: 0, games: [] };
+        // Counts the MONTHS the range covers, which is what the assertion is
+        // about: the generator is started either way, but an empty range asks
+        // for nothing.
+        // eslint-disable-next-line require-yield
+        fetchRange: async function* (_username, from, to) {
+          monthsFetched += monthsInRange(from, to).length;
         },
       },
     });
@@ -826,7 +830,7 @@ describe("import API", () => {
     // No phantom months reported at zero — the range simply covers nothing.
     expect(monthsFetched).toBe(0);
     expect(final.result.months).toEqual([]);
-    expect(final.result.message).toMatch(/no games found/i);
+    expect(final.result.message).toMatch(/aucune partie trouvée/i);
   });
 
   it("POST /api/import imposes no cap on how long a range may be", async () => {
@@ -853,7 +857,8 @@ describe("import API", () => {
     const { db } = openDb(":memory:");
     const failing: PlatformClient = {
       fetchPlayer: async (username) => ({ username }),
-      fetchMonth: async () => {
+      // eslint-disable-next-line require-yield
+      fetchRange: async function* () {
         throw new Error("chess.com request failed (429)");
       },
     };
@@ -907,7 +912,7 @@ describe("import API", () => {
       classical: 0,
       correspondence: 0,
     });
-    expect(final.result.message).toMatch(/no games found/i);
+    expect(final.result.message).toMatch(/aucune partie trouvée/i);
   });
 
   it("POST /api/import reports zero with a message covering the whole range", async () => {
@@ -926,7 +931,7 @@ describe("import API", () => {
 
     const final = await importDone(app);
     expect(final.result).toMatchObject({ imported: 0, alreadyPresent: 0 });
-    expect(final.result.message).toMatch(/no games found/i);
+    expect(final.result.message).toMatch(/aucune partie trouvée/i);
   });
 });
 
@@ -1039,7 +1044,7 @@ describe("stats API", () => {
 
 /**
  * The `Platform` as a **value the code reads** rather than a word it spells
- * (ADR-0016): which site an operation talks to is resolved from the `Profile`,
+ * (ADR-0018): which site an operation talks to is resolved from the `Profile`,
  * and every message names the site actually asked for. A refusal that says
  * "chess.com" when the Player asked for Lichess is the failure this exists
  * against.

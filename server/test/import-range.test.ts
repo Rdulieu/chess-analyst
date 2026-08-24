@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
 import { listGames } from "../src/repository";
 import { importRange } from "../src/import";
-import { importedGame, fakeClient, seedProfile } from "./fixtures";
+import { importedGame, fakeClient, interceptMonths, seedProfile } from "./fixtures";
 import type { ImportRangeParams } from "../src/import";
 
 /** A fresh database with the one `Profile` these tests import under. */
@@ -43,13 +43,9 @@ describe("importRange", () => {
         importedGame({ timeControlCategory: "rapid", playerColor: "black", result: "loss" }),
       ],
     });
-    const spying = {
-      ...client,
-      fetchMonth: (username: string, year: number, month: number) => {
-        asked.push(`${year}-${String(month).padStart(2, "0")}`);
-        return client.fetchMonth(username, year, month);
-      },
-    };
+    const spying = interceptMonths(client, ({ year, month }) => {
+      asked.push(`${year}-${String(month).padStart(2, "0")}`);
+    });
 
     const result = await importRange(db, spying, {
       ...params(profileId),
@@ -134,7 +130,15 @@ describe("importRange", () => {
 
     expect(result.imported).toBe(2);
     expect(result.totalFetched).toBe(2);
-    expect(result.message).toBeUndefined(); // a partly successful Import is not a failed one
+    // **Decision reversed by the requester, 2026-08-24.** This used to assert
+    // `undefined`, on the rule "a partly successful Import is not a failed one".
+    // It is now the opposite: a range with an unanswered month always says which
+    // period has to be re-run, whether or not other months brought Games in.
+    // Silence here left the Player to work the gap out from the month lines, and
+    // the whole point of the global statement is that they should not have to.
+    expect(result.message).toMatch(/2024-02/); // where the gap starts
+    expect(result.message).toMatch(/2024-03/); // through the end of the range
+    expect(result.message).toMatch(/conserv/i); // and nothing already in is lost
   });
 
   it("catches up only the missing month when the range is replayed", async () => {
@@ -159,6 +163,8 @@ describe("importRange", () => {
   });
 
   it("reports nothing found over the whole range, not month by month", async () => {
+    // Every month answered, all of them empty: "nothing found" is then a
+    // statement the run actually established, and it is said once for the range.
     const { db, profileId } = testDb();
     const client = fakeClient({});
 
@@ -168,8 +174,47 @@ describe("importRange", () => {
     });
 
     expect(result.message).toBe(
-      "No games found for 2024-01 to 2024-03 in the selected time control categories.",
+      "Aucune partie trouvée de 2024-01 à 2024-03 dans les cadences sélectionnées.",
     );
+  });
+
+  it("never says nothing was found when a month was never answered", async () => {
+    // The claim is about what the range HELD; a month the Platform refused was
+    // not read, so nothing about its contents was established. The one wrong
+    // conclusion available to the Player here is "I did not play in those
+    // months" — which is exactly what the per-month lines exist to prevent.
+    const { db, profileId } = testDb();
+    const refused = new Error("Lichess request failed (500)");
+    const client = fakeClient({ "2024-01": refused, "2024-02": refused, "2024-03": refused });
+
+    const result = await importRange(db, client, {
+      ...params(profileId),
+      to: { year: 2024, month: 3 },
+    });
+
+    expect(result.message ?? "").not.toMatch(/aucune partie trouv/i);
+    // What it says instead: what failed, that nothing already held is lost, and
+    // the range to retry — the shape the interruption message established.
+    expect(result.message).toMatch(/2024-01/);
+    expect(result.message).toMatch(/2024-03/);
+    expect(result.message).toMatch(/conserv/i);
+  });
+
+  it("still says nothing was found when only SOME months failed and the answered ones were empty", async () => {
+    // The mixed case, and the reason the rule is "every month answered" rather
+    // than "nothing imported": February was read and was genuinely empty, but
+    // January was not read at all, so the range as a whole cannot be called
+    // empty. The retry range starts at the first month that failed.
+    const { db, profileId } = testDb();
+    const client = fakeClient({ "2024-01": new Error("Lichess request failed (500)") });
+
+    const result = await importRange(db, client, {
+      ...params(profileId),
+      to: { year: 2024, month: 3 },
+    });
+
+    expect(result.message ?? "").not.toMatch(/aucune partie trouv/i);
+    expect(result.message).toMatch(/2024-01/);
   });
 
   it("says nothing when at least one month of the range brought Games in", async () => {
@@ -182,5 +227,103 @@ describe("importRange", () => {
     });
 
     expect(result.message).toBeUndefined();
+  });
+});
+
+describe("an Import whose stream broke mid-flight", () => {
+  /** A range whose stream dies in March, after two months came through. */
+  const brokenInMarch = () =>
+    fakeClient({
+      "2024-01": [importedGame({ gameUrl: "https://x/1" })],
+      "2024-02": [importedGame({ gameUrl: "https://x/2" })],
+      "2024-03": { games: [importedGame({ gameUrl: "https://x/3" })], cutShortWith: new Error("le flux a été interrompu avant la fin") },
+    });
+
+  it("says where it stopped, that the Games are kept, and the exact range left to run", async () => {
+    // Three facts, none decorative. Without the second the Player assumes the
+    // whole import has to be redone; without the third they have to work the
+    // range out themselves, from a list of month lines.
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    // The last month that came through IN FULL — not the month it broke in.
+    expect(result.message).toContain("2024-02");
+    expect(result.message).toMatch(/conserv/i);
+    // The range to retype, starting AT the month it broke in, never after it:
+    // March is partial, and re-fetching it is free while declaring it covered
+    // would be a silent, permanent hole.
+    expect(result.message).toMatch(/2024-03/);
+    expect(result.message).toMatch(/2024-05/);
+  });
+
+  it("counts what arrived in the cut month as fetched, so the summary cannot keep more than it received", async () => {
+    // The headline read "4 games fetched — 5 imported": more kept than
+    // received, which is impossible on its face. The month the stream died in
+    // never gets a `month-done`, by design (we over-declare incompleteness), so
+    // its Games were counted as imported and never as fetched.
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    expect(result.imported).toBe(3);
+    expect(result.totalFetched).toBe(3);
+    // The invariant, stated rather than the arithmetic: the Platform cannot have
+    // given us less than we kept.
+    expect(result.totalFetched).toBeGreaterThanOrEqual(result.imported);
+  });
+
+  it("returns its summary rather than throwing — a failed month has never aborted an Import", async () => {
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    expect(result.imported).toBe(3);
+    // What arrived before the break is persisted and findable — that is what
+    // makes re-running the stated range an addition rather than a redo.
+    expect(listGames(db, profileId)).toHaveLength(3);
+  });
+
+  it("reports the month it broke in, and every month after it, as failed", async () => {
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    const failed = result.months.filter((m) => m.failure !== undefined);
+    expect(failed.map((m) => m.month.month)).toEqual([3, 4, 5]);
+    // And the covered ones stay covered, at their real counts.
+    expect(result.months.filter((m) => m.failure === undefined).map((m) => m.month.month)).toEqual([
+      1, 2,
+    ]);
+  });
+
+  it("says nothing of the sort on a nominal import", async () => {
+    // The message must be the sign of an interruption, not decoration that
+    // always shows: a Player who sees it on a clean run learns to ignore it.
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      fakeClient({ "2024-01": [importedGame()] }),
+      params(profileId),
+    );
+
+    expect(result.message ?? "").not.toMatch(/interromp/i);
   });
 });

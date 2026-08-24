@@ -106,12 +106,15 @@ imported, 0 already present" against a database that already holds them.
   fixture. The span reaches back years and every month in it is immutable, so its figures do not
   drift the way a recent month's would.
 - **The Lichess address family is pinned to IPv4 by the app itself** (`server/src/platform/lichess/request.ts`),
-  and nothing here needs configuring. It is stated because of how it fails when it is bypassed:
-  the games-export endpoint answers an **instant, permanent `429` over IPv6** — insensitive to
-  waiting, independent of the account, specific to that endpoint. That reads exactly like a rate
-  limit and invites exactly the wrong fixes (wait, retry, add a token). **A `429` on the Lichess
-  export during this step is an address-family finding until proven otherwise**, so check the
-  request path went through `lichessGet` before concluding anything about quotas.
+  and nothing here needs configuring. It is stated so that a `429` here is not misread: the pin is a
+  **determinism choice, not a correctness requirement**, and Lichess does **not** refuse IPv6 —
+  that earlier conclusion came from measurements taken in one direction only, and the exact
+  opposite reproduced on 2026-08-22 (IPv4 → `429`, IPv6 → `200`, seconds apart) after a reference
+  import had bursted over the pinned IPv4. What fits both is a **per-IP throttle on the export
+  endpoint, keyed to a recent burst**. So **a `429` on the export here is a "we asked too much too
+  recently" finding**, not an address-family one and not a quota one: report it with what ran
+  before it. The import now asks **once for the whole range**, so a burst is no longer something a
+  nominal run produces.
 
 ## Journey
 1. Start the app on a fresh, empty database → with no `Profile` yet, the app leads to `/profiles`
@@ -163,7 +166,18 @@ imported, 0 already present" against a database that already holds them.
   against the live API. Record the figures it reports (see *Recorded figures* below).
 - Step 5, the empty months: the per-month lines cover **every** month of the span in order,
   **including the 51 with no game, each listed at zero**. A span that silently skipped its empty
-  months would be indistinguishable from one that failed to fetch them.
+  months would be indistinguishable from one that failed to fetch them. Since US-17 this is a
+  **stronger** assertion than it was: it used to check that 51 requests each answered empty, which
+  is close to tautological; it now checks that **slicing one stream into months** produces 51 zero
+  lines, which is new code and the thing most likely to get this wrong.
+- Step 5, the request count: the whole span costs **one** export request, not 71 — measured, with
+  the instrument below. Without this assertion nothing in the suite tells US-17 delivered from
+  US-17 undelivered: the screen looks identical either way, which is the point of the story (the
+  month stays the unit of reporting) and exactly why the cost has to be observed instead of read.
+- Step 5, the pauses: **no minute-long pause occurs**. The `attente de la plateforme` line must
+  never appear. Six of them was the reference run's dominant cost, and one request is not a burst.
+- Step 5, the duration: the Lichess import is **timed on its own**, separately from the scenario's
+  total, and reported with its delta against the reference (see *Recorded durations*).
 - Step 6: the list holds **three** rows, `DudulSmash` marked "Profil actuel" and the other two
   offering "Sélectionner", and **nothing overflows its container** — with a third row the list is
   taller than the pairing that first caught the overflow, so this is the stricter version of the
@@ -175,6 +189,65 @@ imported, 0 already present" against a database that already holds them.
   entries. Two `Monthly import` lines, in order: `2026-05` at 28, `2026-06` at 54. On `/profiles`,
   `Nonomoho` still reads **`0 parties · 0 analysées`** and `Metalyst` still reads the count step 5
   recorded.
+
+### Counting the requests — the instrument
+
+The count is what makes this scenario able to observe US-17 at all, so how it is obtained is part of
+the scenario rather than left to the runner.
+
+**Put a logging reverse proxy in front of Lichess** and point the app at it with
+`LICHESS_BASE_URL=http://127.0.0.1:<port>`. The proxy forwards to `https://lichess.org`. The
+**contract under test is still the live one** — real API, real ndjson, real throttle; only the base
+URL moved, and that is an already-supported knob (`server/src/platform/lichess/client.ts`). Pin the
+proxy's own outbound hop to IPv4 to keep the determinism the app's own pin buys.
+
+Two things the proxy has to get right, both learned by writing one:
+
+- **Log three lines per request, not one**: request-out, response-headers, response-end. A single
+  line cannot carry both *first request out* and *last byte in*, and the duration below is exactly
+  that interval. One line per request is enough to **count**, not to **time**.
+- **Set `Host: lichess.org` on the outbound hop.** Forwarding the caller's own
+  `Host: 127.0.0.1:<port>` does not reach the API at all.
+
+The proxy log is also what yields the Lichess import's **own** duration — first request out to last
+byte in — which is the figure US-18 needs and which the wall-clock of a UI-driven step cannot give.
+
+> **Do not count connections, and do not use `NODE_DEBUG`.** Both were tried and both lie. Node's
+> global agent keeps connections alive, so a connection count reports **1** for a burst of 71
+> requests — the exact false green this assertion exists to prevent. `NODE_DEBUG=http` was measured
+> directly: three sequential export requests emitted **one** `call onSocket` and **one**
+> `createConnection` line, so its output cannot be counted either. Measured on 2026-08-24, on the
+> code under test — recorded here so the next run does not re-derive it.
+
+### Recorded durations — step 5, `Metalyst` over 71 months
+
+The reference is the **month-by-month** run, before US-17: the Lichess import took **~3.5 min**, of
+which **~2.4 min was pure waiting** across **six one-minute pauses** — `429`s provoked by the burst
+of 71 requests, each answered by a one-minute sleep and one replay.
+
+| Figure | Reference (71 requests) | US-17 delivery run (2026-08-24) | This run |
+| --- | --- | --- | --- |
+| Export requests | 71 | **1** | *measured* |
+| One-minute pauses | 6 | **0** | *measured* |
+| Lichess import, own duration | ~3.5 min (~210 s) | **33.6 s** | *measured* |
+| of which waiting | ~2.4 min (~144 s) | **0 s** | *measured* |
+| Scenario total | *not recorded* | *not cleanly measured — see below* | *measured* |
+
+**Report the measured figures and the delta, never "it is faster".** This table is the first real
+datum US-18 has: its own entry says plainly that its figures are *deduced, not measured*, so a run
+that reports an impression instead of a number hands it nothing. Fill the right column from the run
+and state the delta against the reference.
+
+The middle column is the run that delivered US-17, kept here so the figure lives in the repo rather
+than only in a pull request: **33.571 s**, request-out `10:34:58.517Z` to last-byte-in
+`10:35:32.088Z`, read off the proxy log — **−176 s against the reference, about 6.3× shorter**, with
+the six one-minute pauses gone. It measures the export alone and therefore excludes the app's own
+PGN parsing and database writes; that is deliberate, since it is the fetching US-18 is about.
+
+Its **scenario total is not a clean measurement** and is not recorded as one: the session driving it
+was interrupted mid-run, so its wall clock holds dead time and a restart. The import figure is
+unaffected — it comes from the proxy log, entirely before the interruption — and does not need
+re-paying to obtain a total. A single uninterrupted run would give one.
 
 ### Recorded figures — `Metalyst`, 2017-10 → 2023-08
 
@@ -252,12 +325,12 @@ names the right one.
 - The range's figures were read from the live chess.com API and both months are past. If they
   drift, **re-check the account and update HP-01's table** — the point of anchoring on immutable
   months is to keep the suite assertable on real data.
-- **The Lichess span is the long pole of the suite.** 71 months are fetched one month at a time,
-  so this step now takes materially longer than it did. That is a cost paid **once** per suite run —
-  it is exactly what the snapshots exist to avoid re-paying — but budget for it rather than reading
-  a slow step as a hung one.
-- **Real network dependency**: needs chess.com reachable, and Lichess reachable over IPv4 (see the
-  Preconditions — a `429` on the export is an address-family finding before it is a quota one). A month marked in **échec** here means
+- **The Lichess span used to be the long pole of the suite**, when its 71 months were fetched one
+  month at a time. They are now fetched in **one request** (US-17), which is what the step is
+  expected to show; the duration is *measured and recorded* by path 0 itself rather than asserted
+  here. It stays a cost paid **once** per suite run — what the snapshots exist to avoid re-paying.
+- **Real network dependency**: needs chess.com and Lichess reachable (see the Preconditions — a
+  `429` on the export points at a recent burst, not at an address family). A month marked in **échec** or **incomplet** here means
   the snapshot is incomplete and the scenarios restoring it would assert against a partial range —
   re-run path 0 rather than continuing, since a failed month is a legitimate environment finding
   but a poisoned shared state.
