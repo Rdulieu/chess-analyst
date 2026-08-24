@@ -9,6 +9,7 @@ import { GameHeader } from "./GameHeader";
 import { gameHeader } from "./gameHeader";
 import { ReviewModeControl } from "../review/ReviewModeControl";
 import { atLeastAnnotated, loadReviewMode, saveReviewMode } from "../review/reviewMode";
+import { noteEngineShown, showsEngine } from "../personal/engineSeen";
 import type { Game, GameRecap, MoveAnnotation } from "../../types";
 
 /**
@@ -74,6 +75,20 @@ export function GameViewer({
     setMode(next);
     saveReviewMode(next);
   };
+
+  /**
+   * The **provenance** of a future `Personal analysis` (US-16a): this Game had the
+   * engine's findings put in front of the Player. Recorded here because this is
+   * the screen that renders them — an intention is not something the Player saw,
+   * so the record is made where the showing happens, and only when both halves
+   * hold (a level above Unaided, on a Game with an analysis to show).
+   *
+   * It **labels** a later reading; it never claims to have prevented anyone from
+   * looking, which is a promise this app cannot keep and does not make.
+   */
+  useEffect(() => {
+    if (showsEngine({ analyzed: game.analyzed, mode })) noteEngineShown(game.id);
+  }, [game.id, game.analyzed, mode]);
 
   const analyze = async (overwrite = false) => {
     // `overwrite` is the Player's confirmation travelling all the way to the

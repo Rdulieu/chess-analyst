@@ -25,19 +25,32 @@ function stubReading(reading: PersonalAnalysis = EMPTY) {
     vi.fn(async (url: string, init?: RequestInit) => {
       calls.push(`${init?.method ?? "GET"} ${url}`);
       if (!url.startsWith("/api/personal/")) throw new Error(`unexpected request: ${url}`);
+      if (init?.method === "POST" && url.includes("/seal")) {
+        // The server's own refusals, so the fake cannot flatter the screen.
+        if (current.marks.length === 0)
+          return { ok: false, status: 409, json: async () => ({ reason: "empty", error: "Cette lecture est vide." }) } as Response;
+        if (current.sealedAt !== null)
+          return { ok: false, status: 409, json: async () => ({ reason: "already-sealed", error: "Déjà scellée." }) } as Response;
+        const { engineSeen } = JSON.parse(String(init.body)) as { engineSeen: boolean };
+        current = { ...current, sealedAt: "2026-08-24T18:00:00.000Z", engineSeenBeforeSeal: engineSeen };
+        return { ok: true, status: 200, json: async () => current } as Response;
+      }
       if (init?.method === "PUT") {
         const patch = JSON.parse(String(init.body)) as Record<string, unknown>;
         const ply = Number(url.split("/marks/")[1].split("?")[0]);
-        const rest = current.marks.filter((m) => m.ply !== ply);
-        const was = current.marks.find((m) => m.ply === ply);
+        const layer = current.sealedAt !== null;
+        const rest = current.marks.filter((m) => !(m.ply === ply && m.posterior === layer));
+        const was =
+          current.marks.find((m) => m.ply === ply && m.posterior === layer) ??
+          (layer ? current.marks.find((m) => m.ply === ply && !m.posterior) : undefined);
         const mark = {
           ply,
           declaredSeverity: null,
           note: null,
           keyMoment: false,
-          posterior: false,
           ...was,
           ...patch,
+          posterior: layer,
         };
         // The server's own rules, so the fake cannot flatter the screen: a blank
         // Note is no Note, and a ply with nothing left said about it has no mark.
@@ -45,7 +58,9 @@ function stubReading(reading: PersonalAnalysis = EMPTY) {
         const silent = !mark.declaredSeverity && !mark.note && !mark.keyMoment;
         current = {
           ...current,
-          marks: (silent ? rest : [...rest, mark]).sort((a, b) => a.ply - b.ply),
+          marks: (silent ? rest : [...rest, mark]).sort(
+            (a, b) => a.ply - b.ply || Number(a.posterior) - Number(b.posterior),
+          ),
         };
       }
       return { ok: true, status: 200, json: async () => current } as Response;
@@ -416,5 +431,170 @@ describe("the reading route", () => {
     expect(
       (screen.getByRole("button", { name: /retirer mon verdict/i }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+});
+
+describe("sealing a reading", () => {
+  const sealed = (over: Partial<PersonalAnalysis> = {}): PersonalAnalysis => ({
+    ...EMPTY,
+    sealedAt: "2026-08-20T10:00:00.000Z",
+    engineSeenBeforeSeal: false,
+    marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    ...over,
+  });
+
+  it("names what sealing commits before doing it, and does nothing if the Player backs out", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+
+    // Named before it happens, so nobody seals by reflex.
+    const dialog = await screen.findByRole("alertdialog", { name: /sceller/i });
+    expect(dialog.textContent).toMatch(/figé|fige/i);
+    expect(dialog.textContent).toMatch(/définitif|ne peut pas être descellée|irréversible/i);
+
+    await user.click(within(dialog).getByRole("button", { name: /annuler/i }));
+    expect(calls.some((c) => c.includes("/seal"))).toBe(false);
+  });
+
+  it("seals on confirmation, and labels the reading as read unaided", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, id: 1, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    const dialog = await screen.findByRole("alertdialog", { name: /sceller/i });
+    await user.click(within(dialog).getByRole("button", { name: /^sceller$/i }));
+
+    await waitFor(() => expect(calls.some((c) => c.includes("/seal"))).toBe(true));
+    await screen.findByText(/lue à l'aveugle/i);
+  });
+
+  it("labels the reading as read informed when the engine had been shown for THIS Game", async () => {
+    localStorage.setItem("chess-analyst.engine-seen", JSON.stringify([1]));
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, id: 1, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    await user.click(
+      within(await screen.findByRole("alertdialog", { name: /sceller/i })).getByRole("button", {
+        name: /^sceller$/i,
+      }),
+    );
+
+    await screen.findByText(/lue informée/i);
+  });
+
+  it("stays 'unaided' when the engine was shown for ANOTHER Game — provenance is per Game", async () => {
+    localStorage.setItem("chess-analyst.engine-seen", JSON.stringify([99]));
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, id: 1, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    await user.click(
+      within(await screen.findByRole("alertdialog", { name: /sceller/i })).getByRole("button", {
+        name: /^sceller$/i,
+      }),
+    );
+
+    await screen.findByText(/lue à l'aveugle/i);
+  });
+
+  it("refuses to seal an empty reading, with its reason, and does not ask first", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // Nothing to confront: the act is not offered, and the reason is said.
+    expect((screen.getByRole("button", { name: /sceller ma lecture/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/rien à confronter|lecture est vide|au moins une marque/i)).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("offers nothing that unseals a sealed reading", async () => {
+    stubReading(sealed());
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // A sealed reading stays sealed: no control anywhere reopens it.
+    expect(screen.queryByRole("button", { name: /desceller|rouvrir|annuler le scellement/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /sceller ma lecture/i })).toBeNull();
+  });
+
+  it("never claims to have prevented the Player from seeing the engine", async () => {
+    stubReading(sealed());
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // The app labels a reading; it cannot make anyone blind and must not say it
+    // did (the reason the glossary rejected the name "Blind mode").
+    expect(document.body.textContent).not.toMatch(/empêch|garanti|vous n'avez pas pu voir/i);
+  });
+
+  it("keeps writing possible after the seal, and says what is written is posterior", async () => {
+    stubReading(sealed());
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(
+      within(screen.getByRole("group", { name: /mon verdict/i })).getByRole("radio", {
+        name: /bévue/i,
+      }),
+    );
+
+    // Discovering the engine and understanding why is the most fertile moment of
+    // the exercise, so writing stays open — and what is added is marked as coming
+    // after, in words.
+    await screen.findByText(/après le scellement|postérieur/i);
+  });
+
+  it("keeps the sealed reading readable exactly as it was, beside what came after", async () => {
+    stubReading({
+      ...sealed(),
+      marks: [
+        { ply: 1, declaredSeverity: "sound", note: "je ne vois rien à reprocher", keyMoment: false, posterior: false },
+        { ply: 1, declaredSeverity: "blunder", note: "en fait je perds une pièce", keyMoment: false, posterior: true },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Both layers legible, and told apart in words rather than by colour alone.
+    const initial = screen.getByRole("group", { name: /ma lecture scellée/i });
+    expect(initial.textContent).toMatch(/correct/i);
+    expect(initial.textContent).toMatch(/je ne vois rien à reprocher/i);
+    const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked);
+    expect((posed[0] as HTMLInputElement).value).toBe("blunder");
   });
 });

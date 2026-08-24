@@ -67,7 +67,9 @@ export function getPersonalAnalysis(db: Db, gameId: number): PersonalAnalysis | 
         keyMoment,
         posterior,
       }))
-      .sort((a, b) => a.ply - b.ply),
+      // Ply, then layer: what was sealed reads before what was added on top of
+      // it, which is the order the reading actually happened in.
+      .sort((a, b) => a.ply - b.ply || Number(a.posterior) - Number(b.posterior)),
   };
 }
 
@@ -87,8 +89,35 @@ export function writeMark(
   if (!game) return undefined;
 
   const analysis = ensureAnalysis(db, gameId, game.profileId);
-  const where = and(eq(personalMarks.analysisId, analysis.id), eq(personalMarks.ply, ply));
+  // **The layer the write lands in follows from the seal, never from the
+  // caller.** Once a reading is sealed, every write is posterior to the reveal —
+  // there is no request that can put a mark back into the sealed layer, which is
+  // what makes "sealed" mean anything at all.
+  const posterior = analysis.sealedAt !== null;
+  const where = and(
+    eq(personalMarks.analysisId, analysis.id),
+    eq(personalMarks.ply, ply),
+    eq(personalMarks.posterior, posterior),
+  );
   const existing = db.select().from(personalMarks).where(where).get();
+  // What a post-seal edit starts from: the sealed mark, when this layer holds
+  // nothing yet. Changing one field of a sealed mark must carry the others over,
+  // not silently blank them — the Player is amending a reading, not writing a
+  // fresh one. Read-only: the sealed row itself is never touched.
+  const sealedBelow = posterior
+    ? db
+        .select()
+        .from(personalMarks)
+        .where(
+          and(
+            eq(personalMarks.analysisId, analysis.id),
+            eq(personalMarks.ply, ply),
+            eq(personalMarks.posterior, false),
+          ),
+        )
+        .get()
+    : undefined;
+  const base = existing ?? sealedBelow;
 
   // A field the caller **named** is what the caller says, `null` included — a
   // field it did not name is left as it was. `??` would conflate the two and make
@@ -96,15 +125,15 @@ export function writeMark(
   const next: Pick<PersonalMark, "declaredSeverity" | "note" | "keyMoment"> = {
     declaredSeverity: said(patch, "declaredSeverity")
       ? (patch.declaredSeverity ?? null)
-      : (existing?.declaredSeverity ?? null),
+      : (base?.declaredSeverity ?? null),
     // A blank Note is not a Note (CONTEXT.md): the Player said nothing, and
     // storing whitespace would make a ply *claim* to have been examined.
-    note: blankToNull(said(patch, "note") ? patch.note : existing?.note),
+    note: blankToNull(said(patch, "note") ? patch.note : base?.note),
     // Never null: a `Key moment` is posed or it is not, and "unknown" is not one
     // of its states.
     keyMoment: said(patch, "keyMoment")
       ? patch.keyMoment === true
-      : (existing?.keyMoment ?? false),
+      : (base?.keyMoment ?? false),
   };
 
   // Nothing left said about this ply, so no row: **silence is not a value**, and
@@ -115,10 +144,74 @@ export function writeMark(
   } else if (existing) {
     db.update(personalMarks).set(next).where(where).run();
   } else {
-    db.insert(personalMarks).values({ analysisId: analysis.id, ply, ...next }).run();
+    db.insert(personalMarks).values({ analysisId: analysis.id, ply, posterior, ...next }).run();
   }
 
   return getPersonalAnalysis(db, gameId);
+}
+
+/**
+ * Why a seal was refused. A business fact with a name, not a thrown string: both
+ * refusals are things the Player must be *told*, and an exception carrying prose
+ * would have every caller re-deciding how to phrase them.
+ *
+ * - `empty` — there is nothing to confront. Sealing here would open a comparison
+ *   against no reading at all.
+ * - `already-sealed` — the reading is what it was. Re-sealing would move the date
+ *   and could rewrite the provenance, which is the whole thing the seal fixes.
+ */
+export class SealRefusal {
+  constructor(readonly reason: "empty" | "already-sealed" | "no-such-game") {}
+}
+
+/**
+ * **Seals** a reading: *this is my reading, now show me the engine* (CONTEXT.md).
+ * It does two things and only two — it **fixes what will be confronted** and it
+ * **dates** the reading — plus records the one thing that makes a later
+ * comparison honest: whether the engine's findings **had already been shown for
+ * this Game**.
+ *
+ * `engineSeen` comes from the client, because only the client knows what was
+ * actually rendered. This is the **one** fact in the app where what was displayed
+ * becomes persistent, and the exception is deliberate: a comparison with no
+ * provenance is not a comparison. It is a **label, not a lock** — a cleared local
+ * store falls back to "not seen", and another tab is always a click away, so what
+ * is stored is what the app can honestly claim to have observed and nothing more.
+ *
+ * **Irreversible**: there is no unsealing function here, and that absence is the
+ * feature. If what is confronted could be reopened, it would no longer be what the
+ * Player had written.
+ */
+export function sealAnalysis(
+  db: Db,
+  gameId: number,
+  { engineSeen }: { engineSeen: boolean },
+): PersonalAnalysis | SealRefusal {
+  const game = db.select().from(games).where(eq(games.id, gameId)).get();
+  if (!game) return new SealRefusal("no-such-game");
+
+  const analysis = db
+    .select()
+    .from(personalAnalyses)
+    .where(eq(personalAnalyses.gameId, gameId))
+    .get();
+  // No reading at all and a reading with no marks are the same emptiness here:
+  // in both cases there is nothing that could be confronted.
+  if (!analysis) return new SealRefusal("empty");
+  if (analysis.sealedAt !== null) return new SealRefusal("already-sealed");
+  const marks = db
+    .select()
+    .from(personalMarks)
+    .where(eq(personalMarks.analysisId, analysis.id))
+    .all();
+  if (marks.length === 0) return new SealRefusal("empty");
+
+  db.update(personalAnalyses)
+    .set({ sealedAt: new Date().toISOString(), engineSeenBeforeSeal: engineSeen })
+    .where(eq(personalAnalyses.id, analysis.id))
+    .run();
+
+  return getPersonalAnalysis(db, gameId)!;
 }
 
 /**

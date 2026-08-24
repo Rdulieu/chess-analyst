@@ -3,7 +3,13 @@ import { openDb } from "../src/db";
 import { games, personalAnalyses, personalMarks, type NewGame } from "../src/db/schema";
 import { DECLARED_SEVERITIES } from "../src/personal/severity";
 import { seedProfile, MORPHY_GAME } from "./fixtures";
-import { getPersonalAnalysis, writeMark } from "../src/personal/repository";
+import {
+  getPersonalAnalysis,
+  writeMark,
+  sealAnalysis,
+  SealRefusal,
+} from "../src/personal/repository";
+import * as repository from "../src/personal/repository";
 
 function tempDb() {
   return openDb(":memory:").db;
@@ -266,5 +272,135 @@ describe("Personal analysis store", () => {
       declaredSeverity: "mistake",
       note: "c'est ici que je perds le fil",
     });
+  });
+
+});
+
+describe("sealing a Personal analysis", () => {
+  it("dates the reading and records that the engine had not been shown", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "mistake" });
+
+    const sealed = sealAnalysis(db, game.id, { engineSeen: false });
+
+    expect(sealed).not.toBeInstanceOf(SealRefusal);
+    const analysis = getPersonalAnalysis(db, game.id)!;
+    expect(analysis.sealedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(analysis.engineSeenBeforeSeal).toBe(false);
+  });
+
+  it("records that the engine HAD been shown, when it had", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "mistake" });
+
+    sealAnalysis(db, game.id, { engineSeen: true });
+
+    expect(getPersonalAnalysis(db, game.id)?.engineSeenBeforeSeal).toBe(true);
+  });
+
+  it("refuses to seal a reading with nothing in it, and says why", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    const refusal = sealAnalysis(db, game.id, { engineSeen: false });
+
+    // Sealing an empty reading would open a confrontation against nothing.
+    expect(refusal).toBeInstanceOf(SealRefusal);
+    expect((refusal as SealRefusal).reason).toBe("empty");
+    expect(getPersonalAnalysis(db, game.id)?.sealedAt).toBeNull();
+  });
+
+  it("refuses to seal a reading that is already sealed, and says why", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "mistake" });
+    sealAnalysis(db, game.id, { engineSeen: false });
+    const sealedAt = getPersonalAnalysis(db, game.id)?.sealedAt;
+
+    const refusal = sealAnalysis(db, game.id, { engineSeen: true });
+
+    expect(refusal).toBeInstanceOf(SealRefusal);
+    expect((refusal as SealRefusal).reason).toBe("already-sealed");
+    // Neither the instant nor the provenance is rewritten by a second attempt:
+    // a sealed reading is what it was.
+    expect(getPersonalAnalysis(db, game.id)?.sealedAt).toBe(sealedAt);
+    expect(getPersonalAnalysis(db, game.id)?.engineSeenBeforeSeal).toBe(false);
+  });
+
+  it("exposes no way at all to unseal — the store has no such operation", () => {
+    // Deliberately an assertion about the module's surface: if what is confronted
+    // could be reopened, it would no longer be what the Player had written.
+    const surface = Object.keys(repository).join(" ");
+    expect(surface).not.toMatch(/unseal|reopen|desceller/i);
+  });
+
+  it("carries a mark written AFTER the seal to the posterior layer, leaving the initial one intact", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "mistake", note: "je crois que c'est raté" });
+    sealAnalysis(db, game.id, { engineSeen: false });
+
+    writeMark(db, game.id, 3, { declaredSeverity: "blunder" });
+
+    const marks = getPersonalAnalysis(db, game.id)!.marks;
+    // Two layers on one ply: what was sealed, and what was understood afterwards.
+    expect(marks).toEqual([
+      {
+        ply: 3,
+        declaredSeverity: "mistake",
+        note: "je crois que c'est raté",
+        keyMoment: false,
+        posterior: false,
+      },
+      {
+        ply: 3,
+        declaredSeverity: "blunder",
+        note: "je crois que c'est raté",
+        keyMoment: false,
+        posterior: true,
+      },
+    ]);
+  });
+
+  it("puts a mark on a ply first touched after the seal in the posterior layer alone", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "mistake" });
+    sealAnalysis(db, game.id, { engineSeen: false });
+
+    writeMark(db, game.id, 9, { note: "vu après coup : le clouage était là" });
+
+    const marks = getPersonalAnalysis(db, game.id)!.marks;
+    expect(marks.filter((m) => m.ply === 9)).toEqual([
+      {
+        ply: 9,
+        declaredSeverity: null,
+        note: "vu après coup : le clouage était là",
+        keyMoment: false,
+        posterior: true,
+      },
+    ]);
+    // The sealed layer gained nothing: it is closed.
+    expect(marks.filter((m) => !m.posterior).map((m) => m.ply)).toEqual([3]);
+  });
+
+  it("never lets a posterior write erase the sealed layer, however many times it happens", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "sound" });
+    sealAnalysis(db, game.id, { engineSeen: false });
+
+    writeMark(db, game.id, 3, { declaredSeverity: "blunder" });
+    writeMark(db, game.id, 3, { note: "en fait j'avais tort deux fois" });
+    writeMark(db, game.id, 3, { keyMoment: true });
+    // Even taking a posterior mark back must not touch what was sealed.
+    writeMark(db, game.id, 3, { declaredSeverity: null, note: null, keyMoment: false });
+
+    const initial = getPersonalAnalysis(db, game.id)!.marks.filter((m) => !m.posterior);
+    expect(initial).toEqual([
+      { ply: 3, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false },
+    ]);
   });
 });

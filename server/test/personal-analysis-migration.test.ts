@@ -170,4 +170,30 @@ describe("the Personal analysis migration", () => {
       ),
     ).toEqual([{ on_delete: "CASCADE" }]);
   });
+
+  it("gives a ply two layers, and keeps every mark it already held as an initial one", () => {
+    const { file, gameId } = legacyDb();
+
+    const first = openDb(file);
+    writeMark(first.db, gameId, 3, { declaredSeverity: "mistake", note: "avant scellement" });
+    first.sqlite.close();
+
+    // The layer is part of the key now: a ply can hold what was sealed AND what
+    // was written afterwards. Nothing already written may move or vanish in
+    // gaining that capacity.
+    expect(
+      query<{ name: string }>(file, "SELECT name FROM pragma_table_info('personal_marks')").map(
+        (r) => r.name,
+      ),
+    ).toContain("posterior");
+    expect(
+      query<{ name: string; pk: number }>(file, "SELECT name, pk FROM pragma_table_info('personal_marks')")
+        .filter((c) => c.pk > 0)
+        .map((c) => c.name)
+        .sort(),
+    ).toEqual(["analysis_id", "ply", "posterior"]);
+    expect(query(file, "SELECT ply, declared_severity, note, posterior FROM personal_marks")).toEqual([
+      { ply: 3, declared_severity: "mistake", note: "avant scellement", posterior: 0 },
+    ]);
+  });
 });
