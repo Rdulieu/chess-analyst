@@ -127,6 +127,12 @@ puppeteer) rather than on a session you close. So the rule is not merely "do not
 default" — it is **do not trust the emulation you set either; assert it inside the audited script,
 every screen, every half.** That assertion is the only thing that has ever caught this.
 
+**And it fails in the other direction too, so do not read the above as "detaching clears it".** On a
+third run the same day (2026-08-24, US-16a slice 02), an emulated scheme **survived** past its
+session's detach into a later screenshot, which is the opposite behaviour. Four observations now
+disagree about the mechanism; none of them disagrees about the remedy. Keep one session alive, and
+assert the theme inside the script — that is what holds whichever way the emulation misbehaves.
+
 Contrast is **blocking**, not a report: US-3 shipped a highlight that was invisible for want of any
 CSS, and the point of a stylesheet is not to replay that finding in reverse.
 

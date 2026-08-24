@@ -8,6 +8,13 @@ from `CONTEXT.md`.
 **At most 3 HP.** To add a 4th: merge two, drop a non-critical one, or graft a
 drive-by onto an existing HP.
 
+> **Decided for US-16b**, so the next reader does not have to rediscover it: HP-02 and HP-03 are to be
+> **merged** into one "read my aggregates" journey — they open on the same sentence, run on the same
+> path-0 snapshot, and both assert *shape and internal consistency, not fixed numbers* — and the slot
+> that frees up receives a **dedicated** HP: *read a Game blind, seal, confront*. The cap is not
+> raised. US-16a itself is a **graft** onto HP-01 (step 9b) precisely because a Happy Path carries a
+> core value, and this one is not whole until the `Confrontation` exists.
+
 **[Path 0](./path-0-bootstrap.md) is a prerequisite, not a fourth journey, and sits outside the
 cap.** It is run **first, once per suite run**: it creates **three** reference `Profile`s — one that
 owns the reference chess.com range, one that owns nothing, and one on **lichess.org** (`Metalyst`)
@@ -26,7 +33,7 @@ restore the **imported** snapshot.
 | ID | Title | Covers | Status |
 |---|---|---|---|
 | path 0 | Bootstrap: three reference Profiles, two Platforms, two histories | Profile, Platform, Import, Monthly import, Game, Time control category | prerequisite — **not an HP** |
-| HP-01 | Import and explore my chess.com history | Profile, Platform, Import, Game, Move, Position, Theme | active |
+| HP-01 | Import and explore my chess.com history | Profile, Platform, Import, Game, Move, Position, Personal analysis, Theme | active |
 | HP-02 | Explore my move habits | Move habit, Position, Move, Profile, Theme | active |
 | HP-03 | Spot my weak openings | Weak opening, Opening, Win rate, Profile, Theme | active |
 
@@ -126,6 +133,12 @@ only the site behind it, and the cap still holds at three.
 database (ADR-0014). Every scenario selects `DudulSmash` as its own first step, which is what the
 suite asserts anyway: a scenario that never selected a Profile has not shown that the banner names
 the right one.
+
+**Beware what a database copy actually captures.** The suite already says to checkpoint the WAL
+before copying (`PRAGMA wal_checkpoint(TRUNCATE)`), and that is not always enough: on **2026-08-24** a
+`cp` taken *after* a truncating checkpoint produced a copy whose `evaluations` table read back as
+**"database disk image is malformed"**. `sqlite3 <src> ".backup <dst>"` worked where `cp` did not.
+Prefer `.backup`; whichever you use, **read the copy back** before trusting it.
 
 **Do not pay for the theme pass twice.** It reuses the state its scenario has already built: it must
 trigger no Import, no analysis and no `Profile` creation, and it must not restart the app. Sixteen
