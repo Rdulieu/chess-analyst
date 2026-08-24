@@ -30,20 +30,22 @@ function stubReading(reading: PersonalAnalysis = EMPTY) {
         const ply = Number(url.split("/marks/")[1].split("?")[0]);
         const rest = current.marks.filter((m) => m.ply !== ply);
         const was = current.marks.find((m) => m.ply === ply);
+        const mark = {
+          ply,
+          declaredSeverity: null,
+          note: null,
+          keyMoment: false,
+          posterior: false,
+          ...was,
+          ...patch,
+        };
+        // The server's own rules, so the fake cannot flatter the screen: a blank
+        // Note is no Note, and a ply with nothing left said about it has no mark.
+        if (typeof mark.note === "string") mark.note = mark.note.trim() || null;
+        const silent = !mark.declaredSeverity && !mark.note && !mark.keyMoment;
         current = {
           ...current,
-          marks: [
-            ...rest,
-            {
-              ply,
-              declaredSeverity: null,
-              note: null,
-              keyMoment: false,
-              posterior: false,
-              ...was,
-              ...patch,
-            },
-          ].sort((a, b) => a.ply - b.ply),
+          marks: (silent ? rest : [...rest, mark]).sort((a, b) => a.ply - b.ply),
         };
       }
       return { ok: true, status: 200, json: async () => current } as Response;
@@ -196,5 +198,121 @@ describe("the reading route", () => {
       el.getAttribute("data-square"),
     );
     expect(squares[0]).toBe("h1");
+  });
+
+  it("takes a Note on the Move being read, and shows it with that Move", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const note = screen.getByRole("textbox", { name: /ma note/i });
+    await user.type(note, "je joue ça par habitude");
+    await user.click(screen.getByRole("button", { name: /enregistrer la note/i }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je joue ça par habitude",
+      ),
+    );
+  });
+
+  it("says outright that a Note is never graded — that is the point of it", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText(/jamais notée|jamais notées/i)).not.toBeNull();
+  });
+
+  it("offers a Note on the starting Position, read as the Game's own — and no verdict there", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 0, declaredSeverity: null, note: "ouverture que je subis", keyMoment: false, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // Ply 0 is the starting Position: there is a Note to write about the Game as
+    // a whole, and no Move to judge.
+    expect((screen.getByRole("textbox", { name: /note/i }) as HTMLTextAreaElement).value).toBe(
+      "ouverture que je subis",
+    );
+    expect(screen.queryByRole("group", { name: /mon verdict/i })).toBeNull();
+  });
+
+  it("carries the Note of the Move being read, and only that one", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "sur e4", keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "sur e5", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "sur e4",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "sur e5",
+    );
+  });
+
+  it("erases a Note without touching the verdict that stays beside it", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: "blunder", note: "à revoir", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(screen.getByRole("button", { name: /supprimer la note/i }));
+
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(""),
+    );
+    // The verdict is a separate statement and survives the erasure.
+    const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked);
+    expect((posed[0] as HTMLInputElement).value).toBe("blunder");
+  });
+
+  it("renders a Note's line breaks as written, rather than running them together", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "première\nseconde", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement;
+    expect(box.value).toBe("première\nseconde");
   });
 });

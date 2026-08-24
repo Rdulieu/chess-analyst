@@ -34,7 +34,7 @@ export async function savePersonalMark(
   gameId: number,
   profileId: number,
   ply: number,
-  patch: { declaredSeverity?: DeclaredSeverity | null },
+  patch: { declaredSeverity?: DeclaredSeverity | null; note?: string | null; keyMoment?: boolean },
 ): Promise<PersonalAnalysis> {
   const res = await fetch(`/api/personal/${gameId}/marks/${ply}?profileId=${profileId}`, {
     method: "PUT",

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { games } from "../db/schema";
-import { getPersonalAnalysis, writeMark } from "../personal/repository";
+import { getPersonalAnalysis, writeMark, type MarkPatch } from "../personal/repository";
 import { isDeclaredSeverity } from "../personal/severity";
 import { scopedProfile } from "./scope";
 
@@ -55,14 +55,27 @@ export function createPersonalRouter(db: Db): Router {
       res.status(400).json({ error: `Coup invalide : ${req.params.ply}` });
       return;
     }
-    const { declaredSeverity } = req.body ?? {};
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const { declaredSeverity, note } = body;
     // The five values are the vocabulary (CONTEXT.md); anything else is a caller
     // bug, refused rather than stored as a sixth severity nothing can read.
     if (declaredSeverity !== undefined && declaredSeverity !== null && !isDeclaredSeverity(declaredSeverity)) {
       res.status(400).json({ error: `Verdict inconnu : ${String(declaredSeverity)}` });
       return;
     }
-    res.json(writeMark(db, scoped.gameId, ply, { declaredSeverity }));
+    // A `Note` is free text (CONTEXT.md) — free, but text. Anything else is a
+    // caller bug; `null` is how a Note is taken back, and is not one.
+    if (note !== undefined && note !== null && typeof note !== "string") {
+      res.status(400).json({ error: "Une note est du texte." });
+      return;
+    }
+    // Only the fields the request actually named are passed on: a field the
+    // caller left out must be left as it was, and one it sent as `null` is a
+    // deliberate erasure. Collapsing the two would make erasing impossible.
+    const patch: MarkPatch = {};
+    if ("declaredSeverity" in body) patch.declaredSeverity = declaredSeverity as MarkPatch["declaredSeverity"];
+    if ("note" in body) patch.note = note as MarkPatch["note"];
+    res.json(writeMark(db, scoped.gameId, ply, patch));
   });
 
   return router;

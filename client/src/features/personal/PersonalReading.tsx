@@ -3,8 +3,20 @@ import { Board } from "../../components/Board";
 import { GameHeader } from "../games/GameHeader";
 import { fetchPersonalAnalysis, savePersonalMark, GameNotThisProfiles } from "../../api";
 import { DeclaredSeverityControl } from "./DeclaredSeverityControl";
+import { NoteEditor } from "./NoteEditor";
 import { playersOwnPly } from "./plies";
-import type { DeclaredSeverity, Game, PersonalAnalysis } from "../../types";
+import type { DeclaredSeverity, Game, PersonalAnalysis, PersonalMark } from "../../types";
+
+/**
+ * What one write says about a ply. Only the fields the caller **names** travel,
+ * so `{ note: null }` is an erasure and an omitted field is left alone — the
+ * distinction the server relies on to make erasing possible at all.
+ */
+export type MarkPatch = {
+  declaredSeverity?: DeclaredSeverity | null;
+  note?: string | null;
+  keyMoment?: boolean;
+};
 
 /**
  * The reading of one Game — the Player's own work, written down (`Personal
@@ -69,12 +81,12 @@ export function PersonalReading({
    * and the reading is saved as it goes, which is what lets the Player close the
    * app mid-Game and lose nothing.
    */
-  const pose = useCallback(
-    async (ply: number, declaredSeverity: DeclaredSeverity) => {
+  const write = useCallback(
+    async (ply: number, patch: MarkPatch) => {
       // Shown at once, so posing thirty verdicts never waits on the network; the
       // answer replaces it, and a failure is said rather than swallowed.
-      setReading((current) => current && withMark(current, ply, { declaredSeverity }));
-      await savePersonalMark(game.id, profileId, ply, { declaredSeverity })
+      setReading((current) => current && withMark(current, ply, patch));
+      await savePersonalMark(game.id, profileId, ply, patch)
         .then(setReading)
         .catch(() => setRefused("failed"));
     },
@@ -112,9 +124,17 @@ export function PersonalReading({
           <div data-part="reading-controls">
             <DeclaredSeverityControl
               ply={ply}
-              posed={reading.marks.find((m) => m.ply === ply)?.declaredSeverity ?? null}
+              posed={markAt(reading, ply)?.declaredSeverity ?? null}
               playersOwnMove={playersOwnPly(ply, game.playerColor)}
-              onPose={(severity) => void pose(ply, severity)}
+              onPose={(severity) => void write(ply, { declaredSeverity: severity })}
+            />
+            <NoteEditor
+              ply={ply}
+              note={markAt(reading, ply)?.note ?? null}
+              onSave={(note) => void write(ply, { note })}
+              // `null` is the erasure, and it has to reach the server as `null`:
+              // an omitted field would leave the old text exactly where it was.
+              onErase={() => void write(ply, { note: null })}
             />
           </div>
         )}
@@ -123,23 +143,30 @@ export function PersonalReading({
   );
 }
 
-/** The reading with one ply's mark replaced — the optimistic echo of a write. */
-function withMark(
-  reading: PersonalAnalysis,
-  ply: number,
-  patch: { declaredSeverity: DeclaredSeverity },
-): PersonalAnalysis {
-  const existing = reading.marks.find((m) => m.ply === ply);
-  const mark = {
+/** What the Player has said about one ply, if anything. */
+function markAt(reading: PersonalAnalysis, ply: number): PersonalMark | undefined {
+  return reading.marks.find((m) => m.ply === ply);
+}
+
+/**
+ * The reading with one ply's mark replaced — the optimistic echo of a write.
+ * Mirrors the server's own rules, so the screen shown before the answer is the
+ * one the answer will confirm: a blank `Note` is no Note, and a ply with nothing
+ * left said about it keeps no mark (**silence is not a value**).
+ */
+function withMark(reading: PersonalAnalysis, ply: number, patch: MarkPatch): PersonalAnalysis {
+  const existing = markAt(reading, ply);
+  const merged = {
     ply,
+    declaredSeverity: null,
     note: null,
     keyMoment: false,
     posterior: false,
     ...existing,
     ...patch,
   };
-  return {
-    ...reading,
-    marks: [...reading.marks.filter((m) => m.ply !== ply), mark].sort((a, b) => a.ply - b.ply),
-  };
+  const mark = { ...merged, note: merged.note === null ? null : merged.note.trim() || null };
+  const others = reading.marks.filter((m) => m.ply !== ply);
+  const silent = mark.declaredSeverity === null && mark.note === null && !mark.keyMoment;
+  return { ...reading, marks: (silent ? others : [...others, mark]).sort((a, b) => a.ply - b.ply) };
 }

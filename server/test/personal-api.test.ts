@@ -77,4 +77,52 @@ describe("Personal analysis API", () => {
 
     expect((await request(app).get(`/api/personal/4242?profileId=${profileId}`)).status).toBe(404);
   });
+
+  it("takes a Note, and takes it back, without disturbing the verdict beside it", async () => {
+    const { app, profileId, game } = appWithGame();
+    const mark = (body: Record<string, unknown>) =>
+      request(app).put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`).send(body);
+
+    await mark({ declaredSeverity: "blunder" });
+    const written = await mark({ note: "je n'ai pas vu le clouage" });
+    expect(written.body.marks[0]).toEqual({
+      ply: 3,
+      declaredSeverity: "blunder",
+      note: "je n'ai pas vu le clouage",
+      keyMoment: false,
+      posterior: false,
+    });
+
+    const erased = await mark({ note: null });
+    expect(erased.body.marks[0]).toMatchObject({ declaredSeverity: "blunder", note: null });
+  });
+
+  it("takes a Note on the starting Position, which is how the Game as a whole is commented", async () => {
+    const { app, profileId, game } = appWithGame();
+
+    const res = await request(app)
+      .put(`/api/personal/${game.id}/marks/0?profileId=${profileId}`)
+      .send({ note: "Partie où je me perds dès la sortie d'ouverture." });
+
+    expect(res.status).toBe(200);
+    expect(res.body.marks).toEqual([
+      {
+        ply: 0,
+        declaredSeverity: null,
+        note: "Partie où je me perds dès la sortie d'ouverture.",
+        keyMoment: false,
+        posterior: false,
+      },
+    ]);
+  });
+
+  it("refuses a Note that is not text", async () => {
+    const { app, profileId, game } = appWithGame();
+
+    const res = await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ note: { oops: true } });
+
+    expect(res.status).toBe(400);
+  });
 });
