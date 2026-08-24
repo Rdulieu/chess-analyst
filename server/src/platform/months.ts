@@ -32,3 +32,14 @@ export function monthOf(date: string): MonthRef {
   const [year, month] = date.split("-");
   return { year: Number(year), month: Number(month) };
 }
+
+/**
+ * The month a Platform's own instant falls in, **in UTC** — the same frame the
+ * export's `since`/`until` window is expressed in, so a Game can never be
+ * counted toward a month the request did not ask for because the machine sits in
+ * another timezone.
+ */
+export function monthOfCreatedAt(createdAt: number): MonthRef {
+  const at = new Date(createdAt);
+  return { year: at.getUTCFullYear(), month: at.getUTCMonth() + 1 };
+}

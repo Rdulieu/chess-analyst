@@ -4,7 +4,7 @@ import type { Server } from "node:http";
 import { AddressInfo } from "node:net";
 import { createHttpLichessClient } from "../src/platform/lichess/client";
 import { collectMonth } from "./fixtures";
-import type { PlatformClient } from "../src/platform";
+import type { MonthRef, PlatformClient } from "../src/platform";
 
 /**
  * A tiny stand-in for the Lichess API, so the real client is exercised end to
@@ -130,6 +130,42 @@ beforeAll(async () => {
     res.flushHeaders();
     res.write(JSON.stringify(game({ id: "arrived1" })) + "\n");
     setTimeout(() => res.socket?.destroy(), 50);
+  });
+
+  /**
+   * A range stream cut **after crossing a month boundary**: a January game, a
+   * March game, then the socket dies. The months the Games proved past are
+   * settled; the rest never got its answer.
+   */
+  app.get("/api/games/user/truncated-span", (_req, res) => {
+    res.type("application/x-ndjson");
+    res.flushHeaders();
+    res.write(JSON.stringify(game({ id: "jan01", createdAt: Date.UTC(2024, 0, 5) })) + "\n");
+    res.write(JSON.stringify(game({ id: "mar01", createdAt: Date.UTC(2024, 2, 11) })) + "\n");
+    setTimeout(() => res.socket?.destroy(), 50);
+  });
+
+  /**
+   * An account with a real history: games in January and March 2024, **nothing
+   * in February**. Filters on `since`/`until` exactly like the real export, and
+   * serves in `dateAsc` order — the two properties deriving month coverage from
+   * the Games depends on.
+   */
+  const SPANNING = [
+    game({ id: "jan01", createdAt: Date.UTC(2024, 0, 5) }),
+    game({ id: "jan02", createdAt: Date.UTC(2024, 0, 20), speed: "ultraBullet" }),
+    // Counted as fetched in March, never a Game: a month can be busy and still
+    // keep nothing, and that must not read as an empty one.
+    game({ id: "mar99", createdAt: Date.UTC(2024, 2, 3), variant: "chess960" }),
+    game({ id: "mar01", createdAt: Date.UTC(2024, 2, 11) }),
+  ];
+  app.get("/api/games/user/spanning", (req, res) => {
+    exportCalls.push({ username: "spanning", query: req.query });
+    const since = Number(req.query.since);
+    const until = Number(req.query.until);
+    const lines = SPANNING.filter((g) => g.createdAt >= since && g.createdAt <= until);
+    res.type("application/x-ndjson");
+    res.send(lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
   });
 
   app.get("/api/games/user/:username", (req, res) => {
@@ -294,6 +330,21 @@ describe("a 429 from Lichess", () => {
     expect(said[0]).toMatch(/lichess\.org/i);
   });
 
+  it("names the RANGE as what resumes, not the month", async () => {
+    // There is one request for the whole span now, so what the wait holds up is
+    // the range. Saying "reprise du mois" would misname it — and would tell a
+    // Player watching a 71-month import that one month of it is being retried.
+    await arm(1);
+    const said: string[] = [];
+
+    await collectMonth(withFastRetry(), "throttled", 2024, 1, {
+      onWaiting: (m) => said.push(m),
+    });
+
+    expect(said[0]).toMatch(/plage/i);
+    expect(said[0]).not.toMatch(/du mois/i);
+  });
+
   it("gives up after a second refusal, as an ordinary month failure — no hammering", async () => {
     // ADR-0010's no-retry rule is deliberate; this is the one exception, and it
     // stays one replay. A second 429 hands the month back to the existing
@@ -399,5 +450,88 @@ describe("a truncated games stream", () => {
     }
 
     expect(events.filter((e) => e.kind === "month-failed")).toHaveLength(2);
+  });
+});
+
+describe("a Lichess range", () => {
+  /** Every event of a range, in order. */
+  const eventsOver = async (username: string, from: MonthRef, to: MonthRef) => {
+    const events = [];
+    for await (const e of createHttpLichessClient(baseUrl).fetchRange(username, from, to)) {
+      events.push(e);
+    }
+    return events;
+  };
+
+  it("is asked for in a single export request, whatever the number of months", async () => {
+    // The whole payoff of US-17: 71 requests became one. The month stays the
+    // unit of REPORTING and stops being the unit of FETCHING — so this count
+    // must not follow the length of the range.
+    exportCalls.length = 0;
+
+    await eventsOver("spanning", { year: 2024, month: 1 }, { year: 2024, month: 4 });
+
+    expect(exportCalls).toHaveLength(1);
+    const { query } = exportCalls[0];
+    expect(Number(query.since)).toBe(Date.UTC(2024, 0, 1));
+    expect(Number(query.until)).toBe(Date.UTC(2024, 4, 1) - 1);
+    // Still ordered, because coverage is read off the Games in date order.
+    expect(query.sort).toBe("dateAsc");
+  });
+  it("still draws one line per month, the empty ones at zero", async () => {
+    // The assertion the whole story must not break: a month the Player was
+    // inactive in reads as a plain zero, so a gap in the HISTORY stays
+    // distinguishable from a gap in the FETCHING. February was never asked for
+    // on its own any more — it is covered because a March Game proved it past.
+    const events = await eventsOver("spanning", { year: 2024, month: 1 }, { year: 2024, month: 4 });
+
+    expect(events.filter((e) => e.kind !== "game")).toEqual([
+      { kind: "month-done", month: { year: 2024, month: 1 }, totalFetched: 2 },
+      { kind: "month-done", month: { year: 2024, month: 2 }, totalFetched: 0 },
+      // Two fetched, one kept: the variant counts as fetched, so a busy month
+      // that yields nothing never reads as an empty one.
+      { kind: "month-done", month: { year: 2024, month: 3 }, totalFetched: 2 },
+      // Past the last Game, and still covered — not omitted, not failed.
+      { kind: "month-done", month: { year: 2024, month: 4 }, totalFetched: 0 },
+    ]);
+  });
+
+  it("tags each Game with the month it counts toward, in date order", async () => {
+    const events = await eventsOver("spanning", { year: 2024, month: 1 }, { year: 2024, month: 4 });
+
+    expect(events.filter((e) => e.kind === "game").map((e) => [e.month.month, e.game.gameUrl]))
+      .toEqual([
+        [1, "https://lichess.org/jan01"],
+        [1, "https://lichess.org/jan02"],
+        [3, "https://lichess.org/mar01"],
+      ]);
+  });
+  it("keeps the months a Game proved past when the stream is cut, and fails only the rest", async () => {
+    // With one request there is no next request to carry on to, so a cut has to
+    // say WHERE it stopped. January and February were settled by the March Game
+    // arriving — re-failing them would send the Player back over months that
+    // were answered in full. March and April never got their answer.
+    const events = await eventsOver(
+      "truncated-span",
+      { year: 2024, month: 1 },
+      { year: 2024, month: 4 },
+    );
+
+    expect(events.filter((e) => e.kind !== "game")).toEqual([
+      { kind: "month-done", month: { year: 2024, month: 1 }, totalFetched: 1 },
+      { kind: "month-done", month: { year: 2024, month: 2 }, totalFetched: 0 },
+      {
+        kind: "month-failed",
+        month: { year: 2024, month: 3 },
+        reason: expect.stringMatching(/interrompu|incomplet/i),
+      },
+      {
+        kind: "month-failed",
+        month: { year: 2024, month: 4 },
+        reason: expect.stringMatching(/interrompu|incomplet/i),
+      },
+    ]);
+    // And both Games are through before any of it — nothing is lost with the cut.
+    expect(events.filter((e) => e.kind === "game")).toHaveLength(2);
   });
 });

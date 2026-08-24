@@ -8,7 +8,7 @@ import {
   type PlatformClient,
   type RangeEvent,
 } from "../types";
-import { monthsInRange } from "../months";
+import { monthOfCreatedAt, monthOrdinal, monthsInRange } from "../months";
 import { discard, lichessGet, readNdjson, readText } from "./request";
 import { isInScope, monthWindow, toImportedGame } from "./mapping";
 import type { LichessGame } from "./payload";
@@ -27,7 +27,7 @@ import type { LichessGame } from "./payload";
 const DEFAULT_BASE_URL = "https://lichess.org";
 
 /**
- * How long to wait after a `429` before replaying the month, **once**.
+ * How long to wait after a `429` before replaying the export, **once**.
  *
  * A `429` from Lichess is an *instruction*, not a failure, which is why
  * ADR-0010's deliberate no-retry rule does not apply to it: treated as a month
@@ -36,9 +36,11 @@ const DEFAULT_BASE_URL = "https://lichess.org";
  * a second `429` is an ordinary month failure and the existing per-month
  * tolerance takes over.
  *
- * The minute comes from Lichess's documentation, not from measurement: every
- * `429` we could actually produce was the IPv6 refusal (see ./request.ts), not a
- * genuine throttle. A real one should be used to revisit this.
+ * The minute comes from Lichess's documentation, not from measurement. The
+ * `429`s we have actually produced look like a **per-IP throttle keyed to a
+ * recent burst** (see ./request.ts) rather than a steady rate limit — and this
+ * slice removes the burst, so a `429` on a nominal import should now be rare
+ * enough that meeting one is itself worth reading as news.
  */
 const RETRY_AFTER_MS = 60_000;
 
@@ -82,56 +84,79 @@ export function createHttpLichessClient(
     },
 
     /**
-     * **Still one request per month** — collapsing the range into a single
-     * export is the next slice's whole point, and this one must not change any
-     * request count. What changes here is that the Games are *yielded* as the
-     * ndjson arrives instead of being piled into an array first: `readNdjson`
-     * was already an `AsyncGenerator`, and `fetchMonth` was the thing breaking
-     * the flow.
+     * **One request for the whole range** — the payoff of US-17. The export has
+     * a range endpoint, so the month stops being what is *fetched* and stays
+     * only what is *reported*: coverage is read off the Games themselves, in
+     * date order, rather than off the requests.
      *
-     * A month whose stream is cut short is reported as a **failed month** and the
-     * loop carries on. The Games that arrived have already been yielded — so they
-     * are already kept, without anything having to carry them (slice 01 had to,
-     * because the port materialised the month; it no longer does).
+     * The stream is `sort=dateAsc`, so a Game dated in March is proof that
+     * January and February are **behind us** — that is what closes them, at
+     * zero if nothing came for them. A month the Player was inactive in
+     * therefore still reads as a plain zero, which is the assertion this whole
+     * story must not break (`CONTEXT.md`, `Monthly import`): a gap in the
+     * history stays distinguishable from a gap in the fetching.
+     *
+     * A cut stream fails **every month still open**, and there is no carrying
+     * on: with one request there is no next request to make. The Games that
+     * arrived were already yielded, so nothing is lost — the failed months say
+     * what has to be re-run.
      */
     async *fetchRange(username, from, to, hooks): AsyncGenerator<RangeEvent, void> {
-      for (const month of monthsInRange(from, to)) {
-        let totalFetched = 0;
-        try {
-          for await (const fetched of exportOneMonth(root, username, month, retryAfterMs, hooks)) {
-            // `totalFetched` says what Lichess HAD, out-of-scope games included,
-            // so a month mostly out of scope never reads as an empty one.
-            totalFetched++;
-            if (fetched !== null) yield { kind: "game", month, game: fetched };
+      const months = monthsInRange(from, to);
+      // The month awaiting its line, and what has been fetched toward it.
+      let open = 0;
+      let totalFetched = 0;
+      try {
+        for await (const fetched of exportRange(root, username, from, to, retryAfterMs, hooks)) {
+          // Everything up to the month this Game belongs to is now behind us.
+          while (open < months.length && monthOrdinal(months[open]) < monthOrdinal(fetched.month)) {
+            yield { kind: "month-done", month: months[open], totalFetched };
+            totalFetched = 0;
+            open++;
           }
-        } catch (err) {
-          yield {
-            kind: "month-failed",
-            month,
-            reason: err instanceof Error ? err.message : String(err),
-          };
-          continue;
+          // `totalFetched` says what Lichess HAD, out-of-scope games included,
+          // so a month mostly out of scope never reads as an empty one.
+          totalFetched++;
+          if (fetched.game !== null) {
+            yield { kind: "game", month: fetched.month, game: fetched.game };
+          }
         }
-        yield { kind: "month-done", month, totalFetched };
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        for (; open < months.length; open++) {
+          yield { kind: "month-failed", month: months[open], reason };
+        }
+        return;
+      }
+      // Whatever the stream never reached is covered, and empty.
+      for (; open < months.length; open++) {
+        yield { kind: "month-done", month: months[open], totalFetched };
+        totalFetched = 0;
       }
     },
   };
 }
 
 /**
- * One month's export, **streamed**: yields the in-scope Game for each line, or
- * `null` for a line that counts as fetched but is not ours to study. Raises
- * `TruncatedStreamError` when the body ends before the Platform finished.
+ * The range's export, **streamed**: yields each line's month together with the
+ * in-scope Game, or `null` for a line that counts as fetched but is not ours to
+ * study. The month is derived from the line itself — the only thing that can
+ * say which month a Game counts toward now that the request no longer says it.
+ *
+ * Raises `TruncatedStreamError` when the body ends before the Platform finished.
  */
-async function* exportOneMonth(
+async function* exportRange(
   root: string,
   username: string,
-  { year, month }: MonthRef,
+  from: MonthRef,
+  to: MonthRef,
   retryAfterMs: number,
   hooks?: FetchHooks,
-): AsyncGenerator<ImportedGame | null, void> {
-  // The month is still what is ASKED for here; that it need not be is slice 03.
-  const { since, until } = monthWindow(year, month);
+): AsyncGenerator<{ month: MonthRef; game: ImportedGame | null }, void> {
+  // One window over the whole span: the first month's opening instant to the
+  // last month's closing one.
+  const { since } = monthWindow(from.year, from.month);
+  const { until } = monthWindow(to.year, to.month);
   const query = new URLSearchParams({
     since: String(since),
     until: String(until),
@@ -139,9 +164,10 @@ async function* exportOneMonth(
     // (ADR-0007's amendment).
     pgnInJson: "true",
     opening: "true",
+    // Not a preference: month coverage is DERIVED from this order.
     sort: "dateAsc",
   });
-  const { status, body } = await exportMonth(
+  const { status, body } = await exportGames(
     `${root}/api/games/user/${encodeURIComponent(username)}?${query}`,
     retryAfterMs,
     hooks,
@@ -153,7 +179,10 @@ async function* exportOneMonth(
   try {
     for await (const line of readNdjson(body)) {
       const game = line as LichessGame;
-      yield isInScope(game) ? toImportedGame(game, username) : null;
+      yield {
+        month: monthOfCreatedAt(game.createdAt),
+        game: isInScope(game) ? toImportedGame(game, username) : null,
+      };
     }
   } catch (err) {
     // The stream died mid-body. Node raises here (`aborted`, ECONNRESET) —
@@ -172,7 +201,7 @@ async function* exportOneMonth(
  * retried: a 500 is not an instruction to wait, and replaying it would only
  * double the load on a Platform that is already failing.
  */
-async function exportMonth(url: string, retryAfterMs: number, hooks?: FetchHooks) {
+async function exportGames(url: string, retryAfterMs: number, hooks?: FetchHooks) {
   const first = await lichessGet(url, { accept: "application/x-ndjson" });
   if (first.status !== 429) return first;
   discard(first.body);
@@ -181,7 +210,7 @@ async function exportMonth(url: string, retryAfterMs: number, hooks?: FetchHooks
   // it is configurable, and a message that named the wrong duration would be a
   // small lie in the one place the Player is being asked to trust us and sit.
   hooks?.onWaiting?.(
-    `${platformLabel("lichess")} demande d'attendre : reprise du mois dans ${Math.round(
+    `${platformLabel("lichess")} demande d'attendre : reprise de la plage dans ${Math.round(
       retryAfterMs / 1000,
     )} s.`,
   );

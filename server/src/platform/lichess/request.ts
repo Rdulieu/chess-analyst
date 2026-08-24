@@ -5,13 +5,19 @@ import { request as httpsRequest } from "node:https";
  * Every Lichess request goes through here, for one reason: **the address family
  * is pinned to IPv4**.
  *
- * This is a correctness requirement, not a tuning knob. Measured against the
- * live API: the games-export endpoint answers an instant, permanent `429` over
- * IPv6 from a real network — insensitive to waiting, independent of the account,
- * specific to that endpoint — while answering `200` over IPv4. Node's `fetch`
- * does Happy Eyeballs and may pick IPv6, so without the pin a perfectly correct
- * import fails with a message that invites exactly the wrong fixes (wait longer,
- * retry, add a token).
+ * This is a **determinism choice, not a correctness requirement** — it was
+ * documented as one, and that was wrong. What is actually known: the games-export
+ * endpoint answered an instant, sustained `429` over IPv6 while answering `200`
+ * over IPv4, and on 2026-08-22 **the exact opposite reproduced** (IPv4 → `429`,
+ * IPv6 → `200`, two accounts seconds apart) after a 71-request reference import
+ * had run over the pinned IPv4. Neither address family is refused; the
+ * explanation covering both observations is a **per-IP throttle on the export
+ * endpoint**, keyed to a recent burst — so the family that just did the bursting
+ * is the one that gets refused, whichever it is.
+ *
+ * The pin is kept for what it actually buys: one variable fewer when diagnosing
+ * a `429`, since both attempts then come from the same address. US-17 largely
+ * dissolves the question anyway — one request for a whole range is not a burst.
  *
  * `node:http(s)` is used rather than `fetch` because `family: 4` is a documented
  * option there, with no dependency to add and no reliance on which undici a

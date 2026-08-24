@@ -106,12 +106,15 @@ imported, 0 already present" against a database that already holds them.
   fixture. The span reaches back years and every month in it is immutable, so its figures do not
   drift the way a recent month's would.
 - **The Lichess address family is pinned to IPv4 by the app itself** (`server/src/platform/lichess/request.ts`),
-  and nothing here needs configuring. It is stated because of how it fails when it is bypassed:
-  the games-export endpoint answers an **instant, permanent `429` over IPv6** — insensitive to
-  waiting, independent of the account, specific to that endpoint. That reads exactly like a rate
-  limit and invites exactly the wrong fixes (wait, retry, add a token). **A `429` on the Lichess
-  export during this step is an address-family finding until proven otherwise**, so check the
-  request path went through `lichessGet` before concluding anything about quotas.
+  and nothing here needs configuring. It is stated so that a `429` here is not misread: the pin is a
+  **determinism choice, not a correctness requirement**, and Lichess does **not** refuse IPv6 —
+  that earlier conclusion came from measurements taken in one direction only, and the exact
+  opposite reproduced on 2026-08-22 (IPv4 → `429`, IPv6 → `200`, seconds apart) after a reference
+  import had bursted over the pinned IPv4. What fits both is a **per-IP throttle on the export
+  endpoint, keyed to a recent burst**. So **a `429` on the export here is a "we asked too much too
+  recently" finding**, not an address-family one and not a quota one: report it with what ran
+  before it. The import now asks **once for the whole range**, so a burst is no longer something a
+  nominal run produces.
 
 ## Journey
 1. Start the app on a fresh, empty database → with no `Profile` yet, the app leads to `/profiles`
@@ -252,12 +255,12 @@ names the right one.
 - The range's figures were read from the live chess.com API and both months are past. If they
   drift, **re-check the account and update HP-01's table** — the point of anchoring on immutable
   months is to keep the suite assertable on real data.
-- **The Lichess span is the long pole of the suite.** 71 months are fetched one month at a time,
-  so this step now takes materially longer than it did. That is a cost paid **once** per suite run —
-  it is exactly what the snapshots exist to avoid re-paying — but budget for it rather than reading
-  a slow step as a hung one.
-- **Real network dependency**: needs chess.com reachable, and Lichess reachable over IPv4 (see the
-  Preconditions — a `429` on the export is an address-family finding before it is a quota one). A month marked in **échec** here means
+- **The Lichess span used to be the long pole of the suite**, when its 71 months were fetched one
+  month at a time. They are now fetched in **one request** (US-17), which is what the step is
+  expected to show; the duration is *measured and recorded* by path 0 itself rather than asserted
+  here. It stays a cost paid **once** per suite run — what the snapshots exist to avoid re-paying.
+- **Real network dependency**: needs chess.com and Lichess reachable (see the Preconditions — a
+  `429` on the export points at a recent burst, not at an address family). A month marked in **échec** here means
   the snapshot is incomplete and the scenarios restoring it would assert against a partial range —
   re-run path 0 rather than continuing, since a failed month is a legitimate environment finding
   but a poisoned shared state.
