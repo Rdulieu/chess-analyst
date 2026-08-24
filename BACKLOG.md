@@ -82,6 +82,17 @@
   >   faudrait écraser le `Review mode` mémorisé du joueur. Une route distincte est aveugle *par nature*.
   > - **Prémisse du backlog corrigée** : le « toggle d'annotations à `true` par défaut » n'existe plus,
   >   US-15a a livré `Review mode` avec **Unaided par défaut**.
+  >
+  > **PRD + issues (2026-08-24)** : `.scratch/personal-analysis/PRD.md`, six tranches —
+  > `01-a-reading-exists-and-judges-a-move` (tracer bullet : tables + API + route + `Declared
+  > severity`), `02-i-comment-a-move`, `03-i-mark-where-the-game-turned`, `04-i-seal-my-reading`
+  > (gardée **entière** : scellement + provenance + couche postérieure), `05-i-see-where-i-stand`,
+  > `06-graft-on-hp-01-and-run-the-suite` (**HITL**). Coutures validées : **aucune nouvelle**.
+  > **Pas de 4ᵉ HP** — greffe sur **HP-01 après l'étape 9** (elle asserte déjà « the app does not start
+  > volunteering the engine's verdict » et a déjà ouvert une partie non analysée) ; HP-02 écarté comme
+  > hôte, il n'ouvre une partie que dans sa passe de thème. **Décidé pour US-16b** : fusion HP-02 + HP-03
+  > en « lire mes agrégats », le créneau libéré accueillant une HP dédiée « lire à l'aveugle, sceller,
+  > confronter ».
 
 - **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
   > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
