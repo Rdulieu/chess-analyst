@@ -196,11 +196,18 @@ The count is what makes this scenario able to observe US-17 at all, so how it is
 the scenario rather than left to the runner.
 
 **Put a logging reverse proxy in front of Lichess** and point the app at it with
-`LICHESS_BASE_URL=http://127.0.0.1:<port>`. The proxy forwards to `https://lichess.org`, logging one
-line per request with its path and its timestamps. The **contract under test is still the live one**
-— real API, real ndjson, real throttle; only the base URL moved, and that is an already-supported
-knob (`server/src/platform/lichess/client.ts`). Pin the proxy's own outbound hop to IPv4 to keep the
-determinism the app's own pin buys.
+`LICHESS_BASE_URL=http://127.0.0.1:<port>`. The proxy forwards to `https://lichess.org`. The
+**contract under test is still the live one** — real API, real ndjson, real throttle; only the base
+URL moved, and that is an already-supported knob (`server/src/platform/lichess/client.ts`). Pin the
+proxy's own outbound hop to IPv4 to keep the determinism the app's own pin buys.
+
+Two things the proxy has to get right, both learned by writing one:
+
+- **Log three lines per request, not one**: request-out, response-headers, response-end. A single
+  line cannot carry both *first request out* and *last byte in*, and the duration below is exactly
+  that interval. One line per request is enough to **count**, not to **time**.
+- **Set `Host: lichess.org` on the outbound hop.** Forwarding the caller's own
+  `Host: 127.0.0.1:<port>` does not reach the API at all.
 
 The proxy log is also what yields the Lichess import's **own** duration — first request out to last
 byte in — which is the figure US-18 needs and which the wall-clock of a UI-driven step cannot give.
@@ -218,18 +225,29 @@ The reference is the **month-by-month** run, before US-17: the Lichess import to
 which **~2.4 min was pure waiting** across **six one-minute pauses** — `429`s provoked by the burst
 of 71 requests, each answered by a one-minute sleep and one replay.
 
-| Figure | Reference (71 requests) | This run |
-| --- | --- | --- |
-| Export requests | 71 | *measured* |
-| One-minute pauses | 6 | *measured* |
-| Lichess import, own duration | ~3.5 min | *measured* |
-| of which waiting | ~2.4 min | *measured* |
-| Scenario total | *not recorded* | *measured* |
+| Figure | Reference (71 requests) | US-17 delivery run (2026-08-24) | This run |
+| --- | --- | --- | --- |
+| Export requests | 71 | **1** | *measured* |
+| One-minute pauses | 6 | **0** | *measured* |
+| Lichess import, own duration | ~3.5 min (~210 s) | **33.6 s** | *measured* |
+| of which waiting | ~2.4 min (~144 s) | **0 s** | *measured* |
+| Scenario total | *not recorded* | *not cleanly measured — see below* | *measured* |
 
 **Report the measured figures and the delta, never "it is faster".** This table is the first real
 datum US-18 has: its own entry says plainly that its figures are *deduced, not measured*, so a run
 that reports an impression instead of a number hands it nothing. Fill the right column from the run
-and state the delta against the left one.
+and state the delta against the reference.
+
+The middle column is the run that delivered US-17, kept here so the figure lives in the repo rather
+than only in a pull request: **33.571 s**, request-out `10:34:58.517Z` to last-byte-in
+`10:35:32.088Z`, read off the proxy log — **−176 s against the reference, about 6.3× shorter**, with
+the six one-minute pauses gone. It measures the export alone and therefore excludes the app's own
+PGN parsing and database writes; that is deliberate, since it is the fetching US-18 is about.
+
+Its **scenario total is not a clean measurement** and is not recorded as one: the session driving it
+was interrupted mid-run, so its wall clock holds dead time and a restart. The import figure is
+unaffected — it comes from the proxy log, entirely before the interruption — and does not need
+re-paying to obtain a total. A single uninterrupted run would give one.
 
 ### Recorded figures — `Metalyst`, 2017-10 → 2023-08
 
