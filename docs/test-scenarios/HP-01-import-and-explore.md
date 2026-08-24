@@ -219,7 +219,9 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 
 ## Notes
 - **Real network dependency**: needs chess.com reachable. Since US-9 an outage or rate-limit no
-  longer aborts the Import: the affected month is marked in **échec** on its own line and the
+  longer aborts the Import: the affected month is marked on its own line — **échec** when it
+  received nothing, **incomplet** followed by what it did bring in when Games arrived before it
+  stopped — and the
   remaining months are still covered. That is a legitimate finding about the environment, not the
   app — and the run is still readable, since the other months' lines stand. Replaying the range
   catches the failed month up. A `Profile` whose username the relay cannot resolve at all still

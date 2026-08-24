@@ -141,15 +141,11 @@ export async function importRange(
   // play in those months", which is exactly what the per-month lines exist to
   // prevent. Only when **every** month came through is an empty range a fact.
   if (cutIn !== null) total.message = interrupted(cutIn, params.to, lastCovered);
+  else if (unanswered.length > 0) total.message = incomplete(unanswered, params.to);
   else if (total.imported === 0 && total.alreadyPresent === 0) {
-    // Nothing came in — so this is where the range gets described, and where
-    // describing it wrongly was possible. An unanswered month means the range
-    // was never fully read, and "nothing found" would be a claim about contents
-    // nobody looked at.
-    total.message =
-      unanswered.length > 0
-        ? incomplete(unanswered, params.to)
-        : `Aucune partie trouvée de ${yyyymm(params.from)} à ${yyyymm(params.to)} dans les cadences sélectionnées.`;
+    // Only reachable once **every** month came through: an empty range is then a
+    // fact the run established, rather than a claim about months nobody read.
+    total.message = `Aucune partie trouvée de ${yyyymm(params.from)} à ${yyyymm(params.to)} dans les cadences sélectionnées.`;
   }
   return total;
 }
@@ -160,12 +156,13 @@ export async function importRange(
  * wrong, that nothing already in hand is lost, and the exact range to re-run —
  * in the import form's own `YYYY-MM` vocabulary so it can be retyped as-is.
  *
- * It replaces the "nothing found" sentence **only when nothing came in at all**,
- * which is the case that sentence was wrong about. A *partly* successful Import
- * stays globally silent, its failures carried by their own month lines — that is
- * a standing decision ("a partly successful Import is not a failed one"), and
- * this fix deliberately does not reopen it. Whether such a range should also get
- * a global "N months to re-run" line is a separate question, and a real one.
+ * It is said **whenever a month went unanswered**, whether or not other months
+ * brought Games in. That reverses an earlier rule ("a partly successful Import is
+ * not a failed one", which kept such a range globally silent): decided by the
+ * requester on 2026-08-24, on the ground that silence left the Player to work the
+ * gap out from the month lines themselves — which is precisely the job this
+ * statement exists to do. A range that half worked still has a period that has to
+ * be re-run, and it is now named.
  *
  * The re-run starts at the **first** unanswered month and ends at the range's own
  * end — not at the last unanswered one. Re-fetching a month that already

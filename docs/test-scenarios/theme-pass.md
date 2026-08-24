@@ -85,7 +85,8 @@ in both themes like any other.
 3. **No horizontal overflow**: the page does not scroll sideways, and no box is wider than its own
    container unless it is a declared horizontal scroller.
 4. **Non-chromatic cues are present wherever a tint carries meaning** — the weak-opening ⚠, the
-   danger card's ⚠, the severity glyphs `?!` `?` `??`, the failed month's word "échec", the
+   danger card's ⚠, the severity glyphs `?!` `?` `??`, the failed month's word ("échec" when nothing arrived, "incomplet" when
+   some Games did and the month stopped short), the
    "analysée" badge's word and checkmark, the current tab's weight/border beside its
    `aria-current`, and — since US-11 — the banner's spelled-out "Profil courant :" and the profiles
    list's "Profil actuel" on the current row, which carries the state in words beside the

@@ -130,7 +130,15 @@ describe("importRange", () => {
 
     expect(result.imported).toBe(2);
     expect(result.totalFetched).toBe(2);
-    expect(result.message).toBeUndefined(); // a partly successful Import is not a failed one
+    // **Decision reversed by the requester, 2026-08-24.** This used to assert
+    // `undefined`, on the rule "a partly successful Import is not a failed one".
+    // It is now the opposite: a range with an unanswered month always says which
+    // period has to be re-run, whether or not other months brought Games in.
+    // Silence here left the Player to work the gap out from the month lines, and
+    // the whole point of the global statement is that they should not have to.
+    expect(result.message).toMatch(/2024-02/); // where the gap starts
+    expect(result.message).toMatch(/2024-03/); // through the end of the range
+    expect(result.message).toMatch(/conserv/i); // and nothing already in is lost
   });
 
   it("catches up only the missing month when the range is replayed", async () => {
