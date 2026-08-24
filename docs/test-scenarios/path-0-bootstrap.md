@@ -319,6 +319,14 @@ names the right one.
   silently stayed on the current month while the checkboxes took. Use the native value setter and
   dispatch `input` (and `change`), then **read the values back before submitting**. Every scenario
   that drives this form is exposed to it.
+- **A range over 12 months raises a `confirm()`, and an unhandled one hangs the driver.** The import
+  form asks *"Cette plage couvre 71 mois. Continuer ?"* (`client/src/features/import/ImportForm.tsx`).
+  The dialog is deliberate — it is the app warning about a long range — but a CDP driver with no
+  `page.on('dialog')` handler never gets its injected click back, and the failure looks exactly like a
+  hung app: measured 2026-08-24, one wasted 3-minute attempt ending in a `Runtime.callFunctionOn`
+  timeout. **Register a dialog handler before submitting, and raise `protocolTimeout`.** This sits
+  beside the month-fields note above because it is the same trap in a different guise: the form is
+  driven by a human affordance the driver has to answer, not just filled.
 - **Snapshot into each scenario's own file.** Scenarios run on their own ports and their own
   `DB_FILE`; restore is a copy **into** that file, never a scenario pointing at the shared
   snapshot, which two scenarios would then write to at once.
