@@ -385,6 +385,75 @@
   >
   > **Critère de succès à définir au grill.**
 
+- **US-20**: Reprendre la main sur les processus des tests agentiques — pour qu'un run interrompu ne
+  laisse ni serveur qui sert dans le vide, ni machine à genoux.
+  > **Pas encore grillée.** Demandée le 2026-08-24, après que le poste a gelé pendant la passe HP
+  > d'US-17 et qu'il a fallu l'arrêter au bouton.
+  >
+  > ### Le constat : il n'existe aucun mécanisme, seulement une consigne
+  >
+  > La skill `agentic-tests` dit « teardown by pid, jamais `pkill` par motif », et chaque agent
+  > l'applique lui-même. **Aucun hook n'est configuré**, ni côté projet ni côté utilisateur : rien
+  > n'est automatique. Ça tient tant que l'agent **termine**. Le trou est là — un agent tué en cours
+  > de route laisse tout tourner, et ce n'est pas un cas d'école : c'est arrivé **deux fois le
+  > 2026-08-24**.
+  >
+  > | Incident | Ce qui a survécu | Comment ça s'est réglé |
+  > | --- | --- | --- |
+  > | Sortie de session pendant la FP d'US-17-05 | un **Vite orphelin sur 5271**, servant un backend mort | tué à la main, après identification par `/proc/<pid>/environ` |
+  > | Gel du poste pendant la suite HP | tous les processus des 4 agents | **le reboot** — nettoyage par accident, pas par conception |
+  >
+  > « Libérer la mémoire » n'a pas d'existence séparée : ce sont les processus qui la retiennent, et
+  > les tuer *est* le mécanisme. À côté, sur disque, les scratchpads accumulent des bases `.db` de
+  > run et des `node_modules` posés en `--no-save` — 55 Mo au moment du constat, négligeable en soi
+  > mais sur une partition à **86 %**.
+  >
+  > ### Le piège du grand-enfant, redécouvert à chaque run
+  >
+  > `npx` interpose un wrapper : **le processus qui écoute n'est pas celui qu'on a lancé**. Tuer le
+  > pid retourné laisse le vrai serveur debout. C'est re-confirmé sur **absolument chaque run** —
+  > encore sur le dernier (listener 7965 sous wrapper 7954). Aujourd'hui chaque agent le
+  > redécouvre, le contourne à la main, et le consigne. C'est du travail répété qui devrait être
+  > structurel.
+  >
+  > ### Pistes, par ordre d'efficacité (à trancher au grill)
+  >
+  > 1. **`systemd-run --user --scope --unit=…` autour de chaque processus lancé.** Correction à la
+  >    racine : `systemctl --user stop <unit>` tue **l'arbre entier**, grand-enfants compris. Le
+  >    piège ci-dessus disparaît structurellement. Demande de toucher la recette de lancement de la
+  >    skill.
+  > 2. **Un script de récupération** dans `docs/test-scenarios/tools/`, **`--dry-run` par défaut**,
+  >    identifiant les processus de test par signature (port dans la plage agentique, `cwd` sous
+  >    `.claude/worktrees/`, `DB_FILE` pointant un scratchpad, Chrome en `--user-data-dir` sous
+  >    `/tmp/claude-*`). Filet pour les orphelins, purement additif.
+  >
+  > ### Une piste explicitement déconseillée, et pourquoi
+  >
+  > **Un hook Claude Code qui nettoie automatiquement.** C'est le réflexe tentant et c'est un
+  > piège : un hook `Stop` se déclenche à la fin du tour de l'agent principal, or **les sous-agents
+  > tournent en arrière-plan** — il tuerait l'app d'un agent en pleine FP. Le nettoyage automatique
+  > et les runs en arrière-plan s'opposent, sauf à savoir précisément quels processus appartiennent
+  > à un agent encore vivant, ce qui est le problème même qu'on cherche à résoudre. Préférer un
+  > outil explicite qu'on lance en connaissance de cause.
+  >
+  > ### Tension à arbitrer avec US-18
+  >
+  > Le gel a produit une contre-mesure immédiate : la skill plafonne désormais la concurrence à
+  > `min(3, floor(nproc / 4))`, soit **2** sur ce poste (§5.7). C'est **la direction opposée à
+  > US-18**, qui veut accélérer la suite. Les deux ne s'excluent pas — reprendre la main sur les
+  > processus pourrait permettre de **remonter** le plafond en sécurité — mais l'ordre compte, et
+  > c'est un sujet de grill commun aux deux stories. Les mesures et le diagnostic sont dans la
+  > skill §5.7, avec leurs limites : aucun kill OOM, `systemd-oomd` inactif, rien de thermique,
+  > aucun *GPU hang* — donc **famine CPU** plutôt que mémoire, et **le déclencheur de la sortie de
+  > session n'est pas établi**.
+  >
+  > Le demandeur signale que le gel s'est produit **plusieurs fois en trois jours**, corroboré par
+  > `/var/log/apport.log` (2026-08-23 16:23, 2026-08-24 00:29, 2026-08-24 16:49). L'un d'eux ne
+  > coïncide avec aucun run d'agent : **il pourrait donc exister une cause seconde, indépendante**,
+  > que cette story ne corrigerait pas.
+  >
+  > **Critère de succès à définir au grill.**
+
 ## Doing
 
 ## In review
