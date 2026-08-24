@@ -79,6 +79,20 @@ describe("ImportSummary", () => {
     expect(inactive.getAttribute("data-failed")).toBeNull();
   });
 
+  it("puts zero in the singular, as French does", () => {
+    // `0 déjà présentes` is wrong, and the old rule (`=== 1`) produced it on
+    // every zero — including lines that then read `1 importée, 0 déjà présentes`,
+    // singular and plural in one breath. In French zero takes the singular.
+    render(<ImportSummary result={result} />);
+
+    const [january, inactive] = screen.getAllByRole("listitem", { name: /2024-\d\d/ });
+
+    expect(inactive.textContent).toContain("0 importée, 0 déjà présente");
+    expect(inactive.textContent).not.toMatch(/0 (importées|déjà présentes)/);
+    // And the plural still applies above one, on the same line as a zero.
+    expect(january.textContent).toContain("4 importées, 1 déjà présente");
+  });
+
   it("says what a failed month DID bring in, so the lines still add up to the headline", () => {
     // A month can fail after some Games arrived — a stream cut mid-month keeps
     // what it received (US-17). Showing only the failure made the month

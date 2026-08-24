@@ -13,9 +13,15 @@ const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : 
 const yyyymm = ({ year, month }: MonthlyImport["month"]) =>
   `${year}-${String(month).padStart(2, "0")}`;
 
-/** What a month brought in, spelled out. */
+/**
+ * What a month brought in, spelled out. **Zero takes the singular in French** —
+ * `0 déjà présente`, not `0 déjà présentes` — which is why the test is `<= 1`
+ * rather than `=== 1`; the latter made every zero read plural, and put a
+ * singular and a plural in one breath (`1 importée, 0 déjà présentes`).
+ */
+const plural = (n: number) => (n <= 1 ? "" : "s");
 const contribution = (line: MonthlyImport) =>
-  `${line.imported} importée${line.imported === 1 ? "" : "s"}, ${line.alreadyPresent} déjà présente${line.alreadyPresent === 1 ? "" : "s"}`;
+  `${line.imported} importée${plural(line.imported)}, ${line.alreadyPresent} déjà présente${plural(line.alreadyPresent)}`;
 
 /**
  * One month of the range. The month's own contribution is shown, and a month the
