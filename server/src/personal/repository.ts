@@ -87,28 +87,67 @@ export function writeMark(
   if (!game) return undefined;
 
   const analysis = ensureAnalysis(db, gameId, game.profileId);
-  const existing = db
-    .select()
-    .from(personalMarks)
-    .where(and(eq(personalMarks.analysisId, analysis.id), eq(personalMarks.ply, ply)))
-    .get();
+  const where = and(eq(personalMarks.analysisId, analysis.id), eq(personalMarks.ply, ply));
+  const existing = db.select().from(personalMarks).where(where).get();
 
-  const next = {
-    declaredSeverity: patch.declaredSeverity ?? existing?.declaredSeverity ?? null,
-    note: patch.note ?? existing?.note ?? null,
-    keyMoment: patch.keyMoment ?? existing?.keyMoment ?? false,
+  // A field the caller **named** is what the caller says, `null` included — a
+  // field it did not name is left as it was. `??` would conflate the two and make
+  // erasing a Note impossible: the fallback would keep restoring the old text.
+  const next: Pick<PersonalMark, "declaredSeverity" | "note" | "keyMoment"> = {
+    declaredSeverity: said(patch, "declaredSeverity")
+      ? (patch.declaredSeverity ?? null)
+      : (existing?.declaredSeverity ?? null),
+    // A blank Note is not a Note (CONTEXT.md): the Player said nothing, and
+    // storing whitespace would make a ply *claim* to have been examined.
+    note: blankToNull(said(patch, "note") ? patch.note : existing?.note),
+    // Never null: a `Key moment` is posed or it is not, and "unknown" is not one
+    // of its states.
+    keyMoment: said(patch, "keyMoment")
+      ? patch.keyMoment === true
+      : (existing?.keyMoment ?? false),
   };
 
-  if (existing) {
-    db.update(personalMarks)
-      .set(next)
-      .where(and(eq(personalMarks.analysisId, analysis.id), eq(personalMarks.ply, ply)))
-      .run();
+  // Nothing left said about this ply, so no row: **silence is not a value**, and
+  // a row of nulls would be a mark asserting the Move was examined and found to
+  // be nothing at all. Taking back the last mark returns the ply to silence.
+  if (isSilent(next)) {
+    if (existing) db.delete(personalMarks).where(where).run();
+  } else if (existing) {
+    db.update(personalMarks).set(next).where(where).run();
   } else {
     db.insert(personalMarks).values({ analysisId: analysis.id, ply, ...next }).run();
   }
 
   return getPersonalAnalysis(db, gameId);
+}
+
+/**
+ * Whether the patch **named** this field at all. The distinction the whole write
+ * path turns on: a field named as `null` is the Player taking something back, a
+ * field left out is a field they said nothing about this time.
+ */
+function said(patch: MarkPatch, key: keyof MarkPatch): boolean {
+  return key in patch;
+}
+
+/**
+ * A `Note` that is only whitespace is no Note at all. The surrounding blanks go;
+ * the ones **inside** stay, because the line breaks the Player typed are part of
+ * what they wrote.
+ */
+function blankToNull(note: string | null | undefined): string | null {
+  if (typeof note !== "string") return null;
+  const trimmed = note.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+/** Whether a ply now has nothing said about it — hence no row to keep. */
+function isSilent(mark: {
+  declaredSeverity: unknown;
+  note: unknown;
+  keyMoment: unknown;
+}): boolean {
+  return mark.declaredSeverity === null && mark.note === null && mark.keyMoment !== true;
 }
 
 /**

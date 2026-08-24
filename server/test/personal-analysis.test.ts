@@ -106,4 +106,99 @@ describe("Personal analysis store", () => {
     const db = tempDb();
     expect(getPersonalAnalysis(db, 4242)).toBeUndefined();
   });
+
+  it("keeps a Note on any ply, the opponent's Moves and the starting Position included", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 0, { note: "Ouverture que je joue mal en général." });
+    writeMark(db, game.id, 4, { note: "Là il me laisse le centre." });
+
+    expect(getPersonalAnalysis(db, game.id)?.marks).toEqual([
+      { ply: 0, declaredSeverity: null, note: "Ouverture que je joue mal en général.", keyMoment: false, posterior: false },
+      { ply: 4, declaredSeverity: null, note: "Là il me laisse le centre.", keyMoment: false, posterior: false },
+    ]);
+  });
+
+  it("keeps a Note's text exactly as written, line breaks included", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 3, { note: "Deux idées :\n- pousser d4\n- ou attendre" });
+
+    expect(getPersonalAnalysis(db, game.id)?.marks[0].note).toBe(
+      "Deux idées :\n- pousser d4\n- ou attendre",
+    );
+  });
+
+  it("holds a Note and a verdict on the same ply, each independent of the other", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 3, { declaredSeverity: "mistake" });
+    writeMark(db, game.id, 3, { note: "j'avais vu Bxh7 mais pas la suite" });
+
+    expect(getPersonalAnalysis(db, game.id)?.marks).toEqual([
+      {
+        ply: 3,
+        declaredSeverity: "mistake",
+        note: "j'avais vu Bxh7 mais pas la suite",
+        keyMoment: false,
+        posterior: false,
+      },
+    ]);
+  });
+
+  it("erases a Note without touching the verdict beside it, and the other way round", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { declaredSeverity: "blunder", note: "je ne comprends pas ce coup" });
+
+    writeMark(db, game.id, 3, { note: null });
+    expect(getPersonalAnalysis(db, game.id)?.marks[0]).toMatchObject({
+      declaredSeverity: "blunder",
+      note: null,
+    });
+
+    writeMark(db, game.id, 3, { note: "finalement je crois que c'est jouable" });
+    writeMark(db, game.id, 3, { declaredSeverity: null });
+    expect(getPersonalAnalysis(db, game.id)?.marks[0]).toMatchObject({
+      declaredSeverity: null,
+      note: "finalement je crois que c'est jouable",
+    });
+  });
+
+  it("does not store a blank Note as a Note — and lets the ply fall silent again", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 3, { note: "   \n  " });
+
+    // Nothing was said, so nothing is stored: a whitespace Note would be a mark
+    // claiming the ply was examined.
+    expect(getPersonalAnalysis(db, game.id)?.marks).toEqual([]);
+    expect(db.select().from(personalMarks).all()).toEqual([]);
+  });
+
+  it("drops the row when the last thing said about a ply is taken back", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+    writeMark(db, game.id, 3, { note: "à revoir" });
+
+    writeMark(db, game.id, 3, { note: null });
+
+    // The ply is silent again, and silence has no row — not a row of nulls
+    // standing for a Move that was examined and found to be nothing.
+    expect(db.select().from(personalMarks).all()).toEqual([]);
+    expect(getPersonalAnalysis(db, game.id)?.marks).toEqual([]);
+  });
+
+  it("trims the surrounding blanks but keeps the words and the breaks inside", () => {
+    const db = tempDb();
+    const game = seedGame(db);
+
+    writeMark(db, game.id, 3, { note: "  première ligne\n\nseconde  " });
+
+    expect(getPersonalAnalysis(db, game.id)?.marks[0].note).toBe("première ligne\n\nseconde");
+  });
 });
