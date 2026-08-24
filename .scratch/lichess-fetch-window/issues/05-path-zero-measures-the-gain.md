@@ -1,6 +1,6 @@
 # 05 — path 0 asks once, and the gain is a figure
 
-Status: `ready-for-agent`
+Status: done
 
 > **Implemented on the business-story integration branch `integration/US-17-lichess-fetch-window`.**
 > Branch from it, PR back into it — **not** `develop`. Auto-merges into the integration branch on a
@@ -33,13 +33,13 @@ This last point is the deliverable US-18 is waiting on: its entry says plainly t
 
 ## Acceptance criteria
 
-- [ ] `path 0` still builds the three reference Profiles across two Platforms, unchanged.
-- [ ] `Metalyst` is still imported over its full 71-month span, with **51 months at zero**.
-- [ ] The scenario asserts the Lichess import cost **one** export request.
-- [ ] The scenario's duration is measured and reported, with the delta against the reference figures.
-- [ ] The precondition no longer claims Lichess refuses IPv6 (corrected in slice 03 — verify it took).
-- [ ] The suite still holds at **three** HP; no fourth journey is added.
-- [ ] The report distinguishes the Lichess import's own duration from the scenario's total, so US-18
+- [x] `path 0` still builds the three reference Profiles across two Platforms, unchanged.
+- [x] `Metalyst` is still imported over its full 71-month span, with **51 months at zero**.
+- [x] The scenario asserts the Lichess import cost **one** export request.
+- [x] The scenario's duration is measured and reported, with the delta against the reference figures.
+- [x] The precondition no longer claims Lichess refuses IPv6 (corrected in slice 03 — verify it took).
+- [x] The suite still holds at **three** HP; no fourth journey is added.
+- [x] The report distinguishes the Lichess import's own duration from the scenario's total, so US-18
       can attribute the gain.
 
 ### Feature Path (FP)
@@ -56,3 +56,59 @@ Verify: UI first — the import summary and the Profiles screens, as path 0 alre
 ## Blocked by
 
 - `.scratch/lichess-fetch-window/issues/04-an-interruption-says-where-it-stopped.md`
+
+## Comments
+
+**2026-08-24 — implémentée et fusionnée dans `integration/US-17-lichess-fetch-window`.**
+
+Tranche de documentation : `path-0-bootstrap.md` et une règle de `README.md`. Rien à tester en
+dessous ; sa vérification est le run de path 0 lui-même.
+
+**Le travail de fond a été l'instrument.** Deux candidats auraient menti, et c'est mesuré :
+- **compter les connexions** rapporte **1** pour une rafale de 71 requêtes — l'agent global de Node
+  garde les connexions vivantes. Exactement le faux vert que l'assertion existe pour empêcher ;
+- **`NODE_DEBUG=http`**, essayé sur le code sous test : trois requêtes d'export successives émettent
+  **une** ligne `call onSocket` et **une** `createConnection`. Incomptable.
+
+Retenu : un **proxy inverse journalisant** devant Lichess, `LICHESS_BASE_URL` pointé dessus. Le
+contrat testé reste le vrai (vraie API, vrai ndjson, vrai throttle), seule l'URL de base bouge — un
+bouton déjà supporté. Bonus décisif : son journal donne la durée **propre** de l'import, que le
+chrono d'une étape pilotée par l'UI ne peut pas donner. Les deux instruments rejetés sont consignés
+**avec la mesure qui les rejette**, pour que le prochain run ne les re-dérive pas.
+
+**Feature Path : verte, 5/5**, contre les vraies API chess.com et Lichess.
+
+| Figure | Référence (71 requêtes) | Mesuré | Delta |
+|---|---|---|---|
+| Requêtes d'export | 71 | **1** | −70 |
+| Pauses d'une minute | 6 | **0** | −6 |
+| Import Lichess, durée propre | ~210 s | **33,571 s** | **−176 s, ~6,3×** |
+| dont attente | ~144 s | **0 s** | −144 s |
+
+`Metalyst` sur 2017-10 → 2023-08 : **71 lignes de mois, dans l'ordre, 51 à zéro** — vérifié
+programmatiquement contre une séquence de mois générée, pas à l'œil. Toutes les figures consignées
+reproduites **à l'identique** (403 récupérées, 351 importées, 38 `classical`, 37 `correspondence`,
+20 mois peuplés, 51 à zéro) : aucune dérive, rien à relire. Aucun `429`, l'export unique répond
+`200` en 52 ms d'en-têtes pour 653 896 octets. Scoping intact : 82 sur le profil 1, 351 sur le 3,
+**aucune** sur le 2.
+
+**Le texte était-il exécutable tel quel ?** Oui, suivi littéralement, sans déviation — et le run a
+trouvé deux manques, corrigés dans la tranche (`4d1fb60`) : « une ligne par requête » suffit à
+compter mais pas à chronométrer (il en faut trois : requête, en-têtes, fin), et le proxy doit poser
+`Host: lichess.org` sur le saut sortant. Pour une tranche de documentation, un texte qu'on ne peut
+pas suivre tel qu'écrit **est** le défaut.
+
+Le chiffre est désormais **dans le dépôt**, pas seulement dans un corps de PR : c'est le premier
+datum réel d'US-18, dont l'entrée dit noir sur blanc que ses chiffres sont déduits.
+
+Findings, **aucun bloquant** :
+- Le **total du scénario n'est pas une mesure propre** sur ce run : la session pilotante a été
+  interrompue entre les étapes 6 et 7, son horloge murale contient du temps mort et un redémarrage.
+  Rapporté comme approximatif plutôt que reconstruit. La durée de l'import n'en souffre pas (journal
+  du proxy, entièrement avant l'interruption) et n'a pas à être repayée pour obtenir un total.
+- Le `window.confirm` des 71 mois a été re-signalé par le pilote ~2 min plus tard, à la navigation
+  suivante. Re-mesuré : **toujours une seule** requête d'export, donc aucun second import déclenché.
+  Jugé artefact du pilote — **déduit, pas mesuré**, le handler n'a pas été instrumenté.
+- L'arrêt brutal a laissé 2,5 Mo de `.db` à côté de **4,1 Mo de `-wal`** — exactement ce dont la
+  section *Backing store* prévient. `wal_checkpoint(TRUNCATE)` a tout récupéré, vérifié par
+  relecture. L'avertissement du scénario est juste et porteur : consigné comme confirmation.
