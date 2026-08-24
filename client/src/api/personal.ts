@@ -1,6 +1,14 @@
 import type { DeclaredSeverity, PersonalAnalysis } from "../types";
 
 /**
+ * The named refusal: this Game is not the named `Profile`'s, so there is no
+ * reading of it to answer (ADR-0014). Distinguished from any other failure
+ * because the screen has something true and specific to say about it — "not this
+ * Profile's Game" is not "the app is broken".
+ */
+export class GameNotThisProfiles extends Error {}
+
+/**
  * The Player's own reading of one Game (`Personal analysis`, CONTEXT.md), scoped
  * to the `Profile` like every other read (ADR-0014). A Game nobody has read yet
  * answers an **empty reading**, not a 404 — no reading is the normal starting
@@ -12,6 +20,7 @@ export async function fetchPersonalAnalysis(
   profileId: number,
 ): Promise<PersonalAnalysis> {
   const res = await fetch(`/api/personal/${gameId}?profileId=${profileId}`);
+  if (res.status === 404) throw new GameNotThisProfiles(`Game ${gameId} is not profile ${profileId}'s`);
   if (!res.ok) throw new Error(`Failed to load reading for game ${gameId} (${res.status})`);
   return (await res.json()) as PersonalAnalysis;
 }

@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchGame } from "../api";
 import { PersonalReading } from "../features/personal/PersonalReading";
+import { ScopedPage } from "../features/profiles/ScopedPage";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import type { Game } from "../types";
+import type { Game, Profile } from "../types";
 
 /**
  * The reading route (`/analyse/:gameId/lecture`): where the Player writes their
@@ -11,10 +12,24 @@ import type { Game } from "../types";
  *
  * Outside the `Nav`, exactly like `/analyse/:gameId`: it is *Game-scoped* — one
  * reaches it from a Game, never from a global menu — so the navigation is
- * untouched. The Game id comes from the route, so the page survives a reload and
- * a direct URL.
+ * untouched.
+ *
+ * But **behind `ScopedPage`** all the same, unlike `/analyse/:gameId` (ADR-0014).
+ * A reading is one Player's own work: asking for it under the Game's *owner*
+ * rather than under whoever is selected would show a Player another Player's
+ * reading whenever the URL was reached with the wrong Profile in hand — the very
+ * mixing the partitioning exists against. And the gate sits **above** the Game
+ * load on purpose: with no Profile selected there is nobody for this screen to
+ * be about, so it asks for one instead of fetching a Game to show nobody.
  */
 export function ReadingPage() {
+  return (
+    <ScopedPage>{(profile) => <ReadingOfOneGame profile={profile} />}</ScopedPage>
+  );
+}
+
+/** The reading itself, once there is a `Profile` for it to be about. */
+function ReadingOfOneGame({ profile }: { profile: Profile }) {
   const { gameId } = useParams();
   const [game, setGame] = useState<Game | null>(null);
 
@@ -42,7 +57,7 @@ export function ReadingPage() {
         <Link to={`/analyse/${game.id}`}>Retour à l'analyse de cette partie</Link>
       </p>
       <ErrorBoundary key={game.id}>
-        <PersonalReading game={game} profileId={game.profileId} />
+        <PersonalReading game={game} profileId={profile.id} />
       </ErrorBoundary>
     </section>
   );

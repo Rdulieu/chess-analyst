@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Board } from "../../components/Board";
 import { GameHeader } from "../games/GameHeader";
-import { fetchPersonalAnalysis, savePersonalMark } from "../../api";
+import { fetchPersonalAnalysis, savePersonalMark, GameNotThisProfiles } from "../../api";
 import { DeclaredSeverityControl } from "./DeclaredSeverityControl";
 import { playersOwnPly } from "./plies";
 import type { DeclaredSeverity, Game, PersonalAnalysis } from "../../types";
@@ -27,13 +27,24 @@ import type { DeclaredSeverity, Game, PersonalAnalysis } from "../../types";
  */
 export function PersonalReading({ game, profileId }: { game: Game; profileId: number }) {
   const [reading, setReading] = useState<PersonalAnalysis | null>(null);
-  const [failed, setFailed] = useState(false);
+  /**
+   * Why there is nothing to read, when there is nothing to read. `foreign` is
+   * kept apart from `failed` because it is not a malfunction: the Game is simply
+   * not this `Profile`'s, and saying "an error occurred" about a correct refusal
+   * would send the Player looking for a bug.
+   */
+  const [refused, setRefused] = useState<"foreign" | "failed" | null>(null);
 
   useEffect(() => {
     let live = true;
+    setReading(null);
+    setRefused(null);
     fetchPersonalAnalysis(game.id, profileId)
       .then((result) => live && setReading(result))
-      .catch(() => live && setFailed(true));
+      .catch((cause: Error) => {
+        if (!live) return;
+        setRefused(cause instanceof GameNotThisProfiles ? "foreign" : "failed");
+      });
     return () => {
       live = false;
     };
@@ -52,12 +63,23 @@ export function PersonalReading({ game, profileId }: { game: Game; profileId: nu
       setReading((current) => current && withMark(current, ply, { declaredSeverity }));
       await savePersonalMark(game.id, profileId, ply, { declaredSeverity })
         .then(setReading)
-        .catch(() => setFailed(true));
+        .catch(() => setRefused("failed"));
     },
     [game.id, profileId],
   );
 
-  if (failed) return <p role="alert">La lecture de cette partie n'a pas pu être chargée.</p>;
+  // A reading is filed where the Game it reads is filed (ADR-0014), so a Game
+  // belonging to another `Profile` has no reading to show HERE — and none of its
+  // marks are rendered either. The board itself is not drawn: there is nothing
+  // on this screen for the Player to do with a Game that is not theirs.
+  if (refused === "foreign")
+    return (
+      <p role="status">
+        Cette partie n'appartient pas au profil courant : elle n'a pas de lecture ici.
+      </p>
+    );
+  if (refused === "failed")
+    return <p role="alert">La lecture de cette partie n'a pas pu être chargée.</p>;
   if (!reading) return <p>Chargement de ma lecture…</p>;
 
   return (
