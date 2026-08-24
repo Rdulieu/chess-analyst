@@ -571,7 +571,19 @@ describe("sealing a reading", () => {
     // Discovering the engine and understanding why is the most fertile moment of
     // the exercise, so writing stays open — and what is added is marked as coming
     // after, in words.
-    await screen.findByText(/après le scellement|postérieur/i);
+    // The notice, by its own part rather than by its words: "posterior" is now
+    // said in several places on purpose, so matching on the phrase alone would
+    // find them all.
+    await waitFor(() =>
+      expect(document.querySelector('[data-part="posterior-notice"]')?.textContent).toMatch(
+        /postérieure/i,
+      ),
+    );
+    // And the layer is legible AT the control, not only in a paragraph above it:
+    // a Player scrolled past the notice would otherwise see a control identical
+    // to the pre-seal one.
+    expect(screen.getByRole("group", { name: /verdict.*après le scellement/i })).not.toBeNull();
+    expect(screen.getByRole("textbox", { name: /note.*après le scellement/i })).not.toBeNull();
   });
 
   it("keeps the sealed reading readable exactly as it was, beside what came after", async () => {

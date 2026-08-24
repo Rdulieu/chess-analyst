@@ -19,6 +19,7 @@ export function DeclaredSeverityControl({
   posed,
   playersOwnMove,
   disabled = false,
+  posterior = false,
   onPose,
   onWithdraw,
 }: {
@@ -33,6 +34,13 @@ export function DeclaredSeverityControl({
    */
   playersOwnMove: boolean;
   disabled?: boolean;
+  /**
+   * Whether this control writes into the layer **posterior to the seal**. Said in
+   * the legend, not only in a paragraph above: a Player who has scrolled past the
+   * notice would otherwise see a control identical to the pre-seal one and think
+   * they were still amending their sealed reading.
+   */
+  posterior?: boolean;
   onPose: (severity: DeclaredSeverity) => void;
   /**
    * Returns the Move to **silence**. Five exclusive radios can change a verdict
@@ -46,7 +54,7 @@ export function DeclaredSeverityControl({
 
   return (
     <fieldset data-part="declared-severity">
-      <legend>Mon verdict</legend>
+      <legend>{posterior ? "Mon verdict, après le scellement" : "Mon verdict"}</legend>
       {!playersOwnMove && (
         // Said here and not only in the glossary: the Player is about to judge a
         // Move that is not theirs, and would otherwise reasonably assume the

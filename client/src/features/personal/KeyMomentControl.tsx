@@ -22,12 +22,15 @@ export function KeyMomentControl({
   ply,
   posed,
   disabled = false,
+  posterior = false,
   onToggle,
 }: {
   /** The ply being read; the starting Position is not a Move and cannot be a pivot. */
   ply: number;
   posed: boolean;
   disabled?: boolean;
+  /** Whether this control writes into the layer posterior to the seal. */
+  posterior?: boolean;
   onToggle: (posed: boolean) => void;
 }) {
   if (ply === 0) return null;
@@ -42,6 +45,7 @@ export function KeyMomentControl({
           onChange={(event) => onToggle(event.target.checked)}
         />{" "}
         Moment clé : c'est ici que la partie a tourné
+        {posterior ? " (après le scellement)" : ""}
       </label>
       {/* Said, not implied. Beside five verdicts, an unexplained sixth control
           reads as a sixth verdict. */}

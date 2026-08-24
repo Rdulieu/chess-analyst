@@ -180,6 +180,7 @@ export function PersonalReading({
               ply={ply}
               posed={markAt(reading, ply, sealedAt !== null)?.declaredSeverity ?? null}
               playersOwnMove={playersOwnPly(ply, game.playerColor)}
+              posterior={sealedAt !== null}
               onPose={(severity) => void write(ply, { declaredSeverity: severity })}
               // `null` reaches the server as `null`: an omitted field would leave
               // the verdict exactly where it was.
@@ -188,6 +189,7 @@ export function PersonalReading({
             <KeyMomentControl
               ply={ply}
               posed={markAt(reading, ply, sealedAt !== null)?.keyMoment ?? false}
+              posterior={sealedAt !== null}
               onToggle={(posed) => void write(ply, { keyMoment: posed })}
             />
             <KeyMomentCount
@@ -203,6 +205,7 @@ export function PersonalReading({
             <NoteEditor
               ply={ply}
               note={markAt(reading, ply, sealedAt !== null)?.note ?? null}
+              posterior={sealedAt !== null}
               onSave={(note) => void write(ply, { note })}
               // `null` is the erasure, and it has to reach the server as `null`:
               // an omitted field would leave the old text exactly where it was.
