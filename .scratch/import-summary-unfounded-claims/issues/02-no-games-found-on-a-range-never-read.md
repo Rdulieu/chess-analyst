@@ -1,6 +1,6 @@
 # 02 — « No games found » sur une plage qui n'a jamais été lue
 
-Status: `needs-triage`
+Status: done
 
 ## Constat
 
@@ -43,3 +43,27 @@ s'arrête, ce qui est conservé, quoi relancer) est probablement la bonne base.
 Le défaut est **assis sur le raisonnement d'US-17-04 lui-même** et mérite sa propre décision : la
 tranche 04 avait à traiter la coupure, pas le refus. Déposé sous son propre slug pour ne pas mourir
 avec la story.
+
+## Comments
+
+**2026-08-24 — corrigé, sur demande du demandeur avant le merge d'US-17 (PR #62).**
+
+« Aucune partie trouvée » exige désormais que **tous** les mois de la plage aient abouti. Sinon le
+Player reçoit les trois mêmes faits que pour une interruption : ce qui a échoué, que les parties déjà
+récupérées sont conservées, et la plage exacte à retaper. Elle part du **premier** mois non répondu et
+va jusqu'au bout de la plage — re-récupérer un mois déjà abouti est gratuit (dedup par URL), en
+omettre un risque un trou définitif.
+
+**Une décision existante a été rencontrée et n'a pas été rouverte.** Le premier jet énonçait les mois
+en échec *même quand l'import avait partiellement réussi*. Un test l'a arrêté : « a partly successful
+Import is not a failed one » (`import-range.test.ts`, « consolidates only the months it actually
+covered »). C'est une décision, pas un détail, et elle ne fait partie d'aucun des deux findings — le
+correctif ne remplace donc la phrase que **quand rien n'est entré**, le cas où elle était fausse.
+
+**Question laissée ouverte au demandeur**, consignée en commentaire dans `range.ts` : une plage à
+moitié réussie mérite-t-elle aussi une ligne globale disant quels mois relancer ? Aujourd'hui ses
+échecs ne vivent que sur leurs lignes de mois. C'est la même famille de silence que ce finding, un
+cas plus loin.
+
+Le message a été **traduit en français** au passage : il était le seul texte anglais que le Player
+pouvait lire, alors que celui de la tranche 04 est en français.
