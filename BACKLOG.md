@@ -663,6 +663,24 @@
   >
   > Jugement du demandeur : « **pas mal pour un premier jet** » — d'où **US-15a-bis**, qui doit
   > passer **avant** l'agrégat de 15c.
+  >
+  > **Trois arbitrages de la tranche 01 sont restés ouverts**, et ne figuraient jusqu'ici nulle part
+  > dans `develop` : ils avaient été consignés le 2026-08-22 dans un commit posé sur
+  > `feature/US-15a-01-best-line` **après** que cette branche avait déjà été fusionnée dans
+  > l'intégration (`84ed264`), donc sur un chemin qui ne menait plus à `develop`. Rapatriés ici parce
+  > qu'un point produit ouvert qu'on ne voit nulle part est un point qu'on redécouvre :
+  >
+  > 1. **Le clamp de défilement quand le panneau rétrécit** — comportement à trancher, jamais tranché.
+  > 2. **Le bandeau ne dit pas qu'une passe était une *ré*analyse.** À ne pas confondre avec le bug
+  >    voisin relevé par US-15a-bis (« Analyser cette partie » silencieusement avalé sous une bannière
+  >    non acquittée) : celui-ci porte sur le **libellé** d'une passe qui aboutit, celui-là sur une
+  >    action qui n'aboutit pas.
+  > 3. **L'a11y préexistante de la liste des parties** — antérieure à la story, laissée en l'état.
+  >
+  > Le reste de cette note orpheline était **déjà couvert ailleurs**, vérifié avant de la rapatrier :
+  > la mesure MultiPV vit dans **ADR-0016** avec plus de détail que le backlog n'en portait (`2.11×`
+  > à une ligne d'abord, `2.19×` à deux, les deux runs et le protocole), et le rejet des 1199
+  > `Evaluation`s héritées est déjà dit plus haut. Seuls ces trois arbitrages manquaient.
 
 - **US-12**: Importer mes parties depuis un compte Lichess, pas seulement chess.com.
   > **Livrée.** Aujourd'hui la seule source est chess.com et elle n'est pas isolée derrière
