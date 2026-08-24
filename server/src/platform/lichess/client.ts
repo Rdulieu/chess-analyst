@@ -123,6 +123,18 @@ export function createHttpLichessClient(
         }
       } catch (err) {
         const reason = err instanceof Error ? err.message : String(err);
+        // Where it stopped, said once and separately: the month lines below say
+        // WHAT is missing, this says WHERE to resume from. The month still open
+        // is the one it died in — it is reported as failed, never as covered,
+        // because we over-declare incompleteness (US-17-04).
+        //
+        // **Only a truncation.** A `429` or a `500` is refused before the first
+        // byte: nothing was interrupted, there is no month it "died in", and
+        // telling the Player where to resume would name a stop that never
+        // happened. Those stay ordinary month failures.
+        if (err instanceof TruncatedStreamError && open < months.length) {
+          yield { kind: "stream-cut", month: months[open] };
+        }
         for (; open < months.length; open++) {
           yield { kind: "month-failed", month: months[open], reason };
         }

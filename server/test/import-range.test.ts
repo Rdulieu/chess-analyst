@@ -180,3 +180,81 @@ describe("importRange", () => {
     expect(result.message).toBeUndefined();
   });
 });
+
+describe("an Import whose stream broke mid-flight", () => {
+  /** A range whose stream dies in March, after two months came through. */
+  const brokenInMarch = () =>
+    fakeClient({
+      "2024-01": [importedGame({ gameUrl: "https://x/1" })],
+      "2024-02": [importedGame({ gameUrl: "https://x/2" })],
+      "2024-03": { games: [importedGame({ gameUrl: "https://x/3" })], cutShortWith: new Error("le flux a été interrompu avant la fin") },
+    });
+
+  it("says where it stopped, that the Games are kept, and the exact range left to run", async () => {
+    // Three facts, none decorative. Without the second the Player assumes the
+    // whole import has to be redone; without the third they have to work the
+    // range out themselves, from a list of month lines.
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    // The last month that came through IN FULL — not the month it broke in.
+    expect(result.message).toContain("2024-02");
+    expect(result.message).toMatch(/conserv/i);
+    // The range to retype, starting AT the month it broke in, never after it:
+    // March is partial, and re-fetching it is free while declaring it covered
+    // would be a silent, permanent hole.
+    expect(result.message).toMatch(/2024-03/);
+    expect(result.message).toMatch(/2024-05/);
+  });
+
+  it("returns its summary rather than throwing — a failed month has never aborted an Import", async () => {
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    expect(result.imported).toBe(3);
+    // What arrived before the break is persisted and findable — that is what
+    // makes re-running the stated range an addition rather than a redo.
+    expect(listGames(db, profileId)).toHaveLength(3);
+  });
+
+  it("reports the month it broke in, and every month after it, as failed", async () => {
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      brokenInMarch(),
+      params(profileId, { from: { year: 2024, month: 1 }, to: { year: 2024, month: 5 } }),
+    );
+
+    const failed = result.months.filter((m) => m.failure !== undefined);
+    expect(failed.map((m) => m.month.month)).toEqual([3, 4, 5]);
+    // And the covered ones stay covered, at their real counts.
+    expect(result.months.filter((m) => m.failure === undefined).map((m) => m.month.month)).toEqual([
+      1, 2,
+    ]);
+  });
+
+  it("says nothing of the sort on a nominal import", async () => {
+    // The message must be the sign of an interruption, not decoration that
+    // always shows: a Player who sees it on a clean run learns to ignore it.
+    const { db, profileId } = testDb();
+
+    const result = await importRange(
+      db,
+      fakeClient({ "2024-01": [importedGame()] }),
+      params(profileId),
+    );
+
+    expect(result.message ?? "").not.toMatch(/interromp/i);
+  });
+});

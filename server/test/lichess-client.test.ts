@@ -107,7 +107,10 @@ beforeAll(async () => {
    * the socket destroyed. Served chunked (no `Content-Length`), exactly like the
    * real export — so the premature end is something the client can notice.
    */
+  const truncatedCalls: number[] = [];
+  app.get("/__truncated-calls", (_req, res) => res.json({ calls: truncatedCalls.length }));
   app.get("/api/games/user/truncated", (_req, res) => {
+    truncatedCalls.push(1);
     res.type("application/x-ndjson");
     res.flushHeaders();
     res.write(JSON.stringify(game({ id: "arrived1" })) + "\n");
@@ -520,6 +523,9 @@ describe("a Lichess range", () => {
     expect(events.filter((e) => e.kind !== "game")).toEqual([
       { kind: "month-done", month: { year: 2024, month: 1 }, totalFetched: 1 },
       { kind: "month-done", month: { year: 2024, month: 2 }, totalFetched: 0 },
+      // Said once, naming the month the answer died IN — that is what tells the
+      // Player where to resume, which no per-month failure line can say.
+      { kind: "stream-cut", month: { year: 2024, month: 3 } },
       {
         kind: "month-failed",
         month: { year: 2024, month: 3 },
@@ -533,5 +539,32 @@ describe("a Lichess range", () => {
     ]);
     // And both Games are through before any of it — nothing is lost with the cut.
     expect(events.filter((e) => e.kind === "game")).toHaveLength(2);
+  });
+  it("is not retried once the first byte has arrived", async () => {
+    // ADR-0010's no-retry rule, applied rather than excepted. The 429 exception
+    // is pre-first-byte and stays there: once bytes are on the wire we cannot
+    // know what was already persisted, so replaying is guesswork. Recovery is
+    // the Player re-running the stated range, which dedup by URL makes exact.
+    await fetch(`${baseUrl}/__truncated-calls`); // read, then measure the delta
+    const before = ((await fetch(`${baseUrl}/__truncated-calls`).then((r) => r.json())) as {
+      calls: number;
+    }).calls;
+
+    await eventsOver("truncated", { year: 2024, month: 1 }, { year: 2024, month: 3 });
+
+    const after = ((await fetch(`${baseUrl}/__truncated-calls`).then((r) => r.json())) as {
+      calls: number;
+    }).calls;
+    expect(after - before).toBe(1);
+  });
+
+  it("does not call a refusal an interruption: a 429 or a 500 cuts nothing", async () => {
+    // Nothing was interrupted — the answer never started. Emitting a stop here
+    // would tell the Player to resume from a month the stream never reached, and
+    // would name a break that did not happen.
+    const refused = await eventsOver("broken", { year: 2024, month: 1 }, { year: 2024, month: 2 });
+
+    expect(refused.map((e) => e.kind)).not.toContain("stream-cut");
+    expect(refused.filter((e) => e.kind === "month-failed")).toHaveLength(2);
   });
 });
