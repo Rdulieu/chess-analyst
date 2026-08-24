@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Board } from "../../components/Board";
 import { GameHeader } from "../games/GameHeader";
-import { fetchPersonalAnalysis, savePersonalMark, GameNotThisProfiles } from "../../api";
+import {
+  fetchPersonalAnalysis,
+  savePersonalMark,
+  sealPersonalAnalysis,
+  GameNotThisProfiles,
+  SealRefused,
+} from "../../api";
 import { DeclaredSeverityControl } from "./DeclaredSeverityControl";
 import { NoteEditor } from "./NoteEditor";
 import { KeyMomentControl, KeyMomentCount } from "./KeyMomentControl";
+import { SealAction } from "./SealAction";
+import { SealedMarkReadout, SealedReadout } from "./SealedReadout";
+import { engineWasSeen } from "./engineSeen";
 import { playersOwnPly } from "./plies";
 import type { DeclaredSeverity, Game, PersonalAnalysis, PersonalMark } from "../../types";
 
@@ -60,6 +69,9 @@ export function PersonalReading({
    * would send the Player looking for a bug.
    */
   const [refused, setRefused] = useState<"foreign" | "failed" | null>(null);
+  /** What the server said when it would not seal — shown as it came. */
+  const [sealRefusal, setSealRefusal] = useState<string | null>(null);
+  const [sealing, setSealing] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -98,6 +110,26 @@ export function PersonalReading({
   // belonging to another `Profile` has no reading to show HERE — and none of its
   // marks are rendered either. The board itself is not drawn: there is nothing
   // on this screen for the Player to do with a Game that is not theirs.
+  /**
+   * Seals the reading, handing the server the **provenance** — had the engine
+   * been shown for **this** Game? Read at the moment of sealing and nowhere else:
+   * it is a statement about the past, and reading it earlier would freeze an
+   * answer that was still changing.
+   */
+  const seal = useCallback(async () => {
+    setSealing(true);
+    setSealRefusal(null);
+    await sealPersonalAnalysis(game.id, profileId, engineWasSeen(game.id))
+      .then(setReading)
+      .catch((cause: Error) => {
+        // A refusal is a fact about the reading and is said in the server's own
+        // words; anything else is a malfunction and is said as one.
+        if (cause instanceof SealRefused) setSealRefusal(cause.message);
+        else setRefused("failed");
+      })
+      .finally(() => setSealing(false));
+  }, [game.id, profileId]);
+
   if (refused === "foreign")
     return (
       <p role="status">
@@ -107,6 +139,8 @@ export function PersonalReading({
   if (refused === "failed")
     return <p role="alert">La lecture de cette partie n'a pas pu être chargée.</p>;
   if (!reading) return <p>Chargement de ma lecture…</p>;
+
+  const { sealedAt } = reading;
 
   return (
     <div>
@@ -123,10 +157,30 @@ export function PersonalReading({
         // optional for.
         controls={(ply) => (
           <div data-part="reading-controls">
+            {sealedAt !== null && (
+              <>
+                <SealedReadout
+                  sealedAt={sealedAt}
+                  engineSeenBeforeSeal={reading.engineSeenBeforeSeal}
+                />
+                {/* What was written on THIS Move when the reading was sealed,
+                    beside — never replaced by — what has been written since. */}
+                <SealedMarkReadout mark={markAt(reading, ply, false)} />
+                {/* Writing stays open after the seal: seeing the engine and
+                    understanding why is the most fertile moment of the exercise,
+                    so forbidding it would be absurd — and counting it would be
+                    dishonest. Hence the words, on every control below. */}
+                <p data-part="posterior-notice">
+                  Ce que vous écrivez maintenant est conservé comme une couche
+                  <strong> postérieure</strong> au scellement, et reste hors de la confrontation.
+                </p>
+              </>
+            )}
             <DeclaredSeverityControl
               ply={ply}
-              posed={markAt(reading, ply)?.declaredSeverity ?? null}
+              posed={markAt(reading, ply, sealedAt !== null)?.declaredSeverity ?? null}
               playersOwnMove={playersOwnPly(ply, game.playerColor)}
+              posterior={sealedAt !== null}
               onPose={(severity) => void write(ply, { declaredSeverity: severity })}
               // `null` reaches the server as `null`: an omitted field would leave
               // the verdict exactly where it was.
@@ -134,13 +188,24 @@ export function PersonalReading({
             />
             <KeyMomentControl
               ply={ply}
-              posed={markAt(reading, ply)?.keyMoment ?? false}
+              posed={markAt(reading, ply, sealedAt !== null)?.keyMoment ?? false}
+              posterior={sealedAt !== null}
               onToggle={(posed) => void write(ply, { keyMoment: posed })}
             />
-            <KeyMomentCount total={reading.marks.filter((m) => m.keyMoment).length} />
+            <KeyMomentCount
+              total={
+                reading.marks.filter((m) => m.keyMoment && m.posterior === (sealedAt !== null))
+                  .length
+              }
+            />
+            {sealedAt === null ? (
+              <SealAction empty={reading.marks.length === 0} sealing={sealing} onSeal={seal} />
+            ) : null}
+            {sealRefusal && <p role="alert">{sealRefusal}</p>}
             <NoteEditor
               ply={ply}
-              note={markAt(reading, ply)?.note ?? null}
+              note={markAt(reading, ply, sealedAt !== null)?.note ?? null}
+              posterior={sealedAt !== null}
               onSave={(note) => void write(ply, { note })}
               // `null` is the erasure, and it has to reach the server as `null`:
               // an omitted field would leave the old text exactly where it was.
@@ -153,9 +218,19 @@ export function PersonalReading({
   );
 }
 
-/** What the Player has said about one ply, if anything. */
-function markAt(reading: PersonalAnalysis, ply: number): PersonalMark | undefined {
-  return reading.marks.find((m) => m.ply === ply);
+/**
+ * What the Player has said about one ply **in one layer**. The layer is explicit
+ * at every call: before the seal there is only the initial one, after it the
+ * controls act on the posterior one while the initial stays readable beside them.
+ * A `markAt` that guessed would be the bug that quietly overwrites a sealed
+ * reading.
+ */
+function markAt(
+  reading: PersonalAnalysis,
+  ply: number,
+  posterior: boolean,
+): PersonalMark | undefined {
+  return reading.marks.find((m) => m.ply === ply && m.posterior === posterior);
 }
 
 /**
@@ -165,18 +240,27 @@ function markAt(reading: PersonalAnalysis, ply: number): PersonalMark | undefine
  * left said about it keeps no mark (**silence is not a value**).
  */
 function withMark(reading: PersonalAnalysis, ply: number, patch: MarkPatch): PersonalAnalysis {
-  const existing = markAt(reading, ply);
+  // The layer follows the seal, exactly as it does on the server: after sealing,
+  // every write is posterior, and an amendment starts from the sealed mark rather
+  // than from nothing — the Player is amending a reading, not writing a fresh one.
+  const posterior = reading.sealedAt !== null;
+  const base = markAt(reading, ply, posterior) ?? (posterior ? markAt(reading, ply, false) : undefined);
   const merged = {
     ply,
     declaredSeverity: null,
     note: null,
     keyMoment: false,
-    posterior: false,
-    ...existing,
+    ...base,
     ...patch,
+    posterior,
   };
   const mark = { ...merged, note: merged.note === null ? null : merged.note.trim() || null };
-  const others = reading.marks.filter((m) => m.ply !== ply);
+  const others = reading.marks.filter((m) => !(m.ply === ply && m.posterior === posterior));
   const silent = mark.declaredSeverity === null && mark.note === null && !mark.keyMoment;
-  return { ...reading, marks: (silent ? others : [...others, mark]).sort((a, b) => a.ply - b.ply) };
+  return {
+    ...reading,
+    marks: (silent ? others : [...others, mark]).sort(
+      (a, b) => a.ply - b.ply || Number(a.posterior) - Number(b.posterior),
+    ),
+  };
 }

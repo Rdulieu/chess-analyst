@@ -2,7 +2,13 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { games } from "../db/schema";
-import { getPersonalAnalysis, writeMark, type MarkPatch } from "../personal/repository";
+import {
+  getPersonalAnalysis,
+  writeMark,
+  sealAnalysis,
+  SealRefusal,
+  type MarkPatch,
+} from "../personal/repository";
 import { isDeclaredSeverity } from "../personal/severity";
 import { scopedProfile } from "./scope";
 
@@ -85,5 +91,43 @@ export function createPersonalRouter(db: Db): Router {
     res.json(writeMark(db, scoped.gameId, ply, patch));
   });
 
+  /**
+   * **Sealing** — *this is my reading, now show me the engine*. There is
+   * deliberately **no counterpart**: nothing here unseals, and no route rewrites
+   * `sealedAt`, because a reading that could be reopened would no longer be what
+   * the Player had written.
+   *
+   * The two refusals are **explicit business errors** (409) rather than silent
+   * no-ops: both are things the Player has to be told, and told the reason for.
+   */
+  router.post("/:gameId/seal", (req, res) => {
+    const scoped = scopedGame(req, res);
+    if (!scoped) return;
+    const { engineSeen } = (req.body ?? {}) as Record<string, unknown>;
+    // Not optional, and with no safe default: quietly recording "not seen" would
+    // let a caller launder an informed reading into a blind one, which is exactly
+    // the honesty this flag exists for.
+    if (typeof engineSeen !== "boolean") {
+      res.status(400).json({ error: "Il faut dire si le moteur avait déjà été montré." });
+      return;
+    }
+
+    const sealed = sealAnalysis(db, scoped.gameId, { engineSeen });
+    if (sealed instanceof SealRefusal) {
+      res.status(409).json({ reason: sealed.reason, error: SEAL_REFUSAL[sealed.reason] });
+      return;
+    }
+    res.json(sealed);
+  });
+
   return router;
 }
+
+/** What each refusal is told to the Player — its reason, in their own terms. */
+const SEAL_REFUSAL: Record<SealRefusal["reason"], string> = {
+  empty:
+    "Cette lecture est vide : il n'y a rien à confronter. Posez au moins un verdict, une note ou un moment clé.",
+  "already-sealed":
+    "Cette lecture est déjà scellée, et une lecture scellée le reste : ce qui sera confronté est ce que vous aviez écrit.",
+  "no-such-game": "Partie introuvable.",
+};

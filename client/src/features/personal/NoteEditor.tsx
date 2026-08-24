@@ -21,12 +21,16 @@ export function NoteEditor({
   ply,
   note,
   disabled = false,
+  posterior = false,
   onSave,
   onErase,
 }: {
   ply: number;
   note: string | null;
   disabled?: boolean;
+  /** Whether this field writes into the layer posterior to the seal — said in
+   *  the label, so the layer is legible at the control itself. */
+  posterior?: boolean;
   onSave: (note: string) => void;
   onErase: () => void;
 }) {
@@ -37,7 +41,9 @@ export function NoteEditor({
   // Move's text sitting in the box.
   useEffect(() => setDraft(note ?? ""), [ply, note]);
 
-  const label = ply === 0 ? "Ma note sur la partie" : "Ma note sur ce coup";
+  const label =
+    (ply === 0 ? "Ma note sur la partie" : "Ma note sur ce coup") +
+    (posterior ? ", après le scellement" : "");
   const dirty = draft.trim() !== (note ?? "");
 
   return (

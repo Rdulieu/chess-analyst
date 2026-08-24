@@ -158,4 +158,125 @@ describe("Personal analysis API", () => {
 
     expect(res.status).toBe(400);
   });
+
+});
+
+describe("sealing over HTTP", () => {
+  const seal = (
+    app: ReturnType<typeof appWithGame>["app"],
+    gameId: number,
+    profileId: number,
+    body: Record<string, unknown> = { engineSeen: false },
+  ) => request(app).post(`/api/personal/${gameId}/seal?profileId=${profileId}`).send(body);
+
+  it("seals a reading that has something in it, and answers it sealed and labelled", async () => {
+    const { app, profileId, game } = appWithGame();
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ declaredSeverity: "mistake" });
+
+    const res = await seal(app, game.id, profileId);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sealedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.body.engineSeenBeforeSeal).toBe(false);
+  });
+
+  it("refuses an empty reading with an explicit business error, not a silent failure", async () => {
+    const { app, profileId, game } = appWithGame();
+
+    const res = await seal(app, game.id, profileId);
+
+    expect(res.status).toBe(409);
+    expect(res.body.reason).toBe("empty");
+    expect(res.body.error).toMatch(/vide/i);
+  });
+
+  it("refuses to seal twice with an explicit business error", async () => {
+    const { app, profileId, game } = appWithGame();
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ declaredSeverity: "mistake" });
+    await seal(app, game.id, profileId);
+
+    const res = await seal(app, game.id, profileId);
+
+    expect(res.status).toBe(409);
+    expect(res.body.reason).toBe("already-sealed");
+  });
+
+  it("records the provenance the client reports, per Game and not globally", async () => {
+    const { app, db, profileId } = appWithGame();
+    const informed = db
+      .insert(games)
+      // A second Game under the same Profile: the pair (profile, url) is unique,
+      // so it needs its own url.
+      .values({ ...morphyGame(profileId), gameUrl: "https://chess.com/g/personal/informed" })
+      .returning()
+      .get();
+    const blind = db.select().from(games).all()[0];
+
+    for (const game of [blind, informed]) {
+      await request(app)
+        .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+        .send({ declaredSeverity: "sound" });
+    }
+    await seal(app, blind.id, profileId, { engineSeen: false });
+    await seal(app, informed.id, profileId, { engineSeen: true });
+
+    const read = async (id: number) =>
+      (await request(app).get(`/api/personal/${id}?profileId=${profileId}`)).body;
+    // Seeing the engine on one Game says nothing about another: the provenance
+    // belongs to the reading, not to the session.
+    expect((await read(blind.id)).engineSeenBeforeSeal).toBe(false);
+    expect((await read(informed.id)).engineSeenBeforeSeal).toBe(true);
+  });
+
+  it("refuses a seal that does not say whether the engine had been shown", async () => {
+    const { app, profileId, game } = appWithGame();
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ declaredSeverity: "mistake" });
+
+    // The provenance is not optional and has no safe default: silently recording
+    // "not seen" would let a caller launder an informed reading into a blind one.
+    const res = await seal(app, game.id, profileId, {});
+
+    expect(res.status).toBe(400);
+  });
+
+  it("offers no route that unseals a reading", async () => {
+    const { app, profileId, game } = appWithGame();
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
+      .send({ declaredSeverity: "mistake" });
+    await seal(app, game.id, profileId);
+
+    for (const attempt of [
+      request(app).delete(`/api/personal/${game.id}/seal?profileId=${profileId}`),
+      request(app).post(`/api/personal/${game.id}/unseal?profileId=${profileId}`),
+      request(app)
+        .put(`/api/personal/${game.id}?profileId=${profileId}`)
+        .send({ sealedAt: null }),
+    ]) {
+      expect((await attempt).status).toBe(404);
+    }
+    const still = await request(app).get(`/api/personal/${game.id}?profileId=${profileId}`);
+    expect(still.body.sealedAt).not.toBeNull();
+  });
+
+  it("carries a write after the seal to the posterior layer, and reports both layers", async () => {
+    const { app, profileId, game } = appWithGame();
+    const mark = (body: Record<string, unknown>) =>
+      request(app).put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`).send(body);
+    await mark({ declaredSeverity: "sound" });
+    await seal(app, game.id, profileId);
+
+    const after = await mark({ declaredSeverity: "blunder" });
+
+    expect(after.body.marks).toEqual([
+      { ply: 3, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false },
+      { ply: 3, declaredSeverity: "blunder", note: null, keyMoment: false, posterior: true },
+    ]);
+  });
 });

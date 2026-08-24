@@ -354,6 +354,48 @@ section[aria-label="partie"] {
   margin-block: 0;
 }
 
+// Sealing, and what a sealed reading says about itself (US-16a). The card itself
+// is the app's existing `alertdialog` idiom (`_surfaces`); these are the lines
+// around it.
+[data-part="seal"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// The reason a seal is not offered, and the provenance of one that happened.
+// Muted and in words: both state a fact about the reading, and neither may rest
+// on a colour (ADR-0013).
+[data-part="seal-blocked"],
+[data-part="provenance"],
+[data-part="provenance-unknown"],
+[data-part="posterior-notice"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
+}
+
+// What was written when the reading was sealed: read-only, and set apart from the
+// live controls by a rule and a legend rather than by a tint.
+[data-part="sealed-mark"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+
+  p {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+}
+
+// The sealed layer must read as it was written — the Player's own line breaks
+// included.
+[data-part="sealed-note"] {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
 // The step controls, on one line at the top of the pane beside the board.
 [data-part="stepper"] {
   display: flex;

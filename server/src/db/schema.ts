@@ -268,8 +268,12 @@ export type PersonalAnalysisRow = typeof personalAnalyses.$inferSelect;
  * row whose columns are null — never a sentinel. That is what lets US-16b keep
  * **coverage** and **correctness** apart instead of folding one into the other.
  *
- * `posterior` marks what was written **after the seal** (US-16a slice 04): kept,
- * shown as such, and out of the comparison.
+ * `posterior` is **part of the key**, not merely a column on it: a ply may carry
+ * **two** marks, one per layer — what the Player had written when they sealed,
+ * and what they wrote afterwards on seeing the engine. A single row per ply could
+ * only hold one of the two, and the later write would erase the earlier one; the
+ * requirement is precisely that *the initial reading stays readable as it was*.
+ * So the layer keys the row (US-16a slice 04).
  */
 export const personalMarks = sqliteTable(
   "personal_marks",
@@ -283,7 +287,7 @@ export const personalMarks = sqliteTable(
     keyMoment: integer("key_moment", { mode: "boolean" }).notNull().default(false),
     posterior: integer("posterior", { mode: "boolean" }).notNull().default(false),
   },
-  (t) => [primaryKey({ columns: [t.analysisId, t.ply] })],
+  (t) => [primaryKey({ columns: [t.analysisId, t.ply, t.posterior] })],
 );
 
 export type PersonalMarkRow = typeof personalMarks.$inferSelect;
