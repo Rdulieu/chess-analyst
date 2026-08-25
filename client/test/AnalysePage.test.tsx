@@ -77,3 +77,34 @@ describe("AnalysePage", () => {
     expect(await screen.findByLabelText("blunder", undefined, { timeout: 3000 })).toBeTruthy();
   });
 });
+
+describe("AnalysePage — the way into the Confrontation", () => {
+  function withReading(reading: "none" | "open" | "sealed") {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed: true, reading });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    return renderAt(1);
+  }
+
+  it("offers the confrontation once the reading is sealed — sealing has to lead somewhere", async () => {
+    withReading("sealed");
+
+    const link = await screen.findByRole("link", { name: /face au moteur|confronter/i });
+    expect(link.getAttribute("href")).toBe("/analyse/1/confrontation");
+  });
+
+  it("does not offer it while the reading is unsealed or absent", async () => {
+    withReading("open");
+    await screen.findByRole("region", { name: /^analyse$/i });
+    expect(screen.queryByRole("link", { name: /face au moteur|confronter/i })).toBeNull();
+
+    vi.unstubAllGlobals();
+    withReading("none");
+    await screen.findAllByRole("region", { name: /^analyse$/i });
+    expect(screen.queryByRole("link", { name: /face au moteur|confronter/i })).toBeNull();
+  });
+});

@@ -46,6 +46,17 @@ export function AnalysePage() {
             sealed one does not know which they are about to do. */}
         <span data-reading={reading}>{READING_STATE_LABEL[reading]}</span>
       </p>
+      {/* The `Confrontation` (US-16b), offered only once the reading is sealed —
+          which is what makes sealing lead somewhere. Before the seal there is
+          nothing fixed to confront, and offering it would invite the Player to
+          discover a refusal rather than be told the order of the exercise. */}
+      {reading === "sealed" && (
+        <p data-part="confrontation-entry">
+          <Link to={`/analyse/${game.id}/confrontation`}>
+            Confronter ma lecture au moteur
+          </Link>
+        </p>
+      )}
       <ErrorBoundary key={game.id}>
         <GameViewer game={game} onAnalyzed={refresh} />
       </ErrorBoundary>

@@ -10,6 +10,8 @@ import {
   type MarkPatch,
 } from "../personal/repository";
 import { isDeclaredSeverity } from "../personal/severity";
+import { confrontGame, ConfrontationRefusal } from "../personal/confrontation";
+import { getGameAnnotations } from "../annotations/repository";
 import { scopedProfile } from "./scope";
 
 /**
@@ -46,6 +48,36 @@ export function createPersonalRouter(db: Db): Router {
     }
     return { gameId };
   };
+
+  /**
+   * The `Confrontation` of one Game (US-16b) — the sealed reading set against
+   * what the engine found. **A join** (ADR-0019), computed on the spot from rows
+   * two other routes already serve: nothing here is stored, so retuning a
+   * threshold retunes this with no re-analysis (ADR-0009).
+   *
+   * Its two refusals are **409s, named apart**, never a 404: the Game is there,
+   * and the Player has two different things to go and do — seal, or analyse.
+   */
+  router.get("/:gameId/confrontation", (req, res) => {
+    const scoped = scopedGame(req, res);
+    if (!scoped) return;
+    const annotations = getGameAnnotations(db, scoped.gameId);
+    const analysis = getPersonalAnalysis(db, scoped.gameId);
+    // `scopedGame` already vouched for the Game, so neither can be absent here.
+    if (!annotations || !analysis) {
+      res.status(404).json({ error: "Partie introuvable." });
+      return;
+    }
+
+    const confrontation = confrontGame(analysis, annotations);
+    if (confrontation instanceof ConfrontationRefusal) {
+      res
+        .status(409)
+        .json({ reason: confrontation.reason, error: CONFRONTATION_REFUSAL[confrontation.reason] });
+      return;
+    }
+    res.json(confrontation);
+  });
 
   router.get("/:gameId", (req, res) => {
     const scoped = scopedGame(req, res);
@@ -122,6 +154,18 @@ export function createPersonalRouter(db: Db): Router {
 
   return router;
 }
+
+/**
+ * What each refusal to confront is told to the Player. **Two sentences, because
+ * there are two roads**: one goes back to the reading to seal it, the other
+ * launches an `Analysis pass`. A single message would leave the Player guessing.
+ */
+const CONFRONTATION_REFUSAL: Record<ConfrontationRefusal["reason"], string> = {
+  "not-sealed":
+    "Cette lecture n'est pas encore scellée : il n'y a rien de figé à confronter. Retournez à votre lecture et scellez-la quand elle vous convient.",
+  "not-analyzed":
+    "Cette partie n'a pas été analysée : le moteur n'a rien dit dont on puisse rapprocher votre lecture. Lancez son analyse depuis la page Analyse.",
+};
 
 /** What each refusal is told to the Player — its reason, in their own terms. */
 const SEAL_REFUSAL: Record<SealRefusal["reason"], string> = {
