@@ -219,6 +219,8 @@ export interface KeyMomentMiss {
 /** One of the Player's Moves the analysis excludes, and what they said about it. */
 export interface UncountedMove {
   ply: number;
+  /** Standard notation, so the entry **names** its Move rather than numbering it. */
+  notation: string | null;
   reason: UncountedReason;
   /** `null` when the Player said nothing here — silence, not a verdict. */
   declared: DeclaredSeverity | null;
@@ -227,6 +229,8 @@ export interface UncountedMove {
 /** One mark written after the reveal. Shown as a layer, never compared. */
 export interface PosteriorMark {
   ply: number;
+  /** Standard notation — the same discipline as everywhere else on this screen. */
+  notation: string | null;
   declaredSeverity: DeclaredSeverity | null;
   note: string | null;
   keyMoment: boolean;
@@ -310,6 +314,7 @@ export function confrontGame(
       if (move.counted.reason) {
         uncounted.push({
           ply: move.ply,
+          notation: notations[move.ply] ?? null,
           reason: move.counted.reason,
           declared: verdicts.get(move.ply) ?? null,
         });
@@ -363,6 +368,7 @@ export function confrontGame(
       .filter((mark) => mark.posterior)
       .map(({ ply, declaredSeverity, note, keyMoment }) => ({
         ply,
+        notation: notations[ply] ?? null,
         declaredSeverity,
         note,
         keyMoment,

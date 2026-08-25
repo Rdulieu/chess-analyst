@@ -1,10 +1,6 @@
+import { moveName } from "./moveName";
 import { DECLARED_SEVERITY_LABEL } from "../personal/declaredSeverity";
 import type { GameConfrontation, PosteriorMark, UncountedMove, UncountedReason } from "../../types";
-
-/** How a ply is named to the Player: the Move number and the side. */
-function moveName(ply: number): string {
-  return `${Math.ceil(ply / 2)}${ply % 2 === 1 ? "." : "…"}`;
-}
 
 /** Why a Move is excluded, said in the Player's own terms. */
 const REASON: Record<UncountedReason, { label: string; why: string }> = {
@@ -59,7 +55,7 @@ export function UnscoredReadout({ confrontation }: { confrontation: GameConfront
           <ul>
             {moves.map((move) => (
               <li key={move.ply}>
-                {moveName(move.ply)}
+                {moveName(move.ply, move.notation)}
                 {move.declared ? (
                   <>
                     {" — vous aviez dit "}
@@ -120,7 +116,7 @@ function PosteriorLayer({ marks }: { marks: PosteriorMark[] }) {
       <ul>
         {marks.map((mark, i) => (
           <li key={`${mark.ply}-${i}`}>
-            {moveName(mark.ply)}
+            {moveName(mark.ply, mark.notation)}
             {mark.declaredSeverity && ` — ${DECLARED_SEVERITY_LABEL[mark.declaredSeverity]}`}
             {mark.keyMoment && " — moment clé"}
             {mark.note && ` — « ${mark.note} »`}

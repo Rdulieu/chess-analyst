@@ -1,21 +1,6 @@
+import { moveName } from "./moveName";
 import type { KeyMomentMiss, KeyMomentReading } from "../../types";
 
-/**
- * How a Move is **named** to the Player: its number, the side, and its standard
- * notation — `21.Rd1`, not `21.`.
- *
- * The notation is what makes the sentence usable. Two plies of the same Move
- * number render as `21.` and `21…`, which are nearly the same string for two
- * different Moves; with the notation they are `21.Rd1` and `21…Nxe5`, and the
- * Player can find both on their board.
- *
- * Falls back to the number alone when no notation came through: a poorer
- * sentence, and still a true one.
- */
-function moveName(ply: number, notation: string | null): string {
-  const number = `${Math.ceil(ply / 2)}${ply % 2 === 1 ? "." : "…"}`;
-  return notation ? `${number}${notation}` : number;
-}
 
 /** Points of winning chances, as they are written everywhere else in the app. */
 function points(value: number): string {

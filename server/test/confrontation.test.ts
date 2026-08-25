@@ -347,7 +347,9 @@ describe("confrontGame — the Player's reading against the engine's", () => {
 
     const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotations);
 
-    expect(result.uncounted).toEqual([{ ply: 1, reason: "forced", declared: "sound" }]);
+    expect(result.uncounted).toEqual([
+      { ply: 1, notation: null, reason: "forced", declared: "sound" },
+    ]);
   });
 
   it("carries the verdict the Player put on an uncounted Move — that is the case that settles the denominator", () => {
@@ -378,7 +380,9 @@ describe("confrontGame — the Player's reading against the engine's", () => {
 
     // Still listed — the gap between what the Game shows and what the Player is
     // held to exists whether or not they wrote there — but with no verdict.
-    expect(result.uncounted).toEqual([{ ply: 1, reason: "forced", declared: null }]);
+    expect(result.uncounted).toEqual([
+      { ply: 1, notation: null, reason: "forced", declared: null },
+    ]);
   });
 
   it("shows what was written after the seal, marked as posterior and outside every figure", () => {
@@ -397,8 +401,14 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // exercise: forbidding it would be absurd, counting it dishonest.
     expect(after.severity).toEqual(before.severity);
     expect(after.posterior).toEqual([
-      { ply: 5, declaredSeverity: "blunder", note: null, keyMoment: false },
-      { ply: 7, declaredSeverity: null, note: "j'ai compris en voyant la ligne", keyMoment: false },
+      { ply: 5, notation: null, declaredSeverity: "blunder", note: null, keyMoment: false },
+      {
+        ply: 7,
+        notation: null,
+        declaredSeverity: null,
+        note: "j'ai compris en voyant la ligne",
+        keyMoment: false,
+      },
     ]);
     expect(before.posterior).toEqual([]);
   });
@@ -565,6 +575,28 @@ describe("confrontGame — where the Player looked", () => {
     const result = confronted(sealed([{ ply: 1, keyMoment: true }]), annotationsOf(TWO_FAULTS));
 
     expect(result.keyMoments.misses[0]).toMatchObject({ ply: 1, notation: null });
+  });
+
+  it("names EVERY Move it lists, not only the ones in a distance", () => {
+    // The defect this pins: one list learned about notations and the other two
+    // did not, so the same screen named a Move in one paragraph and numbered it
+    // three lines below. Two copies of one helper is what let them drift.
+    const annotations = annotationsFrom(
+      ["7k/8/8/8/8/8/5PPP/6rK w - - 0 1", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"],
+      [60, 60],
+      "white",
+    );
+    const result = confronted(
+      sealed([
+        { ply: 1, declaredSeverity: "sound" },
+        { ply: 1, note: "vu après coup", posterior: true },
+      ]),
+      annotations,
+      ["", "Kxg1"],
+    );
+
+    expect(result.uncounted[0].notation).toBe("Kxg1");
+    expect(result.posterior[0].notation).toBe("Kxg1");
   });
 });
 

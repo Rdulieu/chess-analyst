@@ -35,6 +35,8 @@ export type UncountedReason = "forced" | "decided";
 /** One of the Player's Moves the analysis excludes, and what they said about it. */
 export interface UncountedMove {
   ply: number;
+  /** Standard notation, so the entry names its Move rather than numbering it. */
+  notation: string | null;
   reason: UncountedReason;
   /** `null` when the Player said nothing here — silence, not a verdict. */
   declared: DeclaredSeverity | null;
@@ -68,6 +70,7 @@ export interface KeyMomentMiss {
 /** One mark written after the reveal: shown as a layer, never compared. */
 export interface PosteriorMark {
   ply: number;
+  notation: string | null;
   declaredSeverity: DeclaredSeverity | null;
   note: string | null;
   keyMoment: boolean;

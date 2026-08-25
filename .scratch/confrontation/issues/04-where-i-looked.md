@@ -115,3 +115,21 @@ posés sur cette partie » là où la confrontation en compte **2** — le premi
 scellée et la couche postérieure, la seconde ne confronte que la scellée. Les deux sont corrects dans
 leur registre (l'un mesure l'avancement de la saisie, l'autre ce qui est confronté), mais l'écart peut
 surprendre. Hérité d'US-16a, hors périmètre ici.
+
+**Re-vérification sur l'app après correction** — les quatre points verts, le bloquant levé. Le cas qui
+le motivait — deux plies dans le même numéro de coup — affiche désormais « **25…cxd6** » contre
+« **25.exd6** », deux libellés distincts et retrouvables sur l'échiquier. Les chiffres n'ont pas bougé
+(78 % — 86/110, 22 %, 0 %, « Pas de score », bloc absent) : la correction n'a touché que du texte et
+de la mise en page.
+
+**Une incohérence créée par la correction elle-même, corrigée dans la foulée** : nommer les coups dans
+la distance a rendu criant que la couche postérieure et les coups non comptés, eux, ne les nommaient
+toujours pas — « 11. » trois lignes sous « 23.d4 », sur le même écran. La cause était un `moveName`
+**dupliqué dans deux composants** : l'un a appris les notations, l'autre non, et rien ne les tenait
+ensemble. Extrait dans un module unique, et les deux autres listes portent maintenant leur notation.
+Un test du fold asserte que l'enregistrement **nomme tout ce qu'il liste**, pas seulement la distance.
+
+**Un repli non vérifiable par l'UI, dit comme tel** : `notation: null` n'a aucun chemin d'application
+qui le produise (la route remplit toujours les notations depuis le PGN). Il est couvert par les tests
+du fold et du composant, et le testeur l'a signalé comme lecture de code plutôt que comme observation
+— c'est la bonne façon de le rapporter.
