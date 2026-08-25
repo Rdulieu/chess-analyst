@@ -130,9 +130,11 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    > glossary refused to promise when it rejected the name *Blind mode*. Assert the display and the
    > label, never a guarantee.
    >
-   > It is a **step, not a fourth HP**: the cap stays at three. The `Confrontation` is US-16b, and
-   > it is there that HP-02 and HP-03 merge to free a slot for a dedicated journey — read a Game
-   > blind, seal, confront.
+   > It is a **step, not a fourth HP**: the cap stays at three. That merge happened at US-16b, and
+   > the freed slot now holds [HP-03](./HP-03-read-blind-and-confront.md) — read a Game blind, seal,
+   > confront. **This step is not made redundant by it**: it runs on a Game that has **not** been
+   > analysed, where the engine has nothing to hide, while HP-03 runs on one it has fully evaluated.
+   > The two prove different things about the same route.
 
 10. (Drive-by, US-4 + US-8 + US-10b) Select the **two shortest Games sharing the same first Move**
    and start the analysis pass on them (real WASM

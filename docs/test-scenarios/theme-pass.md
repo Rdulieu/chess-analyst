@@ -98,8 +98,8 @@ in both themes like any other.
 6. **No console error** across the walk.
 
 **A cue rule with no subject on the screen proves nothing.** The audit drops rules that find nothing,
-so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's and
-HP-03's states only the weak-opening ⚠, the current tab and the two `Profile` cues have subjects at
+so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's
+state only the weak-opening ⚠, the current tab and the two `Profile` cues have subjects at
 all, and HP-01 is the scenario that carries the danger cards, the severity glyphs and the "analysée"
 badge. Read the three passes together, and read `subjects` before reading `failures`.
 
