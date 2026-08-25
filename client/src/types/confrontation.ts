@@ -1,4 +1,5 @@
 import type { SearchRegime } from "./annotation";
+import type { DeclaredSeverity } from "./personal";
 
 /**
  * How a `Personal analysis` was written: with the engine's findings already shown
@@ -22,7 +23,23 @@ export interface SeverityReading {
   scorable: number;
   /** Among the scorable, those the engine agrees with. */
   agreed: number;
+  /** What was declared against what was measured. The `good` row is never scored. */
+  matrix: ConfusionMatrix;
 }
+
+/** What the engine said about a Move: one of its three bands, or nothing at all. */
+export type MeasuredLabel = "blunder" | "mistake" | "inaccuracy" | "none";
+
+/**
+ * The **confusion matrix**: declared band -> measured label -> how many Moves.
+ * Rows are the five declared bands, columns the three measured ones **plus
+ * `none`** — "the engine flagged nothing", a fact rather than an absence, and the
+ * column that makes `Sound` scorable at all.
+ */
+export type ConfusionMatrix = Record<DeclaredSeverity, Record<MeasuredLabel, number>>;
+
+/** The four columns, worst to "nothing flagged". */
+export const MEASURED_LABELS: MeasuredLabel[] = ["blunder", "mistake", "inaccuracy", "none"];
 
 /** One Game's `Confrontation` (CONTEXT.md), as the API answers it. */
 export interface GameConfrontation {

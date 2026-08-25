@@ -28,4 +28,7 @@ export type {
   SeverityReading,
   GameConfrontation,
   ConfrontationRefusalReason,
+  MeasuredLabel,
+  ConfusionMatrix,
 } from "./confrontation";
+export { MEASURED_LABELS } from "./confrontation";

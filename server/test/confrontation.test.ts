@@ -248,13 +248,61 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // That is what lets the aggregate be a sum of numerators over a sum of
     // denominators rather than an average of rates (ADR-0017).
     expect(Object.keys(result.severity).sort()).toEqual(
-      ["agreed", "countedMoves", "examined", "scorable"].sort(),
+      ["agreed", "countedMoves", "examined", "scorable", "matrix"].sort(),
     );
     expect(result).toMatchObject({
       gameId: 1,
       sealedAt: "2026-08-25T10:00:00.000Z",
       regime: REGIME,
     });
+  });
+
+  it("holds the five declared bands against the four measured ones", () => {
+    // Four columns, not three: "the engine flagged nothing" is a FACT, and it is
+    // the column that makes `Sound` scorable at all.
+    const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
+
+    expect(Object.keys(result.severity.matrix).sort()).toEqual(
+      ["blunder", "mistake", "inaccuracy", "sound", "good"].sort(),
+    );
+    expect(Object.keys(result.severity.matrix.sound).sort()).toEqual(
+      ["blunder", "mistake", "inaccuracy", "none"].sort(),
+    );
+  });
+
+  it("adds up to the accuracy denominator over its scorable cells", () => {
+    // The Player must be able to add the cells they can see and land on the
+    // figure printed beside them. Anything else reads as a bug.
+    const result = confronted(
+      sealed([
+        { ply: 1, declaredSeverity: "sound" },
+        { ply: 3, declaredSeverity: "good" },
+        { ply: 5, declaredSeverity: "blunder" },
+      ]),
+      annotationsOf([30, -20, 10, -40, 20, 480, -460, 450, -470]),
+    );
+
+    const scorableCells = Object.entries(result.severity.matrix)
+      .filter(([declared]) => declared !== "good")
+      .flatMap(([, row]) => Object.values(row))
+      .reduce((a, b) => a + b, 0);
+
+    expect(scorableCells).toBe(result.severity.scorable);
+    // And the Good is in the matrix all the same — shown, never scored.
+    const goodRow = Object.values(result.severity.matrix.good).reduce((a, b) => a + b, 0);
+    expect(goodRow).toBe(1);
+  });
+
+  it("puts an agreement on the diagonal and a divergence off it", () => {
+    const cps = [30, -20, 10, -40, 20, 480, -460, 450, -470];
+    const measured = annotationsOf(cps).plies[5].severity;
+    expect(measured).not.toBeNull();
+
+    // The Player calls the same Move one band milder than the engine does.
+    const result = confronted(sealed([{ ply: 5, declaredSeverity: "inaccuracy" }]), annotationsOf(cps));
+
+    expect(result.severity.matrix.inaccuracy[measured!]).toBe(1);
+    expect(result.severity.agreed).toBe(0);
   });
 });
 

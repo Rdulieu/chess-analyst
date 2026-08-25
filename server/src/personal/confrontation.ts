@@ -1,8 +1,9 @@
 import type { MoveAnnotation } from "../analysis/derivation";
+import type { MoveSeverity } from "../danger/move-quality";
 import type { SearchRegime } from "../engine/types";
 import type { GameAnnotations } from "../annotations/repository";
 import type { PersonalAnalysis } from "./repository";
-import type { DeclaredSeverity } from "./severity";
+import { DECLARED_SEVERITIES, type DeclaredSeverity } from "./severity";
 
 /**
  * What one Game's `Confrontation` (CONTEXT.md) holds about the Player's
@@ -42,6 +43,45 @@ export interface SeverityReading {
   scorable: number;
   /** Among the scorable, how many the engine agrees with. */
   agreed: number;
+  /**
+   * The **confusion matrix**: what the Player declared, against what was
+   * measured. Rows are the five declared bands, columns the three measured ones
+   * **plus `none`** — "the engine flagged nothing", which is a fact rather than
+   * an absence, and the column that makes `Sound` scorable at all.
+   *
+   * It says *how* the Player is wrong and not merely how often, and it carries
+   * one further fact for free: **the direction of the bias**. The matrix is not
+   * symmetric, and over-reading danger and under-reading it are opposite faults
+   * of analysis that none of the three figures separates alone.
+   *
+   * The `good` row is filled and **never scored** — kept so the Player can see
+   * what they said, excluded from the accuracy denominator. Summing every cell
+   * outside that row gives `scorable` exactly, so the Player can add up what
+   * they see and land on the figure printed beside it.
+   */
+  matrix: ConfusionMatrix;
+}
+
+/** What the engine said about a Move: one of its three bands, or nothing at all. */
+export type MeasuredLabel = MoveSeverity | "none";
+
+/** Declared band -> measured label -> how many Moves. */
+export type ConfusionMatrix = Record<DeclaredSeverity, Record<MeasuredLabel, number>>;
+
+/** The four columns, worst to "nothing flagged". */
+export const MEASURED_LABELS: MeasuredLabel[] = ["blunder", "mistake", "inaccuracy", "none"];
+
+/** An empty matrix — every cell present, so a zero is a zero and not a hole. */
+function emptyMatrix(): ConfusionMatrix {
+  return Object.fromEntries(
+    DECLARED_SEVERITIES.map((declared) => [
+      declared,
+      Object.fromEntries(MEASURED_LABELS.map((label) => [label, 0])) as Record<
+        MeasuredLabel,
+        number
+      >,
+    ]),
+  ) as ConfusionMatrix;
 }
 
 /**
@@ -106,6 +146,7 @@ export function confrontGame(
     examined: 0,
     scorable: 0,
     agreed: 0,
+    matrix: emptyMatrix(),
   };
 
   for (const move of annotations.plies) {
@@ -116,6 +157,9 @@ export function confrontGame(
     const declared = verdicts.get(move.ply);
     if (declared === undefined) continue;
     reading.examined += 1;
+    // Filled for every examined Move, `Good` included: the matrix shows what the
+    // Player said. What it does NOT do is score the `good` row.
+    reading.matrix[declared][move.severity ?? "none"] += 1;
     if (!isScorable(declared)) continue;
     reading.scorable += 1;
     if (agrees(declared, move)) reading.agreed += 1;

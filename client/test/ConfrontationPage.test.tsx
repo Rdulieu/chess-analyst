@@ -10,7 +10,19 @@ const CONFRONTATION: GameConfrontation = {
   sealedAt: "2026-08-25T10:00:00.000Z",
   provenance: "unaided",
   regime: { depth: 16, lines: 2 },
-  severity: { countedMoves: 20, examined: 10, scorable: 10, agreed: 7 },
+  severity: {
+    countedMoves: 20,
+    examined: 10,
+    scorable: 10,
+    agreed: 7,
+    matrix: {
+      blunder: { blunder: 2, mistake: 3, inaccuracy: 0, none: 0 },
+      mistake: { blunder: 0, mistake: 1, inaccuracy: 0, none: 0 },
+      inaccuracy: { blunder: 0, mistake: 0, inaccuracy: 1, none: 0 },
+      sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 3 },
+      good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
+    },
+  },
 };
 
 /**

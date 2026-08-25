@@ -1,3 +1,4 @@
+import { ConfusionMatrixTable } from "./ConfusionMatrixTable";
 import type { GameConfrontation } from "../../types";
 
 /**
@@ -21,7 +22,7 @@ import type { GameConfrontation } from "../../types";
  * percentage hides whether it rests on three Moves or on forty.
  */
 export function ConfrontationReadout({ confrontation }: { confrontation: GameConfrontation }) {
-  const { countedMoves, examined, scorable, agreed } = confrontation.severity;
+  const { countedMoves, examined, scorable, agreed, matrix } = confrontation.severity;
 
   return (
     <div data-part="confrontation-severity">
@@ -41,6 +42,9 @@ export function ConfrontationReadout({ confrontation }: { confrontation: GameCon
         unit="verdicts confrontables"
         note="Sur les verdicts que vous avez posés. Un désaccord dit où regarder, pas qui se trompe."
       />
+      {/* HOW the Player is wrong, under the figures rather than beside them: the
+          two rates answer *how much*, and the matrix is what explains them. */}
+      <ConfusionMatrixTable matrix={matrix} />
     </div>
   );
 }
