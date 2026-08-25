@@ -1,0 +1,96 @@
+Status: `ready-for-agent`
+
+## Parent
+
+`.scratch/confrontation/PRD.md` (US-16b — `BACKLOG.md`, découpée d'US-16 au grilling du 2026-08-24
+en 16a / 16b / 16c).
+
+Implemented on the business-story integration branch `integration/US-16-my-own-analysis` — branch
+sub-work from it and merge back into it via PR, **not** `develop`. Auto-merges once the local check
+(build + tests + this issue's Feature Path) is green.
+
+## What to build
+
+Le tracer bullet de la **`Confrontation`** (`CONTEXT.md`) : de la jointure à l'écran, sur la première
+des trois lectures — les `Declared severity` du joueur contre les sévérités mesurées.
+
+- **Une route de confrontation dédiée**, atteinte depuis la page Analyse. Pas depuis la route de
+  lecture : celle-ci est **aveugle par nature** et le reste, y montrer le moteur détruirait ce
+  qu'elle garantit. Le scellement ouvre cette porte — c'est ce qui fait que sceller sert à quelque
+  chose.
+- **Deux figures, jamais fondues** : la **couverture** (quelle part des `Counted Move`s du joueur
+  porte un verdict) et la **justesse** (sur ceux-là, combien d'accords). Un joueur qui annote trois
+  coups et les juge parfaitement a **100 % de justesse et 10 % de couverture**, et les deux sont
+  vrais. Le **compte voyage avec le taux**, habitude constante du projet.
+- **Aucune nouvelle colonne, aucune migration.** La confrontation est **une jointure** (ADR-0019)
+  entre deux relevés déjà servis et déjà testés : le relevé par Move du moteur (sévérité mesurée,
+  `Counted Move` avec sa raison, `chancesLost`, le recap) et les marques de l'`Analyse personnelle`.
+  Elle est **dérivée** (ADR-0009) : retoucher un seuil la retouche, sans réanalyse.
+- **Le fold est un module pur**, sur le modèle exact du recap par partie : ni base, ni moteur, ni
+  rendu. C'est **la seule implémentation** de la méthode — la page et le bilan de la tranche 05
+  liront celle-là (ADR-0017).
+- **Les numérateurs et dénominateurs voyagent non divisés.** La division se fait à la lecture. C'est
+  ce qui permettra au bilan d'être une **somme de numérateurs sur une somme de dénominateurs**, et
+  non une moyenne de taux qui donnerait le même poids à une partie de trois coups et à une de
+  soixante.
+- **Deux règles de fold qui ne peuvent pas être différées**, même si leur affichage vient plus tard
+  (tranche 03) : le dénominateur porte sur les **seuls `Counted Move`s du joueur**, et **seule la
+  couche scellée est confrontée** (les marques postérieures sont exclues de tout calcul). Les
+  différer rendrait cette tranche fausse dès sa livraison.
+- **`Sound` est notable et c'est tout son intérêt** : la colonne « le moteur n'a rien flagué » est un
+  fait, donc `Sound` face à elle est un **accord**. Sans ça, une confrontation ne pourrait exposer
+  que les manques du joueur, jamais ses réussites.
+- **Le silence reste le silence** : un coup sans verdict entre au dénominateur de la couverture, à
+  aucun des deux de la justesse.
+- **Deux refus nommés**, pas un écran vide ni un 404 générique : lecture **non scellée**, et partie
+  **non analysée**. Deux faits métier différents, avec deux suites différentes (sceller / lancer
+  l'analyse), donc deux réponses distinctes portant chacune sa phrase.
+- **La provenance est portée dès maintenant** — lecture **à l'aveugle** ou **informée**. Une
+  comparaison sans provenance n'est pas une comparaison : aucune confrontation ne doit pouvoir
+  s'afficher sans son étiquette.
+- **Vocabulaire** : un désaccord est une **divergence** — *où regarder*, jamais *qui se trompe*. Le
+  mot « erreur » n'est pas employé pour un désaccord joueur/moteur.
+- **Aucun score unique**, sous aucun nom.
+- Routes scopées au `Profile` par le mécanisme existant, et vérifiant que la partie est bien celle de
+  ce `Profile` (ADR-0014). SCSS + tokens existants (ADR-0013), aucun indice purement chromatique.
+
+## Acceptance criteria
+
+- [ ] La confrontation d'une partie s'ouvre depuis sa page Analyse, sur une lecture **scellée** d'une partie **analysée**
+- [ ] Une lecture **non scellée** produit un refus nommé, disant qu'il faut sceller
+- [ ] Une partie **non analysée** produit un refus nommé, disant comment lancer l'analyse
+- [ ] Les deux refus sont distincts l'un de l'autre et d'un 404
+- [ ] La **couverture** est affichée avec son compte à côté du taux
+- [ ] La **justesse** est affichée avec son compte à côté du taux
+- [ ] Les deux ne sont **jamais fondues** en un chiffre, et aucun score unique n'apparaît nulle part
+- [ ] Le dénominateur de la couverture est le nombre de **`Counted Move`s du joueur**, pas ses coups
+- [ ] Un coup **sans verdict** n'entre ni au numérateur ni au dénominateur de la justesse
+- [ ] `Sound` posé sur un coup que le moteur n'a pas flagué compte comme un **accord**
+- [ ] Les marques **postérieures au scellement** n'entrent dans aucun calcul
+- [ ] L'étiquette de provenance (**à l'aveugle** / **informée**) est présente sur toute confrontation affichée
+- [ ] Le `Search regime` derrière les chiffres du moteur est affiché
+- [ ] Le fold est un module **pur**, testable sans base, sans moteur et sans rendu
+- [ ] Numérateurs et dénominateurs sont portés **non divisés** par l'enregistrement
+- [ ] La route de lecture reste **aveugle**, y compris après scellement — rien du moteur n'y apparaît
+- [ ] Aucune migration, aucune colonne nouvelle
+- [ ] Les routes sont scopées au `Profile`, et une partie d'un autre `Profile` est introuvable
+- [ ] Le mot « erreur » n'est pas employé pour un désaccord joueur/moteur
+- [ ] Lisible en thème clair et sombre, aucun indice purement chromatique
+
+### Feature Path (FP)
+
+1. J'ouvre une partie **analysée** dont la lecture n'est pas scellée, et je demande sa confrontation → on me dit que ma lecture n'est pas encore scellée, et ce qu'il faut faire.
+2. Je vais sur la lecture, je déclare `Mistake` sur un de mes coups que le moteur a flagué et `Sound` sur un de mes coups qu'il n'a pas flagué, puis je scelle.
+3. Je reviens sur la partie → la porte vers la confrontation est là.
+4. J'ouvre la confrontation → je lis **deux figures distinctes**, couverture et justesse, chacune avec son compte ; mes deux verdicts comptent comme des accords.
+5. Je cherche un score global → il n'y en a aucun.
+6. Je regarde l'étiquette de la confrontation → elle dit si ma lecture était à l'aveugle ou informée.
+7. Je retourne sur la route de lecture → **rien du moteur** n'y est apparu, alors même que la partie est analysée et ma lecture scellée.
+8. J'ouvre la confrontation d'une partie **non analysée** dont la lecture est scellée → on me dit qu'il n'y a rien à confronter, et comment lancer l'analyse.
+9. Je sélectionne un autre `Profile` → la confrontation de la première partie n'y est pas atteignable.
+
+Verify: UI first ; sonder l'API seulement pour la forme des deux refus.
+
+## Blocked by
+
+None - can start immediately.
