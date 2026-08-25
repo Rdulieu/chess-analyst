@@ -79,7 +79,7 @@ des trois lectures — les `Declared severity` du joueur contre les sévérités
 - [ ] La **justesse** est affichée avec son compte à côté du taux
 - [ ] Les deux ne sont **jamais fondues** en un chiffre, et aucun score unique n'apparaît nulle part
 - [ ] Le dénominateur de la couverture est le nombre de **`Counted Move`s du joueur**, pas ses coups ni les demi-coups de la partie
-- [ ] Couverture et justesse partagent **le même dénominateur**
+- [ ] Couverture et justesse partagent **la même base** — les `Counted Move`s du joueur — sans partager leur **dénominateur** : la couverture se prend sur tous les coups comptés, la justesse sur les seuls verdicts confrontables. C'est ce que dit l'exemple travaillé du PRD (trois coups jugés parfaitement = 100 % de justesse et 10 % de couverture) ; une base commune est ce qui permet de les lire ensemble, un dénominateur commun les refondrait
 - [ ] Le chiffre d'avancement de la route de lecture n'est plus nommé « couverture », et son sens est resté le sien
 - [ ] Un coup **sans verdict** n'entre ni au numérateur ni au dénominateur de la justesse
 - [ ] `Sound` posé sur un coup que le moteur n'a pas flagué compte comme un **accord**
@@ -97,7 +97,8 @@ des trois lectures — les `Declared severity` du joueur contre les sévérités
 ### Feature Path (FP)
 
 1. J'ouvre une partie **analysée** dont la lecture n'est pas scellée, et je demande sa confrontation → on me dit que ma lecture n'est pas encore scellée, et ce qu'il faut faire.
-2. Je vais sur la lecture, je déclare `Mistake` sur un de mes coups que le moteur a flagué et `Sound` sur un de mes coups qu'il n'a pas flagué, puis je scelle.
+2. Je vais sur la lecture, je déclare sur un de mes coups flagués **le verdict qui correspond à la bande que le moteur a mesurée** (`Mistake` s'il mesure une `Mistake`, `Blunder` s'il mesure une `Blunder`), et `Sound` sur un de mes coups qu'il n'a pas flagué. Puis je scelle.
+   > La bande **doit être nommée d'après ce qui est mesuré**, sans quoi le pas promet un accord que la conception ne donne pas : la justesse exige l'égalité des bandes, et un `Mistake` déclaré face à une `Blunder` mesurée est une **divergence**. Sur une partie qui n'offre qu'un seul coup flagué, on décrit ce coup-là, on n'en invente pas un autre.
 3. Je reviens sur la partie → la porte vers la confrontation est là.
 4. J'ouvre la confrontation → je lis **deux figures distinctes**, couverture et justesse, chacune avec son compte ; mes deux verdicts comptent comme des accords.
 5. Je cherche un score global → il n'y en a aucun.
@@ -111,3 +112,30 @@ Verify: UI first ; sonder l'API seulement pour la forme des deux refus.
 ## Blocked by
 
 None - can start immediately.
+
+## Comments
+
+**FP passée le 2026-08-25** — 9/9 étapes vertes, aucun finding bloquant. Sur la partie 271 (la seule
+analysée de la base) : couverture 4/30 coups comptés, justesse 1/4 verdicts confrontables, provenance
+« Lue informée », régime profondeur 16 / 2 lignes, exactement deux pourcentages sur l'écran. Route de
+lecture vérifiée **toujours aveugle** avec un `Niveau de revue` mémorisé sur `Détaillé` — elle ne fait
+même pas l'appel aux annotations. Marques postérieures au scellement vérifiées **hors calcul**.
+Thèmes clair et sombre audités dans une seule session CDP avec assertion `matchMedia` interne
+(contraste min. 6.27 / 7.49), aucun indice purement chromatique.
+
+Deux défauts **de ces documents**, corrigés ci-dessus : l'étape 2 du FP ne nommait pas la bande
+mesurée et promettait donc un accord que la conception ne donne pas ; et le critère « même
+dénominateur » contredisait l'exemple travaillé du PRD — c'est la **base** qui est commune, pas le
+dénominateur.
+
+**Deux questions laissées au demandeur**, ni l'une ni l'autre bloquante :
+
+1. **La porte vers la confrontation est offerte sur une partie scellée mais non analysée**, et mène
+   au refus `not-analyzed`. Défendable — le refus explique et donne la suite, et c'est le seul chemin
+   d'écran vers ce refus — mais on pourrait la conditionner à l'analyse, ou signaler dans son libellé
+   qu'il manque quelque chose. Laissé tel quel : cacher la porte enverrait le joueur découvrir le
+   refus par l'URL.
+2. **Les refus métier passent par des statuts HTTP d'erreur** (409, 404), donc la console affiche des
+   lignes rouges sur un parcours parfaitement nominal. C'est la convention déjà établie par
+   `SealRefusal` en US-16a ; changer ici seul créerait une incohérence. À trancher pour les deux
+   ensemble ou pas du tout.
