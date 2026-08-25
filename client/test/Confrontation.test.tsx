@@ -19,7 +19,16 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
     sealedAt: "2026-08-25T10:00:00.000Z",
     provenance: "unaided",
     regime: { depth: 16, lines: 2 },
-    severity: { countedMoves: 20, examined: 10, scorable: 10, agreed: 7, matrix: MATRIX },
+    severity: {
+      countedMoves: 20,
+      examined: 10,
+      scorable: 10,
+      agreed: 7,
+      matrix: MATRIX,
+      unscored: { good: 0, opponent: 0 },
+    },
+    uncounted: [],
+    posterior: [],
     ...over,
   };
 }
@@ -52,6 +61,7 @@ describe("Confrontation — coverage and accuracy, side by side", () => {
         scorable: 3,
         agreed: 3,
         matrix: { ...MATRIX, sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 3 }, blunder: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 }, mistake: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 }, inaccuracy: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 } },
+        unscored: { good: 0, opponent: 0 },
       },
     });
     render(<ConfrontationReadout confrontation={sparse} />);
@@ -76,6 +86,7 @@ describe("Confrontation — coverage and accuracy, side by side", () => {
             scorable: 0,
             agreed: 0,
             matrix: { ...MATRIX, blunder: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 }, mistake: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 }, inaccuracy: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 }, sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 }, good: { blunder: 0, mistake: 0, inaccuracy: 2, none: 0 } },
+        unscored: { good: 0, opponent: 0 },
           },
         })}
       />,
@@ -183,6 +194,7 @@ describe("Confrontation — how I get it wrong", () => {
               sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
               good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
             },
+            unscored: { good: 0, opponent: 0 },
           },
         })}
       />,
@@ -206,6 +218,7 @@ describe("Confrontation — how I get it wrong", () => {
             scorable: 1,
             agreed: 0,
             matrix: MATRIX,
+            unscored: { good: 0, opponent: 0 },
           },
         })}
       />,
@@ -227,5 +240,19 @@ describe("Confrontation — how I get it wrong", () => {
     container.querySelectorAll("[data-cell]").forEach((cell) => {
       expect(cell.getAttribute("aria-label")).toBe(cell.getAttribute("aria-label")?.trim());
     });
+  });
+
+  it("keeps the matrix OUT of the two-column figure grid", () => {
+    const { container } = render(<ConfrontationReadout confrontation={confrontation()} />);
+
+    // Inside it, the matrix became a third grid cell and was sized as a column:
+    // two of its four columns sat behind a scrollbar on a window with room to
+    // spare, and one of them was the column carrying the only non-zero cell.
+    // The grid holds the two rates and nothing else.
+    const grid = container.querySelector('[data-part="confrontation-severity"]');
+    expect(grid?.querySelector('[data-part="matrix"]')).toBeNull();
+    expect(grid?.children).toHaveLength(2);
+    // And the matrix is still on the screen, after them.
+    expect(container.querySelector('[data-part="matrix"]')).not.toBeNull();
   });
 });

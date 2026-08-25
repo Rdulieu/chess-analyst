@@ -30,5 +30,8 @@ export type {
   ConfrontationRefusalReason,
   MeasuredLabel,
   ConfusionMatrix,
+  UncountedReason,
+  UncountedMove,
+  PosteriorMark,
 } from "./confrontation";
 export { MEASURED_LABELS } from "./confrontation";
