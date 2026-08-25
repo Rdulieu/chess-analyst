@@ -62,4 +62,27 @@ export interface Game {
   openingName: string | null;
   /** Whether this Game has been through the engine analysis pass (US-4). */
   analyzed: boolean;
+  /**
+   * Whether this Game carries a `Personal analysis`, and how far along it is
+   * (US-16a): `none`, `open` (started, not sealed) or `sealed`. Travels with the
+   * Game like `analyzed` does, so showing it on eighty rows costs one request.
+   *
+   * Optional only because a fixture or an older payload may not carry it; every
+   * live answer does, and its absence reads as `none`.
+   */
+  reading?: ReadingState;
 }
+
+/**
+ * How far a Game's `Personal analysis` has got. Three states and never two:
+ * *in progress* is where the Player resumes, *sealed* is where they are done —
+ * which is the whole reason for showing it beside a Game.
+ */
+export type ReadingState = "none" | "open" | "sealed";
+
+/** How each state is written wherever it is shown — in words, never a tint alone. */
+export const READING_STATE_LABEL: Record<ReadingState, string> = {
+  none: "Aucune lecture",
+  open: "Lecture en cours",
+  sealed: "Lecture scellée",
+};

@@ -72,6 +72,9 @@ describe("GameList", () => {
       "Résultat",
       "Cadence",
       "État",
+      // The Player's own reading, beside the engine's state and never merged
+      // into it: one is the machine's work, the other is theirs (US-16a).
+      "Lecture",
     ]);
   });
 
@@ -108,7 +111,7 @@ describe("GameList", () => {
     // One fact per cell, in the order the headers announced. The result and the
     // cadence are read in WORDS, not in the API's own vocabulary: `loss` and
     // `rapid` are how the Game is stored, never how it is read.
-    expect(cells).toHaveLength(6);
+    expect(cells).toHaveLength(7);
     expect(cells[1].textContent).toBe("2026-05-17");
     expect(cells[2].textContent).toBe("Alice");
     expect(cells[3].textContent).toBe("Défaite");

@@ -372,4 +372,48 @@ describe("GameViewer — game header", () => {
 
     expect(screen.getByRole("region", { name: /partie/i }).textContent).toBe(before);
   });
+
 });
+
+describe("GameViewer — recording that the engine was shown", () => {
+  const seen = () => JSON.parse(localStorage.getItem("chess-analyst.engine-seen") ?? "[]");
+
+  it("records the Game once its annotations are actually on screen", async () => {
+    stubAnnotations(ANNOTATED_FOR_PROVENANCE);
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, id: 42, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("radio", { name: /annoté/i }));
+
+    // The provenance of a future `Personal analysis` (US-16a): what was DISPLAYED,
+    // recorded by the screen that displayed it.
+    await waitFor(() => expect(seen()).toEqual([42]));
+  });
+
+  it("records nothing while the engine is saying nothing — Unaided shows no finding", async () => {
+    stubAnnotations(ANNOTATED_FOR_PROVENANCE);
+    render(<GameViewer game={{ ...OPERA_GAME, id: 42, analyzed: true }} />);
+
+    await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+
+    expect(seen()).toEqual([]);
+  });
+
+  it("records nothing on a Game with no analysis to show, whatever the remembered level", async () => {
+    localStorage.setItem("chess-analyst.review-mode", "detailed");
+    stubAnnotations([]);
+    render(<GameViewer game={{ ...OPERA_GAME, id: 42, analyzed: false }} />);
+
+    await screen.findByText(/pas encore été analysée/i);
+
+    // A level is a willingness to be shown; an unanalysed Game has nothing to
+    // show. Marking it seen would label an honestly blind reading as informed.
+    expect(seen()).toEqual([]);
+  });
+});
+
+/** "1. e4 e5" annotated, for the provenance tests above. */
+const ANNOTATED_FOR_PROVENANCE = [
+  { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early", counted: null, chancesLost: null },
+  { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early", counted: null, chancesLost: null },
+] satisfies MoveAnnotation[];

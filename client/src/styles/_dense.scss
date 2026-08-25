@@ -268,6 +268,165 @@ section[aria-label="partie"] {
   padding: var(--space-1) var(--space-2) var(--space-2);
 }
 
+// The Player's own verdict on the Move being read (US-16a), in the same 14rem
+// column as the `Review mode`'s control above — so the five values read as one
+// control rather than five stacked lines. No new token: the spacing and the
+// border are the ones every fieldset in this pane already uses.
+[data-part="declared-severity"] {
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}
+
+// "This Move is the opponent's, your verdict is kept but not scored." A muted
+// note and not a warning: it states a rule, it does not refuse anything. In
+// WORDS, so the meaning never rests on the colour (ADR-0013).
+[data-part="uncounted-notice"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0 var(--space-1);
+}
+
+// The Player's `Note` on the Move being read (US-16a). A textarea in a 14rem
+// column: full width, and tall enough for a sentence or two without pushing the
+// board's own height around.
+[data-part="note"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  textarea {
+    inline-size: 100%;
+    // A Note is text the Player typed, line breaks included, so the field must
+    // not reflow it into one run — and it must not spill out of the column.
+    resize: vertical;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    font: inherit;
+    // The app's palette, not the browser's (ADR-0013). Without these the field
+    // renders in the UA's own form colours — measured in dark as #fff on
+    // rgb(18,18,18) against a page surface of rgb(22,24,26), which is legible but
+    // is the one element on the pane whose theme is not the app's.
+    color: var(--ink);
+    background: var(--ground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-1) var(--space-2);
+  }
+}
+
+// "Notes are never graded" — the sentence that makes the Player willing to
+// write. Muted, because it states a rule rather than warning about anything.
+[data-part="never-graded"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
+}
+
+// Save and erase, side by side rather than stacked: two lines here are two lines
+// the diagram does not get.
+[data-part="note-actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+// The `Key moment` (US-16a): a checkbox and its two lines of text, in the same
+// column as the verdict above it.
+[data-part="key-moment"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// "Neither a good Move nor a fault: a pivot." Muted like the other notices — it
+// states what the control is, in words, so nothing rests on its position beside
+// the five verdicts.
+[data-part="pivot-notice"],
+[data-part="key-moment-count"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
+}
+
+// Sealing, and what a sealed reading says about itself (US-16a). The card itself
+// is the app's existing `alertdialog` idiom (`_surfaces`); these are the lines
+// around it.
+[data-part="seal"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// The reason a seal is not offered, and the provenance of one that happened.
+// Muted and in words: both state a fact about the reading, and neither may rest
+// on a colour (ADR-0013).
+[data-part="seal-blocked"],
+[data-part="provenance"],
+[data-part="provenance-unknown"],
+[data-part="posterior-notice"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
+}
+
+// What was written when the reading was sealed: read-only, and set apart from the
+// live controls by a rule and a legend rather than by a tint.
+[data-part="sealed-mark"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+
+  p {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+}
+
+// The sealed layer must read as it was written — the Player's own line breaks
+// included.
+[data-part="sealed-note"] {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+// The Player's own marks IN the move list (US-16a) — a reading has to be
+// locatable without stepping through every Move. Glyphs, each with its own
+// accessible name; the tint is never the cue, so none is set here.
+[data-part="move-marks"] {
+  display: inline-flex;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+}
+
+// Where the reading stands — its own figures, grouped. Set apart from the
+// notices above by a legend and a rule rather than by a tint, so the numbers read
+// as numbers and not as a third line of an explanation.
+[data-part="tally"],
+[data-part="whole-game-note"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+
+  p {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+}
+
+// The coverage line: the count beside the share, plain body ink — it is a figure
+// the Player acts on, not a caveat.
+[data-part="coverage"] {
+  margin-block: 0;
+}
+
 // The step controls, on one line at the top of the pane beside the board.
 [data-part="stepper"] {
   display: flex;

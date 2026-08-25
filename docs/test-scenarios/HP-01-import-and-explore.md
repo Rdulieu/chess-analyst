@@ -1,6 +1,6 @@
 ---
 id: HP-01
-covers: [Profile, Platform, Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation, Theme]
+covers: [Profile, Platform, Import, Monthly import, Game, Move, Position, Evaluation, Evaluation curve, Danger position, Board orientation, Personal analysis, Declared severity, Note, Key moment, Theme]
 ---
 
 # HP-01 — Import and explore my chess.com history
@@ -44,6 +44,12 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 - Engine analysis pass (US-4, graft — no dedicated HP; the 3-HP cap is already spent): analyzing
   one imported Game with the real engine marks it "analysée" and the resulting `Danger position`
   view (`/danger`) renders without error.
+- `Personal analysis` (US-16a, graft — no fourth HP): the Player writes their **own** reading of a
+  Game on a route that shows **nothing** of the engine, **seals** it, and the reading is labelled
+  with its `provenance` — read unaided, or read informed. Grafted here because step 9 has just
+  asserted that the app "does not start volunteering the engine's verdict" and step 7 has already
+  opened a **not-yet-analysed** Game: the exact context US-16a needs, with no preamble to write, and
+  **no engine time** owed.
 - The stylesheet and the dark theme (US-13): the final step walks all eight screens in both themes.
   This scenario is the one whose state reaches every screen with content, so it is the strongest of
   the three theme passes.
@@ -96,6 +102,38 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 7b. Go back and open a Game the Player played **as Black** → the same header, now marking the Player on the Black side, and the board is read **Black at the bottom**.
 8. Start the same Import again from the Profile's page (same range + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
 9. Reopen the app (reload) → `DudulSmash` is **still the current Profile**: the banner names it without re-selecting, and the scoped screens show its history straight away. The `Review mode` is remembered the same way and has never been changed, so a Game still opens **Unaided** after a reload: the app does not start volunteering the engine's verdict.
+9b. **(US-16a) Write my own reading of a Game, and seal it.** Open any imported Game from "Mes
+   parties" — its row says **`Aucune lecture`** — and, from its Analyse page, follow **« Écrire ma
+   lecture de cette partie »** to the reading route → the board is oriented on the side the Player
+   played, the Moves and their notation are there, and **nothing of the engine is**: no
+   `Evaluation`, no advantage bar, no `Evaluation curve`, no severity glyph, no `Best line`, and not
+   even the `Niveau de revue` control. Step to one of the Player's **own** Moves and declare a
+   `Declared severity` on it; write a `Note` saying why; step to another Move and mark it a
+   **`Key moment`** → the move list now flags those Moves, the three kinds of mark told apart, and
+   « Où j'en suis » states the **coverage** as a count beside its share. Nothing anywhere states a
+   score, a justesse or a comparison. Now **seal**: the confirmation **names what it commits** —
+   what is written is frozen, and a sealed reading cannot be unsealed — and after confirming, the
+   reading carries the instant of its sealing and the label **« Lue à l'aveugle »**. Write one more
+   mark → it is accepted and marked **posterior to the seal**, while what was sealed stays readable
+   beside it, unchanged. Return to "Mes parties" → that Game's row now reads **`Lecture scellée`**.
+
+   > **Why here.** Step 9 has just asserted that the remembered `Review mode` is Unaided and that
+   > "the app does not start volunteering the engine's verdict"; step 7 opened a Game that has
+   > **not** been analysed. That is precisely the state US-16a is about, so the graft costs a few
+   > navigations and **no engine time at all** — which is also why it sits *before* step 10 rather
+   > than after it. Run before any analysis exists, the « Lue à l'aveugle » label is earned by the
+   > run rather than merely reported by it.
+   >
+   > **What this step does not claim.** It checks that the reading route **renders** nothing of the
+   > engine and that the provenance is **recorded**; it cannot check that the Player did not look.
+   > Nothing can — the app labels a reading, it does not certify one, which is exactly what the
+   > glossary refused to promise when it rejected the name *Blind mode*. Assert the display and the
+   > label, never a guarantee.
+   >
+   > It is a **step, not a fourth HP**: the cap stays at three. The `Confrontation` is US-16b, and
+   > it is there that HP-02 and HP-03 merge to free a slot for a dedicated journey — read a Game
+   > blind, seal, confront.
+
 10. (Drive-by, US-4 + US-8 + US-10b) Select the **two shortest Games sharing the same first Move**
    and start the analysis pass on them (real WASM
    Stockfish, depth 16 — allow it real time to finish) → while it runs, a count of **Positions
@@ -185,11 +223,27 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 - Step 3: the Profile's page (`/profiles/:id`) names the Profile and carries the import form: a first and a last month, category checkboxes and an Import button, and **no username field** at all. Both month fields default to the current month; each field is labelled above it (US-13's skeleton) and the Import button is the form's primary action, visibly distinguished from the secondary controls. The progress readout is visible during the run, is **determinate** (n/N, counted in months, N = 2 for this range), advances to N/N, and is gone once the Import completes.
 - Step 4: the import landed on `DudulSmash` and nowhere else — `Nonomoho` still reads `0 parties · 0 analysées` on `/profiles` (ADR-0014). On a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).
 - Step 5: exactly two lines, in range order — **`2026-05` at 28 imported** and **`2026-06` at 54 imported**, summing to the consolidated 82. Neither is marked in échec.
-- Step 6: the number of listed Games matches the imported count from the summary (82 on a clean run). Each entry reads as a row of parts — the selection checkbox, the description, the analysed state — with every badge landing on the same left edge across rows so the column can be scanned. **That alignment is the assertion**; the markup carrying it is not. It used to read "still a **list**, not a table", which shipped product then contradicted: `Mes parties` became a real `<table>` with a `Date / Adversaire / Résultat / Cadence / État` header (US-19, PRs #59 and #60), and the 2026-08-24 run reported the wording as drift while verifying the intent — three parts per row, `État` on one left edge across all 82 rows, no overflow. Corrected here rather than re-discovered every run.
+- Step 6: the number of listed Games matches the imported count from the summary (82 on a clean run). Each entry reads as a row of parts — the selection checkbox, the description, the analysed state — with every badge landing on the same left edge across rows so the column can be scanned. **That alignment is the assertion**; the markup carrying it is not. It used to read "still a **list**, not a table", which shipped product then contradicted: `Mes parties` became a real `<table>` (US-19, PRs #59 and #60), and the 2026-08-24 run reported the wording as drift while verifying the intent — no overflow, and the last cell's box on one single left edge across all 82 rows. Corrected here rather than re-discovered every run. Its header is `Date / Adversaire / Résultat / Cadence / État / Lecture` plus the selection column — **`Lecture` since US-16a**, which is the state a `Personal analysis` puts on each Game (`Aucune lecture` / `Lecture en cours` / `Lecture scellée`, in words). The column count is **not** the assertion and is named here only so the next reader is not misled by a stale list; what is asserted is the alignment and the absence of overflow, which is what survives a column being added.
 - Step 7: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The pane beside the board holds the move list — a move list is not an annotation, and it is there for every Game — but on this unanalysed Game it holds **nothing of the engine** and offers no `Niveau de revue` control: there is nothing to reveal. The row proper is asserted at step 10.
 - Step 7b: on a Black-side Game the board is **Black-at-bottom** — the Player's own back rank is nearest them — and the Player mark has moved to the Black line of the header. The pieces have not moved: the board is turned, not rearranged.
 - Step 8: the replay's summary shows **0 imported / 82 already present**, both month lines saying so (28 and 54 already present); the listed Game count is unchanged.
 - Step 9: after reload, the `Review mode` is still Unaided — never chosen, never volunteered — and `DudulSmash` is still the current Profile — the banner names it with no re-selection, and the scoped screens render its history rather than sending the Player to `/profiles`. The selection is what survives a restart now; there is no remembered username field left to pre-fill.
+- Step 9b: the reading route (`/analyse/:gameId/lecture`) renders **no engine information at all** —
+  no `Evaluation`, no advantage bar, no `Evaluation curve`, no severity glyph, no `Best line`, no
+  `Niveau de revue` control — on a Game that has not been analysed, and it neither reads nor writes
+  the remembered `Review mode` (still Unaided after the visit, per step 9). The board is oriented on
+  the side the Player played. A `Declared severity`, a `Note` and a `Key moment` are each accepted and
+  each **flagged in the move list**, the three told apart by their own accessible names **and** by
+  what is drawn — three marks the eye cannot separate would defeat the point of putting them there.
+  « Où j'en suis » states the coverage as **a count beside its share**. **No score, no justesse and no
+  comparison appear anywhere** — that is US-16b, and its absence here is the assertion. Sealing is
+  confirmed by a dialog that **names what it commits** (what is written is frozen; a sealed reading
+  cannot be unsealed) with **Cancel as the primary action**; after it, the reading states the instant
+  of sealing and is labelled **« Lue à l'aveugle »**, a mark written afterwards is accepted and shown
+  as **posterior**, what was sealed remains readable unchanged beside it, and **no control anywhere
+  unseals**. The Game's row in "Mes parties" moves from `Aucune lecture` to `Lecture scellée`, **in
+  words**. Nowhere does the app claim to have **prevented** the Player from seeing the engine: it
+  labels a reading, it does not certify one.
 - Step 10: after the analysis pass completes, each selected Game shows the "analysée" badge — a
   bordered pill carrying **both** a checkmark and the word, so the tint is never the only signal;
   `/danger` renders a grid of cards (not the empty-state invitation) with at least one recurring

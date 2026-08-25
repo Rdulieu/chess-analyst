@@ -1,0 +1,721 @@
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { PersonalReading } from "../src/features/personal/PersonalReading";
+import { OPERA_GAME } from "./fixtures";
+import type { PersonalAnalysis } from "../src/types";
+
+const EMPTY: PersonalAnalysis = {
+  gameId: 1,
+  sealedAt: null,
+  engineSeenBeforeSeal: null,
+  marks: [],
+};
+
+/**
+ * The reading route talks to one endpoint only. A fake that answers **anything
+ * else** loudly is the point: this route must never fetch the engine's record,
+ * and a silent 404 would let it try without the suite noticing.
+ */
+function stubReading(reading: PersonalAnalysis = EMPTY) {
+  const calls: string[] = [];
+  let current = reading;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      if (!url.startsWith("/api/personal/")) throw new Error(`unexpected request: ${url}`);
+      if (init?.method === "POST" && url.includes("/seal")) {
+        // The server's own refusals, so the fake cannot flatter the screen.
+        if (current.marks.length === 0)
+          return { ok: false, status: 409, json: async () => ({ reason: "empty", error: "Cette lecture est vide." }) } as Response;
+        if (current.sealedAt !== null)
+          return { ok: false, status: 409, json: async () => ({ reason: "already-sealed", error: "Déjà scellée." }) } as Response;
+        const { engineSeen } = JSON.parse(String(init.body)) as { engineSeen: boolean };
+        current = { ...current, sealedAt: "2026-08-24T18:00:00.000Z", engineSeenBeforeSeal: engineSeen };
+        return { ok: true, status: 200, json: async () => current } as Response;
+      }
+      if (init?.method === "PUT") {
+        const patch = JSON.parse(String(init.body)) as Record<string, unknown>;
+        const ply = Number(url.split("/marks/")[1].split("?")[0]);
+        const layer = current.sealedAt !== null;
+        const rest = current.marks.filter((m) => !(m.ply === ply && m.posterior === layer));
+        const was =
+          current.marks.find((m) => m.ply === ply && m.posterior === layer) ??
+          (layer ? current.marks.find((m) => m.ply === ply && !m.posterior) : undefined);
+        const mark = {
+          ply,
+          declaredSeverity: null,
+          note: null,
+          keyMoment: false,
+          ...was,
+          ...patch,
+          posterior: layer,
+        };
+        // The server's own rules, so the fake cannot flatter the screen: a blank
+        // Note is no Note, and a ply with nothing left said about it has no mark.
+        if (typeof mark.note === "string") mark.note = mark.note.trim() || null;
+        const silent = !mark.declaredSeverity && !mark.note && !mark.keyMoment;
+        current = {
+          ...current,
+          marks: (silent ? rest : [...rest, mark]).sort(
+            (a, b) => a.ply - b.ply || Number(a.posterior) - Number(b.posterior),
+          ),
+        };
+      }
+      return { ok: true, status: 200, json: async () => current } as Response;
+    }),
+  );
+  return calls;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
+
+const moveItems = () =>
+  within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+
+describe("the reading route", () => {
+  it("reads the Game move by move, with its notation, on a Game the engine never touched", async () => {
+    stubReading();
+
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    // The Game is readable as soon as it is imported: no engine time is owed for
+    // the Player to work on it.
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    expect(moveItems()[0].textContent).toContain("e4");
+    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("shows NOTHING of the engine, even on an analysed Game with Détaillé remembered", async () => {
+    // The trap this route exists to close: the remembered level is the highest
+    // one, and the Game has been analysed. A route that consulted the Review mode
+    // would light up here.
+    localStorage.setItem("chess-analyst.review-mode", "detailed");
+    stubReading();
+
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // No level control, no evaluation, no severity glyph, no curve, no record.
+    expect(screen.queryByRole("radiogroup", { name: /niveau de revue/i })).toBeNull();
+    expect(screen.queryByLabelText("evaluation")).toBeNull();
+    expect(screen.queryByRole("region", { name: /relevé/i })).toBeNull();
+    expect(screen.queryByText(/avantage au fil de la partie/i)).toBeNull();
+    for (const item of moveItems()) {
+      expect(item.textContent).not.toContain("??");
+      expect(item.textContent).not.toMatch(/[+-]\d+\.\d/);
+    }
+  });
+
+  it("neither reads nor writes the Review mode — the route is blind because that is what it is", async () => {
+    stubReading();
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const touched = [...setItem.mock.calls, ...getItem.mock.calls].map(([key]) => String(key));
+    expect(touched.filter((key) => key.includes("review-mode"))).toEqual([]);
+    setItem.mockRestore();
+    getItem.mockRestore();
+  });
+
+  it("offers the five verdicts on the Move being read, and records the one the Player poses", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" })); // 1. e4, the Player's own
+
+    const verdicts = screen.getByRole("group", { name: /mon verdict/i });
+    expect(within(verdicts).getAllByRole("radio")).toHaveLength(5);
+
+    await user.click(within(verdicts).getByRole("radio", { name: /bévue|blunder|gaffe/i }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+  });
+
+  it("lets the Player change a verdict they already posed", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "blunder", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const verdicts = screen.getByRole("group", { name: /mon verdict/i });
+    const posed = within(verdicts).getAllByRole("radio").filter((r) => (r as HTMLInputElement).checked);
+    expect(posed).toHaveLength(1);
+
+    await user.click(within(verdicts).getByRole("radio", { name: /correct|sain|sound/i }));
+    await waitFor(() => {
+      const now = within(screen.getByRole("group", { name: /mon verdict/i }))
+        .getAllByRole("radio")
+        .filter((r) => (r as HTMLInputElement).checked);
+      expect((now[0] as HTMLInputElement).value).toBe("sound");
+    });
+  });
+
+  it("says, on an opponent's Move, that the verdict will not be scored — and takes it anyway", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    // The Player played White, so an even ply is the opponent's.
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false, playerColor: "white" }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.queryByText(/ne sera pas (noté|comptabilisé)/i)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // 1... e5, the opponent's
+    expect(screen.getByText(/ne sera pas (noté|comptabilisé)/i)).not.toBeNull();
+
+    await user.click(
+      within(screen.getByRole("group", { name: /mon verdict/i })).getByRole("radio", {
+        name: /erreur|mistake/i,
+      }),
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/2"))).toBe(true),
+    );
+  });
+
+  it("leaves a Move the Player said nothing about silent — no verdict is preselected", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const verdicts = within(screen.getByRole("group", { name: /mon verdict/i })).getAllByRole("radio");
+    expect(verdicts.filter((r) => (r as HTMLInputElement).checked)).toEqual([]);
+  });
+
+  it("orients the board on the side the Player played", async () => {
+    stubReading();
+    const { container } = render(
+      <PersonalReading game={{ ...OPERA_GAME, playerColor: "black" }} profileId={1} />,
+    );
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    const squares = [...container.querySelectorAll("[data-square]")].map((el) =>
+      el.getAttribute("data-square"),
+    );
+    expect(squares[0]).toBe("h1");
+  });
+
+  it("takes a Note on the Move being read, and shows it with that Move", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const note = screen.getByRole("textbox", { name: /ma note/i });
+    await user.type(note, "je joue ça par habitude");
+    await user.click(screen.getByRole("button", { name: /enregistrer la note/i }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je joue ça par habitude",
+      ),
+    );
+  });
+
+  it("says outright that a Note is never graded — that is the point of it", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText(/jamais notée|jamais notées/i)).not.toBeNull();
+  });
+
+  it("offers a Note on the starting Position, read as the Game's own — and no verdict there", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 0, declaredSeverity: null, note: "ouverture que je subis", keyMoment: false, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // Ply 0 is the starting Position: there is a Note to write about the Game as
+    // a whole, and no Move to judge.
+    expect((screen.getByRole("textbox", { name: /note/i }) as HTMLTextAreaElement).value).toBe(
+      "ouverture que je subis",
+    );
+    expect(screen.queryByRole("group", { name: /mon verdict/i })).toBeNull();
+  });
+
+  it("carries the Note of the Move being read, and only that one", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "sur e4", keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "sur e5", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "sur e4",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "sur e5",
+    );
+  });
+
+  it("erases a Note without touching the verdict that stays beside it", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: "blunder", note: "à revoir", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(screen.getByRole("button", { name: /supprimer la note/i }));
+
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(""),
+    );
+    // The verdict is a separate statement and survives the erasure.
+    const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked);
+    expect((posed[0] as HTMLInputElement).value).toBe("blunder");
+  });
+
+  it("renders a Note's line breaks as written, rather than running them together", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "première\nseconde", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement;
+    expect(box.value).toBe("première\nseconde");
+  });
+
+  it("marks the Move being read as where the Game turned, and says it is not a verdict", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const pivot = screen.getByRole("checkbox", { name: /moment clé/i });
+    expect((pivot as HTMLInputElement).checked).toBe(false);
+    await user.click(pivot);
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await waitFor(() =>
+      expect((screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement).checked).toBe(true),
+    );
+    // A pivot is neither a good Move nor a fault, and the screen must say so —
+    // otherwise the Player reads it as a sixth verdict, sitting right beside the
+    // five real ones.
+    expect(screen.getByText(/ni un bon coup ni une faute|pas un jugement/i)).not.toBeNull();
+  });
+
+  it("counts the Key moments posed, and imposes no ceiling on them", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [4, 9, 21].map((ply) => ({
+        ply,
+        declaredSeverity: null,
+        note: null,
+        keyMoment: true,
+        posterior: false,
+      })),
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // The count beside the marks, the project's constant habit — marking twelve
+    // Moves out of thirty is not forbidden, it is visible.
+    expect(screen.getByText(/3 moments clés/i)).not.toBeNull();
+  });
+
+  it("takes a Key moment back without disturbing the verdict on the same Move", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: true, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(screen.getByRole("checkbox", { name: /moment clé/i }));
+
+    await waitFor(() =>
+      expect((screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement).checked).toBe(false),
+    );
+    const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked);
+    expect((posed[0] as HTMLInputElement).value).toBe("mistake");
+  });
+
+  it("lets the Player take a verdict back, returning the Move to silence", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "good", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Five exclusive radios can change a verdict but never unsay one, so silence
+    // needs its own control — otherwise a misplaced verdict is permanent while a
+    // Note is not.
+    await user.click(screen.getByRole("button", { name: /retirer mon verdict/i }));
+
+    await waitFor(() => {
+      const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+        .getAllByRole("radio")
+        .filter((r) => (r as HTMLInputElement).checked);
+      expect(posed).toEqual([]);
+    });
+  });
+
+  it("does not offer to take back a verdict that was never posed", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(
+      (screen.getByRole("button", { name: /retirer mon verdict/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+});
+
+describe("sealing a reading", () => {
+  const sealed = (over: Partial<PersonalAnalysis> = {}): PersonalAnalysis => ({
+    ...EMPTY,
+    sealedAt: "2026-08-20T10:00:00.000Z",
+    engineSeenBeforeSeal: false,
+    marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    ...over,
+  });
+
+  it("names what sealing commits before doing it, and does nothing if the Player backs out", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+
+    // Named before it happens, so nobody seals by reflex.
+    const dialog = await screen.findByRole("alertdialog", { name: /sceller/i });
+    expect(dialog.textContent).toMatch(/figé|fige/i);
+    expect(dialog.textContent).toMatch(/définitif|ne peut pas être descellée|irréversible/i);
+
+    await user.click(within(dialog).getByRole("button", { name: /annuler/i }));
+    expect(calls.some((c) => c.includes("/seal"))).toBe(false);
+  });
+
+  it("seals on confirmation, and labels the reading as read unaided", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, id: 1, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    const dialog = await screen.findByRole("alertdialog", { name: /sceller/i });
+    await user.click(within(dialog).getByRole("button", { name: /^sceller$/i }));
+
+    await waitFor(() => expect(calls.some((c) => c.includes("/seal"))).toBe(true));
+    await screen.findByText(/lue à l'aveugle/i);
+  });
+
+  it("labels the reading as read informed when the engine had been shown for THIS Game", async () => {
+    localStorage.setItem("chess-analyst.engine-seen", JSON.stringify([1]));
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, id: 1, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    await user.click(
+      within(await screen.findByRole("alertdialog", { name: /sceller/i })).getByRole("button", {
+        name: /^sceller$/i,
+      }),
+    );
+
+    await screen.findByText(/lue informée/i);
+  });
+
+  it("stays 'unaided' when the engine was shown for ANOTHER Game — provenance is per Game", async () => {
+    localStorage.setItem("chess-analyst.engine-seen", JSON.stringify([99]));
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, id: 1, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    await user.click(
+      within(await screen.findByRole("alertdialog", { name: /sceller/i })).getByRole("button", {
+        name: /^sceller$/i,
+      }),
+    );
+
+    await screen.findByText(/lue à l'aveugle/i);
+  });
+
+  it("refuses to seal an empty reading, with its reason, and does not ask first", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // Nothing to confront: the act is not offered, and the reason is said.
+    expect((screen.getByRole("button", { name: /sceller ma lecture/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/rien à confronter|lecture est vide|au moins une marque/i)).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: /sceller ma lecture/i }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("offers nothing that unseals a sealed reading", async () => {
+    stubReading(sealed());
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // A sealed reading stays sealed: no control anywhere reopens it.
+    expect(screen.queryByRole("button", { name: /desceller|rouvrir|annuler le scellement/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /sceller ma lecture/i })).toBeNull();
+  });
+
+  it("never claims to have prevented the Player from seeing the engine", async () => {
+    stubReading(sealed());
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // The app labels a reading; it cannot make anyone blind and must not say it
+    // did (the reason the glossary rejected the name "Blind mode").
+    expect(document.body.textContent).not.toMatch(/empêch|garanti|vous n'avez pas pu voir/i);
+  });
+
+  it("keeps writing possible after the seal, and says what is written is posterior", async () => {
+    stubReading(sealed());
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(
+      within(screen.getByRole("group", { name: /mon verdict/i })).getByRole("radio", {
+        name: /bévue/i,
+      }),
+    );
+
+    // Discovering the engine and understanding why is the most fertile moment of
+    // the exercise, so writing stays open — and what is added is marked as coming
+    // after, in words.
+    // The notice, by its own part rather than by its words: "posterior" is now
+    // said in several places on purpose, so matching on the phrase alone would
+    // find them all.
+    await waitFor(() =>
+      expect(document.querySelector('[data-part="posterior-notice"]')?.textContent).toMatch(
+        /postérieure/i,
+      ),
+    );
+    // And the layer is legible AT the control, not only in a paragraph above it:
+    // a Player scrolled past the notice would otherwise see a control identical
+    // to the pre-seal one.
+    expect(screen.getByRole("group", { name: /verdict.*après le scellement/i })).not.toBeNull();
+    expect(screen.getByRole("textbox", { name: /note.*après le scellement/i })).not.toBeNull();
+  });
+
+  it("keeps the sealed reading readable exactly as it was, beside what came after", async () => {
+    stubReading({
+      ...sealed(),
+      marks: [
+        { ply: 1, declaredSeverity: "sound", note: "je ne vois rien à reprocher", keyMoment: false, posterior: false },
+        { ply: 1, declaredSeverity: "blunder", note: "en fait je perds une pièce", keyMoment: false, posterior: true },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Both layers legible, and told apart in words rather than by colour alone.
+    const initial = screen.getByRole("group", { name: /ma lecture scellée/i });
+    expect(initial.textContent).toMatch(/correct/i);
+    expect(initial.textContent).toMatch(/je ne vois rien à reprocher/i);
+    const posed = within(screen.getByRole("group", { name: /mon verdict/i }))
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked);
+    expect((posed[0] as HTMLInputElement).value).toBe("blunder");
+  });
+
+});
+
+describe("seeing where I stand in a reading", () => {
+  it("marks, in the move list, which Moves carry a verdict, a Note, a Key moment", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "pourquoi", keyMoment: false, posterior: false },
+        { ply: 3, declaredSeverity: null, note: null, keyMoment: true, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    const items = moveItems();
+    // Spotted without opening each Move — and the three kinds told apart, each
+    // with its own accessible name rather than one anonymous dot.
+    const verdict = within(items[0]).getByLabelText(/verdict/i);
+    const note = within(items[1]).getByLabelText(/note/i);
+    const pivot = within(items[2]).getByLabelText(/moment clé/i);
+    // Told apart by their accessible names AND by what is drawn: three marks the
+    // eye cannot separate would defeat the point of putting them in the list.
+    expect(new Set([verdict.textContent, note.textContent, pivot.textContent]).size).toBe(3);
+    // And a Move nobody wrote on carries nothing at all.
+    expect(within(items[4]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
+  });
+
+  it("states the coverage — how many Moves examined, out of how many", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [1, 2, 3].map((ply) => ({
+        ply,
+        declaredSeverity: "sound" as const,
+        note: null,
+        keyMoment: false,
+        posterior: false,
+      })),
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    const readout = screen.getByText(/coups examinés/i);
+    // The count beside the share, never the share alone.
+    expect(readout.textContent).toMatch(/3\s*\/\s*33/);
+    expect(readout.textContent).toMatch(/9\s*%/);
+  });
+
+  it("computes no correctness at all — that is US-16b, and it must not leak here", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "blunder", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    expect(document.body.textContent).not.toMatch(/juste|exact|correct à|score|bonne réponse|vous avez trouvé/i);
+  });
+
+  it("groups the reading's own figures together, apart from the explanations", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: "sound", note: null, keyMoment: true, posterior: false },
+        { ply: 2, declaredSeverity: null, note: null, keyMoment: true, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    // Coverage and the Key moment count are the reading's tally; they must not
+    // read as a second line of the notice that happens to sit above them.
+    const tally = screen.getByRole("group", { name: /où j'en suis/i });
+    expect(within(tally).getByText(/coups examinés/i)).not.toBeNull();
+    expect(within(tally).getByText(/moments clés/i)).not.toBeNull();
+  });
+
+  it("surfaces the Game-wide Note from anywhere in the Game, not only at the start", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 0, declaredSeverity: null, note: "je subis cette ouverture", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Written at the starting Position, but it is about the whole Game — so it
+    // must be legible from inside the Game, not only from its first Position.
+    const whole = screen.getByRole("group", { name: /note sur la partie/i });
+    expect(whole.textContent).toMatch(/je subis cette ouverture/i);
+  });
+
+  it("says nothing about a Game-wide Note that was never written", async () => {
+    stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // An empty panel announcing an absence is noise: silence stays silent here too.
+    expect(screen.queryByRole("group", { name: /note sur la partie/i })).toBeNull();
+  });
+});

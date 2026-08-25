@@ -57,50 +57,202 @@
   > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
   > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
 
-- **US-16**: Analyser moi-même une de mes parties — commenter, explorer des variations, désigner les
-  coups qui me semblent importants — puis confronter mon analyse à celle du moteur pour progresser en
-  analyse.
-  > Pas encore grillée. Le but n'est **pas** de mieux montrer l'analyse moteur (c'est US-15a) mais de
-  > faire **travailler le joueur** : d'abord analyser **sans moteur**, pour exercer sa capacité
-  > d'analyse et sa compréhension du jeu ; ensuite seulement, confronter son analyse à celle du moteur
-  > et de notre moteur d'analyse (US-15) pour en évaluer la pertinence, et faire ressortir ses points
-  > forts et faibles **en analyse** (et non plus seulement en jeu).
-  > **Bonus visé par le demandeur** : c'est aussi une manière d'évaluer la pertinence de *notre*
-  > moteur d'analyse.
+- **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
+  > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
   >
-  > État vérifié : **ADR-0004 a déjà payé pour cette US, en US-1.** `cm-chess` a été choisi *contre*
-  > `chess.js`, malgré une communauté bien plus petite, précisément pour son **historique en arbre
-  > (variations)** et ses **annotations PGN natives (NAG, commentaires)** — « branching analysis lines
-  > are of real interest for this project ». Rien n'exploite encore cette capacité : `history.ts`
-  > aplatit le PGN en une liste linéaire de plys.
+  > **Trois lectures côte à côte, jamais un score composite** — un total exigerait des poids
+  > arbitraires, et un chiffre unique s'optimise en **imitant le moteur**, le seul résultat contre
+  > lequel la story existe. On suit trois valeurs dans le temps.
+  > 1. `Declared severity` vs mesurée : **couverture** (part des coups examinés — le silence n'est pas
+  >    un verdict) et **justesse**, jamais fondues.
+  > 2. `Key moment` : **part des dégâts trouvée** = chances de gain perdues par les coups flagués
+  >    désignés / perdues par **tous** les coups flagués du joueur. Une seule division, dans la monnaie
+  >    déjà utilisée. Crédit partiel par construction, `Key moment`s multiples **additifs et non
+  >    trichables** (un coup compte une fois). Dénominateur **hors `Drift`** (le Drift n'a aucun coup à
+  >    désigner) mais Drift **rapporté à côté** : « tu as cherché une faute, il n'y en avait pas ».
+  >    Dénominateur nul = **pas de score**, pas un zéro. **Aucune fenêtre de tolérance** : l'écart est
+  >    **affiché** au lieu d'être crédité.
+  > 3. Le **sens du biais**, gratuit (l'asymétrie de la matrice) : sur-estimer ou sous-estimer le danger
+  >    sont deux défauts opposés qu'aucun des trois scores ne distingue seul.
   >
-  > Points à trancher au grilling :
-  > - **Terminologie** : « commentaire », « variation », « coup important » n'existent pas au
-  >   glossaire, et « important » demande un terme propre qui ne collide ni avec `Danger position`
-  >   (récurrence, agrégat) ni avec `Move habit`. L'analyse du joueur elle-même est un objet à nommer.
-  > - **Le problème de l'aveuglement, structurel.** La page Analyse montre aujourd'hui l'info moteur
-  >   **en permanence** : `WinningChancesBar` et `EvaluationGraph` sont dans `Board.tsx`, et le toggle
-  >   d'annotations est **à `true` par défaut** (`GameViewer.tsx:27`). US-15a en ajoutera encore. Or
-  >   analyser « sans moteur » n'est pas un simple interrupteur : **une fois vu, on ne peut pas ne pas
-  >   avoir vu**. Il faut donc un **ordre** (analyser → révéler), pas seulement un affichage
-  >   conditionnel — et décider ce qui se passe si le joueur révèle puis modifie son analyse.
-  > - **Ce que « pertinent » veut dire**, et c'est le cœur : comparer les coups désignés importants aux
-  >   Moves signalés / `Counted Move` d'US-15a ? Les variations proposées à la `Best line` ? Les
-  >   commentaires à rien du tout (non comparables) ? Chaque réponse est un critère de notation
-  >   différent, et un mauvais critère apprendra au joueur à imiter le moteur plutôt qu'à comprendre.
-  > - **Découpage / dépendance** : la moitié « annoter en aveugle » est constructible **tout de
-  >   suite** ; la moitié « confronter » dépend d'**US-15a** (le relevé par Move). Donc probablement
-  >   deux stories, et c'est ce qui permet de commencer celle-ci avant le reste de l'EPIC.
-  > - **Persistance** : l'analyse du joueur est une donnée **irremplaçable** (elle n'a aucun amont) —
-  >   ADR-0015 s'applique pleinement, migration due, et elle est à **cloisonner par `Profile`**
-  >   (ADR-0014). Stockage sous forme de **PGN annoté** (ce que `cm-chess` sait lire et écrire nativement,
-  >   donc exportable vers d'autres outils) ou en modèle relationnel ? Vrai arbitrage, **ADR probable**.
-  > - **Où ça vit** : dans la page Analyse ou dans un parcours dédié « exercice » (ADR-0006 : une page
-  >   par parcours) ? La page Analyse est déjà la plus dense de l'app.
-  > - **La circularité du bonus, à assumer** : utiliser l'accord joueur/moteur pour juger *notre*
-  >   moteur d'analyse suppose que le joueur a raison. Un désaccord révèle une **divergence**, jamais
-  >   **qui se trompe**. C'est un signal utile (où regarder) et non un oracle de validation — à écrire
-  >   noir sur blanc, sinon la story promet une garantie qu'elle ne peut pas tenir.
+  > **À vérifier à l'usage** (accepté provisoirement par le demandeur, jugé « un peu compliqué ») : la
+  > matrice se lit sur les **`Counted Move`s** seulement. Le cas qui l'impose : un coup **forcé**
+  > catastrophique mesure une `Blunder` mais n'est « nobody's mistake », donc un joueur qui le déclare
+  > `Sound` **a raison** et une matrice naïve le compterait faux. Si à l'usage la complexité ne paye
+  > pas, c'est ce point-là qu'on rouvre.
+  >
+  > **Agrégat en dernière tranche** (ADR-0017, repliement) + entrée de Nav. **Aucun axe en v1** :
+  > l'échantillon est de quelques dizaines de lectures écrites à la main. L'axe `Phase` est le premier
+  > qui méritera sa place, mais il est **exclu tant que la détection des phases n'est pas fiable**
+  > (terrain d'US-15a-bis) — décision explicite du demandeur. `Opening` (échantillon nul) et
+  > `Time control category` (confond jouer et analyser : une partie est lue à froid) ne sont pas
+  > candidats.
+  >
+  > **La circularité du bonus, assumée** : juger *notre* moteur d'analyse par l'accord joueur/moteur
+  > suppose le joueur juste. Un désaccord est une **divergence** — où regarder, jamais qui se trompe.
+  >
+  > **À lire avant de griller 16b** (ajouté le 2026-08-25) : la `Confrontation` s'installe dans le
+  > panneau latéral de la route de lecture, **déjà dense et au format instable** — voir **US-22**,
+  > dont le grilling est volontairement placé **après** celle-ci. Deux conséquences pour 16b : tout
+  > bloc qu'elle ajoute et qui **apparaît selon le ply** aggrave le défaut de reflow signalé là-bas,
+  > et le dénominateur de la **couverture** livré par US-16a (demi-coups, ply 0 exclu) devra être
+  > tranché ici, puisque la justesse portera sur les coups **du joueur** — deux chiffres côte à côte
+  > sur des bases différentes sinon (arbitrage ouvert sur la PR #70).
+
+- **US-16c**: Explorer mes variantes et savoir ce qu'elles valent.
+  > **Grillée le 2026-08-24.** Sort **en dernier** : c'est la partie la plus chère (éditer un arbre sur
+  > l'échiquier), la seule qui coûte du temps moteur, et la seule abandonnable si l'exercice ne prend
+  > pas. Elle est verticalement complète seule (éditeur + `Line check` + sa lecture dans la
+  > `Confrontation`), donc la différer ne laisse rien d'inachevé.
+  >
+  > - **Une `Candidate line` est jugée par ce qu'elle coûte, jamais par la coïncidence** avec la
+  >   `Best line` : le critère textuel est gratuit mais **apprend l'imitation** — il déclarerait fausse
+  >   une idée qui perd 2 %. On évalue la Position atteinte (`Line check`), **temps moteur assumé**, à
+  >   la demande.
+  > - **`Line check` n'est pas une `Analysis pass`** : la Position atteinte n'appartient à **aucun**
+  >   `Game`. Les confondre corromprait « cette partie est analysée » et les compteurs de progression.
+  >   Le `Search regime` est porté quand même, sinon le verdict est un artefact de profondeur.
+  > - **Ligne plate, pas un arbre** : symétrie avec `Best line` ; une variante dans une variante n'a
+  >   personne en face.
+  > - **C'est ici qu'ADR-0004 est enfin exploité** — `cm-chess` tient l'arbre **en mémoire** pendant
+  >   l'édition et **écrit** le PGN annoté en export ; `history.ts` continue d'aplatir pour le replay.
+  >
+  > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
+  > et c'est voulu.
+
+- **US-22**: Rendre la route de lecture agréable à tenir sur trente coups — pour qu'annoter une
+  partie entière soit un exercice et non une corvée.
+  > **Pas encore grillée.** Demandée le 2026-08-25, après revue d'US-16a livrée : « l'US-16a est
+  > bonne mais l'interface pourra être améliorée ».
+  >
+  > ### Le défaut nommé : **le format de la page change à chaque coup cliqué**
+  >
+  > Observé par le demandeur sur l'app livrée, le 2026-08-25. Ce n'est pas une amélioration
+  > d'ergonomie, c'est une **correction** : le projet tient déjà le principe inverse depuis US-14 —
+  > « cacher les annotations ne doit pas déplacer la position que le joueur est en train de lire ».
+  > Ce principe a été tenu **au-dessus du diagramme**, par l'ordre du document, et **jamais appliqué
+  > d'un ply au suivant** dans le panneau latéral. Or on change de coup bien plus souvent qu'on ne
+  > change de niveau de revue.
+  >
+  > **Cause probable, vérifiée dans le code** (`client/src/features/personal/`) : cinq blocs
+  > apparaissent et disparaissent selon le ply, et **aucun `min-height` ne réserve leur place** dans
+  > `_dense.scss`.
+  >
+  > | Bloc | Condition | Fréquence du saut |
+  > | --- | --- | --- |
+  > | La notice « Coup de l'adversaire… » | `!playersOwnMove` | **un coup sur deux** — c'est le principal suspect |
+  > | Le fieldset de verdict | absent si `ply === 0` | à l'entrée et à la sortie de la position de départ |
+  > | Le contrôle de moment clé | absent si `ply === 0` | idem |
+  > | La note sur la partie | absente au ply 0, et absente s'il n'y en a pas | idem |
+  > | Le relevé de la couche scellée | seulement sur les plys portant une marque scellée, **hauteur variable** selon son contenu | à chaque coup, après scellement |
+  >
+  > Le panneau vit dans `[data-row="board"]`, **à côté** de l'échiquier : une variation de sa hauteur
+  > peut donc faire bouger la rangée entière. À mesurer plutôt qu'à supposer — mais le mécanisme,
+  > lui, est établi.
+  >
+  > **Ce que « corriger » veut probablement dire** : réserver la place plutôt que retirer le
+  > contenu. Une notice qui alterne un coup sur deux peut occuper une hauteur constante, ou vivre à
+  > un endroit stable de l'écran au lieu d'être collée au contrôle — ce qui rejoint la piste
+  > « les notices une fois, pas à chaque coup » ci-dessous. **Ne pas la supprimer** : le garde-fou
+  > n°1 s'applique.
+
+  > ### Le constat : le fond est juste, la densité ne l'est pas
+  >
+  > US-16a a livré ce qu'elle promettait, et ses règles sont **bonnes** — chaque phrase de l'écran
+  > existe pour une raison nommée au glossaire. Le problème n'est pas qu'une règle manque : c'est
+  > que **toutes tiennent dans la même colonne de 14rem, à côté de l'échiquier**, et que le prix se
+  > paie coup après coup.
+  >
+  > Ce que le panneau empile aujourd'hui, sur **un seul** ply : le fieldset de verdict (cinq radios,
+  > un bouton « Retirer », plus la notice de coup adverse), l'éditeur de note (label, textarea, la
+  > phrase « les notes ne sont jamais notées », deux boutons), le moment clé (case + notice de
+  > pivot), la note sur la partie, le fieldset « Où j'en suis », l'action de scellement — puis, une
+  > fois scellé, **les deux couches** (le relevé scellé *et* les contrôles postérieurs) plus la
+  > notice de couche. Le tout au-dessus du stepper, du coup courant et de la liste des coups, qui
+  > faisait **137 entrées** sur la partie mesurée par HP-01.
+  >
+  > **Quatre phrases explicatives atténuées à 13 px** cohabitent : coup adverse, notes jamais
+  > notées, ni-bon-ni-faute, couche postérieure. Chacune est nécessaire **une fois** — la FP 03 a
+  > d'ailleurs montré qu'empilées elles se lisent l'une comme la suite de l'autre (le compte des
+  > moments clés passait pour une troisième ligne de l'explication du pivot). Aucune n'est de trop ;
+  > c'est leur **répétition à chaque coup** qui est en cause.
+  >
+  > ### La mesure à faire d'abord
+  >
+  > **Rien de tout ça n'est mesuré.** La hauteur réelle du panneau, à combien de coups le
+  > défilement commence, ce qui sort de l'écran sur un portable — inconnu. Les FP ont vérifié
+  > l'absence de **débordement horizontal**, jamais le confort vertical. Ouvrir cette story sans
+  > mesure serait refaire l'erreur qu'US-10b a évitée en commençant par chronométrer `/danger`
+  > (3111 ms → 55 ms). **Première tranche : une mesure, sur une partie longue, en clair et en
+  > sombre, à 1400 / 900 / 380 px.**
+  >
+  > ### Les frictions concrètes, telles qu'observées
+  >
+  > | Friction | Pourquoi ça pèse |
+  > | --- | --- |
+  > | Un verdict = **un clic** ; une note = **cliquer, taper, cliquer « Enregistrer »** | l'asymétrie décourage la note, qui est pourtant la seule partie où le joueur *pense* |
+  > | **Aucun raccourci clavier** | le critère 40 d'US-16a voulait « peu de clics, coup après coup » ; c'est tenu pour le verdict seul |
+  > | La note sur la partie est **lisible partout mais modifiable au ply 0 seulement** | corriger une pensée d'ensemble oblige à remonter au début |
+  > | Après scellement le panneau **double** : deux couches rendues | l'état le plus riche est aussi le plus haut, au moment où le joueur découvre le moteur |
+  > | **Aucune vue d'ensemble de sa lecture** | les glyphes de la liste des coups disent *où*, rien ne dit *quoi* sans parcourir |
+  > | Le vocabulaire de glyphes `⚖ ✎ ◆` a été **choisi sous la pression d'une FP**, pas dessiné | il marche (deux crayons indiscernables l'ont précédé), il n'est pas un système |
+  >
+  > ### Ce qu'il ne faut pas « simplifier »
+  >
+  > Le risque de cette story est de gagner de la place en **retirant ce qui porte le sens**. Trois
+  > garde-fous, chacun payé par une décision de grilling ou une FP :
+  >
+  > 1. **Les notices disent ce que l'app ne peut pas promettre autrement.** « Ce verdict ne sera pas
+  >    noté » sur un coup adverse, « les notes ne sont jamais notées », « ni un bon coup ni une
+  >    faute » — les cacher derrière une icône ou une infobulle les rend invisibles au moment
+  >    exact où elles servent. Les **dire moins souvent** n'est pas les **dire moins clairement**.
+  > 2. **La couche scellée reste lisible telle qu'elle était.** C'est le critère qui a coûté une
+  >    seconde migration (`posterior` dans la clef). Aucune économie de hauteur ne peut la replier
+  >    au point de la rendre facultative.
+  > 3. **Rien en indice purement chromatique** (ADR-0013), et l'état dit **en mots**. La FP 05 a
+  >    montré que le critère peut être tenu à la lettre et manqué en pratique : deux crayons que les
+  >    noms accessibles distinguaient parfaitement et l'œil pas du tout à 16 px.
+  >
+  > ### Pistes, à trancher au grill
+  >
+  > - **Un verdict au clavier** (1–5 sur les cinq valeurs, flèches pour naviguer), qui rendrait
+  >   « verdict, coup suivant, verdict » réellement rapide. Probablement le meilleur rapport
+  >   valeur/coût de la story.
+  > - **Les notices une fois, pas à chaque coup** — au premier usage, ou dans un endroit stable de
+  >   l'écran plutôt que collé au contrôle. À arbitrer contre le garde-fou n°1.
+  > - **Enregistrement de la note au fil de l'eau**, comme le verdict — le critère 20 d'US-16a
+  >   demandait déjà « enregistrée au fil de l'eau » et le bouton explicite est une lecture stricte
+  >   de « une note est une phrase en cours de composition ». À rouvrir.
+  > - **Une vue d'ensemble de la lecture** : tous les coups marqués, avec leur marque, sur un écran.
+  >   C'est aussi ce que la `Confrontation` d'US-16b voudra afficher — **d'où la question de
+  >   séquencement ci-dessous**.
+  > - **Replier la couche scellée** une fois lue, sans la rendre introuvable.
+  > - **Le panneau ailleurs qu'à côté de l'échiquier** sur écran étroit — la contrainte d'US-14
+  >   (rien au-dessus du diagramme ne doit bouger) porte sur le haut, pas sur le côté.
+  >
+  > ### Séquencement : **tranché — grilling après US-16b**
+  >
+  > Décision du demandeur, le 2026-08-25. Rien n'est urgent tant que le joueur n'a pas la
+  > `Confrontation`, qui est la valeur qu'il attend ; et grillée après, cette story connaîtra la
+  > **charge réelle** des écrans plutôt que de la deviner — US-16b y ajoute trois lectures côte à
+  > côte, la matrice déclaré/mesuré, la part des dégâts et la couverture.
+  >
+  > **Conséquence à assumer** : US-16b sera donc conçue **dans la contrainte actuelle**, panneau
+  > dense et format instable compris. Deux garde-fous pour que ce ne soit pas un piège :
+  >
+  > 1. **Le défaut de reflow ci-dessus ne doit pas être *étendu* par US-16b.** Tout bloc que 16b
+  >    ajoute au panneau et qui apparaît selon le ply aggrave exactement le symptôme signalé ici.
+  >    À dire au grilling de 16b, pas seulement à celui-ci.
+  > 2. **La mesure de la première tranche reste faite tôt si l'occasion se présente** — elle vaut
+  >    dans les deux ordres, et une mesure avant 16b donne un point de comparaison qu'on ne pourra
+  >    plus obtenir après.
+  >
+  > ### Ce que cette story ne couvre pas
+  >
+  > La `Confrontation` (US-16b), les `Candidate line`s (US-16c), et l'export PGN annoté (ADR-0019,
+  > toujours hors périmètre). Ni les quatre arbitrages produit déjà ouverts sur la PR #70 — le
+  > dénominateur de la couverture, le `DELETE /api/profiles/:id` à 500, le pluriel du nom accessible
+  > des résultats, la remise à `Départ` du niveau de l'explorateur — qui vivent là où ils sont.
 
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
@@ -530,6 +682,82 @@
 ## Doing
 
 ## In review
+
+- **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
+  désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
+  > **Grillée le 2026-08-24** (avec US-16b et US-16c). Branche `integration/US-16-my-own-analysis`.
+  > `CONTEXT.md` : `Personal analysis`, `Note`, `Candidate line`, `Key moment`, `Declared severity`,
+  > `Line check`, `Confrontation` ; entrée `Inaccuracy`/`Mistake`/`Blunder` **amendée** (échelle à deux
+  > auteurs). **ADR-0019** : stockage relationnel, PGN annoté en export.
+  >
+  > Périmètre : route dédiée `/analyse/:gameId/lecture`, `Note`s, `Declared severity` sur **tous** les
+  > coups (adverses compris, jamais scorés), `Key moment`s, le **scellement** et sa **provenance**, la
+  > migration due (ADR-0015) et le cloisonnement par `Profile` (ADR-0014). **Aucune dépendance, aucun
+  > temps moteur.**
+  >
+  > Décisions structurantes du grilling :
+  > - **Le scellement, pas le verrou.** L'app ne peut pas rendre aveugle (autre onglet) ; prétendre le
+  >   contraire est la faute que `Review mode` a refusée en écartant le nom *Blind mode*. Donc : un acte
+  >   explicite qui fige ce qui sera confronté, plus un drapeau « le moteur avait-il déjà été montré ».
+  >   Ce qui est écrit **après** la révélation est conservé et hors confrontation.
+  > - **Conséquence assumée** : sur ce seul fait, ce qui a été affiché est **persisté**, alors que
+  >   `Review mode` reste un choix local dont le serveur n'a pas d'opinion. Une confrontation sans
+  >   provenance n'est pas une confrontation. (ADR proposé, **refusé par le demandeur** — la décision
+  >   vit au glossaire.)
+  > - **Route dédiée, et c'est ce qui dissout le problème de l'aveuglement** : dans la page Analyse il
+  >   faudrait écraser le `Review mode` mémorisé du joueur. Une route distincte est aveugle *par nature*.
+  > - **Prémisse du backlog corrigée** : le « toggle d'annotations à `true` par défaut » n'existe plus,
+  >   US-15a a livré `Review mode` avec **Unaided par défaut**.
+  >
+  > **PRD + issues (2026-08-24)** : `.scratch/personal-analysis/PRD.md`, six tranches —
+  > `01-a-reading-exists-and-judges-a-move` (tracer bullet : tables + API + route + `Declared
+  > severity`), `02-i-comment-a-move`, `03-i-mark-where-the-game-turned`, `04-i-seal-my-reading`
+  > (gardée **entière** : scellement + provenance + couche postérieure), `05-i-see-where-i-stand`,
+  > `06-graft-on-hp-01-and-run-the-suite` (**HITL**). Coutures validées : **aucune nouvelle**.
+  > **Pas de 4ᵉ HP** — greffe sur **HP-01 après l'étape 9** (elle asserte déjà « the app does not start
+  > volunteering the engine's verdict » et a déjà ouvert une partie non analysée) ; HP-02 écarté comme
+  > hôte, il n'ouvre une partie que dans sa passe de thème. **Décidé pour US-16b** : fusion HP-02 + HP-03
+  > en « lire mes agrégats », le créneau libéré accueillant une HP dédiée « lire à l'aveugle, sceller,
+  > confronter ».
+  >
+  > **Livrée le 2026-08-24** — six tranches, PRs **#64 → #69**, toutes auto-mergées sur la branche
+  > d'intégration après FP verte. **Suite HP 3/3 verte** (prérequis path 0 vert d'abord et seul).
+  > PR `integration → develop` : **#70**, en attente du merge humain.
+  >
+  > **Ce que la livraison a appris, et qui n'était pas dans le grilling :**
+  > - **La migration due l'a été deux fois.** La tranche 01 avait lu « un drapeau postérieur au
+  >   scellement » comme un drapeau *sur la ligne*. Le critère « la lecture initiale reste lisible
+  >   telle qu'elle était » l'interdit : avec une seule ligne par ply, une écriture postérieure n'a
+  >   nulle part où aller qu'**au-dessus** de la valeur scellée — ce qui détruit ce que le scellement
+  >   existe pour fixer. `posterior` est donc entré dans la **clef primaire** (migration `0014`) :
+  >   deux couches par ply, plafonnées à deux par construction.
+  > - **`writeMark` confondait « le caller a dit `null` » et « le caller n'a rien dit »** (`??`), ce
+  >   qui rendait l'effacement d'une `Note` impossible — le repli restaurait le texte. Un champ
+  >   **nommé** est ce que le joueur dit ; un champ omis est laissé tel quel.
+  > - **Le silence a une conséquence de stockage** : quand la dernière marque d'un ply est reprise,
+  >   la **ligne part**. Une ligne de nuls serait une marque affirmant « j'ai regardé et rien
+  >   trouvé » — ce qui est exactement le rôle de `Sound`.
+  > - **La greffe HP est placée à l'étape 9b, *avant* l'étape 10** (qui analyse), et pas seulement
+  >   après l'étape 9 comme prévu : jouée avant qu'aucune analyse n'existe, l'étiquette « Lue à
+  >   l'aveugle » est **méritée par la course**. Vérifié à la course : `engine-seen` a fini à
+  >   `[395,407]` — les deux parties de l'étape 10 — et **pas** la partie scellée en 9b.
+  > - **La FP a trouvé ce que les tests ne pouvaient pas.** Une lecture rendue sous un **autre
+  >   `Profile`** (le seul rouge de la story, tranche 01) ; deux crayons quasi identiques que les
+  >   noms accessibles distinguaient et l'œil pas ; les contrôles postérieurs au scellement portant
+  >   les libellés de la couche initiale ; un écran de refus offrant un lien vers la partie qu'il
+  >   venait de refuser.
+  >
+  > **Décisions laissées au demandeur** (dans la PR #70) :
+  > - **Le dénominateur de la couverture** — demi-coups, ply 0 exclu. US-16b calculera la justesse
+  >   sur les coups **du joueur** : les deux chiffres seraient alors rapportés côte à côte sur des
+  >   **bases différentes**. À trancher en 16b, pas ici.
+  > - `DELETE /api/profiles/:id` **répond 500 pour tout `Profile`** (préexistant,
+  >   `.scratch/profile-deletion/`, `needs-triage`) — c'est pourquoi la cascade depuis le `Profile`
+  >   n'a pu être prouvée qu'au niveau du magasin.
+  > - Le niveau de pluriel du nom accessible des résultats (`1 victoires`), trouvé par HP-03.
+  > - La remise à `Départ` du niveau de l'explorateur quand on quitte l'écran, trouvée par HP-02 :
+  >   aucune assertion ne la couvre, et la formulation « après avoir été piloté » de sa passe de
+  >   thème suppose un état que l'app ne garde pas.
 
 ## Done
 

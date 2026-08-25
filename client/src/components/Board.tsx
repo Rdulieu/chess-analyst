@@ -42,6 +42,7 @@ export function Board({
   recap = null,
   orientation = "white",
   controls,
+  moveMarks,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
@@ -58,14 +59,26 @@ export function Board({
    */
   recap?: GameRecap | null;
   /**
-   * A caller's own control over what the board shows — the `Review mode`'s
-   * level control today. Taken as a slot rather than left above the board, because everything
-   * stacked above the diagram is height the diagram does not get, and the board
-   * has to be visible in full. The caller owns the state; this component only
-   * decides where it is read, which is beside the board with the rest of the
-   * readout.
+   * A caller's own controls, read beside the board. Taken as a slot rather than
+   * left above the board, because everything stacked above the diagram is height
+   * the diagram does not get, and the board has to be visible in full. The
+   * caller owns the state; this component only decides where it is read, which
+   * is beside the board with the rest of the readout.
+   *
+   * A **function of the ply being read**, not a plain node: the reading route's
+   * controls act ON the current Move (US-16a), and where the Player is is this
+   * component's own state. Handing it over is what stops a second copy of the
+   * index from existing beside it and drifting from it — the caller reads the
+   * position, it never tracks it.
    */
-  controls?: ReactNode;
+  controls?: (ply: number) => ReactNode;
+  /**
+   * What the caller wants shown **in the move list**, per ply — the Player's own
+   * marks on the reading route (US-16a). A slot like `controls`, and for the same
+   * reason: the list is this component's, what is worth flagging in it is the
+   * caller's. Absent everywhere else, so the Analyse page's list is untouched.
+   */
+  moveMarks?: (ply: number) => ReactNode;
   /**
    * The `Board orientation` — which side sits at the bottom (CONTEXT.md).
    * Defaults to White so a caller with no side in mind gets the neutral
@@ -225,7 +238,7 @@ export function Board({
             to stack above the row, and the stack was what left the diagram no
             height to be visible in full.
           */}
-          {controls}
+          {controls?.(index)}
           {/*
             The way to the record, from beside the board. The panel itself is
             BELOW the row — that is deliberate, its height varies and nothing
@@ -316,6 +329,7 @@ export function Board({
                   >
                     {ply.san}
                   </button>
+                  {moveMarks?.(i + 1)}
                   {annotation?.severity && (
                     // The glyph is the signal; `data-severity` only lets the sheet
                     // reinforce it with the severity's own tint and ink. Naming the

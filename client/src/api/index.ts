@@ -7,3 +7,10 @@ export { fetchDangerView, type DangerView } from "./danger";
 export { startImport, fetchImportStatus } from "./import";
 export { startAnalysis, fetchAnalysisStatus, acknowledgeAnalysis } from "./analyze";
 export { getSettings, saveSettings, type Settings } from "./settings";
+export {
+  fetchPersonalAnalysis,
+  savePersonalMark,
+  sealPersonalAnalysis,
+  GameNotThisProfiles,
+  SealRefused,
+} from "./personal";

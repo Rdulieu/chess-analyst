@@ -230,6 +230,16 @@ subagent, explicitly:
   `emulate colorScheme` **did not survive page-selection churn** (a page emulated `light` later
   measured `prefers-color-scheme: dark` with nothing having asked for it). A theme audit that trusts
   the theme it requested can silently audit one theme twice.
+
+  **Colour-scheme emulation has now failed in BOTH directions, on four separate runs — so never
+  trust a theme you merely requested.** Over the US-16a slices (2026-08-24): emulation set over a
+  CDP session that was then **detached** silently **reverted**, so a light pass measured `dark`
+  (slices 04 and 05, two independent agents); and on another run the same emulation **survived** a
+  detach into a later screenshot, which is the opposite failure (slice 02). Do not encode a
+  mechanism — the two observations contradict any single one. What worked every time: keep **one CDP
+  session alive** for the whole pass, and put a `matchMedia` **assertion inside** the audited script
+  so a wrong theme throws instead of producing a plausible green. That assertion caught every one of
+  these cases; nothing else did.
 - **Teardown by pid, and NEVER `pkill` by pattern.** `pkill node` kills every sibling's server
   mid-run. Also: a dev wrapper often **orphans its listener** — killing the pid the package
   manager returned can leave the real server still serving. Verify the port is actually free
@@ -262,6 +272,13 @@ subagent, explicitly:
   orphans for their owner.
 - **Restore state before starting the server**, not after: a server usually creates its database
   file on open, so a copy made afterwards is overwritten by a live process.
+- **`cp` can produce a corrupt copy even after a truncating checkpoint** — measured 2026-08-24
+  (US-16a slice 04): a `cp` taken after `PRAGMA wal_checkpoint(TRUNCATE)` gave a database whose
+  `evaluations` table read back as **"database disk image is malformed"**. `sqlite3 <src>
+  ".backup <dst>"` worked on the same source. This is **stronger than the standing
+  checkpoint-then-copy advice**, which three later runs followed without trouble — so the failure is
+  not universal and its cause is not established. Prefer `.backup`, and **read the copy back**
+  before trusting it either way.
 - **But *seed* AFTER the server is up** (measured 2026-08-23, games-table-wide FP) — restoring and
   seeding are not the same operation and want opposite orders. An agent copied the database, wrote
   `analyzed = 1` into the copy, started the server, and read the rows back as **0**: the copied
@@ -295,6 +312,24 @@ Not as a chore at the end — as part of the run, because the run is the only ex
 settle any of it.
 
 Answer these, and write the answers down:
+
+> **Audit of 2026-08-24 (US-16a, five consecutive single-subagent FP runs).** Delivery worked **5 of
+> 5**, unprompted, every report arriving **twice** — once by the subagent's own `SendMessage` and once
+> as the completion notification, identical content. No relance was needed and no transcript recovery
+> was needed, so §5.2 stays **unexercised**. `SendMessage` **resumed a completed subagent** to
+> re-verify one fixed step, which was markedly cheaper than dispatching a fresh agent: it still knew
+> its ports, its database copy and its browser. The private-browser default held — **zero page
+> thefts** across all five runs, though each was a single agent, so these runs say nothing new about
+> the parallel case. The `npx` grandchild listener was confirmed on **every** run, both servers each
+> time. Two isolation claims were corrected in §5.4 rather than merely noted: the colour-scheme
+> emulation (which has now failed in *both* directions) and the WAL copy (where `cp` produced a
+> corrupt database that `sqlite3 .backup` did not). Driver-produced false findings: **three**, all
+> caught by re-measuring — a stepper loop inside one `page.evaluate` that advanced a single ply
+> (React re-renders between clicks, so the loop re-clicks a stale handler), a `Start`-button lookup
+> that found nothing because `Start` is the current-ply caption rather than a button, and a
+> "control present at ply 0" that was really the first of these. The rule of re-measuring before
+> reporting has now caught more would-be defects than the app has produced real ones — on this run
+> the score was 3 driver artefacts to 0 false app defects reaching a report.
 
 - **Did any report arrive on its own**, as a completion notification, with no prompting?
   *(**Answered 2026-08-23**: yes — **4 of 4**, unprompted, including the three-way parallel fan-out

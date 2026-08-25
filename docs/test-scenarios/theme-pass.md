@@ -127,6 +127,19 @@ puppeteer) rather than on a session you close. So the rule is not merely "do not
 default" — it is **do not trust the emulation you set either; assert it inside the audited script,
 every screen, every half.** That assertion is the only thing that has ever caught this.
 
+**And it fails in the other direction too, so do not read the above as "detaching clears it".** On a
+third run the same day (2026-08-24, US-16a slice 02), an emulated scheme **survived** past its
+session's detach into a later screenshot, which is the opposite behaviour. Four observations now
+disagree about the mechanism; none of them disagrees about the remedy. Keep one session alive, and
+assert the theme inside the script — that is what holds whichever way the emulation misbehaves.
+
+**`Mes parties` carries a `Lecture` column since US-16a**, stating each Game's `Personal analysis`
+state in words. It is audited by whichever screen list each scenario walks, like every other cell —
+no rule of its own. It is named here because it is the newest thing on the widest table in the app,
+and the table's guarantee is that the **container** scrolls and never the page (`_tables.scss`): a
+column added without re-checking that at a narrow width is how this app would acquire a sideways
+scroll. All three scenarios re-checked it at 900 px and 380 px in both themes on the 2026-08-24 run.
+
 Contrast is **blocking**, not a report: US-3 shipped a highlight that was invisible for want of any
 CSS, and the point of a stylesheet is not to replay that finding in reverse.
 
