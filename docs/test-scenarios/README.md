@@ -64,7 +64,7 @@ Since US-11 the inventory is **eight** screens, not six: `/profiles` and `/profi
 and **none was removed** — "Mes parties" stays, it merely lost the import form, which moved onto the
 Profile's page. The pass costs four more audits per scenario.
 
-The three passes are not redundant: each audits the eight screens **in its own scenario's state**.
+The three passes are not redundant: each audits the nine screens **in its own scenario's state**.
 HP-01 sees a populated `/danger`, two analysed Games, a real `Evaluation curve` and a Profile page
 carrying real counters. HP-02 sees the explorer after it has been driven — arrows on the board — and
 the weak-opening highlight, the two duties it inherited from the pair it replaces; its state analyses
@@ -122,7 +122,7 @@ import — which is HP-01's subject, not a duplicate.
 
 **Three Profiles, always, one of them current, one of them on the other Platform.** The suite held exactly one Profile until 2026-08-21,
 and that blind spot let a `/profiles` screen ship overflowing its own card by 24px in ordinary use —
-green across eight screens and two themes, because the defect needs two rows with one of them
+green across the eight screens of the time and two themes, because the defect needs two rows with one of them
 marked "Profil actuel" to appear at all (two rows unselected fit; add the selection and they do
 not). More than one Profile is also what US-11 *exists for*: studying other players. So path 0
 builds both, at the cost of **one extra chess.com validation request and no import**, and no
@@ -195,7 +195,7 @@ seconds per run and are simultaneously too slow and too flaky. Wait for the elem
 - **Do not reuse the state another scenario left behind.** Even when it looks identical, a scenario
   that never starts clean cannot catch an ordering or precomputation side effect. A snapshot restored
   by file copy **is** a clean start; a database another scenario has been driving is not.
-- **Do not shorten the theme pass to the screens the journey already crossed.** The eight screens
+- **Do not shorten the theme pass to the screens the journey already crossed.** The nine screens
   are the coverage, and the two themes are the point; a pass over four screens in one theme is a
   pass over nothing in particular. The profiles screens are audited **as the scenario left them**,
   empty counters included.

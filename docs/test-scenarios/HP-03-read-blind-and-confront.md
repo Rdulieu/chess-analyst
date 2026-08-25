@@ -50,7 +50,7 @@ shortest Games available; nothing here depends on which.
   per-Game analysis already publishes, and the excluded Moves are shown **with their reason**.
 - `Profile` scoping (US-11, ADR-0014): a reading and its Confrontation belong to the Profile that
   owns the Game, and are unreachable under another.
-- The stylesheet and the dark theme (US-13): the final step walks all eight screens in both themes.
+- The stylesheet and the dark theme (US-13): the final step walks all nine screens in both themes.
   This scenario is the only pass whose state holds **analysed** Games, so it is where `/danger`,
   the `Evaluation curve` and the advantage bar are audited **populated** rather than empty.
 
@@ -88,14 +88,14 @@ shortest Games available; nothing here depends on which.
 12. Open **Game A** from "Mes parties" → it opens on **`Détaillé`** without being asked (the level is remembered **across Games**), so the engine's record is shown for it too. Read Game A — declare at least one severity and a `Key moment` — and seal it → its provenance reads **« Lue informée »**. Open its `Confrontation` → three figures again, labelled informed.
 13. Open **« Mes lectures »** from the navigation → the summary rests on **2 sealed readings**, says **1 lue à l'aveugle, 1 lue informée**, and shows the same three figures, separated. Check the fold **by hand**: each numerator and each denominator is the sum of the two Confrontations just read, the matrix included, cell by cell. Look for an axis — by opening, phase or cadence — and for a single score: there is neither.
 14. Switch the current `Profile` to `Nonomoho` → « Mes lectures » says that Profile has **no sealed reading**, rather than showing a summary of zeros, and Game B's `Confrontation` is unreachable under it. Switch back → both readings are there, unchanged.
-15. **Theme pass (US-13)** — walk the navigation across **all eight screens** (Mes parties,
-    Explorateur, Ouvertures, Positions dangereuses, Stats, Analyse by opening a Game, Profils, and
-    the Profile's own page), plus the **reading route** and the **`Confrontation`**, first in the
+15. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
+    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening a
+    Game, Profils, and the Profile's own page), plus the **reading route** and the **`Confrontation`**, first in the
     light theme, then again with the system's **dark preference emulated** → every screen is painted
     in the theme the system asks for, and everything the Player must be able to read stays readable
     in both.
 
-    > The rules asserted here, the eight screens, the audit tooling and the known-open findings are
+    > The rules asserted here, the nine screens, the audit tooling and the known-open findings are
     > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-01 and HP-02.
     > This scenario is the **only** one whose state holds analysed Games, so it is where `/danger`,
     > the `Evaluation curve` and the advantage bar are audited populated, and the only one that

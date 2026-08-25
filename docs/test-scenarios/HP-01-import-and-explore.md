@@ -50,7 +50,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   asserted that the app "does not start volunteering the engine's verdict" and step 7 has already
   opened a **not-yet-analysed** Game: the exact context US-16a needs, with no preamble to write, and
   **no engine time** owed.
-- The stylesheet and the dark theme (US-13): the final step walks all eight screens in both themes.
+- The stylesheet and the dark theme (US-13): the final step walks all nine screens in both themes.
   This scenario is the one whose state reaches every screen with content, so it is the strongest of
   the three theme passes.
 
@@ -204,15 +204,15 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
     > Switching back is not tidiness, it is a precondition: step 11 asserts against the state steps
     > 1–10 built, and it must run under the Profile that owns it.
 
-11. **Theme pass (US-13)** — walk the navigation across **all eight screens** (Mes parties,
-    Explorateur, Ouvertures, Positions dangereuses, Stats, Analyse by opening a Game, Profils, and
-    the Profile's own page), first in the light theme, then again with the system's **dark preference
+11. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
+    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening a
+    Game, Profils, and the Profile's own page), first in the light theme, then again with the system's **dark preference
     emulated** → every screen is painted in the theme the system asks for, and everything the Player
     must be able to read stays readable in both. **No further Import and no further analysis**: the
     pass reuses exactly the state steps 1–10 built, which is why it is the last step and not a
     scenario of its own.
 
-    > The rules asserted here, the eight screens, the audit tooling and the known-open findings are
+    > The rules asserted here, the nine screens, the audit tooling and the known-open findings are
     > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-02 and HP-03, and
     > three copies of an assertion list would drift. This scenario's state is the richest of the
     > three (real Games, two analysed, `/danger` populated, and a Profile page carrying real
@@ -253,7 +253,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   entry states its **side to move** in text and its diagram is presented from that side. No wording
   on that page attributes a side to the Player: a `Danger position` merges reaches from Games played
   as White and as Black, so "your side" is undefined there (CONTEXT.md → `Board orientation`).
-- Step 11: on each of the eight screens, in **both** themes — every colour resolves, text contrast
+- Step 11: on each of the nine screens, in **both** themes — every colour resolves, text contrast
   holds at 4.5:1 (3:1 for large text) against the ground actually painted behind it, nothing scrolls
   sideways, every meaning-bearing tint still carries its non-chromatic cue, and `--white-share`,
   `--black-share` and the board's square tokens are **identical** between the two themes. The

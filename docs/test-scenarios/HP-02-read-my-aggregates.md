@@ -15,7 +15,7 @@ switching Profile takes them away and brings them back untouched.
 > **Merged from the former HP-02 and HP-03 at US-16b**, and the merge cost no assertion: the two
 > opened on the same sentence, restored the same snapshot, and both asserted **shape and internal
 > consistency rather than fixed numbers**. What was duplicated was the preamble — selecting a
-> Profile, and walking eight screens in two themes — not the journeys. The slot that freed up went
+> Profile, and walking the navigation in two themes — not the journeys. The slot that freed up went
 > to [HP-03](./HP-03-read-blind-and-confront.md), because a Happy Path carries a core value and
 > "confront my reading with the engine's" is one.
 
@@ -39,7 +39,7 @@ switching Profile takes them away and brings them back untouched.
   presented from the **side being explored**, the existing side selector being the only control that
   turns it, and it is **held constant down the whole line** — it must not flip when an
   `Opponent reply` has the move. The **side to move** is stated in text at every level.
-- The stylesheet and the dark theme (US-13): the final step walks all eight screens in both themes.
+- The stylesheet and the dark theme (US-13): the final step walks all nine screens in both themes.
   This scenario carries **two** night-time duties the merge must not drop: the explorer's **arrows**,
   whose hue and opacity are computed per data point and belong to no token, and the
   **weak-opening highlight**, the tint US-13's slice 02 measured at 1.02:1 before it gained its own
@@ -79,14 +79,14 @@ switching Profile takes them away and brings them back untouched.
     banner names `Nonomoho`, and **both are gone**: `/openings` shows its empty invitation and the
     explorer offers no candidate, because that Profile owns no Game. Not one of `DudulSmash`'s rows
     survives the switch. Then select `DudulSmash` again → both aggregates are back, unchanged.
-15. **Theme pass (US-13)** — walk the navigation across **all eight screens** (Mes parties,
-    Explorateur, Ouvertures, Positions dangereuses, Stats, Analyse by opening a Game, Profils, and
-    the Profile's own page by opening `DudulSmash` from the list), first in the light theme, then
+15. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
+    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening a
+    Game, Profils, and the Profile's own page by opening `DudulSmash` from the list), first in the light theme, then
     again with the system's **dark preference emulated** → every screen is painted in the theme the
     system asks for, and everything the Player must be able to read stays readable in both. **No
     further Import and no analysis**: the pass reuses the state step 1 restored and selected.
 
-    > The rules asserted here, the eight screens, the audit tooling and the known-open findings are
+    > The rules asserted here, the nine screens, the audit tooling and the known-open findings are
     > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-01 and HP-03.
     > This scenario carries **both** night-time duties of the two it replaces: the explorer's arrows
     > and the weak-opening highlight. Neither is a token, and both were found broken at night once.
@@ -114,7 +114,7 @@ switching Profile takes them away and brings them back untouched.
   two Profiles share nothing, and reading one never disturbed the other (ADR-0014). **This is the
   step a global aggregate fails**: it would show `DudulSmash`'s openings under `Nonomoho`, or a total
   of 82 games for a Profile that owns none.
-- Step 15: on each of the eight screens, in **both** themes — every colour resolves, text contrast
+- Step 15: on each of the nine screens, in **both** themes — every colour resolves, text contrast
   holds at 4.5:1 (3:1 for large text) against the ground actually painted behind it, nothing scrolls
   sideways, every meaning-bearing tint still carries its non-chromatic cue, and `--white-share`,
   `--black-share` and the board's square tokens are **identical** between the two themes. Full rule
