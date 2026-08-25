@@ -112,6 +112,106 @@
   > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
   > et c'est voulu.
 
+- **US-22**: Rendre la route de lecture agréable à tenir sur trente coups — pour qu'annoter une
+  partie entière soit un exercice et non une corvée.
+  > **Pas encore grillée.** Demandée le 2026-08-25, après revue d'US-16a livrée : « l'US-16a est
+  > bonne mais l'interface pourra être améliorée ».
+  >
+  > ### Le constat : le fond est juste, la densité ne l'est pas
+  >
+  > US-16a a livré ce qu'elle promettait, et ses règles sont **bonnes** — chaque phrase de l'écran
+  > existe pour une raison nommée au glossaire. Le problème n'est pas qu'une règle manque : c'est
+  > que **toutes tiennent dans la même colonne de 14rem, à côté de l'échiquier**, et que le prix se
+  > paie coup après coup.
+  >
+  > Ce que le panneau empile aujourd'hui, sur **un seul** ply : le fieldset de verdict (cinq radios,
+  > un bouton « Retirer », plus la notice de coup adverse), l'éditeur de note (label, textarea, la
+  > phrase « les notes ne sont jamais notées », deux boutons), le moment clé (case + notice de
+  > pivot), la note sur la partie, le fieldset « Où j'en suis », l'action de scellement — puis, une
+  > fois scellé, **les deux couches** (le relevé scellé *et* les contrôles postérieurs) plus la
+  > notice de couche. Le tout au-dessus du stepper, du coup courant et de la liste des coups, qui
+  > faisait **137 entrées** sur la partie mesurée par HP-01.
+  >
+  > **Quatre phrases explicatives atténuées à 13 px** cohabitent : coup adverse, notes jamais
+  > notées, ni-bon-ni-faute, couche postérieure. Chacune est nécessaire **une fois** — la FP 03 a
+  > d'ailleurs montré qu'empilées elles se lisent l'une comme la suite de l'autre (le compte des
+  > moments clés passait pour une troisième ligne de l'explication du pivot). Aucune n'est de trop ;
+  > c'est leur **répétition à chaque coup** qui est en cause.
+  >
+  > ### La mesure à faire d'abord
+  >
+  > **Rien de tout ça n'est mesuré.** La hauteur réelle du panneau, à combien de coups le
+  > défilement commence, ce qui sort de l'écran sur un portable — inconnu. Les FP ont vérifié
+  > l'absence de **débordement horizontal**, jamais le confort vertical. Ouvrir cette story sans
+  > mesure serait refaire l'erreur qu'US-10b a évitée en commençant par chronométrer `/danger`
+  > (3111 ms → 55 ms). **Première tranche : une mesure, sur une partie longue, en clair et en
+  > sombre, à 1400 / 900 / 380 px.**
+  >
+  > ### Les frictions concrètes, telles qu'observées
+  >
+  > | Friction | Pourquoi ça pèse |
+  > | --- | --- |
+  > | Un verdict = **un clic** ; une note = **cliquer, taper, cliquer « Enregistrer »** | l'asymétrie décourage la note, qui est pourtant la seule partie où le joueur *pense* |
+  > | **Aucun raccourci clavier** | le critère 40 d'US-16a voulait « peu de clics, coup après coup » ; c'est tenu pour le verdict seul |
+  > | La note sur la partie est **lisible partout mais modifiable au ply 0 seulement** | corriger une pensée d'ensemble oblige à remonter au début |
+  > | Après scellement le panneau **double** : deux couches rendues | l'état le plus riche est aussi le plus haut, au moment où le joueur découvre le moteur |
+  > | **Aucune vue d'ensemble de sa lecture** | les glyphes de la liste des coups disent *où*, rien ne dit *quoi* sans parcourir |
+  > | Le vocabulaire de glyphes `⚖ ✎ ◆` a été **choisi sous la pression d'une FP**, pas dessiné | il marche (deux crayons indiscernables l'ont précédé), il n'est pas un système |
+  >
+  > ### Ce qu'il ne faut pas « simplifier »
+  >
+  > Le risque de cette story est de gagner de la place en **retirant ce qui porte le sens**. Trois
+  > garde-fous, chacun payé par une décision de grilling ou une FP :
+  >
+  > 1. **Les notices disent ce que l'app ne peut pas promettre autrement.** « Ce verdict ne sera pas
+  >    noté » sur un coup adverse, « les notes ne sont jamais notées », « ni un bon coup ni une
+  >    faute » — les cacher derrière une icône ou une infobulle les rend invisibles au moment
+  >    exact où elles servent. Les **dire moins souvent** n'est pas les **dire moins clairement**.
+  > 2. **La couche scellée reste lisible telle qu'elle était.** C'est le critère qui a coûté une
+  >    seconde migration (`posterior` dans la clef). Aucune économie de hauteur ne peut la replier
+  >    au point de la rendre facultative.
+  > 3. **Rien en indice purement chromatique** (ADR-0013), et l'état dit **en mots**. La FP 05 a
+  >    montré que le critère peut être tenu à la lettre et manqué en pratique : deux crayons que les
+  >    noms accessibles distinguaient parfaitement et l'œil pas du tout à 16 px.
+  >
+  > ### Pistes, à trancher au grill
+  >
+  > - **Un verdict au clavier** (1–5 sur les cinq valeurs, flèches pour naviguer), qui rendrait
+  >   « verdict, coup suivant, verdict » réellement rapide. Probablement le meilleur rapport
+  >   valeur/coût de la story.
+  > - **Les notices une fois, pas à chaque coup** — au premier usage, ou dans un endroit stable de
+  >   l'écran plutôt que collé au contrôle. À arbitrer contre le garde-fou n°1.
+  > - **Enregistrement de la note au fil de l'eau**, comme le verdict — le critère 20 d'US-16a
+  >   demandait déjà « enregistrée au fil de l'eau » et le bouton explicite est une lecture stricte
+  >   de « une note est une phrase en cours de composition ». À rouvrir.
+  > - **Une vue d'ensemble de la lecture** : tous les coups marqués, avec leur marque, sur un écran.
+  >   C'est aussi ce que la `Confrontation` d'US-16b voudra afficher — **d'où la question de
+  >   séquencement ci-dessous**.
+  > - **Replier la couche scellée** une fois lue, sans la rendre introuvable.
+  > - **Le panneau ailleurs qu'à côté de l'échiquier** sur écran étroit — la contrainte d'US-14
+  >   (rien au-dessus du diagramme ne doit bouger) porte sur le haut, pas sur le côté.
+  >
+  > ### Séquencement : avant ou après US-16b ?
+  >
+  > **La question à trancher en premier.** US-16b ajoute la `Confrontation` **sur ces mêmes écrans**
+  > — trois lectures côte à côte, la matrice déclaré/mesuré, la part des dégâts, la couverture. Elle
+  > va donc pousser dans une colonne déjà pleine.
+  >
+  > - **Avant 16b** : on refait la place une fois, et 16b s'installe dans un écran qui l'attend.
+  > - **Après 16b** : on connaît la charge réelle, mais on redessine deux fois — et 16b aura été
+  >   conçue dans la contrainte actuelle.
+  >
+  > Argument pour « avant » : la mesure de la première tranche vaut dans les deux cas, et elle est
+  > **plus utile faite tôt**. Argument pour « après » : rien n'est urgent tant que le joueur n'a pas
+  > la confrontation, qui est la valeur qu'il attend. **Décision du demandeur.**
+  >
+  > ### Ce que cette story ne couvre pas
+  >
+  > La `Confrontation` (US-16b), les `Candidate line`s (US-16c), et l'export PGN annoté (ADR-0019,
+  > toujours hors périmètre). Ni les quatre arbitrages produit déjà ouverts sur la PR #70 — le
+  > dénominateur de la couverture, le `DELETE /api/profiles/:id` à 500, le pluriel du nom accessible
+  > des résultats, la remise à `Départ` du niveau de l'explorateur — qui vivent là où ils sont.
+
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
   > **Pas encore grillée.** Demandée par le demandeur le 2026-08-23 après la livraison d'US-15a :
