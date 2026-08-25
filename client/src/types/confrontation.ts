@@ -59,8 +59,10 @@ export interface KeyMomentReading {
 /** A marker that found nothing, and how far off it was. Shown, never credited. */
 export interface KeyMomentMiss {
   ply: number;
+  /** Standard notation, so a sentence names the Move rather than numbering it. */
+  notation: string | null;
   lostThere: number;
-  nearest: { ply: number; lost: number } | null;
+  nearest: { ply: number; lost: number; notation: string | null } | null;
 }
 
 /** One mark written after the reveal: shown as a layer, never compared. */

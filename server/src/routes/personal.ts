@@ -12,6 +12,7 @@ import {
 import { isDeclaredSeverity } from "../personal/severity";
 import { confrontGame, ConfrontationRefusal } from "../personal/confrontation";
 import { getGameAnnotations } from "../annotations/repository";
+import { gameNotations } from "../chess/positions";
 import { scopedProfile } from "./scope";
 
 /**
@@ -32,6 +33,10 @@ export function createPersonalRouter(db: Db): Router {
   const router = Router();
 
   /** The Game this request is about, once the Profile has vouched for it. */
+  /** The Game row itself, when a route needs more of it than its id. */
+  const gameRow = (gameId: number) =>
+    db.select().from(games).where(eq(games.id, gameId)).get();
+
   const scopedGame = (
     req: Parameters<Parameters<Router["get"]>[1]>[0],
     res: Parameters<Parameters<Router["get"]>[1]>[1],
@@ -69,7 +74,15 @@ export function createPersonalRouter(db: Db): Router {
       return;
     }
 
-    const confrontation = confrontGame(analysis, annotations);
+    // The notations name the Moves a distance talks about. Read from this one
+    // Game's PGN, not the corpus: US-10b's lesson was that replaying PGNs on a
+    // whole-history read costs 3111 ms, and this is a single Game.
+    const game = gameRow(scoped.gameId);
+    const confrontation = confrontGame(
+      analysis,
+      annotations,
+      game ? gameNotations(game.pgn) : [],
+    );
     if (confrontation instanceof ConfrontationRefusal) {
       res
         .status(409)

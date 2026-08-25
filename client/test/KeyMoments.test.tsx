@@ -44,7 +44,9 @@ describe("Where I looked — the Key moment reading", () => {
     render(
       <KeyMomentReadout
         keyMoments={reading({
-          misses: [{ ply: 41, lostThere: 0, nearest: { ply: 43, lost: 24 } }],
+          misses: [
+            { ply: 41, notation: "Rd1", lostThere: 0, nearest: { ply: 43, lost: 24, notation: "Nxe5" } },
+          ],
         })}
       />,
     );
@@ -52,8 +54,8 @@ describe("Where I looked — the Key moment reading", () => {
     const miss = document.querySelector('[data-part="miss"]');
     // "your marker is on 21.Rd1, which cost nothing — the loss is on 22.Nxe5,
     // one Move later". Both Moves named, and the gap stated.
-    expect(miss?.textContent).toMatch(/21\./);
-    expect(miss?.textContent).toMatch(/22\./);
+    expect(miss?.textContent).toMatch(/21\.Rd1/);
+    expect(miss?.textContent).toMatch(/22\.Nxe5/);
     expect(miss?.textContent).toMatch(/n'a rien coûté|rien coûté/i);
   });
 
@@ -62,7 +64,7 @@ describe("Where I looked — the Key moment reading", () => {
       <KeyMomentReadout
         keyMoments={reading({
           damageTotal: 0,
-          misses: [{ ply: 41, lostThere: 0, nearest: null }],
+          misses: [{ ply: 41, notation: "Rd1", lostThere: 0, nearest: null }],
         })}
       />,
     );
@@ -75,5 +77,52 @@ describe("Where I looked — the Key moment reading", () => {
     const { container } = render(<KeyMomentReadout keyMoments={reading({ marked: 0 })} />);
 
     expect(container.textContent).toBe("");
+  });
+
+  it("tells two plies of the SAME Move number apart", () => {
+    // "21." and "21…" are nearly the same string for two different Moves. With
+    // the notation they are two Moves the Player can find on their board.
+    render(
+      <KeyMomentReadout
+        keyMoments={reading({
+          misses: [
+            { ply: 41, notation: "Rd1", lostThere: 0, nearest: { ply: 42, lost: 24, notation: "Nxe5" } },
+          ],
+        })}
+      />,
+    );
+
+    const miss = document.querySelector('[data-part="miss"]');
+    expect(miss?.textContent).toMatch(/21\.Rd1/);
+    expect(miss?.textContent).toMatch(/21…Nxe5/);
+  });
+
+  it("falls back to the Move number when no notation came through", () => {
+    render(
+      <KeyMomentReadout
+        keyMoments={reading({
+          misses: [{ ply: 41, notation: null, lostThere: 0, nearest: null }],
+        })}
+      />,
+    );
+
+    // A poorer sentence, and still a true one: no figure depends on the PGN.
+    expect(document.querySelector('[data-part="miss"]')?.textContent).toMatch(/21\./);
+  });
+
+  it("agrees in number when a single Key moment was posed", () => {
+    render(<KeyMomentReadout keyMoments={reading({ marked: 1 })} />);
+
+    const figure = screen.getByRole("group", { name: /où j'ai regardé/i });
+    expect(figure.textContent).toMatch(/votre moment clé est confronté/i);
+    expect(figure.textContent).not.toMatch(/vos moment clé/i);
+  });
+
+  it("leaves no markdown in the prose the Player reads", () => {
+    const { container } = render(<KeyMomentReadout keyMoments={reading({ drift: 18 })} />);
+
+    // Backticks in a template string reach the screen verbatim: what reads as
+    // emphasis in source is literal punctuation on the page.
+    expect(container.textContent).not.toMatch(/[`*_]/);
   });
 });

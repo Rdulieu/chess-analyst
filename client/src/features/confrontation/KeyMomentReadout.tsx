@@ -1,8 +1,20 @@
 import type { KeyMomentMiss, KeyMomentReading } from "../../types";
 
-/** How a ply is named to the Player: the Move number and the side. */
-function moveName(ply: number): string {
-  return `${Math.ceil(ply / 2)}${ply % 2 === 1 ? "." : "…"}`;
+/**
+ * How a Move is **named** to the Player: its number, the side, and its standard
+ * notation — `21.Rd1`, not `21.`.
+ *
+ * The notation is what makes the sentence usable. Two plies of the same Move
+ * number render as `21.` and `21…`, which are nearly the same string for two
+ * different Moves; with the notation they are `21.Rd1` and `21…Nxe5`, and the
+ * Player can find both on their board.
+ *
+ * Falls back to the number alone when no notation came through: a poorer
+ * sentence, and still a true one.
+ */
+function moveName(ply: number, notation: string | null): string {
+  const number = `${Math.ceil(ply / 2)}${ply % 2 === 1 ? "." : "…"}`;
+  return notation ? `${number}${notation}` : number;
 }
 
 /** Points of winning chances, as they are written everywhere else in the app. */
@@ -50,7 +62,7 @@ export function KeyMomentReadout({ keyMoments }: { keyMoments: KeyMomentReading 
         </p>
       )}
       <p data-part="figure-note">
-        Vos {marked === 1 ? "moment clé" : "moments clés"} sont confrontés à{" "}
+        {marked === 1 ? "Votre moment clé est confronté" : "Vos moments clés sont confrontés"} à{" "}
         <strong>vos propres coups fautifs</strong>, jamais au plus gros écart de la partie — celui-ci
         peut être une bévue de l'adversaire, et manquer un cadeau n'apprend rien.
       </p>
@@ -72,8 +84,8 @@ function Drift({ drift }: { drift: number }) {
   if (drift < 1) return null;
   return (
     <p data-part="drift">
-      À côté : <strong>{points(drift)}</strong> perdus sans qu'aucun coup flagué en réponde — le
-      `Drift`. Il n'entre pas dans la division ci-dessus, parce qu'il n'a{" "}
+      À côté : <strong>{points(drift)}</strong> perdus sans qu'aucun coup flagué en réponde — le{" "}
+      <strong>Drift</strong>. Il n'entre pas dans la division ci-dessus, parce qu'il n'a{" "}
       <strong>aucun coup à désigner</strong> : l'y mettre placerait 100 % hors d'atteinte d'une
       lecture parfaite.
     </p>
@@ -90,7 +102,8 @@ function Miss({ miss }: { miss: KeyMomentMiss }) {
   if (miss.nearest === null) {
     return (
       <p data-part="miss">
-        Votre marqueur est sur {moveName(miss.ply)}, qui n'a rien coûté — et il n'y avait{" "}
+        Votre marqueur est sur {moveName(miss.ply, miss.notation)}, qui n'a rien coûté — et il
+        n'y avait{" "}
         <strong>aucune faute</strong> à désigner sur cette partie.
       </p>
     );
@@ -99,8 +112,10 @@ function Miss({ miss }: { miss: KeyMomentMiss }) {
   const gap = Math.abs(miss.nearest.ply - miss.ply);
   return (
     <p data-part="miss">
-      Votre marqueur est sur <strong>{moveName(miss.ply)}</strong>, qui n'a rien coûté — la perte
-      est sur <strong>{moveName(miss.nearest.ply)}</strong> ({points(miss.nearest.lost)}),{" "}
+      Votre marqueur est sur <strong>{moveName(miss.ply, miss.notation)}</strong>, qui n'a rien
+      coûté — la perte est sur{" "}
+      <strong>{moveName(miss.nearest.ply, miss.nearest.notation)}</strong> (
+      {points(miss.nearest.lost)}),{" "}
       {gap === 1 ? "un demi-coup" : `${gap} demi-coups`} plus loin.
     </p>
   );

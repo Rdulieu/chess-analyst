@@ -3,7 +3,7 @@ import { confrontGame, ConfrontationRefusal } from "../src/personal/confrontatio
 import type { GameConfrontation } from "../src/personal/confrontation";
 import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 import { gameRecap } from "../src/analysis/recap";
-import { gamePositions } from "../src/chess/positions";
+import { gameNotations, gamePositions } from "../src/chess/positions";
 import type { GameAnnotations } from "../src/annotations/repository";
 import type { PersonalAnalysis, PersonalMark } from "../src/personal/repository";
 
@@ -542,6 +542,29 @@ describe("confrontGame — where the Player looked", () => {
     );
 
     expect(result.keyMoments).toMatchObject({ marked: 0, damageFound: 0 });
+  });
+
+  it("NAMES the two Moves of a distance, rather than only numbering them", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const result = confronted(
+      sealed([{ ply: 1, keyMoment: true }]),
+      annotations,
+      gameNotations(PGN),
+    );
+
+    // "your marker is on 1.e4, which cost nothing — the loss is on 2.Nf3": two
+    // Moves the Player can find on their board. A bare "1." and "2." are two
+    // numbers, and two plies of the SAME Move number render nearly alike.
+    expect(result.keyMoments.misses[0].notation).toBe("e4");
+    expect(result.keyMoments.misses[0].nearest!.notation).toBe("Nf3");
+  });
+
+  it("still states the distance when the notations are not to hand", () => {
+    // The figures never depend on the PGN: a Move number is a poorer sentence
+    // than a name, and still a true one.
+    const result = confronted(sealed([{ ply: 1, keyMoment: true }]), annotationsOf(TWO_FAULTS));
+
+    expect(result.keyMoments.misses[0]).toMatchObject({ ply: 1, notation: null });
   });
 });
 

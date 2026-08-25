@@ -671,6 +671,14 @@ section[aria-label="partie"] {
   margin-block: var(--space-3);
 }
 
+// The Key moment figure carries far more prose than the two rates — its value,
+// its note, the Drift beside it and every distance. Left as one cell it sat alone
+// on a second row with half a column empty to its right. It spans instead: the
+// span follows the content's weight, not a designed breakpoint.
+[data-part="figure"][aria-label="Où j'ai regardé"] {
+  grid-column: 1 / -1;
+}
+
 // One figure: its question as a legend, its number, and what it means underneath.
 [data-part="figure"] {
   display: flex;

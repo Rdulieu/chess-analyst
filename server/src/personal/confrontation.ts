@@ -204,10 +204,16 @@ export interface KeyMomentReading {
  */
 export interface KeyMomentMiss {
   ply: number;
+  /**
+   * The Move in standard notation, so the sentence **names** it rather than
+   * merely numbering it. `null` when the notations were not to hand — a Move
+   * number is a poorer sentence than a name, and still a true one.
+   */
+  notation: string | null;
   /** What the marked Move actually cost. Often `0`, and that is the point. */
   lostThere: number;
   /** The Player's flawed Move nearest to it, or `null` when they had none. */
-  nearest: { ply: number; lost: number } | null;
+  nearest: { ply: number; lost: number; notation: string | null } | null;
 }
 
 /** One of the Player's Moves the analysis excludes, and what they said about it. */
@@ -249,6 +255,12 @@ export class ConfrontationRefusal {
 export function confrontGame(
   analysis: PersonalAnalysis,
   annotations: GameAnnotations,
+  /**
+   * The Game's half-moves in standard notation, indexed by ply. Optional because
+   * **no figure depends on it**: it names the Moves a distance talks about, and
+   * a distance is still true without a name.
+   */
+  notations: string[] = [],
 ): GameConfrontation | ConfrontationRefusal {
   // The Player's own act is checked first: sending someone to go and analyse a
   // Game whose reading they have not finished points them down the wrong road.
@@ -336,7 +348,15 @@ export function confrontGame(
       misses: [...marked]
         .filter((ply) => !lostAt.get(ply))
         .sort((a, b) => a - b)
-        .map((ply) => ({ ply, lostThere: 0, nearest: nearestFault(ply, faults) })),
+        .map((ply) => {
+          const nearest = nearestFault(ply, faults);
+          return {
+            ply,
+            notation: notations[ply] ?? null,
+            lostThere: 0,
+            nearest: nearest && { ...nearest, notation: notations[nearest.ply] ?? null },
+          };
+        }),
     },
     uncounted,
     posterior: analysis.marks
