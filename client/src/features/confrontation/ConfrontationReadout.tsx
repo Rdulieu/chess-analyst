@@ -31,6 +31,7 @@ export function ConfrontationReadout({ confrontation }: { confrontation: GameCon
         of={countedMoves}
         count={examined}
         unit="coups comptés"
+        singular="coup compté"
         // Said in words, because the number alone invites the wrong question.
         // Coverage answers *did I look*, and nothing else.
         note="Sur les coups que l'analyse vous compte. Un coup sur lequel vous n'avez rien dit n'est ni juste ni faux : il n'a pas été examiné."
@@ -40,6 +41,7 @@ export function ConfrontationReadout({ confrontation }: { confrontation: GameCon
         of={scorable}
         count={agreed}
         unit="verdicts confrontables"
+        singular="verdict confrontable"
         note="Sur les verdicts que vous avez posés. Un désaccord dit où regarder, pas qui se trompe."
       />
       {/* HOW the Player is wrong, under the figures rather than beside them: the
@@ -61,12 +63,15 @@ function Figure({
   count,
   of,
   unit,
+  singular,
   note,
 }: {
   name: string;
   count: number;
   of: number;
   unit: string;
+  /** The same unit for a denominator of one — "1 verdicts" reads as a bug. */
+  singular: string;
   note: string;
 }) {
   return (
@@ -77,7 +82,8 @@ function Figure({
           <strong>Pas de chiffre</strong>
         ) : (
           <>
-            <strong>{Math.round((count / of) * 100)} %</strong> — {count} sur {of} {unit}
+            <strong>{Math.round((count / of) * 100)} %</strong> — {count} sur {of}{" "}
+            {of === 1 ? singular : unit}
           </>
         )}
       </p>

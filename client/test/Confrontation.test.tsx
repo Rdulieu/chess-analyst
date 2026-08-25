@@ -193,4 +193,39 @@ describe("Confrontation — how I get it wrong", () => {
     // And it SAYS there is nothing to conclude, rather than leaving a blank.
     expect(bias?.textContent).toMatch(/pas assez/i);
   });
+
+  it("agrees in number with a denominator of one", () => {
+    // "1 verdicts confrontables" reads as a rendering bug and undermines a
+    // figure the Player is meant to check by hand.
+    render(
+      <ConfrontationReadout
+        confrontation={confrontation({
+          severity: {
+            countedMoves: 1,
+            examined: 1,
+            scorable: 1,
+            agreed: 0,
+            matrix: MATRIX,
+          },
+        })}
+      />,
+    );
+
+    const accuracy = screen.getByRole("group", { name: /ce que j'ai vu juste/i });
+    expect(accuracy.textContent).toMatch(/1 verdict confrontable/);
+    expect(accuracy.textContent).not.toMatch(/1 verdicts/);
+    const coverage = screen.getByRole("group", { name: /ce que j'ai examiné/i });
+    expect(coverage.textContent).toMatch(/1 coup compté/);
+    expect(coverage.textContent).not.toMatch(/1 coups/);
+  });
+
+  it("leaves no dangling separator on a cell that is not an agreement", () => {
+    const { container } = render(<ConfrontationReadout confrontation={confrontation()} />);
+
+    // Read aloud verbatim by a screen reader, so a trailing fragment is not
+    // cosmetic there the way it is on screen.
+    container.querySelectorAll("[data-cell]").forEach((cell) => {
+      expect(cell.getAttribute("aria-label")).toBe(cell.getAttribute("aria-label")?.trim());
+    });
+  });
 });

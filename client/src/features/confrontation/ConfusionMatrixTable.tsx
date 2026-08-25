@@ -69,7 +69,10 @@ export function ConfusionMatrixTable({ matrix }: { matrix: ConfusionMatrix }) {
                       data-agreement={agreement}
                       // Said in words, so the diagonal survives a screen reader
                       // and a monochrome eye alike.
-                      aria-label={`${DECLARED_SEVERITY_LABEL[declared]} contre ${MEASURED_LABEL[label]} : ${count} ${agreement ? "— accord" : ""}`}
+                      aria-label={
+                        `${DECLARED_SEVERITY_LABEL[declared]} contre ${MEASURED_LABEL[label]} : ${count}` +
+                        (agreement ? " — accord" : "")
+                      }
                     >
                       <span data-count>{count}</span>
                       {/* The diagonal, marked by a GLYPH and not by a tint: a
