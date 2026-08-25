@@ -1,4 +1,9 @@
-import type { DeclaredSeverity, PersonalAnalysis } from "../types";
+import type {
+  ConfrontationRefusalReason,
+  DeclaredSeverity,
+  GameConfrontation,
+  PersonalAnalysis,
+} from "../types";
 
 /**
  * The named refusal: this Game is not the named `Profile`'s, so there is no
@@ -82,6 +87,44 @@ export class SealRefused extends Error {
   constructor(
     message: string,
     readonly reason: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * The `Confrontation` of one Game (US-16b): the sealed reading set against what
+ * the engine found. Scoped to the `Profile` like every other read (ADR-0014).
+ *
+ * A refusal is a **business fact**, not a transport failure — and there are
+ * **two**, told apart, because the Player has two different things to go and do.
+ * They come back as `ConfrontationRefused` carrying the reason and the sentence
+ * to show, on the model of `SealRefused`.
+ */
+export async function fetchConfrontation(
+  gameId: number,
+  profileId: number,
+): Promise<GameConfrontation> {
+  const res = await fetch(`/api/personal/${gameId}/confrontation?profileId=${profileId}`);
+  if (res.status === 404) throw new GameNotThisProfiles(`Game ${gameId} is not profile ${profileId}'s`);
+  if (res.status === 409) {
+    const body = (await res.json()) as { reason: ConfrontationRefusalReason; error: string };
+    throw new ConfrontationRefused(body.error, body.reason);
+  }
+  if (!res.ok) throw new Error(`Failed to load confrontation for game ${gameId} (${res.status})`);
+  return (await res.json()) as GameConfrontation;
+}
+
+/**
+ * Why there is nothing to confront. The **reason travels**, not just the
+ * sentence: the screen does not merely print it, it points the Player at the
+ * place where the missing act is performed — the reading, or the analysis — and
+ * those are two different places.
+ */
+export class ConfrontationRefused extends Error {
+  constructor(
+    message: string,
+    readonly reason: ConfrontationRefusalReason,
   ) {
     super(message);
   }

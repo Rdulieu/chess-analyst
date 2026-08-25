@@ -638,7 +638,7 @@ describe("seeing where I stand in a reading", () => {
     expect(within(items[4]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
   });
 
-  it("states the coverage — how many Moves examined, out of how many", async () => {
+  it("states how far the reading has got — how many Moves annotated, out of how many", async () => {
     stubReading({
       ...EMPTY,
       marks: [1, 2, 3].map((ply) => ({
@@ -652,7 +652,7 @@ describe("seeing where I stand in a reading", () => {
     render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
 
     await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
-    const readout = screen.getByText(/coups examinés/i);
+    const readout = screen.getByText(/coups annotés/i);
     // The count beside the share, never the share alone.
     expect(readout.textContent).toMatch(/3\s*\/\s*33/);
     expect(readout.textContent).toMatch(/9\s*%/);
@@ -683,7 +683,7 @@ describe("seeing where I stand in a reading", () => {
     // Coverage and the Key moment count are the reading's tally; they must not
     // read as a second line of the notice that happens to sit above them.
     const tally = screen.getByRole("group", { name: /où j'en suis/i });
-    expect(within(tally).getByText(/coups examinés/i)).not.toBeNull();
+    expect(within(tally).getByText(/coups annotés/i)).not.toBeNull();
     expect(within(tally).getByText(/moments clés/i)).not.toBeNull();
   });
 

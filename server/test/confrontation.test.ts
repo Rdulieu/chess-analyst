@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { confrontGame, ConfrontationRefusal } from "../src/personal/confrontation";
+import type { GameConfrontation } from "../src/personal/confrontation";
 import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 import { gameRecap } from "../src/analysis/recap";
 import { gamePositions } from "../src/chess/positions";
@@ -76,11 +77,26 @@ function sealed(marks: Partial<PersonalMark>[]): PersonalAnalysis {
   };
 }
 
+/**
+ * The confrontation of a reading the test means to be confrontable. A refusal
+ * here is the test's own setup being wrong, and it fails as such rather than
+ * being narrowed away silently.
+ */
+function confronted(
+  ...args: Parameters<typeof confrontGame>
+): GameConfrontation {
+  const result = confrontGame(...args);
+  if (result instanceof ConfrontationRefusal) {
+    throw new Error(`expected a Confrontation, got a refusal: ${result.reason}`);
+  }
+  return result;
+}
+
 describe("confrontGame — the Player's reading against the engine's", () => {
   it("counts the Player's Counted Moves as the denominator, not the Game's half-moves", () => {
     // Eight half-moves, four of them White's, none forced and none played from a
     // decided Position: the denominator both figures share is 4.
-    const result = confrontGame(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
+    const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
 
     expect(result).toMatchObject({
       severity: { countedMoves: 4 },
@@ -88,7 +104,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
   });
 
   it("counts as examined only the Moves the Player actually put a verdict on", () => {
-    const result = confrontGame(
+    const result = confronted(
       sealed([
         { ply: 1, declaredSeverity: "sound" },
         { ply: 3, declaredSeverity: "mistake" },
@@ -106,7 +122,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // The whole point of keeping coverage and accuracy apart: annotating two
     // Moves out of four and judging them perfectly is 100% accuracy and 50%
     // coverage, and both are true.
-    const result = confrontGame(
+    const result = confronted(
       sealed([
         { ply: 1, declaredSeverity: "sound" },
         { ply: 3, declaredSeverity: "sound" },
@@ -119,7 +135,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
 
   it("does not credit a verdict the engine contradicts", () => {
     // Move 3 (ply 5, White's Bc4) throws the game away; the Player calls it fine.
-    const result = confrontGame(
+    const result = confronted(
       sealed([{ ply: 5, declaredSeverity: "sound" }]),
       annotationsOf([30, -20, 10, -40, 20, 480, -460, 450, -470]),
     );
@@ -135,7 +151,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     const cps = [30, -20, 10, -40, 20, 480, -460, 450, -470];
     // Sealed: one verdict, and it is wrong. Then, having seen the engine, the
     // Player corrects themselves on the very same Move.
-    const result = confrontGame(
+    const result = confronted(
       sealed([
         { ply: 5, declaredSeverity: "sound" },
         { ply: 5, declaredSeverity: "blunder", posterior: true },
@@ -151,7 +167,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
   it("scores none of the Player's verdicts on the OPPONENT's Moves", () => {
     // Kept and shown, never scored — not for want of the means, but because this
     // tool is about the Player's own improvement.
-    const result = confrontGame(
+    const result = confronted(
       sealed([
         { ply: 1, declaredSeverity: "sound" },
         { ply: 2, declaredSeverity: "blunder" },
@@ -164,7 +180,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
   });
 
   it("does not treat a Note on the starting Position as a Move examined", () => {
-    const result = confrontGame(
+    const result = confronted(
       sealed([{ ply: 0, note: "une Espagnole que je connais mal" }]),
       annotationsOf(),
     );
@@ -187,7 +203,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // Anchored: the Move IS excluded, and for THAT reason.
     expect(annotations.plies[1].counted).toEqual({ counted: false, reason: "forced" });
 
-    const result = confrontGame(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotations);
+    const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotations);
 
     // Not examined, not disagreed with, not held against the Player anywhere.
     expect(result.severity).toMatchObject({ countedMoves: 0, examined: 0, agreed: 0 });
@@ -198,7 +214,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // against. Both halves matter and each is wrong on its own: dropping it from
     // coverage would deny the Player looked, and keeping it in accuracy would
     // judge a verdict that has no counterpart.
-    const result = confrontGame(
+    const result = confronted(
       sealed([
         { ply: 1, declaredSeverity: "good" },
         { ply: 3, declaredSeverity: "sound" },
@@ -215,10 +231,10 @@ describe("confrontGame — the Player's reading against the engine's", () => {
   });
 
   it("labels the reading by its provenance — a comparison with no provenance is not one", () => {
-    const unaided = confrontGame(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
+    const unaided = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
     expect(unaided).toMatchObject({ provenance: "unaided" });
 
-    const informed = confrontGame(
+    const informed = confronted(
       { ...sealed([{ ply: 1, declaredSeverity: "sound" }]), engineSeenBeforeSeal: true },
       annotationsOf(),
     );
@@ -226,7 +242,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
   });
 
   it("carries what the aggregate will fold, undivided — no share is computed here", () => {
-    const result = confrontGame(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
+    const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotationsOf());
 
     // Numerators and denominators travel; the division happens where it is read.
     // That is what lets the aggregate be a sum of numerators over a sum of
