@@ -154,7 +154,8 @@ shortest Games available; nothing here depends on which.
   Player's, or none, and may hold no forced or already-decided Move at all. That is why every check
   here is about **shape and consistency** — the figures agreeing with the cells and with each other —
   and never about a value. A Game with nothing flagged should produce **« Pas de score »** on the
-  Key moment figure and the `Drift` beside it, and that is a **pass**, not a failure.
+  Key moment figure — with the `Drift` beside it when there is a point of it to report, and alone
+  when there is not — and that is a **pass**, not a failure.
 - **What this scenario does not claim.** It checks that the reading route **renders** nothing of the
   engine and that the provenance is **recorded**; it cannot check that the Player did not look.
   Nothing can — the app labels a reading, it does not certify one, which is exactly what the glossary
