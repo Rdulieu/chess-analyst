@@ -89,7 +89,22 @@ already completed on the first check. A backgrounded command re-invokes the agen
 wait for that. If a readout must be watched, poll the status endpoint and break on `running:false`,
 never on a fixed number of iterations.
 
-**Pick the shortest Games for the analysis pass.** HP-01 step 9 asserts that a pass completes, that
+**Pick the cheapest Games that still carry the assertion — and "cheapest" is not always "shortest".**
+The two scenarios that spend engine time want different things from it, so they select differently,
+and the difference is deliberate rather than an inconsistency:
+
+- **HP-01** wants a pass to *complete* and `/danger` to *populate*. Neither needs a fault, so the
+  shortest Games do — see the rule below.
+- **HP-03** wants a `Confrontation` to have something in it, and that needs **faults**. The shortest
+  Games have none: measured on the reference range, the two shortest are a **6-half-move** Game and a
+  21-half-move one, and both runs of HP-03 on that rule produced **one** flagged Move between them
+  and no excluded Move at all. It therefore selects **losses of ordinary length**, at roughly three
+  times the engine cost — which is what the assertion costs. See that scenario's step 2.
+
+The lesson generalises: **a selection rule tuned for cost will quietly tune the assertion down with
+it**, and the suite will stay green while asserting less every run. Say what a rule is *for*.
+
+**For HP-01, the shortest Games.** HP-01 step 9 asserts that a pass completes, that
 its confirmation is exact, and that `/danger` populates — never that it covered a long Game. Taking
 whichever Game happens to be first cost 78 Positions (~10 min at depth 16); selecting by fewest
 half-moves roughly halves that. Selection by characteristic is already the suite's rule — apply it

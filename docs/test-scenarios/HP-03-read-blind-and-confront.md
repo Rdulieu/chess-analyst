@@ -39,8 +39,8 @@ It also buys the `Confrontation` its two sides. One Game read blind and one read
 summary two readings to fold, which is the only way "the aggregate is the sum" is an observation
 rather than a tautology.
 
-The cost is **two short Games at depth 16**, the same order as HP-01's step 10. Pick the two
-shortest Games available; nothing here depends on which.
+The cost is **two Games at depth 16** — of the order of 85 Positions, against HP-01's 29 for its own
+step 10. See step 2 for which two, and why they are deliberately **not** the shortest available.
 
 ## Drive-by
 - `Analysis pass` (US-4/US-8): a pass runs to completion on selected Games and the Game list reflects it.
@@ -67,7 +67,25 @@ shortest Games available; nothing here depends on which.
 
 ## Journey
 1. Open the app with the restored history and select `DudulSmash` as the current `Profile` → the banner names it from then on.
-2. From "Mes parties", select the **two shortest Games** and start the analysis pass (real Stockfish, depth 16 — allow it real time to finish) → a count of Positions evaluated advances, and when it ends both Games read as analysed in the list. Call them **Game A** and **Game B**.
+2. From "Mes parties", pick **two Games the Player lost**, each running to **at least 30 half-moves** — the result is a column of the list, and the length is readable on the Analyse page's move list **before** any engine time is spent. Take **one played as White and one as Black** if the list allows it. Start the analysis pass on them (real Stockfish, depth 16 — allow it real time to finish) → a count of Positions evaluated advances, and when it ends both Games read as analysed in the list. Call them **Game A** and **Game B**.
+
+    > **Not the shortest Games, and that is the point.** This scenario asked for the two shortest
+    > until 2026-08-25, to spend as little engine time as possible — and it spent the assertion along
+    > with it. Measured on the reference range: the two shortest are a **6-half-move** Game, where the
+    > Player moved **three times**, and a 21-half-move one. Both runs of this scenario on that rule
+    > produced **one** flagged Move between them and **no** excluded Move at all, so the matrix had
+    > almost nothing in it, the partial credit of the `Key moment` reading could not appear, and
+    > « Montré, jamais noté » was empty by accident rather than by fact.
+    >
+    > A **loss of ordinary length** is where the faults are. Measured on two such Games of the
+    > reference range: one gave **three** flagged Moves of clearly different sizes (14, 48 and 17
+    > points — partial credit becomes observable), the other gave **both** exclusion reasons at once,
+    > a `forced` Move included. That last one matters most: a forced catastrophe is the case the whole
+    > denominator exists for, and no run had ever seen one on real data.
+    >
+    > The cost is honest: roughly **three times** the engine time of the old rule (about 85 Positions
+    > against 29). That is what the assertion costs, and the previous rule was not cheaper — it was
+    > emptier.
 3. Open **Game B**'s Analyse page → the `Niveau de revue` has never been touched, so it opens **`Sans aide`** and volunteers nothing of the engine even though the Game is now analysed.
 4. Follow the way into the reading route → the board is oriented on the side the Player played, the Moves and their notation are there, and **nothing of the engine is**: no `Evaluation`, no advantage bar, no `Evaluation curve`, no severity glyph, no `Best line`, and no `Niveau de revue` control.
 5. Write a reading of Game B: declare a `Declared severity` on several of the Player's **own** Moves (use `Correct` on Moves the Player believes sound — it is a verdict, not a silence), write a `Note` saying why on at least one, declare a severity on one **opponent** Move, and mark at least one **`Key moment`** → the move list flags those Moves, the three kinds of mark told apart, and « Où j'en suis » states the progress as a count beside its share.
@@ -150,12 +168,14 @@ shortest Games available; nothing here depends on which.
 - **The `Drift` is shown beside "Pas de score" only when it amounts to at least a point.** Under
   that it is omitted, which is deliberate: a sub-point residual is noise, not a lesson. A Game with
   no fault *and* a negligible Drift therefore shows "Pas de score" alone, and that is correct.
-- **Real Games are thin on flagged Moves.** A short, quiet Game may hold **one** flagged Move of the
-  Player's, or none, and may hold no forced or already-decided Move at all. That is why every check
-  here is about **shape and consistency** — the figures agreeing with the cells and with each other —
-  and never about a value. A Game with nothing flagged should produce **« Pas de score »** on the
-  Key moment figure — with the `Drift` beside it when there is a point of it to report, and alone
-  when there is not — and that is a **pass**, not a failure.
+- **Assert shape, never values — even now that the Games are richer.** Step 2's selection makes
+  flagged Moves and exclusions *likely*, not certain: one of the two Games measured for that rule had
+  three faults and **no** excluded Move at all, the other had one fault and both exclusion reasons. So
+  a section may still be **absent**, and an absent section is **honest**, not a miss. A Game with
+  nothing flagged should produce **« Pas de score »** on the Key moment figure — with the `Drift`
+  beside it when there is a point of it to report, and alone when there is not — and that is a
+  **pass**, not a failure. What the checks assert is that the figures agree with the cells and with
+  each other, never that a particular number appears.
 - **What this scenario does not claim.** It checks that the reading route **renders** nothing of the
   engine and that the provenance is **recorded**; it cannot check that the Player did not look.
   Nothing can — the app labels a reading, it does not certify one, which is exactly what the glossary
