@@ -3,7 +3,7 @@ import { confrontGame, ConfrontationRefusal } from "../src/personal/confrontatio
 import type { GameConfrontation } from "../src/personal/confrontation";
 import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 import { gameRecap } from "../src/analysis/recap";
-import { gamePositions } from "../src/chess/positions";
+import { gameNotations, gamePositions } from "../src/chess/positions";
 import type { GameAnnotations } from "../src/annotations/repository";
 import type { PersonalAnalysis, PersonalMark } from "../src/personal/repository";
 
@@ -347,7 +347,9 @@ describe("confrontGame — the Player's reading against the engine's", () => {
 
     const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotations);
 
-    expect(result.uncounted).toEqual([{ ply: 1, reason: "forced", declared: "sound" }]);
+    expect(result.uncounted).toEqual([
+      { ply: 1, notation: null, reason: "forced", declared: "sound" },
+    ]);
   });
 
   it("carries the verdict the Player put on an uncounted Move — that is the case that settles the denominator", () => {
@@ -378,7 +380,9 @@ describe("confrontGame — the Player's reading against the engine's", () => {
 
     // Still listed — the gap between what the Game shows and what the Player is
     // held to exists whether or not they wrote there — but with no verdict.
-    expect(result.uncounted).toEqual([{ ply: 1, reason: "forced", declared: null }]);
+    expect(result.uncounted).toEqual([
+      { ply: 1, notation: null, reason: "forced", declared: null },
+    ]);
   });
 
   it("shows what was written after the seal, marked as posterior and outside every figure", () => {
@@ -397,10 +401,202 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // exercise: forbidding it would be absurd, counting it dishonest.
     expect(after.severity).toEqual(before.severity);
     expect(after.posterior).toEqual([
-      { ply: 5, declaredSeverity: "blunder", note: null, keyMoment: false },
-      { ply: 7, declaredSeverity: null, note: "j'ai compris en voyant la ligne", keyMoment: false },
+      { ply: 5, notation: null, declaredSeverity: "blunder", note: null, keyMoment: false },
+      {
+        ply: 7,
+        notation: null,
+        declaredSeverity: null,
+        note: "j'ai compris en voyant la ligne",
+        keyMoment: false,
+      },
     ]);
     expect(before.posterior).toEqual([]);
+  });
+});
+
+describe("confrontGame — where the Player looked", () => {
+  /**
+   * A Game where the Player throws away two **different** amounts, twice — ply 3
+   * an `Inaccuracy` worth ~18 points, ply 5 a `Mistake` worth ~24. The sizes have
+   * to differ: partial credit is the whole claim of this reading.
+   */
+  const TWO_FAULTS = [30, -20, 10, 200, -190, 620, -600, 590, -580];
+
+  it("takes its denominator from the Game's own recap — not a second implementation of it", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const result = confronted(sealed([{ ply: 5, keyMoment: true }]), annotations);
+
+    // The chances lost by ALL the Player's flagged counted Moves. Already
+    // computed, already tested: two implementations of a method agree only by
+    // luck, and diverge in silence.
+    expect(result.keyMoments.damageTotal).toBe(annotations.recap!.flaggedLoss);
+  });
+
+  it("credits a Key moment with what the Move it points at actually cost", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const worst = annotations.plies[5];
+    expect(worst.severity).not.toBeNull();
+
+    const result = confronted(sealed([{ ply: 5, keyMoment: true }]), annotations);
+
+    expect(result.keyMoments.damageFound).toBeCloseTo(worst.chancesLost!, 10);
+    expect(result.keyMoments.marked).toBe(1);
+  });
+
+  it("scores pointing at the worst fault above pointing at a small one", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const flagged = annotations.plies.filter((p) => p.severity !== null && p.counted?.counted);
+    expect(flagged.length).toBeGreaterThan(1);
+    const [big, small] = [...flagged].sort((a, b) => b.chancesLost! - a.chancesLost!);
+
+    const atBig = confronted(sealed([{ ply: big.ply, keyMoment: true }]), annotations);
+    const atSmall = confronted(sealed([{ ply: small.ply, keyMoment: true }]), annotations);
+
+    // Partial credit by construction: no band, no threshold, no magic constant.
+    expect(atBig.keyMoments.damageFound).toBeGreaterThan(atSmall.keyMoments.damageFound);
+  });
+
+  it("counts a Move ONCE, however many Key moments land on it", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const one = confronted(sealed([{ ply: 5, keyMoment: true }]), annotations);
+    const twice = confronted(
+      sealed([
+        { ply: 5, keyMoment: true },
+        { ply: 5, keyMoment: true, posterior: false },
+      ]),
+      annotations,
+    );
+
+    // Which is why several Key moments need no special rule: adding markers
+    // cannot inflate the score beyond what they genuinely name.
+    expect(twice.keyMoments.damageFound).toBe(one.keyMoments.damageFound);
+  });
+
+  it("gives nothing for a Key moment on the OPPONENT's blunder", () => {
+    // Confronted against the Player's OWN flawed Moves, never against the Game's
+    // biggest swing — which may well be a gift, and faulting the Player for
+    // missing a gift teaches nothing.
+    const annotations = annotationsOf(TWO_FAULTS);
+    const result = confronted(sealed([{ ply: 6, keyMoment: true }]), annotations);
+
+    expect(result.keyMoments.damageFound).toBe(0);
+  });
+
+  it("reports the Drift beside the score, and keeps it OUT of the denominator", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const result = confronted(sealed([{ ply: 5, keyMoment: true }]), annotations);
+
+    // Out, because Drift has NO Move to point at: counting it would put 100%
+    // beyond the reach of a perfect reading. Beside, because that is where it
+    // teaches most — a Game lost by bleeding had no fault to find.
+    expect(result.keyMoments.drift).toBe(annotations.recap!.drift);
+    expect(result.keyMoments.damageTotal).not.toBe(
+      annotations.recap!.flaggedLoss + annotations.recap!.drift,
+    );
+  });
+
+  it("leaves the division to the reader — no share is computed here", () => {
+    const result = confronted(sealed([{ ply: 5, keyMoment: true }]), annotationsOf(TWO_FAULTS));
+
+    expect(Object.keys(result.keyMoments).sort()).toEqual(
+      ["marked", "damageFound", "damageTotal", "drift", "misses"].sort(),
+    );
+  });
+
+  it("gives a zero denominator on a Game the Player never faulted — not a zero score", () => {
+    // Five centipawns a Move: never trips the Inaccuracy floor, and loses the
+    // Game as surely as one Blunder. A zero here would make a sound reading look
+    // like a failed one.
+    const annotations = annotationsOf([20, -15, 10, -5, 0, 5, -10, 15, -20]);
+    const result = confronted(sealed([{ ply: 5, keyMoment: true }]), annotations);
+
+    expect(result.keyMoments.damageTotal).toBe(0);
+    expect(result.keyMoments.drift).toBeGreaterThan(0);
+  });
+
+  it("shows the distance instead of crediting a near miss", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    // Ply 1 cost the Player essentially nothing; the faults are later.
+    const result = confronted(sealed([{ ply: 1, keyMoment: true }]), annotations);
+
+    // No tolerance window, no magic constant: the marker earns nothing, and the
+    // Player is TOLD where the loss actually was. That says more than a silent
+    // partial credit, and it keeps the score additive.
+    expect(result.keyMoments.damageFound).toBe(0);
+    expect(result.keyMoments.misses).toHaveLength(1);
+    expect(result.keyMoments.misses[0]).toMatchObject({ ply: 1, lostThere: 0 });
+    expect(result.keyMoments.misses[0].nearest).toMatchObject({ ply: 3 });
+    expect(result.keyMoments.misses[0].nearest!.lost).toBeGreaterThan(0);
+  });
+
+  it("reports no miss for a marker that landed on a real fault", () => {
+    const result = confronted(sealed([{ ply: 5, keyMoment: true }]), annotationsOf(TWO_FAULTS));
+
+    expect(result.keyMoments.misses).toEqual([]);
+  });
+
+  it("states no distance when the Player had no flawed Move to point at", () => {
+    // A Game lost by bleeding: there was nothing to find, so there is nothing to
+    // have missed either, and inventing a nearest Move would be a lie.
+    const annotations = annotationsOf([20, -15, 10, -5, 0, 5, -10, 15, -20]);
+    const result = confronted(sealed([{ ply: 3, keyMoment: true }]), annotations);
+
+    expect(result.keyMoments.misses[0].nearest).toBeNull();
+  });
+
+  it("ignores a Key moment posed after the seal", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const result = confronted(
+      sealed([{ ply: 5, keyMoment: true, posterior: true }]),
+      annotations,
+    );
+
+    expect(result.keyMoments).toMatchObject({ marked: 0, damageFound: 0 });
+  });
+
+  it("NAMES the two Moves of a distance, rather than only numbering them", () => {
+    const annotations = annotationsOf(TWO_FAULTS);
+    const result = confronted(
+      sealed([{ ply: 1, keyMoment: true }]),
+      annotations,
+      gameNotations(PGN),
+    );
+
+    // "your marker is on 1.e4, which cost nothing — the loss is on 2.Nf3": two
+    // Moves the Player can find on their board. A bare "1." and "2." are two
+    // numbers, and two plies of the SAME Move number render nearly alike.
+    expect(result.keyMoments.misses[0].notation).toBe("e4");
+    expect(result.keyMoments.misses[0].nearest!.notation).toBe("Nf3");
+  });
+
+  it("still states the distance when the notations are not to hand", () => {
+    // The figures never depend on the PGN: a Move number is a poorer sentence
+    // than a name, and still a true one.
+    const result = confronted(sealed([{ ply: 1, keyMoment: true }]), annotationsOf(TWO_FAULTS));
+
+    expect(result.keyMoments.misses[0]).toMatchObject({ ply: 1, notation: null });
+  });
+
+  it("names EVERY Move it lists, not only the ones in a distance", () => {
+    // The defect this pins: one list learned about notations and the other two
+    // did not, so the same screen named a Move in one paragraph and numbered it
+    // three lines below. Two copies of one helper is what let them drift.
+    const annotations = annotationsFrom(
+      ["7k/8/8/8/8/8/5PPP/6rK w - - 0 1", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"],
+      [60, 60],
+      "white",
+    );
+    const result = confronted(
+      sealed([
+        { ply: 1, declaredSeverity: "sound" },
+        { ply: 1, note: "vu après coup", posterior: true },
+      ]),
+      annotations,
+      ["", "Kxg1"],
+    );
+
+    expect(result.uncounted[0].notation).toBe("Kxg1");
+    expect(result.posterior[0].notation).toBe("Kxg1");
   });
 });
 

@@ -25,10 +25,11 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       },
       unscored: { good: 1, opponent: 2 },
     },
+    keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
     uncounted: [
-      { ply: 7, reason: "forced", declared: "sound" },
-      { ply: 41, reason: "decided", declared: null },
-      { ply: 43, reason: "decided", declared: "blunder" },
+      { ply: 7, notation: "Nf3", reason: "forced", declared: "sound" },
+      { ply: 41, notation: "Rd1", reason: "decided", declared: null },
+      { ply: 43, notation: "Nxe5", reason: "decided", declared: "blunder" },
     ],
     posterior: [],
     ...over,
@@ -97,8 +98,14 @@ describe("What the Confrontation shows without scoring it", () => {
       <UnscoredReadout
         confrontation={confrontation({
           posterior: [
-            { ply: 5, declaredSeverity: "blunder", note: null, keyMoment: false },
-            { ply: 7, declaredSeverity: null, note: "j'ai compris en voyant la ligne", keyMoment: false },
+            { ply: 5, notation: "Bc4", declaredSeverity: "blunder", note: null, keyMoment: false },
+            {
+              ply: 7,
+              notation: "d3",
+              declaredSeverity: null,
+              note: "j'ai compris en voyant la ligne",
+              keyMoment: false,
+            },
           ],
         })}
       />,
@@ -109,5 +116,27 @@ describe("What the Confrontation shows without scoring it", () => {
     expect(layer?.textContent).toMatch(/j'ai compris en voyant la ligne/);
     // And it is said to be outside the comparison, not merely placed elsewhere.
     expect(layer?.textContent).toMatch(/hors|n'entre dans|ne compte pas|jamais compt/i);
+  });
+
+  it("names the Moves it lists, like every other paragraph on the screen", () => {
+    // The screen must name Moves everywhere or nowhere: naming one paragraph and
+    // numbering the next reads as a rendering bug, because it is one.
+    render(<UnscoredReadout confrontation={confrontation()} />);
+
+    const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
+    expect(forced?.textContent).toMatch(/4\.Nf3/);
+  });
+
+  it("falls back to the Move number when no notation came through", () => {
+    render(
+      <UnscoredReadout
+        confrontation={confrontation({
+          uncounted: [{ ply: 7, notation: null, reason: "forced", declared: null }],
+        })}
+      />,
+    );
+
+    const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
+    expect(forced?.textContent).toMatch(/4\./);
   });
 });

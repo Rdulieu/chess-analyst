@@ -35,14 +35,42 @@ export type UncountedReason = "forced" | "decided";
 /** One of the Player's Moves the analysis excludes, and what they said about it. */
 export interface UncountedMove {
   ply: number;
+  /** Standard notation, so the entry names its Move rather than numbering it. */
+  notation: string | null;
   reason: UncountedReason;
   /** `null` when the Player said nothing here — silence, not a verdict. */
   declared: DeclaredSeverity | null;
 }
 
+/**
+ * The second reading: not *did I judge well* but **did I look in the right
+ * place**. Undivided, like everything else here — `damageTotal === 0` means
+ * **no score**, never a zero.
+ */
+export interface KeyMomentReading {
+  marked: number;
+  /** Chances lost by the flagged Moves the markers point at. A Move counts once. */
+  damageFound: number;
+  /** Chances lost by **all** the Player's flagged counted Moves. */
+  damageTotal: number;
+  /** The `Drift` — beside the figure, and out of the division. */
+  drift: number;
+  misses: KeyMomentMiss[];
+}
+
+/** A marker that found nothing, and how far off it was. Shown, never credited. */
+export interface KeyMomentMiss {
+  ply: number;
+  /** Standard notation, so a sentence names the Move rather than numbering it. */
+  notation: string | null;
+  lostThere: number;
+  nearest: { ply: number; lost: number; notation: string | null } | null;
+}
+
 /** One mark written after the reveal: shown as a layer, never compared. */
 export interface PosteriorMark {
   ply: number;
+  notation: string | null;
   declaredSeverity: DeclaredSeverity | null;
   note: string | null;
   keyMoment: boolean;
@@ -69,6 +97,8 @@ export interface GameConfrontation {
   provenance: Provenance;
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /** Where the Player looked — the `Key moment` reading. */
+  keyMoments: KeyMomentReading;
   /** The Player's Moves the analysis does not count, each with its reason. */
   uncounted: UncountedMove[];
   /** What was written after the seal — shown, never counted. */

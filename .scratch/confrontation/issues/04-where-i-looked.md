@@ -74,3 +74,62 @@ Verify: UI first.
 ## Blocked by
 
 - `.scratch/confrontation/issues/01-a-confrontation-exists.md`
+
+## Comments
+
+**FP du 2026-08-25** — 7/7 sur le fond, avec **un finding bloquant sur la forme**, corrigé dans la
+tranche avant le merge.
+
+**Le bloquant** : la distance affichait « votre marqueur est sur **23.**, la perte est sur **25.** »
+— un numéro de coup sans notation, là où le critère exige de **nommer** les deux coups. Le texte se
+lisait comme tronqué, et devenait franchement **ambigu quand les deux plies tombent dans le même
+numéro de coup** : « 25… » contre « 25. », deux chaînes presque identiques pour deux coups
+différents. Corrigé en faisant porter le **SAN** par la distance, côté serveur — l'enregistrement doit
+être suffisant à lui seul (ADR-0017). Les notations sont lues sur le PGN de **cette** partie, jamais
+sur le corpus : la leçon d'US-10b (3111 ms → 55 ms) portait sur le rejeu à l'échelle de l'historique,
+et une confrontation est une partie. Le champ est **optionnel** : aucune figure n'en dépend, et un
+numéro de coup reste une phrase vraie, seulement plus pauvre.
+
+Deux autres fautes réelles corrigées au passage : « **Vos moment clé** sont confrontés » au singulier,
+et des **backticks markdown qui fuyaient littéralement dans l'UI** (« le \`Drift\` »). Les trois sont
+verrouillées par des tests.
+
+**Mise en page** : « Où j'ai regardé » porte bien plus de prose que les deux taux (sa valeur, sa note,
+le `Drift`, chaque distance) et se retrouvait seule sur une deuxième ligne avec une demi-colonne vide
+à sa droite. Elle occupe désormais toute la largeur — la portée suit le poids du contenu, pas un point
+de rupture dessiné.
+
+**Ce que la FP a mesuré** : 78 % des dégâts trouvés (86 sur 110 points) en désignant la pire faute,
+contre **22 %** en désignant la petite — le crédit partiel tient. Un `Key moment` sur une bévue de
+l'adversaire rapporte 0 sans changer le dénominateur. Un marqueur à **un demi-coup** de la perte
+rapporte **zéro** : aucune fenêtre de tolérance. Le dénominateur affiché est bien 110 (la perte
+flaguée) et non 158 (la perte totale) — le `Drift` est dehors et à côté.
+
+**Limite du jeu de données, à nouveau** : la partie 271 n'a qu'**un seul** coup flagué, donc le crédit
+partiel n'est pas montrable dessus. Le testeur a fabriqué une seconde faute sur sa copie en ajustant
+un `cp` (la sévérité et le coût sont **dérivés**, rien n'est persisté — ADR-0009), plus quatre clones
+pour les cas restants. C'est **dit** plutôt que masqué.
+
+**Une question laissée au demandeur** : le compteur de la route de lecture annonce « 4 moments clés
+posés sur cette partie » là où la confrontation en compte **2** — le premier additionne la couche
+scellée et la couche postérieure, la seconde ne confronte que la scellée. Les deux sont corrects dans
+leur registre (l'un mesure l'avancement de la saisie, l'autre ce qui est confronté), mais l'écart peut
+surprendre. Hérité d'US-16a, hors périmètre ici.
+
+**Re-vérification sur l'app après correction** — les quatre points verts, le bloquant levé. Le cas qui
+le motivait — deux plies dans le même numéro de coup — affiche désormais « **25…cxd6** » contre
+« **25.exd6** », deux libellés distincts et retrouvables sur l'échiquier. Les chiffres n'ont pas bougé
+(78 % — 86/110, 22 %, 0 %, « Pas de score », bloc absent) : la correction n'a touché que du texte et
+de la mise en page.
+
+**Une incohérence créée par la correction elle-même, corrigée dans la foulée** : nommer les coups dans
+la distance a rendu criant que la couche postérieure et les coups non comptés, eux, ne les nommaient
+toujours pas — « 11. » trois lignes sous « 23.d4 », sur le même écran. La cause était un `moveName`
+**dupliqué dans deux composants** : l'un a appris les notations, l'autre non, et rien ne les tenait
+ensemble. Extrait dans un module unique, et les deux autres listes portent maintenant leur notation.
+Un test du fold asserte que l'enregistrement **nomme tout ce qu'il liste**, pas seulement la distance.
+
+**Un repli non vérifiable par l'UI, dit comme tel** : `notation: null` n'a aucun chemin d'application
+qui le produise (la route remplit toujours les notations depuis le PGN). Il est couvert par les tests
+du fold et du composant, et le testeur l'a signalé comme lecture de code plutôt que comme observation
+— c'est la bonne façon de le rapporter.

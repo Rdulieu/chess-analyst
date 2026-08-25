@@ -27,6 +27,7 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       matrix: MATRIX,
       unscored: { good: 0, opponent: 0 },
     },
+    keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
     uncounted: [],
     posterior: [],
     ...over,
@@ -251,7 +252,9 @@ describe("Confrontation — how I get it wrong", () => {
     // The grid holds the two rates and nothing else.
     const grid = container.querySelector('[data-part="confrontation-severity"]');
     expect(grid?.querySelector('[data-part="matrix"]')).toBeNull();
-    expect(grid?.children).toHaveLength(2);
+    // The grid holds figures and only figures — each a named question, all of
+    // them the same kind of thing.
+    expect(grid?.querySelectorAll('[data-part="figure"]')).toHaveLength(grid!.children.length);
     // And the matrix is still on the screen, after them.
     expect(container.querySelector('[data-part="matrix"]')).not.toBeNull();
   });

@@ -1,4 +1,5 @@
 import { ConfusionMatrixTable } from "./ConfusionMatrixTable";
+import { KeyMomentReadout } from "./KeyMomentReadout";
 import type { GameConfrontation } from "../../types";
 
 /**
@@ -54,6 +55,11 @@ export function ConfrontationReadout({
           singular="verdict confrontable"
           note="Sur les verdicts que vous avez posés. Un désaccord dit où regarder, pas qui se trompe."
         />
+        {/* The second reading, IN the same grid as the first two and never fused
+            with them. Their disagreement is the diagnosis: strong here and weak
+            there means the Player sees *where* a Game turns but cannot yet name
+            *what* happens. A single figure would have erased that. */}
+        <KeyMomentReadout keyMoments={confrontation.keyMoments} />
       </div>
       {/* HOW the Player is wrong, UNDER the figures and not beside them: the two
           rates answer *how much*, and the matrix is what explains them. */}

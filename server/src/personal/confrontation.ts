@@ -140,6 +140,11 @@ export interface GameConfrontation {
    * Recognising that a Position was already decided, or that a Move had no
    * alternative, is itself a thing to learn in analysis.
    */
+  /**
+   * The `Key moment` reading (CONTEXT.md): **what share of the damage** the
+   * Player's markers found. Undivided, like everything else here.
+   */
+  keyMoments: KeyMomentReading;
   uncounted: UncountedMove[];
   /**
    * What the Player wrote **after the seal**: kept, shown as such, and part of no
@@ -149,9 +154,73 @@ export interface GameConfrontation {
   posterior: PosteriorMark[];
 }
 
+/**
+ * The second of the `Confrontation`'s readings: not *did the Player judge well*
+ * but **did they look in the right place**.
+ *
+ * One division, in the currency everything else here already uses — no new
+ * scale, no new threshold, and **no tolerance window**: a marker one Move from
+ * the loss earns no approximate credit, the **distance is shown** instead. That
+ * says more than silent partial credit, and it keeps the score additive and free
+ * of any magic constant, the clarity of the calculation to the Player being a
+ * requirement of its own here.
+ */
+export interface KeyMomentReading {
+  /** How many `Key moment`s the sealed reading holds. They are not ranked. */
+  marked: number;
+  /**
+   * The chances lost by the flagged counted Moves those markers point at. A Move
+   * counts **once**, so adding markers cannot inflate this beyond what they
+   * genuinely name — which is why several `Key moment`s need no special rule.
+   */
+  damageFound: number;
+  /**
+   * The chances lost by **all** the Player's flagged counted Moves — the Game's
+   * own `flaggedLoss`, read rather than recomputed. Confronted against the
+   * Player's own faults and never against the Game's biggest swing, which may
+   * well be the *opponent*'s blunder: faulting the Player for missing a gift
+   * teaches nothing.
+   *
+   * `0` means **no score** — not a zero. A zero would make a sound reading look
+   * like a failed one, so the division is refused where there was nothing to find.
+   */
+  damageTotal: number;
+  /**
+   * The `Drift`, **beside the score and out of the division**. Out, because
+   * Drift has **no Move to point at**: counting it would put 100% beyond the
+   * reach of a perfect reading. Beside, because that is where it teaches most —
+   * a Game lost by bleeding had no fault to find, and saying so is the lesson.
+   */
+  drift: number;
+  /** Markers that found nothing, with the distance to what they missed. */
+  misses: KeyMomentMiss[];
+}
+
+/**
+ * A `Key moment` that cost the Player nothing to point at, and **how far off it
+ * was**. Shown rather than credited: "your marker is on 21.Rd1, which cost
+ * nothing — the loss is on 22.Nxe5, one Move later" says more than a silent
+ * partial credit, and leaves the calculation additive.
+ */
+export interface KeyMomentMiss {
+  ply: number;
+  /**
+   * The Move in standard notation, so the sentence **names** it rather than
+   * merely numbering it. `null` when the notations were not to hand — a Move
+   * number is a poorer sentence than a name, and still a true one.
+   */
+  notation: string | null;
+  /** What the marked Move actually cost. Often `0`, and that is the point. */
+  lostThere: number;
+  /** The Player's flawed Move nearest to it, or `null` when they had none. */
+  nearest: { ply: number; lost: number; notation: string | null } | null;
+}
+
 /** One of the Player's Moves the analysis excludes, and what they said about it. */
 export interface UncountedMove {
   ply: number;
+  /** Standard notation, so the entry **names** its Move rather than numbering it. */
+  notation: string | null;
   reason: UncountedReason;
   /** `null` when the Player said nothing here — silence, not a verdict. */
   declared: DeclaredSeverity | null;
@@ -160,6 +229,8 @@ export interface UncountedMove {
 /** One mark written after the reveal. Shown as a layer, never compared. */
 export interface PosteriorMark {
   ply: number;
+  /** Standard notation — the same discipline as everywhere else on this screen. */
+  notation: string | null;
   declaredSeverity: DeclaredSeverity | null;
   note: string | null;
   keyMoment: boolean;
@@ -188,6 +259,12 @@ export class ConfrontationRefusal {
 export function confrontGame(
   analysis: PersonalAnalysis,
   annotations: GameAnnotations,
+  /**
+   * The Game's half-moves in standard notation, indexed by ply. Optional because
+   * **no figure depends on it**: it names the Moves a distance talks about, and
+   * a distance is still true without a name.
+   */
+  notations: string[] = [],
 ): GameConfrontation | ConfrontationRefusal {
   // The Player's own act is checked first: sending someone to go and analyse a
   // Game whose reading they have not finished points them down the wrong road.
@@ -216,6 +293,15 @@ export function confrontGame(
   }
 
   const uncounted: UncountedMove[] = [];
+  // The sealed layer only, and a ply **once**: `Key moment`s are not ranked and
+  // are not counted twice.
+  const marks = analysis.marks.filter((mark) => !mark.posterior);
+  const marked = new Set(marks.filter((mark) => mark.keyMoment).map((mark) => mark.ply));
+  // The Player's own flawed, counted Moves — what a marker is confronted against.
+  const faults = annotations.plies
+    .filter((move) => move.severity !== null && move.counted?.counted)
+    .map((move) => ({ ply: move.ply, lost: move.chancesLost ?? 0 }));
+  const lostAt = new Map(faults.map((fault) => [fault.ply, fault.lost]));
 
   for (const move of annotations.plies) {
     // `counted` is `null` for ply 0 and for the **opponent's** Moves: nothing is
@@ -228,6 +314,7 @@ export function confrontGame(
       if (move.counted.reason) {
         uncounted.push({
           ply: move.ply,
+          notation: notations[move.ply] ?? null,
           reason: move.counted.reason,
           declared: verdicts.get(move.ply) ?? null,
         });
@@ -258,11 +345,30 @@ export function confrontGame(
     provenance: analysis.engineSeenBeforeSeal ? "informed" : "unaided",
     regime: annotations.regime,
     severity: reading,
+    keyMoments: {
+      marked: marked.size,
+      damageFound: [...marked].reduce((sum, ply) => sum + (lostAt.get(ply) ?? 0), 0),
+      damageTotal: annotations.recap.flaggedLoss,
+      drift: annotations.recap.drift,
+      misses: [...marked]
+        .filter((ply) => !lostAt.get(ply))
+        .sort((a, b) => a - b)
+        .map((ply) => {
+          const nearest = nearestFault(ply, faults);
+          return {
+            ply,
+            notation: notations[ply] ?? null,
+            lostThere: 0,
+            nearest: nearest && { ...nearest, notation: notations[nearest.ply] ?? null },
+          };
+        }),
+    },
     uncounted,
     posterior: analysis.marks
       .filter((mark) => mark.posterior)
       .map(({ ply, declaredSeverity, note, keyMoment }) => ({
         ply,
+        notation: notations[ply] ?? null,
         declaredSeverity,
         note,
         keyMoment,
@@ -303,4 +409,26 @@ function isScorable(declared: DeclaredSeverity): boolean {
  */
 function agrees(declared: DeclaredSeverity, move: MoveAnnotation): boolean {
   return move.severity === null ? declared === "sound" : declared === move.severity;
+}
+
+/**
+ * The Player's flawed Move nearest a marker that found nothing. Ties go to the
+ * **later** Move, because a marker placed just before the loss is the common
+ * near miss and naming the Move that follows it is what teaches.
+ *
+ * `null` when the Player had no flawed Move at all: there was nothing to point
+ * at, so there is no distance to state.
+ */
+function nearestFault(
+  ply: number,
+  faults: { ply: number; lost: number }[],
+): { ply: number; lost: number } | null {
+  if (faults.length === 0) return null;
+  return faults.reduce((best, fault) => {
+    const d = Math.abs(fault.ply - ply);
+    const bestD = Math.abs(best.ply - ply);
+    if (d < bestD) return fault;
+    if (d === bestD && fault.ply > best.ply) return fault;
+    return best;
+  });
 }
