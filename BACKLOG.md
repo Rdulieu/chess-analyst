@@ -690,8 +690,8 @@
   > → `05-where-i-read-well` (le bilan et son entrée de `Nav`) → `06-hp-suite-and-story-exit`
   > (**HITL** : fusion HP-02+HP-03, nouvelle HP dédiée, suite complète, PR vers `develop`).
   >
-  > **Tranches 01→05 livrées le 2026-08-25** (PR #71, #72, #73, #74, #75), toutes FP vertes, mergées
-  > dans `integration/US-16-my-own-analysis`. Reste la **06**, qui attend une décision humaine.
+  > **Livrée le 2026-08-25** — six tranches (PR #71→#76), toutes FP vertes, suite HP **3/3** plus son
+  > prérequis. PR `integration → develop` ouverte, en attente du merge humain.
   > Décisions prises en chemin, consignées dans les issues : la **couverture** de la `Confrontation`
   > prend la base de la justesse (les `Counted Move`s du joueur) et le chiffre d'US-16a perd le nom de
   > couverture pour devenir un **avancement** — l'arbitrage que la PR #70 avait laissé ouvert.
