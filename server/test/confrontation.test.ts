@@ -598,6 +598,22 @@ describe("confrontGame — where the Player looked", () => {
     expect(result.uncounted[0].notation).toBe("Kxg1");
     expect(result.posterior[0].notation).toBe("Kxg1");
   });
+
+  it("drops a verdict from outside the five rather than taking the summary down with it", () => {
+    // The column is typed; the database is not. A sixth value would index a
+    // matrix row that does not exist, and the throw would cost the Player their
+    // WHOLE summary — one unreadable Game taking every other one with it, which
+    // is exactly what the fold's filter exists to prevent.
+    const result = confronted(
+      sealed([
+        { ply: 1, declaredSeverity: "ok" as never },
+        { ply: 3, declaredSeverity: "sound" },
+      ]),
+      annotationsOf(),
+    );
+
+    expect(result.severity).toMatchObject({ examined: 1, scorable: 1, agreed: 1 });
+  });
 });
 
 describe("confrontGame — the two refusals, told apart", () => {

@@ -4,7 +4,7 @@ import type { MoveSeverity } from "../danger/move-quality";
 import type { SearchRegime } from "../engine/types";
 import type { GameAnnotations } from "../annotations/repository";
 import type { PersonalAnalysis } from "./repository";
-import { DECLARED_SEVERITIES, type DeclaredSeverity } from "./severity";
+import { DECLARED_SEVERITIES, isDeclaredSeverity, type DeclaredSeverity } from "./severity";
 
 /**
  * What one Game's `Confrontation` (CONTEXT.md) holds about the Player's
@@ -387,6 +387,12 @@ function sealedVerdicts(analysis: PersonalAnalysis): Map<number, DeclaredSeverit
   for (const mark of analysis.marks) {
     if (mark.posterior) continue;
     if (mark.declaredSeverity === null) continue;
+    // The column is typed, the database is not. A value from outside the five
+    // would index a matrix row that does not exist and take down **the whole
+    // summary** — one unreadable Game costing the Player every other one, which
+    // is exactly what the fold's filter exists to prevent. Dropped here rather
+    // than counted as a sixth band nothing can read.
+    if (!isDeclaredSeverity(mark.declaredSeverity)) continue;
     verdicts.set(mark.ply, mark.declaredSeverity);
   }
   return verdicts;

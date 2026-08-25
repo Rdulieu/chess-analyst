@@ -79,3 +79,35 @@ Verify: UI first ; la réconciliation par partie s'observe en comparant les deux
 - `.scratch/confrontation/issues/02-how-i-get-it-wrong.md`
 - `.scratch/confrontation/issues/03-shown-without-being-scored.md`
 - `.scratch/confrontation/issues/04-where-i-looked.md`
+
+## Comments
+
+**FP passée le 2026-08-25** — 7/7 vertes, aucun finding bloquant.
+
+**La réconciliation a été vérifiée à la main, ce qui est le seul test qui compte ici.** À deux
+lectures : 5/60, 2/5, 86/172. Poussé à quatre : 9/120, 3/9, 86/312 — somme exacte, **matrice de
+confusion comprise, case à case**, et confirmée côté API bit pour bit sur les flottants. C'est la
+définition d'ADR-0017 observée plutôt que supposée.
+
+Trois défauts réels trouvés et **corrigés dans la tranche** :
+
+1. **« Sur 1 lectures scellées »** — accord en nombre.
+2. **Les arrondis empêchaient l'addition manuelle** que l'écran invite explicitement à faire : deux
+   parties à 53 points affichent 107 au bilan (53,455 × 2 = 106,91). Le calcul est exact, c'est
+   l'affichage par figure qui arrondit. Corrigé en **le disant** : « les points affichés sont
+   arrondis, l'addition se fait sur les valeurs exactes ». Même discipline que les raisons
+   d'exclusion — un écart correct doit être **lisible** au lieu de ressembler à un bug. C'est le
+   finding le plus important des trois, parce qu'il touchait exactement ce qu'ADR-0017 protège.
+3. **Un 500 non gardé sur une `declared_severity` hors domaine** : la colonne est typée, la base ne
+   l'est pas. Une sixième valeur indexait une ligne de matrice inexistante, et la levée coûtait au
+   joueur **tout son bilan** — une partie illisible emportant toutes les autres, ce que le filtre du
+   fold existe précisément pour empêcher. Gardé à la lecture. Non atteignable par l'UI aujourd'hui,
+   mais la base est éditable à la main en phase de dev.
+
+**Ce qui a tourné sur quoi** : les étapes 1 à 3 sur la donnée réelle (partie 271), les étapes 4 à 7
+sur des **clones fabriqués** sur la copie du testeur — un bilan à une seule lecture ne démontrerait
+qu'une tautologie.
+
+**Une observation reportée** : quand aucun `Key moment` n'est posé, la troisième figure **disparaît**
+de la confrontation d'une partie. C'est voulu (pas de zéro menteur), mais « les trois figures restent
+trois » n'est alors visuellement vrai qu'au niveau du bilan. Terrain d'US-16b-04, non touché ici.

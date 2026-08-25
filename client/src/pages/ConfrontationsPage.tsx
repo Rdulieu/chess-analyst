@@ -72,6 +72,11 @@ function NoReadings() {
   );
 }
 
+/** The plural mark, or nothing. "1 lectures" reads as a rendering bug. */
+function plural(count: number): string {
+  return count > 1 ? "s" : "";
+}
+
 function Summary({ summary }: { summary: ConfrontationSummary }) {
   const { countedMoves, examined, scorable, agreed, matrix } = summary.severity;
 
@@ -79,10 +84,13 @@ function Summary({ summary }: { summary: ConfrontationSummary }) {
     <>
       <div data-part="summary-provenance">
         <p>
-          Sur <strong>{summary.readings} lectures scellées</strong> —{" "}
-          {summary.provenance.unaided} lue{summary.provenance.unaided > 1 ? "s" : ""} à l'aveugle,{" "}
-          {summary.provenance.informed} lue{summary.provenance.informed > 1 ? "s" : ""} informée
-          {summary.provenance.informed > 1 ? "s" : ""}.
+          Sur{" "}
+          <strong>
+            {summary.readings} lecture{plural(summary.readings)} scellée{plural(summary.readings)}
+          </strong>{" "}
+          — {summary.provenance.unaided} lue{plural(summary.provenance.unaided)} à l'aveugle,{" "}
+          {summary.provenance.informed} lue{plural(summary.provenance.informed)} informée
+          {plural(summary.provenance.informed)}.
         </p>
         {/* The count travels because the Player is the one who judges whether a
             handful of readings is a tendency. It is NOT used to slice the
@@ -125,7 +133,9 @@ function Summary({ summary }: { summary: ConfrontationSummary }) {
       </p>
       <p data-part="figure-note">
         Chaque chiffre ci-dessus est la somme de vos confrontations partie par partie : ouvrez une
-        partie que vous connaissez pour voir comment il a été obtenu.
+        partie que vous connaissez pour voir comment il a été obtenu. Les points affichés sont{" "}
+        <strong>arrondis</strong> — l'addition se fait sur les valeurs exactes, donc un total peut
+        s'écarter d'un point de la somme des nombres affichés.
       </p>
     </>
   );

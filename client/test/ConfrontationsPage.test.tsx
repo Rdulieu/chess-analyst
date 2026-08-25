@@ -146,4 +146,23 @@ describe("The Confrontation summary", () => {
     expect(container.textContent).toMatch(/divergence/i);
     expect(container.textContent).toMatch(/où regarder, (et )?pas qui se trompe/i);
   });
+
+  it("agrees in number on a summary resting on a single reading", async () => {
+    stub(summary({ readings: 1, provenance: { unaided: 1, informed: 0 } }));
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/1 lecture scellée/i)).not.toBeNull());
+    expect(screen.queryByText(/1 lectures/i)).toBeNull();
+  });
+
+  it("says its points are rounded, so a one-point gap reads as rounding", async () => {
+    stub(summary());
+    const { container } = renderPage();
+
+    // The screen invites the Player to redo the addition by hand; two Games at
+    // 53 each summing to 107 would otherwise read as a bug rather than as the
+    // arithmetic it is.
+    await waitFor(() => expect(screen.getAllByRole("group").length).toBeGreaterThan(0));
+    expect(container.textContent).toMatch(/arrondis/i);
+  });
 });
