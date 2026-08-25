@@ -841,3 +841,16 @@ tr[data-scored="false"] {
   padding-block-start: var(--space-2);
   border-block-start: 1px solid var(--border);
 }
+
+
+// The Drift, beside the Key moment figure and out of its division. Muted like a
+// caveat, because that is what it is — but present, because a Game lost by
+// bleeding had no fault to find and saying so is the lesson.
+[data-part="drift"],
+// A marker that found nothing, with the distance to what it missed. Shown, never
+// credited: there is no tolerance window here.
+[data-part="miss"] {
+  margin-block: 0;
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}

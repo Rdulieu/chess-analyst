@@ -25,6 +25,7 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       },
       unscored: { good: 1, opponent: 2 },
     },
+    keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
     uncounted: [
       { ply: 7, reason: "forced", declared: "sound" },
       { ply: 41, reason: "decided", declared: null },

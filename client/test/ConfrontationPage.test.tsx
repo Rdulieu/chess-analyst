@@ -24,6 +24,7 @@ const CONFRONTATION: GameConfrontation = {
     },
     unscored: { good: 0, opponent: 0 },
   },
+  keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
   uncounted: [],
   posterior: [],
 };
