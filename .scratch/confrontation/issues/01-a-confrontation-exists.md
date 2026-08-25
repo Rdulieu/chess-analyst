@@ -42,6 +42,21 @@ des trois lectures — les `Declared severity` du joueur contre les sévérités
   que les manques du joueur, jamais ses réussites.
 - **Le silence reste le silence** : un coup sans verdict entre au dénominateur de la couverture, à
   aucun des deux de la justesse.
+- **L'arbitrage laissé ouvert sur la PR #70 est tranché ici**, comme le `BACKLOG.md` le demandait.
+  US-16a affiche déjà une « couverture » sur **tous les demi-coups** (ply 0 exclu) — donc les coups
+  de l'adversaire compris. La justesse, elle, ne peut porter que sur les coups **du joueur**. Deux
+  chiffres côte à côte sur **deux bases différentes**, sous des noms voisins, est exactement le piège
+  que la note nommait. Tranché :
+  - dans la **`Confrontation`**, la **couverture** est sur les **`Counted Move`s du joueur** — la
+    même base que la justesse, sans quoi les deux figures ne se lisent pas ensemble ;
+  - le chiffre de la **route de lecture** reste sur tous les demi-coups mais **cesse de s'appeler une
+    couverture** : il répond *où j'en suis dans ma saisie*, pas *quelle part de ce sur quoi je suis
+    jugé ai-je examinée*. Son cadre s'appelle déjà « Où j'en suis » — le libellé du chiffre suit.
+  Un même mot pour deux dénominateurs serait une divergence fabriquée par le vocabulaire.
+- **La `Confrontation` est sur une route à elle, pas dans le panneau latéral de la lecture.** Le
+  `BACKLOG.md` signale que ce panneau est déjà dense et de format instable (**US-22**), et qu'un bloc
+  **apparaissant selon le ply** y aggraverait le reflow. La confrontation n'y ajoute rien : elle est
+  ailleurs, et elle ne dépend pas du ply courant.
 - **Deux refus nommés**, pas un écran vide ni un 404 générique : lecture **non scellée**, et partie
   **non analysée**. Deux faits métier différents, avec deux suites différentes (sceller / lancer
   l'analyse), donc deux réponses distinctes portant chacune sa phrase.
@@ -63,7 +78,9 @@ des trois lectures — les `Declared severity` du joueur contre les sévérités
 - [ ] La **couverture** est affichée avec son compte à côté du taux
 - [ ] La **justesse** est affichée avec son compte à côté du taux
 - [ ] Les deux ne sont **jamais fondues** en un chiffre, et aucun score unique n'apparaît nulle part
-- [ ] Le dénominateur de la couverture est le nombre de **`Counted Move`s du joueur**, pas ses coups
+- [ ] Le dénominateur de la couverture est le nombre de **`Counted Move`s du joueur**, pas ses coups ni les demi-coups de la partie
+- [ ] Couverture et justesse partagent **le même dénominateur**
+- [ ] Le chiffre d'avancement de la route de lecture n'est plus nommé « couverture », et son sens est resté le sien
 - [ ] Un coup **sans verdict** n'entre ni au numérateur ni au dénominateur de la justesse
 - [ ] `Sound` posé sur un coup que le moteur n'a pas flagué compte comme un **accord**
 - [ ] Les marques **postérieures au scellement** n'entrent dans aucun calcul

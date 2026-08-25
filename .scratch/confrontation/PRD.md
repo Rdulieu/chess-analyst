@@ -180,6 +180,15 @@ affiché comme tel.
   progrès du joueur.
 - **Le silence reste le silence** : un coup sans verdict n'entre ni au numérateur ni au dénominateur
   de la justesse ; il entre au dénominateur de la **couverture** et pas à son numérateur.
+- **Une seule base pour les deux figures, et l'arbitrage de la PR #70 tranché.** La couverture de la
+  `Confrontation` porte sur les **`Counted Move`s du joueur**, comme la justesse : deux figures lues
+  ensemble ne peuvent pas reposer sur deux dénominateurs. Le chiffre d'avancement livré par US-16a
+  sur la route de lecture (tous les demi-coups, ply 0 exclu) **garde son sens et perd le nom de
+  couverture** — il répond *où j'en suis dans ma saisie*. Le `BACKLOG.md` demandait explicitement que
+  ce point soit tranché ici.
+- **La `Confrontation` n'entre pas dans le panneau latéral de la route de lecture** (US-22 : panneau
+  déjà dense, format instable, reflow aggravé par tout bloc apparaissant selon le ply). Elle a sa
+  route, et ne dépend pas du ply courant.
 - **Seule la couche scellée est confrontée.** Les marques `posterior` sont exclues de tout calcul et
   affichées comme postérieures.
 
