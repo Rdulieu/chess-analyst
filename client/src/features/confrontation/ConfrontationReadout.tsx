@@ -21,33 +21,44 @@ import type { GameConfrontation } from "../../types";
  * instead of as figures. And the **count travels with the rate**, always — a bare
  * percentage hides whether it rests on three Moves or on forty.
  */
-export function ConfrontationReadout({ confrontation }: { confrontation: GameConfrontation }) {
-  const { countedMoves, examined, scorable, agreed, matrix } = confrontation.severity;
+export function ConfrontationReadout({
+  confrontation,
+}: {
+  confrontation: GameConfrontation;
+}) {
+  const { countedMoves, examined, scorable, agreed, matrix } =
+    confrontation.severity;
 
   return (
-    <div data-part="confrontation-severity">
-      <Figure
-        name="Ce que j'ai examiné"
-        of={countedMoves}
-        count={examined}
-        unit="coups comptés"
-        singular="coup compté"
-        // Said in words, because the number alone invites the wrong question.
-        // Coverage answers *did I look*, and nothing else.
-        note="Sur les coups que l'analyse vous compte. Un coup sur lequel vous n'avez rien dit n'est ni juste ni faux : il n'a pas été examiné."
-      />
-      <Figure
-        name="Ce que j'ai vu juste"
-        of={scorable}
-        count={agreed}
-        unit="verdicts confrontables"
-        singular="verdict confrontable"
-        note="Sur les verdicts que vous avez posés. Un désaccord dit où regarder, pas qui se trompe."
-      />
-      {/* HOW the Player is wrong, under the figures rather than beside them: the
-          two rates answer *how much*, and the matrix is what explains them. */}
+    <>
+      {/* The two rates sit in a grid of their own — two equal columns, and only
+          two. The matrix is deliberately OUTSIDE it: inside, it became a third
+          grid cell and was sized as a column, which hid two of its four columns
+          behind a scrollbar on a window with room to spare. */}
+      <div data-part="confrontation-severity">
+        <Figure
+          name="Ce que j'ai examiné"
+          of={countedMoves}
+          count={examined}
+          unit="coups comptés"
+          singular="coup compté"
+          // Said in words, because the number alone invites the wrong question.
+          // Coverage answers *did I look*, and nothing else.
+          note="Sur les coups que l'analyse vous compte. Un coup sur lequel vous n'avez rien dit n'est ni juste ni faux : il n'a pas été examiné."
+        />
+        <Figure
+          name="Ce que j'ai vu juste"
+          of={scorable}
+          count={agreed}
+          unit="verdicts confrontables"
+          singular="verdict confrontable"
+          note="Sur les verdicts que vous avez posés. Un désaccord dit où regarder, pas qui se trompe."
+        />
+      </div>
+      {/* HOW the Player is wrong, UNDER the figures and not beside them: the two
+          rates answer *how much*, and the matrix is what explains them. */}
       <ConfusionMatrixTable matrix={matrix} />
-    </div>
+    </>
   );
 }
 
@@ -82,8 +93,8 @@ function Figure({
           <strong>Pas de chiffre</strong>
         ) : (
           <>
-            <strong>{Math.round((count / of) * 100)} %</strong> — {count} sur {of}{" "}
-            {of === 1 ? singular : unit}
+            <strong>{Math.round((count / of) * 100)} %</strong> — {count} sur{" "}
+            {of} {of === 1 ? singular : unit}
           </>
         )}
       </p>

@@ -241,4 +241,18 @@ describe("Confrontation — how I get it wrong", () => {
       expect(cell.getAttribute("aria-label")).toBe(cell.getAttribute("aria-label")?.trim());
     });
   });
+
+  it("keeps the matrix OUT of the two-column figure grid", () => {
+    const { container } = render(<ConfrontationReadout confrontation={confrontation()} />);
+
+    // Inside it, the matrix became a third grid cell and was sized as a column:
+    // two of its four columns sat behind a scrollbar on a window with room to
+    // spare, and one of them was the column carrying the only non-zero cell.
+    // The grid holds the two rates and nothing else.
+    const grid = container.querySelector('[data-part="confrontation-severity"]');
+    expect(grid?.querySelector('[data-part="matrix"]')).toBeNull();
+    expect(grid?.children).toHaveLength(2);
+    // And the matrix is still on the screen, after them.
+    expect(container.querySelector('[data-part="matrix"]')).not.toBeNull();
+  });
 });

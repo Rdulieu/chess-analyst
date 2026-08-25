@@ -72,3 +72,27 @@ Verify: UI first.
 ## Blocked by
 
 - `.scratch/confrontation/issues/01-a-confrontation-exists.md`
+
+## Comments
+
+**FP passée le 2026-08-25** — 7/7 vertes, aucun finding bloquant. Quatre rubriques distinctes, chacune
+avec son compte dans son titre et sa raison en clair ; le `Correct` posé sur un coup **forcé et mesuré
+`Blunder`** n'apparaît nulle part dans la matrice ; les figures relevées avant et après l'écriture
+postérieure sont **identiques au caractère près**. Le bloc disparaît entièrement quand il n'y a rien à
+montrer.
+
+**Un défaut réel trouvé et corrigé dans la tranche** : la matrice était rendue **à l'intérieur de la
+grille à deux colonnes des figures**, donc dimensionnée comme une troisième colonne — deux de ses
+quatre colonnes passaient derrière une barre de défilement sur une fenêtre de 1400 px, dont celle qui
+portait la seule cellule non nulle du scénario. Le commentaire du code disait déjà « sous les figures »
+pendant que le code la mettait dedans. Sortie de la grille, et verrouillée par un test structurel.
+
+**Une limite du jeu de données, à ne pas oublier** : la partie 271 — la seule analysée de la base — n'a
+**aucun coup exclu** (`forced: 0, decided: 0`). Les étapes 3 et 4 ont donc tourné sur une **fixture
+fabriquée** sur la copie du testeur (une FEN à un seul coup légal, un `cp` sous le plancher). Aucune
+tranche future ne doit supposer qu'un coup forcé ou déjà décidé existe naturellement dans cette base.
+
+**Une question laissée au demandeur** : les entrées de « Montré, jamais noté » ne sont reliées à leur
+coup que par un **numéro en texte** — ni notation SAN, ni lien vers la position. Depuis la
+confrontation, retrouver le coup demande d'aller le compter dans la liste. Hors périmètre de cette
+tranche ; c'est le même terrain qu'US-22.
