@@ -736,3 +736,57 @@ section[aria-label="partie"] {
 [data-part="confrontation-entry"] {
   margin-block: var(--space-1) var(--space-3);
 }
+
+
+// The confusion matrix: HOW the Player is wrong, not merely how often.
+[data-part="matrix"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+
+// Four measured columns plus a row header outgrow a narrow window. The table
+// scrolls inside its own box; the page body never scrolls sideways.
+[data-part="matrix-scroll"] {
+  overflow-x: auto;
+
+  table {
+    inline-size: 100%;
+  }
+
+  // Figures read as figures when they line up, and the row headers are labels.
+  td {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// The agreement glyph carries the diagonal on its own — the cell tint below is
+// a SECOND cue and never the only one, which is the whole discipline of this
+// table: a colour ramp on a matrix quietly replaces the information.
+[data-part="agreement-mark"] {
+  font-weight: 600;
+}
+
+[data-cell][data-agreement="true"] {
+  background: var(--ground-sunk);
+}
+
+// The Good row is shown and never scored. Muted, and said in words beside its
+// label rather than only implied by the tint.
+tr[data-scored="false"] {
+  color: var(--ink-muted);
+}
+
+[data-part="unscored"] {
+  font-weight: 400;
+  font-size: var(--text-s);
+}
+
+// The direction of the bias, with the counts it is read off — so the Player can
+// find them in the cells above.
+[data-part="bias"] {
+  margin-block: 0;
+  font-size: var(--text-s);
+}
