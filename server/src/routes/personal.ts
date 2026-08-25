@@ -4,13 +4,19 @@ import type { Db } from "../db";
 import { games } from "../db/schema";
 import {
   getPersonalAnalysis,
+  sealedReadingGames,
   writeMark,
   sealAnalysis,
   SealRefusal,
   type MarkPatch,
 } from "../personal/repository";
 import { isDeclaredSeverity } from "../personal/severity";
-import { confrontGame, ConfrontationRefusal } from "../personal/confrontation";
+import {
+  confrontGame,
+  foldConfrontations,
+  ConfrontationRefusal,
+  type GameConfrontation,
+} from "../personal/confrontation";
 import { getGameAnnotations } from "../annotations/repository";
 import { gameNotations } from "../chess/positions";
 import { scopedProfile } from "./scope";
@@ -53,6 +59,40 @@ export function createPersonalRouter(db: Db): Router {
     }
     return { gameId };
   };
+
+  /**
+   * The `Confrontation` **summary** across the Player's whole history (US-16b) —
+   * where they read well and where they read badly, which is a claim about tens
+   * of readings and never about one.
+   *
+   * **Declared before `/:gameId`**, and that is load-bearing: Express matches in
+   * order, so with the parameter route first `confrontation` would be read as a
+   * Game id and the failure would be **silent** — a 404 on a route that exists.
+   *
+   * The summary is the per-Game records **summed** (ADR-0017), not a query of its
+   * own: reconciliation is the definition, which is what lets the Player audit a
+   * global figure on one Game they know.
+   */
+  router.get("/confrontation", (req, res) => {
+    const profile = scopedProfile(db, req, res);
+    if (!profile) return;
+
+    const confrontations = sealedReadingGames(db, profile.id)
+      .map((gameId) => {
+        const annotations = getGameAnnotations(db, gameId);
+        const analysis = getPersonalAnalysis(db, gameId);
+        if (!annotations || !analysis) return null;
+        const game = gameRow(gameId);
+        return confrontGame(analysis, annotations, game ? gameNotations(game.pgn) : []);
+      })
+      // A refusal here is not an error to report: it is a Game that simply does
+      // not belong in the fold, and the query already excluded every reason we
+      // know of. Filtering rather than throwing keeps one unreadable Game from
+      // costing the Player their whole summary.
+      .filter((result): result is GameConfrontation => result !== null && !(result instanceof ConfrontationRefusal));
+
+    res.json(foldConfrontations(confrontations));
+  });
 
   /**
    * The `Confrontation` of one Game (US-16b) — the sealed reading set against

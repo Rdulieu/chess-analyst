@@ -1,5 +1,6 @@
 import type {
   ConfrontationRefusalReason,
+  ConfrontationSummary,
   DeclaredSeverity,
   GameConfrontation,
   PersonalAnalysis,
@@ -128,4 +129,16 @@ export class ConfrontationRefused extends Error {
   ) {
     super(message);
   }
+}
+
+/**
+ * The `Confrontation` **summary** across the `Profile`'s whole history (US-16b).
+ * Always answers — a Profile with no sealed reading gets an **empty summary**,
+ * not an error: no reading yet is the normal starting state, and the screen has
+ * something true to say about it.
+ */
+export async function fetchConfrontationSummary(profileId: number): Promise<ConfrontationSummary> {
+  const res = await fetch(`/api/personal/confrontation?profileId=${profileId}`);
+  if (!res.ok) throw new Error(`Failed to load the confrontation summary (${res.status})`);
+  return (await res.json()) as ConfrontationSummary;
 }

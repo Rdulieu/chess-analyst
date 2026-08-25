@@ -432,3 +432,74 @@ function nearestFault(
     return best;
   });
 }
+
+/**
+ * The Player's readings **folded across their whole history** — the figure US-16b
+ * exists for. "Where I read well and where I read badly" is a claim about **tens**
+ * of readings, never about one.
+ *
+ * No `misses`, no `uncounted`, no `posterior`: those are facts about **one** Game,
+ * and a corpus has nothing to do with them.
+ */
+export interface ConfrontationSummary {
+  /** How many sealed readings this rests on. Three readings are not a tendency. */
+  readings: number;
+  /**
+   * How those readings were written — **counted, never used to cut the figures**.
+   * A reader has to know what a comparison is worth; but two sets of three
+   * figures on a sample this size would say less than these counts beside one set.
+   */
+  provenance: Record<Provenance, number>;
+  severity: SeverityReading;
+  /** The Key moment reading, without the per-Game `misses`. */
+  keyMoments: Omit<KeyMomentReading, "misses">;
+}
+
+/**
+ * **The aggregate IS the sum** (ADR-0017). Not a query of its own: two
+ * implementations of a method agree only by luck and diverge in silence, and the
+ * reader has no way to tell which is wrong. Reconciliation here is the
+ * **definition**, not a test we hope goes green — which is what lets the Player
+ * open one Game they know and see how a global figure was arrived at.
+ *
+ * **Numerators and denominators are summed separately**, never the rates
+ * averaged: a reading of three Moves must not weigh as much as one of sixty.
+ * The division still belongs where it is read, so an empty corpus yields empty
+ * denominators and the screen says **no score** rather than printing `0 %`.
+ */
+export function foldConfrontations(games: GameConfrontation[]): ConfrontationSummary {
+  const summary: ConfrontationSummary = {
+    readings: games.length,
+    provenance: { unaided: 0, informed: 0 },
+    severity: {
+      countedMoves: 0,
+      examined: 0,
+      scorable: 0,
+      agreed: 0,
+      matrix: emptyMatrix(),
+      unscored: { good: 0, opponent: 0 },
+    },
+    keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0 },
+  };
+
+  for (const game of games) {
+    summary.provenance[game.provenance] += 1;
+    for (const field of ["countedMoves", "examined", "scorable", "agreed"] as const) {
+      summary.severity[field] += game.severity[field];
+    }
+    summary.severity.unscored.good += game.severity.unscored.good;
+    summary.severity.unscored.opponent += game.severity.unscored.opponent;
+    // Folded whole, so the direction of the bias reads at the corpus scale from
+    // the very same cells — one derivation, two altitudes.
+    for (const declared of DECLARED_SEVERITIES) {
+      for (const label of MEASURED_LABELS) {
+        summary.severity.matrix[declared][label] += game.severity.matrix[declared][label];
+      }
+    }
+    for (const field of ["marked", "damageFound", "damageTotal", "drift"] as const) {
+      summary.keyMoments[field] += game.keyMoments[field];
+    }
+  }
+
+  return summary;
+}

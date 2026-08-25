@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import type { Db } from "../db";
 import { games, personalAnalyses, personalMarks } from "../db/schema";
 import type { DeclaredSeverity } from "./severity";
@@ -314,4 +314,28 @@ function ensureAnalysis(db: Db, gameId: number, profileId: number) {
     .values({ gameId, profileId, createdAt: new Date().toISOString() })
     .returning()
     .get();
+}
+
+/**
+ * The `Game`s of one `Profile` that have a **sealed** reading — the only ones a
+ * `Confrontation` summary covers. A reading that is not sealed has nothing fixed
+ * to confront, and a Game that was never analyzed has nothing on the other side.
+ *
+ * One query for the ids, so the summary costs one round trip plus one read per
+ * Game it actually folds, rather than one per Game in the history.
+ */
+export function sealedReadingGames(db: Db, profileId: number): number[] {
+  return db
+    .select({ gameId: personalAnalyses.gameId })
+    .from(personalAnalyses)
+    .innerJoin(games, eq(games.id, personalAnalyses.gameId))
+    .where(
+      and(
+        eq(personalAnalyses.profileId, profileId),
+        isNotNull(personalAnalyses.sealedAt),
+        eq(games.analyzed, true),
+      ),
+    )
+    .all()
+    .map((row) => row.gameId);
 }

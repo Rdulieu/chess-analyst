@@ -432,3 +432,103 @@ describe("Confrontation API", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("Confrontation summary API", () => {
+  /** A second analyzed Game for this Profile, sealed with the given verdicts. */
+  async function sealedGame(
+    app: ReturnType<typeof createApp>,
+    db: ReturnType<typeof openDb>["db"],
+    profileId: number,
+    verdicts: [number, string][],
+  ) {
+    const game = db
+      .insert(games)
+      .values({ ...morphyGame(profileId), gameUrl: `https://x/${Math.random()}` })
+      .returning()
+      .get();
+    analyze(db, game, [0, 0, 0, 0, 0]);
+    for (const [ply, declaredSeverity] of verdicts) {
+      await request(app)
+        .put(`/api/personal/${game.id}/marks/${ply}?profileId=${profileId}`)
+        .send({ declaredSeverity });
+    }
+    await request(app)
+      .post(`/api/personal/${game.id}/seal?profileId=${profileId}`)
+      .send({ engineSeen: false });
+    return game;
+  }
+
+  it("is the SUM of the Games it covers — reconciliation is the definition", async () => {
+    const { app, db, profileId } = appWithGame();
+    const first = await sealedGame(app, db, profileId, [[1, "sound"]]);
+    const second = await sealedGame(app, db, profileId, [
+      [1, "sound"],
+      [3, "blunder"],
+    ]);
+
+    const summary = await request(app).get(`/api/personal/confrontation?profileId=${profileId}`);
+    const perGame = await Promise.all(
+      [first, second].map((game) =>
+        request(app).get(`/api/personal/${game.id}/confrontation?profileId=${profileId}`),
+      ),
+    );
+
+    expect(summary.status).toBe(200);
+    expect(summary.body.readings).toBe(2);
+    // The Player can open one Game they know and see how the global figure was
+    // arrived at. That only holds because there is ONE implementation.
+    for (const field of ["countedMoves", "examined", "scorable", "agreed"]) {
+      expect(summary.body.severity[field]).toBe(
+        perGame.reduce((sum, res) => sum + res.body.severity[field], 0),
+      );
+    }
+  });
+
+  it("is not swallowed by the per-Game route", async () => {
+    const { app, profileId } = appWithGame();
+
+    const res = await request(app).get(`/api/personal/confrontation?profileId=${profileId}`);
+
+    // Declared before `/:gameId`, or `confrontation` would be read as a Game id
+    // — and the failure would be silent.
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("readings");
+  });
+
+  it("covers only sealed readings of analyzed Games", async () => {
+    const { app, db, profileId, game } = appWithGame();
+    // Analyzed but never sealed: nothing fixed to confront.
+    analyze(db, game, [0, 0, 0, 0, 0]);
+    await request(app)
+      .put(`/api/personal/${game.id}/marks/1?profileId=${profileId}`)
+      .send({ declaredSeverity: "sound" });
+    // Sealed but never analyzed: nothing on the other side.
+    const unanalyzed = db
+      .insert(games)
+      .values({ ...morphyGame(profileId), gameUrl: "https://x/unanalyzed" })
+      .returning()
+      .get();
+    await request(app)
+      .put(`/api/personal/${unanalyzed.id}/marks/1?profileId=${profileId}`)
+      .send({ declaredSeverity: "sound" });
+    await request(app)
+      .post(`/api/personal/${unanalyzed.id}/seal?profileId=${profileId}`)
+      .send({ engineSeen: false });
+
+    const res = await request(app).get(`/api/personal/confrontation?profileId=${profileId}`);
+
+    expect(res.body.readings).toBe(0);
+  });
+
+  it("is partitioned by Profile", async () => {
+    const { app, db, profileId } = appWithGame();
+    await sealedGame(app, db, profileId, [[1, "sound"]]);
+    const other = seedProfile(db, "AFriend");
+
+    const mine = await request(app).get(`/api/personal/confrontation?profileId=${profileId}`);
+    const theirs = await request(app).get(`/api/personal/confrontation?profileId=${other}`);
+
+    expect(mine.body.readings).toBe(1);
+    expect(theirs.body.readings).toBe(0);
+  });
+});

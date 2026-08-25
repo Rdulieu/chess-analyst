@@ -862,3 +862,26 @@ tr[data-scored="false"] {
   font-size: var(--text-s);
   color: var(--ink-muted);
 }
+
+
+// The summary's header: how many readings it rests on, and how they were written.
+// Above the figures, like the per-Game provenance — what a comparison is worth is
+// read before the comparison.
+[data-part="summary-provenance"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-end: var(--space-3);
+
+  p {
+    margin-block: 0;
+  }
+}
+
+// A Profile that has sealed nothing yet. Its own screen, not a summary of zeros:
+// zeros would read as "you read badly" where the truth is "you have not read".
+[data-part="no-readings"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

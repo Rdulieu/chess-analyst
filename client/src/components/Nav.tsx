@@ -21,6 +21,9 @@ export function Nav() {
           <NavLink to="/danger">Positions dangereuses</NavLink>
         </li>
         <li>
+          <NavLink to="/confrontation">Mes lectures</NavLink>
+        </li>
+        <li>
           <NavLink to="/stats">Stats</NavLink>
         </li>
         <li>

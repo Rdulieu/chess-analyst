@@ -30,6 +30,7 @@ export type {
   ConfrontationRefusalReason,
   MeasuredLabel,
   ConfusionMatrix,
+  ConfrontationSummary,
   KeyMomentReading,
   KeyMomentMiss,
   UncountedReason,
