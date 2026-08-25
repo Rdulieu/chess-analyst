@@ -90,6 +90,14 @@
   >
   > **La circularité du bonus, assumée** : juger *notre* moteur d'analyse par l'accord joueur/moteur
   > suppose le joueur juste. Un désaccord est une **divergence** — où regarder, jamais qui se trompe.
+  >
+  > **À lire avant de griller 16b** (ajouté le 2026-08-25) : la `Confrontation` s'installe dans le
+  > panneau latéral de la route de lecture, **déjà dense et au format instable** — voir **US-22**,
+  > dont le grilling est volontairement placé **après** celle-ci. Deux conséquences pour 16b : tout
+  > bloc qu'elle ajoute et qui **apparaît selon le ply** aggrave le défaut de reflow signalé là-bas,
+  > et le dénominateur de la **couverture** livré par US-16a (demi-coups, ply 0 exclu) devra être
+  > tranché ici, puisque la justesse portera sur les coups **du joueur** — deux chiffres côte à côte
+  > sur des bases différentes sinon (arbitrage ouvert sur la PR #70).
 
 - **US-16c**: Explorer mes variantes et savoir ce qu'elles valent.
   > **Grillée le 2026-08-24.** Sort **en dernier** : c'est la partie la plus chère (éditer un arbre sur
@@ -117,6 +125,37 @@
   > **Pas encore grillée.** Demandée le 2026-08-25, après revue d'US-16a livrée : « l'US-16a est
   > bonne mais l'interface pourra être améliorée ».
   >
+  > ### Le défaut nommé : **le format de la page change à chaque coup cliqué**
+  >
+  > Observé par le demandeur sur l'app livrée, le 2026-08-25. Ce n'est pas une amélioration
+  > d'ergonomie, c'est une **correction** : le projet tient déjà le principe inverse depuis US-14 —
+  > « cacher les annotations ne doit pas déplacer la position que le joueur est en train de lire ».
+  > Ce principe a été tenu **au-dessus du diagramme**, par l'ordre du document, et **jamais appliqué
+  > d'un ply au suivant** dans le panneau latéral. Or on change de coup bien plus souvent qu'on ne
+  > change de niveau de revue.
+  >
+  > **Cause probable, vérifiée dans le code** (`client/src/features/personal/`) : cinq blocs
+  > apparaissent et disparaissent selon le ply, et **aucun `min-height` ne réserve leur place** dans
+  > `_dense.scss`.
+  >
+  > | Bloc | Condition | Fréquence du saut |
+  > | --- | --- | --- |
+  > | La notice « Coup de l'adversaire… » | `!playersOwnMove` | **un coup sur deux** — c'est le principal suspect |
+  > | Le fieldset de verdict | absent si `ply === 0` | à l'entrée et à la sortie de la position de départ |
+  > | Le contrôle de moment clé | absent si `ply === 0` | idem |
+  > | La note sur la partie | absente au ply 0, et absente s'il n'y en a pas | idem |
+  > | Le relevé de la couche scellée | seulement sur les plys portant une marque scellée, **hauteur variable** selon son contenu | à chaque coup, après scellement |
+  >
+  > Le panneau vit dans `[data-row="board"]`, **à côté** de l'échiquier : une variation de sa hauteur
+  > peut donc faire bouger la rangée entière. À mesurer plutôt qu'à supposer — mais le mécanisme,
+  > lui, est établi.
+  >
+  > **Ce que « corriger » veut probablement dire** : réserver la place plutôt que retirer le
+  > contenu. Une notice qui alterne un coup sur deux peut occuper une hauteur constante, ou vivre à
+  > un endroit stable de l'écran au lieu d'être collée au contrôle — ce qui rejoint la piste
+  > « les notices une fois, pas à chaque coup » ci-dessous. **Ne pas la supprimer** : le garde-fou
+  > n°1 s'applique.
+
   > ### Le constat : le fond est juste, la densité ne l'est pas
   >
   > US-16a a livré ce qu'elle promettait, et ses règles sont **bonnes** — chaque phrase de l'écran
@@ -191,19 +230,22 @@
   > - **Le panneau ailleurs qu'à côté de l'échiquier** sur écran étroit — la contrainte d'US-14
   >   (rien au-dessus du diagramme ne doit bouger) porte sur le haut, pas sur le côté.
   >
-  > ### Séquencement : avant ou après US-16b ?
+  > ### Séquencement : **tranché — grilling après US-16b**
   >
-  > **La question à trancher en premier.** US-16b ajoute la `Confrontation` **sur ces mêmes écrans**
-  > — trois lectures côte à côte, la matrice déclaré/mesuré, la part des dégâts, la couverture. Elle
-  > va donc pousser dans une colonne déjà pleine.
+  > Décision du demandeur, le 2026-08-25. Rien n'est urgent tant que le joueur n'a pas la
+  > `Confrontation`, qui est la valeur qu'il attend ; et grillée après, cette story connaîtra la
+  > **charge réelle** des écrans plutôt que de la deviner — US-16b y ajoute trois lectures côte à
+  > côte, la matrice déclaré/mesuré, la part des dégâts et la couverture.
   >
-  > - **Avant 16b** : on refait la place une fois, et 16b s'installe dans un écran qui l'attend.
-  > - **Après 16b** : on connaît la charge réelle, mais on redessine deux fois — et 16b aura été
-  >   conçue dans la contrainte actuelle.
+  > **Conséquence à assumer** : US-16b sera donc conçue **dans la contrainte actuelle**, panneau
+  > dense et format instable compris. Deux garde-fous pour que ce ne soit pas un piège :
   >
-  > Argument pour « avant » : la mesure de la première tranche vaut dans les deux cas, et elle est
-  > **plus utile faite tôt**. Argument pour « après » : rien n'est urgent tant que le joueur n'a pas
-  > la confrontation, qui est la valeur qu'il attend. **Décision du demandeur.**
+  > 1. **Le défaut de reflow ci-dessus ne doit pas être *étendu* par US-16b.** Tout bloc que 16b
+  >    ajoute au panneau et qui apparaît selon le ply aggrave exactement le symptôme signalé ici.
+  >    À dire au grilling de 16b, pas seulement à celui-ci.
+  > 2. **La mesure de la première tranche reste faite tôt si l'occasion se présente** — elle vaut
+  >    dans les deux ordres, et une mesure avant 16b donne un point de comparaison qu'on ne pourra
+  >    plus obtenir après.
   >
   > ### Ce que cette story ne couvre pas
   >
