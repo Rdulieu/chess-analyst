@@ -1,3 +1,4 @@
+import type { UncountedReason } from "../analysis/counted";
 import type { MoveAnnotation } from "../analysis/derivation";
 import type { MoveSeverity } from "../danger/move-quality";
 import type { SearchRegime } from "../engine/types";
@@ -60,6 +61,24 @@ export interface SeverityReading {
    * they see and land on the figure printed beside it.
    */
   matrix: ConfusionMatrix;
+  /**
+   * Verdicts the Player posed that **nothing scores**, kept apart **by reason**.
+   * Melting them into one "not scored" would leave the Player unable to audit
+   * any of them, and each says something different:
+   *
+   * - `good` — the engine flags flawed Moves only and has **no band for merit**,
+   *   so there is nothing to set it against. It still counts as having looked.
+   * - `opponent` — kept and shown, never scored, and **by decision** rather than
+   *   for want of the means: the `Evaluation`s are there, but this tool is about
+   *   the Player's own improvement.
+   */
+  unscored: UnscoredVerdicts;
+}
+
+/** Verdicts shown and never scored, by the reason nothing scores them. */
+export interface UnscoredVerdicts {
+  good: number;
+  opponent: number;
 }
 
 /** What the engine said about a Move: one of its three bands, or nothing at all. */
@@ -106,6 +125,44 @@ export interface GameConfrontation {
   /** The `Search regime` behind the engine's figures — one per Game. */
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /**
+   * The Player's Moves the analysis **does not count**, each with **its own
+   * reason** — never melted into one "not counted". A Game where the Player
+   * played four `Blunder`s can legitimately contribute **zero** counted errors,
+   * and a screen that leaves that gap unreadable destroys the Player's trust
+   * exactly where the divergence is the thing needing explanation (ADR-0017).
+   *
+   * The verdict the Player put there travels with it, because it is the case
+   * that settles the whole denominator: a **forced** catastrophic Move measures
+   * a `Blunder` and is nobody's mistake, so a Player calling it `Sound` is
+   * **right** — and the screen can only say so if the verdict is still here.
+   *
+   * Recognising that a Position was already decided, or that a Move had no
+   * alternative, is itself a thing to learn in analysis.
+   */
+  uncounted: UncountedMove[];
+  /**
+   * What the Player wrote **after the seal**: kept, shown as such, and part of no
+   * figure. Seeing the engine and understanding why is the most fertile moment of
+   * the exercise — forbidding it would be absurd, and counting it dishonest.
+   */
+  posterior: PosteriorMark[];
+}
+
+/** One of the Player's Moves the analysis excludes, and what they said about it. */
+export interface UncountedMove {
+  ply: number;
+  reason: UncountedReason;
+  /** `null` when the Player said nothing here — silence, not a verdict. */
+  declared: DeclaredSeverity | null;
+}
+
+/** One mark written after the reveal. Shown as a layer, never compared. */
+export interface PosteriorMark {
+  ply: number;
+  declaredSeverity: DeclaredSeverity | null;
+  note: string | null;
+  keyMoment: boolean;
 }
 
 /**
@@ -147,20 +204,46 @@ export function confrontGame(
     scorable: 0,
     agreed: 0,
     matrix: emptyMatrix(),
+    unscored: { good: 0, opponent: 0 },
   };
+
+  // The Player's verdicts on the OPPONENT's Moves. Counted here rather than in
+  // the loop below, which walks the Player's own counted Moves only. Ply 0 is
+  // excluded: it is nobody's Move, so it is not the opponent's either.
+  for (const move of annotations.plies) {
+    if (move.ply === 0 || move.counted !== null) continue;
+    if (verdicts.has(move.ply)) reading.unscored.opponent += 1;
+  }
+
+  const uncounted: UncountedMove[] = [];
 
   for (const move of annotations.plies) {
     // `counted` is `null` for ply 0 and for the **opponent's** Moves: nothing is
     // derived for them, so they are not "not counted" — they are not the
     // Player's play at all.
-    if (!move.counted?.counted) continue;
+    if (move.counted === null) continue;
+    if (!move.counted.counted) {
+      // Shown WITH its reason: the two reasons say different things, and a
+      // Player who cannot tell them apart can audit neither.
+      if (move.counted.reason) {
+        uncounted.push({
+          ply: move.ply,
+          reason: move.counted.reason,
+          declared: verdicts.get(move.ply) ?? null,
+        });
+      }
+      continue;
+    }
     const declared = verdicts.get(move.ply);
     if (declared === undefined) continue;
     reading.examined += 1;
     // Filled for every examined Move, `Good` included: the matrix shows what the
     // Player said. What it does NOT do is score the `good` row.
     reading.matrix[declared][move.severity ?? "none"] += 1;
-    if (!isScorable(declared)) continue;
+    if (!isScorable(declared)) {
+      reading.unscored.good += 1;
+      continue;
+    }
     reading.scorable += 1;
     if (agrees(declared, move)) reading.agreed += 1;
   }
@@ -175,6 +258,15 @@ export function confrontGame(
     provenance: analysis.engineSeenBeforeSeal ? "informed" : "unaided",
     regime: annotations.regime,
     severity: reading,
+    uncounted,
+    posterior: analysis.marks
+      .filter((mark) => mark.posterior)
+      .map(({ ply, declaredSeverity, note, keyMoment }) => ({
+        ply,
+        declaredSeverity,
+        note,
+        keyMoment,
+      })),
   };
 }
 

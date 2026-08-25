@@ -248,7 +248,7 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     // That is what lets the aggregate be a sum of numerators over a sum of
     // denominators rather than an average of rates (ADR-0017).
     expect(Object.keys(result.severity).sort()).toEqual(
-      ["agreed", "countedMoves", "examined", "scorable", "matrix"].sort(),
+      ["agreed", "countedMoves", "examined", "scorable", "matrix", "unscored"].sort(),
     );
     expect(result).toMatchObject({
       gameId: 1,
@@ -303,6 +303,104 @@ describe("confrontGame — the Player's reading against the engine's", () => {
 
     expect(result.severity.matrix.inaccuracy[measured!]).toBe(1);
     expect(result.severity.agreed).toBe(0);
+  });
+
+  it("counts what is shown but never scored, apart and by reason", () => {
+    // Three different reasons not to score, and melting them into one "not
+    // scored" would leave the Player unable to audit any of them.
+    const result = confronted(
+      sealed([
+        { ply: 1, declaredSeverity: "sound" },
+        { ply: 3, declaredSeverity: "good" },
+        { ply: 2, declaredSeverity: "blunder" }, // the opponent's Move
+        { ply: 4, declaredSeverity: "mistake" }, // the opponent's Move
+      ]),
+      annotationsOf(),
+    );
+
+    expect(result.severity.unscored).toEqual({ good: 1, opponent: 2 });
+  });
+
+  it("does not count a Note on the starting Position as an opponent verdict", () => {
+    const result = confronted(
+      sealed([{ ply: 0, declaredSeverity: "blunder" }]),
+      annotationsOf(),
+    );
+
+    // Ply 0 is nobody's Move. It is not the opponent's either.
+    expect(result.severity.unscored).toEqual({ good: 0, opponent: 0 });
+  });
+
+  it("lists the Player's uncounted Moves with their reason, the two kept apart", () => {
+    // A Game where four Blunders can legitimately contribute ZERO counted errors
+    // is a real case, and a page that does not make that gap readable destroys
+    // the Player's trust exactly where the divergence is the thing to explain
+    // (ADR-0017). So the excluded Moves are shown, each with its reason.
+    const annotations = annotationsFrom(
+      [
+        "7k/8/8/8/8/8/5PPP/6rK w - - 0 1", // White has ONE legal Move: forced
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1",
+      ],
+      [60, 60],
+      "white",
+    );
+
+    const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotations);
+
+    expect(result.uncounted).toEqual([{ ply: 1, reason: "forced", declared: "sound" }]);
+  });
+
+  it("carries the verdict the Player put on an uncounted Move — that is the case that settles the denominator", () => {
+    // A forced catastrophic recapture measures a Blunder and is nobody's
+    // mistake. The Player calling it `Sound` is RIGHT, and the screen has to be
+    // able to say so — which it cannot if the verdict is simply dropped.
+    const annotations = annotationsFrom(
+      ["7k/8/8/8/8/8/5PPP/6rK w - - 0 1", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"],
+      [60, 60],
+      "white",
+    );
+
+    const result = confronted(sealed([{ ply: 1, declaredSeverity: "sound" }]), annotations);
+
+    expect(result.uncounted[0].declared).toBe("sound");
+    // And it is nowhere in the figures: not examined, not scored, not disagreed.
+    expect(result.severity).toMatchObject({ countedMoves: 0, examined: 0, scorable: 0, agreed: 0 });
+  });
+
+  it("says nothing of an uncounted Move the Player never judged", () => {
+    const annotations = annotationsFrom(
+      ["7k/8/8/8/8/8/5PPP/6rK w - - 0 1", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"],
+      [60, 60],
+      "white",
+    );
+
+    const result = confronted(sealed([{ ply: 0, note: "partie perdue d'avance" }]), annotations);
+
+    // Still listed — the gap between what the Game shows and what the Player is
+    // held to exists whether or not they wrote there — but with no verdict.
+    expect(result.uncounted).toEqual([{ ply: 1, reason: "forced", declared: null }]);
+  });
+
+  it("shows what was written after the seal, marked as posterior and outside every figure", () => {
+    const cps = [30, -20, 10, -40, 20, 480, -460, 450, -470];
+    const before = confronted(sealed([{ ply: 5, declaredSeverity: "sound" }]), annotationsOf(cps));
+    const after = confronted(
+      sealed([
+        { ply: 5, declaredSeverity: "sound" },
+        { ply: 5, declaredSeverity: "blunder", posterior: true },
+        { ply: 7, note: "j'ai compris en voyant la ligne", posterior: true },
+      ]),
+      annotationsOf(cps),
+    );
+
+    // Seeing the engine and understanding why is the most fertile moment of the
+    // exercise: forbidding it would be absurd, counting it dishonest.
+    expect(after.severity).toEqual(before.severity);
+    expect(after.posterior).toEqual([
+      { ply: 5, declaredSeverity: "blunder", note: null, keyMoment: false },
+      { ply: 7, declaredSeverity: null, note: "j'ai compris en voyant la ligne", keyMoment: false },
+    ]);
+    expect(before.posterior).toEqual([]);
   });
 });
 

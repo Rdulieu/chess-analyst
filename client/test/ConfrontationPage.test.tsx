@@ -22,7 +22,10 @@ const CONFRONTATION: GameConfrontation = {
       sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 3 },
       good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
     },
+    unscored: { good: 0, opponent: 0 },
   },
+  uncounted: [],
+  posterior: [],
 };
 
 /**

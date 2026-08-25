@@ -790,3 +790,54 @@ tr[data-scored="false"] {
   margin-block: 0;
   font-size: var(--text-s);
 }
+
+
+// Montré, jamais noté — the gap between what the Game shows and what the Player
+// is held to. Set apart from the figures by a heading and spacing, NEVER by an
+// alarm tint: none of this is a fault, and half of it is the Player being right.
+[data-part="unscored-section"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+
+  h3 {
+    margin-block: 0;
+  }
+
+  h4 {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+
+  p {
+    margin-block: 0;
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+  }
+
+  ul {
+    margin-block: 0;
+    padding-inline-start: var(--space-3);
+    font-size: var(--text-s);
+  }
+}
+
+// One exclusion reason, with its own count and its own explanation. The two
+// reasons never share a block: they say different things, and a Player who
+// cannot tell them apart can audit neither.
+[data-uncounted] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// The layer written after the reveal — separated by a rule rather than a tint,
+// so "later" reads as a position in time and not as a warning.
+[data-part="posterior"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+}

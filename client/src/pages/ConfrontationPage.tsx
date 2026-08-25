@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchConfrontation, ConfrontationRefused, GameNotThisProfiles } from "../api";
 import { ConfrontationReadout } from "../features/confrontation/ConfrontationReadout";
+import { UnscoredReadout } from "../features/confrontation/UnscoredReadout";
 import { ScopedPage } from "../features/profiles/ScopedPage";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import type { GameConfrontation, Profile } from "../types";
@@ -68,6 +69,9 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
           <>
             <Provenance confrontation={state.confrontation} />
             <ConfrontationReadout confrontation={state.confrontation} />
+            {/* Below the figures, because it is what explains them: the gap
+                between what the Game shows and what the Player is held to. */}
+            <UnscoredReadout confrontation={state.confrontation} />
             {/* The limit of the method, said in the product and not only in the
                 docs: judging our own analysis by Player/engine agreement would
                 assume the Player right, which is exactly what is not

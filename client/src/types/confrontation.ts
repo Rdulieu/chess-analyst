@@ -25,6 +25,27 @@ export interface SeverityReading {
   agreed: number;
   /** What was declared against what was measured. The `good` row is never scored. */
   matrix: ConfusionMatrix;
+  /** Verdicts shown and never scored, kept apart **by reason**. */
+  unscored: { good: number; opponent: number };
+}
+
+/** Why one of the Player's Moves is not counted — the two are never melted into one. */
+export type UncountedReason = "forced" | "decided";
+
+/** One of the Player's Moves the analysis excludes, and what they said about it. */
+export interface UncountedMove {
+  ply: number;
+  reason: UncountedReason;
+  /** `null` when the Player said nothing here — silence, not a verdict. */
+  declared: DeclaredSeverity | null;
+}
+
+/** One mark written after the reveal: shown as a layer, never compared. */
+export interface PosteriorMark {
+  ply: number;
+  declaredSeverity: DeclaredSeverity | null;
+  note: string | null;
+  keyMoment: boolean;
 }
 
 /** What the engine said about a Move: one of its three bands, or nothing at all. */
@@ -48,6 +69,10 @@ export interface GameConfrontation {
   provenance: Provenance;
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /** The Player's Moves the analysis does not count, each with its reason. */
+  uncounted: UncountedMove[];
+  /** What was written after the seal — shown, never counted. */
+  posterior: PosteriorMark[];
 }
 
 /** Why there is no `Confrontation` to show — two facts, two different next steps. */
