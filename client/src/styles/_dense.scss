@@ -421,9 +421,9 @@ section[aria-label="partie"] {
   }
 }
 
-// The coverage line: the count beside the share, plain body ink — it is a figure
-// the Player acts on, not a caveat.
-[data-part="coverage"] {
+// How far the reading has got: the count beside the share, plain body ink — it is
+// a figure the Player acts on, not a caveat.
+[data-part="reading-progress"] {
   margin-block: 0;
 }
 
@@ -652,4 +652,87 @@ section[aria-label="partie"] {
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1);
+}
+
+
+// ---------------------------------------------------------------------------
+// The Confrontation (US-16b): a sealed reading set against what the engine found.
+// ---------------------------------------------------------------------------
+
+// The two figures, SIDE BY SIDE and never stacked into a ranking. A grid of two
+// equal columns says they are two answers to two questions; one above the other
+// would invite reading the first as the headline and the second as its detail —
+// and that is exactly the composite this story exists against. `auto-fit` so a
+// narrow window folds them rather than crushing them.
+[data-part="confrontation-severity"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
+
+// One figure: its question as a legend, its number, and what it means underneath.
+[data-part="figure"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+// The number itself — the largest thing in its box, so the two read as a pair of
+// figures at a glance. Body ink: a figure the Player acts on, not a verdict on
+// them, and never tinted by how "good" it is.
+[data-part="figure-value"] {
+  margin-block: 0;
+  font-size: var(--text-l);
+
+  strong {
+    font-size: var(--text-l);
+  }
+}
+
+// What the figure answers, and what it does not. Muted and small: it is the
+// caveat, not the number.
+[data-part="figure-note"] {
+  margin-block: 0;
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// What the comparison is worth, ABOVE the figures: a comparison with no
+// provenance is not a comparison, so it is read before them and not after.
+[data-part="confrontation-provenance"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-end: var(--space-3);
+
+  p {
+    margin-block: 0;
+  }
+}
+
+[data-part="regime"],
+[data-part="divergence-note"] {
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// A refusal, with the road out of it. Set apart from a figure by spacing and a
+// legendless block, never by an alarm colour: neither refusal is an error.
+[data-part="confrontation-refused"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+
+  p {
+    margin-block: 0;
+  }
+}
+
+// The way into the Confrontation, on the Analyse page, beside the way into the
+// reading — same weight, because they are two steps of one exercise.
+[data-part="confrontation-entry"] {
+  margin-block: var(--space-1) var(--space-3);
 }

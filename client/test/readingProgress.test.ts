@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coverage, markKinds } from "../src/features/personal/coverage";
+import { readingProgress, markKinds } from "../src/features/personal/progress";
 import type { PersonalMark } from "../src/types";
 
 const mark = (over: Partial<PersonalMark> & { ply: number }): PersonalMark => ({
@@ -11,36 +11,39 @@ const mark = (over: Partial<PersonalMark> & { ply: number }): PersonalMark => ({
 });
 
 /**
- * **Coverage** — the share of Moves the Player has already examined. The figure
- * that says whether a reading is far enough along to be sealed, and the **same
- * fact** US-16b will report *beside* correctness, never folded into it. Nothing
- * here compares anything: no score, no justesse.
+ * **How far the reading has got** — the share of the Game's Moves the Player has
+ * written something on, and the figure that says whether a reading is advanced
+ * enough to seal. Nothing here compares anything: no score, no accuracy.
+ *
+ * Deliberately **not** the `Confrontation`'s coverage, which runs over the
+ * Player's `Counted Move`s so it shares accuracy's denominator. Two honest
+ * figures on two denominators, and no longer one word for both.
  */
-describe("how much of a Game has been examined", () => {
-  it("counts nothing examined on a reading with no marks", () => {
-    expect(coverage([], 76)).toEqual({ examined: 0, moves: 76, share: 0 });
+describe("how far a reading has got", () => {
+  it("counts nothing annotated on a reading with no marks", () => {
+    expect(readingProgress([], 76)).toEqual({ annotated: 0, moves: 76, share: 0 });
   });
 
   it("counts a ply once, however many things were said about it", () => {
-    // Three statements about one Move are still one Move examined: coverage is a
+    // Three statements about one Move are still one Move written on: this is a
     // count of Moves looked at, not of marks written.
     const marks = [mark({ ply: 3, declaredSeverity: "mistake", note: "x", keyMoment: true })];
 
-    expect(coverage(marks, 76)).toEqual({ examined: 1, moves: 76, share: 1 / 76 });
+    expect(readingProgress(marks, 76)).toEqual({ annotated: 1, moves: 76, share: 1 / 76 });
   });
 
-  it("counts each examined ply, and keeps the raw figures beside the share", () => {
+  it("counts each annotated ply, and keeps the raw figures beside the share", () => {
     const marks = [mark({ ply: 3 }), mark({ ply: 9 }), mark({ ply: 21 })];
 
     // The count is always shown alongside the rate — the project's constant
     // habit, so the Player judges the figure's weight themselves.
-    expect(coverage(marks, 30)).toEqual({ examined: 3, moves: 30, share: 0.1 });
+    expect(readingProgress(marks, 30)).toEqual({ annotated: 3, moves: 30, share: 0.1 });
   });
 
   it("excludes the starting Position: it is a Position, not a Move to examine", () => {
     const marks = [mark({ ply: 0, note: "sur l'ouverture en général" }), mark({ ply: 5 })];
 
-    expect(coverage(marks, 76)).toEqual({ examined: 1, moves: 76, share: 1 / 76 });
+    expect(readingProgress(marks, 76)).toEqual({ annotated: 1, moves: 76, share: 1 / 76 });
   });
 
   it("counts a ply once when it carries both a sealed and a posterior mark", () => {
@@ -49,11 +52,11 @@ describe("how much of a Game has been examined", () => {
       mark({ ply: 3, declaredSeverity: "blunder", posterior: true }),
     ];
 
-    expect(coverage(marks, 76).examined).toBe(1);
+    expect(readingProgress(marks, 76).annotated).toBe(1);
   });
 
   it("says nothing rather than dividing by zero on a Game with no Moves", () => {
-    expect(coverage([], 0)).toEqual({ examined: 0, moves: 0, share: 0 });
+    expect(readingProgress([], 0)).toEqual({ annotated: 0, moves: 0, share: 0 });
   });
 });
 

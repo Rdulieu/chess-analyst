@@ -76,7 +76,7 @@ export function PersonalReading({
   /** What the server said when it would not seal — shown as it came. */
   const [sealRefusal, setSealRefusal] = useState<string | null>(null);
   const [sealing, setSealing] = useState(false);
-  /** The Game's half-moves — coverage's denominator, read from the PGN. */
+  /** The Game's half-moves — the progress figure's denominator, read from the PGN. */
   const moves = useMemo(() => parseGame(game.pgn).plies.length, [game.pgn]);
 
   useEffect(() => {

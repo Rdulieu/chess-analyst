@@ -23,3 +23,9 @@ export type { AnalysisStatus } from "./analysis";
 export type { MoveAnnotation, GameAnnotations, GameRecap, SearchRegime } from "./annotation";
 export type { DeclaredSeverity, PersonalMark, PersonalAnalysis } from "./personal";
 export { DECLARED_SEVERITIES } from "./personal";
+export type {
+  Provenance,
+  SeverityReading,
+  GameConfrontation,
+  ConfrontationRefusalReason,
+} from "./confrontation";

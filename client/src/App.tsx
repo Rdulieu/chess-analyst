@@ -5,6 +5,7 @@ import { ProfilesPage } from "./pages/ProfilesPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AnalysePage } from "./pages/AnalysePage";
 import { ReadingPage } from "./pages/ReadingPage";
+import { ConfrontationPage } from "./pages/ConfrontationPage";
 import { ExplorerPage } from "./pages/ExplorerPage";
 import { OpeningsPage } from "./pages/OpeningsPage";
 import { DangerPage } from "./pages/DangerPage";
@@ -69,6 +70,10 @@ function Shell() {
             {/* Game-scoped for the same reason, and blind by nature: the Player's
                 own reading of that Game (US-16a). Not in the `Nav` either. */}
             <Route path="/analyse/:gameId/lecture" element={<ReadingPage />} />
+            {/* Where the sealed reading meets the engine's record (US-16b). A
+                route of its own, and deliberately NOT a panel on the reading
+                route: that one is blind by nature and stays so. */}
+            <Route path="/analyse/:gameId/confrontation" element={<ConfrontationPage />} />
             <Route
               path="/explorer"
               element={<ScopedPage>{(profile) => <ExplorerPage profile={profile} />}</ScopedPage>}
