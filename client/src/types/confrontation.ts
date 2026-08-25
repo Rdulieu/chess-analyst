@@ -107,3 +107,17 @@ export interface GameConfrontation {
 
 /** Why there is no `Confrontation` to show — two facts, two different next steps. */
 export type ConfrontationRefusalReason = "not-sealed" | "not-analyzed";
+
+/**
+ * The Player's readings folded across their whole history. No per-Game facts
+ * here — `misses`, `uncounted` and `posterior` are about one Game, and a corpus
+ * has nothing to do with them.
+ */
+export interface ConfrontationSummary {
+  /** How many sealed readings this rests on. Three readings are not a tendency. */
+  readings: number;
+  /** How they were written — **counted**, never used to cut the figures. */
+  provenance: Record<Provenance, number>;
+  severity: SeverityReading;
+  keyMoments: Omit<KeyMomentReading, "misses">;
+}
