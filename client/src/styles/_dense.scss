@@ -421,9 +421,9 @@ section[aria-label="partie"] {
   }
 }
 
-// The coverage line: the count beside the share, plain body ink — it is a figure
-// the Player acts on, not a caveat.
-[data-part="coverage"] {
+// How far the reading has got: the count beside the share, plain body ink — it is
+// a figure the Player acts on, not a caveat.
+[data-part="reading-progress"] {
   margin-block: 0;
 }
 
@@ -652,4 +652,236 @@ section[aria-label="partie"] {
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1);
+}
+
+
+// ---------------------------------------------------------------------------
+// The Confrontation (US-16b): a sealed reading set against what the engine found.
+// ---------------------------------------------------------------------------
+
+// The two figures, SIDE BY SIDE and never stacked into a ranking. A grid of two
+// equal columns says they are two answers to two questions; one above the other
+// would invite reading the first as the headline and the second as its detail —
+// and that is exactly the composite this story exists against. `auto-fit` so a
+// narrow window folds them rather than crushing them.
+[data-part="confrontation-severity"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
+
+// The Key moment figure carries far more prose than the two rates — its value,
+// its note, the Drift beside it and every distance. Left as one cell it sat alone
+// on a second row with half a column empty to its right. It spans instead: the
+// span follows the content's weight, not a designed breakpoint.
+[data-part="figure"][aria-label="Où j'ai regardé"] {
+  grid-column: 1 / -1;
+}
+
+// One figure: its question as a legend, its number, and what it means underneath.
+[data-part="figure"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+// The number itself — the largest thing in its box, so the two read as a pair of
+// figures at a glance. Body ink: a figure the Player acts on, not a verdict on
+// them, and never tinted by how "good" it is.
+[data-part="figure-value"] {
+  margin-block: 0;
+  font-size: var(--text-l);
+
+  strong {
+    font-size: var(--text-l);
+  }
+}
+
+// What the figure answers, and what it does not. Muted and small: it is the
+// caveat, not the number.
+[data-part="figure-note"] {
+  margin-block: 0;
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// What the comparison is worth, ABOVE the figures: a comparison with no
+// provenance is not a comparison, so it is read before them and not after.
+[data-part="confrontation-provenance"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-end: var(--space-3);
+
+  p {
+    margin-block: 0;
+  }
+}
+
+[data-part="regime"],
+[data-part="divergence-note"] {
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// A refusal, with the road out of it. Set apart from a figure by spacing and a
+// legendless block, never by an alarm colour: neither refusal is an error.
+[data-part="confrontation-refused"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+
+  p {
+    margin-block: 0;
+  }
+}
+
+// The way into the Confrontation, on the Analyse page, beside the way into the
+// reading — same weight, because they are two steps of one exercise.
+[data-part="confrontation-entry"] {
+  margin-block: var(--space-1) var(--space-3);
+}
+
+
+// The confusion matrix: HOW the Player is wrong, not merely how often.
+[data-part="matrix"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+
+// Four measured columns plus a row header outgrow a narrow window. The table
+// scrolls inside its own box; the page body never scrolls sideways.
+[data-part="matrix-scroll"] {
+  overflow-x: auto;
+
+  table {
+    inline-size: 100%;
+  }
+
+  // Figures read as figures when they line up, and the row headers are labels.
+  td {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// The agreement glyph carries the diagonal on its own — the cell tint below is
+// a SECOND cue and never the only one, which is the whole discipline of this
+// table: a colour ramp on a matrix quietly replaces the information.
+[data-part="agreement-mark"] {
+  font-weight: 600;
+}
+
+[data-cell][data-agreement="true"] {
+  background: var(--ground-sunk);
+}
+
+// The Good row is shown and never scored. Muted, and said in words beside its
+// label rather than only implied by the tint.
+tr[data-scored="false"] {
+  color: var(--ink-muted);
+}
+
+[data-part="unscored"] {
+  font-weight: 400;
+  font-size: var(--text-s);
+}
+
+// The direction of the bias, with the counts it is read off — so the Player can
+// find them in the cells above.
+[data-part="bias"] {
+  margin-block: 0;
+  font-size: var(--text-s);
+}
+
+
+// Montré, jamais noté — the gap between what the Game shows and what the Player
+// is held to. Set apart from the figures by a heading and spacing, NEVER by an
+// alarm tint: none of this is a fault, and half of it is the Player being right.
+[data-part="unscored-section"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+
+  h3 {
+    margin-block: 0;
+  }
+
+  h4 {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+
+  p {
+    margin-block: 0;
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+  }
+
+  ul {
+    margin-block: 0;
+    padding-inline-start: var(--space-3);
+    font-size: var(--text-s);
+  }
+}
+
+// One exclusion reason, with its own count and its own explanation. The two
+// reasons never share a block: they say different things, and a Player who
+// cannot tell them apart can audit neither.
+[data-uncounted] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// The layer written after the reveal — separated by a rule rather than a tint,
+// so "later" reads as a position in time and not as a warning.
+[data-part="posterior"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+}
+
+
+// The Drift, beside the Key moment figure and out of its division. Muted like a
+// caveat, because that is what it is — but present, because a Game lost by
+// bleeding had no fault to find and saying so is the lesson.
+[data-part="drift"],
+// A marker that found nothing, with the distance to what it missed. Shown, never
+// credited: there is no tolerance window here.
+[data-part="miss"] {
+  margin-block: 0;
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+
+// The summary's header: how many readings it rests on, and how they were written.
+// Above the figures, like the per-Game provenance — what a comparison is worth is
+// read before the comparison.
+[data-part="summary-provenance"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-end: var(--space-3);
+
+  p {
+    margin-block: 0;
+  }
+}
+
+// A Profile that has sealed nothing yet. Its own screen, not a summary of zeros:
+// zeros would read as "you read badly" where the truth is "you have not read".
+[data-part="no-readings"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }

@@ -1,0 +1,511 @@
+import type { UncountedReason } from "../analysis/counted";
+import type { MoveAnnotation } from "../analysis/derivation";
+import type { MoveSeverity } from "../danger/move-quality";
+import type { SearchRegime } from "../engine/types";
+import type { GameAnnotations } from "../annotations/repository";
+import type { PersonalAnalysis } from "./repository";
+import { DECLARED_SEVERITIES, isDeclaredSeverity, type DeclaredSeverity } from "./severity";
+
+/**
+ * What one Game's `Confrontation` (CONTEXT.md) holds about the Player's
+ * `Declared severity`s against the measured ones.
+ *
+ * **Numerators and denominators travel undivided.** The share is computed where
+ * it is read, never stored, so the aggregate can be a **sum of numerators over a
+ * sum of denominators** rather than an average of rates — which would give a
+ * reading of three Moves the same weight as one of sixty.
+ */
+export interface SeverityReading {
+  /**
+   * The Player's `Counted Move`s — the denominator **both** figures share. Not
+   * the Game's half-moves and not the Player's Moves: how justly the Player
+   * judges is a conclusion about where they go wrong, and a `Counted Move` is
+   * already the denominator of every such conclusion.
+   */
+  countedMoves: number;
+  /**
+   * Those of them the Player put a **verdict** on. A `Note` is not a verdict —
+   * the Player said something, they judged nothing — and **silence stays
+   * silence**: a Move with no `Declared severity` means *not examined*, which is
+   * itself worth knowing.
+   */
+  examined: number;
+  /**
+   * Among the examined, those the engine has something to say about. **`Good` is
+   * not one of them**: the engine flags flawed Moves only and has no band for
+   * merit, so there is nothing to set it against. It is kept — the Player needs
+   * it to read their Game — shown, and counted apart; it simply cannot be right
+   * or wrong.
+   *
+   * Hence the two figures do not share this denominator: coverage asks *did I
+   * look*, accuracy asks *was I right*, and a `Good` answers the first and not
+   * the second.
+   */
+  scorable: number;
+  /** Among the scorable, how many the engine agrees with. */
+  agreed: number;
+  /**
+   * The **confusion matrix**: what the Player declared, against what was
+   * measured. Rows are the five declared bands, columns the three measured ones
+   * **plus `none`** — "the engine flagged nothing", which is a fact rather than
+   * an absence, and the column that makes `Sound` scorable at all.
+   *
+   * It says *how* the Player is wrong and not merely how often, and it carries
+   * one further fact for free: **the direction of the bias**. The matrix is not
+   * symmetric, and over-reading danger and under-reading it are opposite faults
+   * of analysis that none of the three figures separates alone.
+   *
+   * The `good` row is filled and **never scored** — kept so the Player can see
+   * what they said, excluded from the accuracy denominator. Summing every cell
+   * outside that row gives `scorable` exactly, so the Player can add up what
+   * they see and land on the figure printed beside it.
+   */
+  matrix: ConfusionMatrix;
+  /**
+   * Verdicts the Player posed that **nothing scores**, kept apart **by reason**.
+   * Melting them into one "not scored" would leave the Player unable to audit
+   * any of them, and each says something different:
+   *
+   * - `good` — the engine flags flawed Moves only and has **no band for merit**,
+   *   so there is nothing to set it against. It still counts as having looked.
+   * - `opponent` — kept and shown, never scored, and **by decision** rather than
+   *   for want of the means: the `Evaluation`s are there, but this tool is about
+   *   the Player's own improvement.
+   */
+  unscored: UnscoredVerdicts;
+}
+
+/** Verdicts shown and never scored, by the reason nothing scores them. */
+export interface UnscoredVerdicts {
+  good: number;
+  opponent: number;
+}
+
+/** What the engine said about a Move: one of its three bands, or nothing at all. */
+export type MeasuredLabel = MoveSeverity | "none";
+
+/** Declared band -> measured label -> how many Moves. */
+export type ConfusionMatrix = Record<DeclaredSeverity, Record<MeasuredLabel, number>>;
+
+/** The four columns, worst to "nothing flagged". */
+export const MEASURED_LABELS: MeasuredLabel[] = ["blunder", "mistake", "inaccuracy", "none"];
+
+/** An empty matrix — every cell present, so a zero is a zero and not a hole. */
+function emptyMatrix(): ConfusionMatrix {
+  return Object.fromEntries(
+    DECLARED_SEVERITIES.map((declared) => [
+      declared,
+      Object.fromEntries(MEASURED_LABELS.map((label) => [label, 0])) as Record<
+        MeasuredLabel,
+        number
+      >,
+    ]),
+  ) as ConfusionMatrix;
+}
+
+/**
+ * How the reading was written: with the engine's findings **already shown** for
+ * this Game, or not. A **provenance, not a lock** — the app cannot make anyone
+ * blind, and claiming otherwise would sell a guarantee it cannot keep.
+ */
+export type Provenance = "unaided" | "informed";
+
+/**
+ * One Game's `Confrontation`, as every read path hands it over — and as the
+ * aggregate folds it (ADR-0017). It carries **everything the aggregate
+ * consumes**, so a Player can open one Game and see how a global figure was
+ * arrived at.
+ */
+export interface GameConfrontation {
+  gameId: number;
+  /** When the reading was fixed. A Confrontation only exists past this instant. */
+  sealedAt: string;
+  /** Never optional: a comparison with no provenance is not a comparison. */
+  provenance: Provenance;
+  /** The `Search regime` behind the engine's figures — one per Game. */
+  regime: SearchRegime | null;
+  severity: SeverityReading;
+  /**
+   * The Player's Moves the analysis **does not count**, each with **its own
+   * reason** — never melted into one "not counted". A Game where the Player
+   * played four `Blunder`s can legitimately contribute **zero** counted errors,
+   * and a screen that leaves that gap unreadable destroys the Player's trust
+   * exactly where the divergence is the thing needing explanation (ADR-0017).
+   *
+   * The verdict the Player put there travels with it, because it is the case
+   * that settles the whole denominator: a **forced** catastrophic Move measures
+   * a `Blunder` and is nobody's mistake, so a Player calling it `Sound` is
+   * **right** — and the screen can only say so if the verdict is still here.
+   *
+   * Recognising that a Position was already decided, or that a Move had no
+   * alternative, is itself a thing to learn in analysis.
+   */
+  /**
+   * The `Key moment` reading (CONTEXT.md): **what share of the damage** the
+   * Player's markers found. Undivided, like everything else here.
+   */
+  keyMoments: KeyMomentReading;
+  uncounted: UncountedMove[];
+  /**
+   * What the Player wrote **after the seal**: kept, shown as such, and part of no
+   * figure. Seeing the engine and understanding why is the most fertile moment of
+   * the exercise — forbidding it would be absurd, and counting it dishonest.
+   */
+  posterior: PosteriorMark[];
+}
+
+/**
+ * The second of the `Confrontation`'s readings: not *did the Player judge well*
+ * but **did they look in the right place**.
+ *
+ * One division, in the currency everything else here already uses — no new
+ * scale, no new threshold, and **no tolerance window**: a marker one Move from
+ * the loss earns no approximate credit, the **distance is shown** instead. That
+ * says more than silent partial credit, and it keeps the score additive and free
+ * of any magic constant, the clarity of the calculation to the Player being a
+ * requirement of its own here.
+ */
+export interface KeyMomentReading {
+  /** How many `Key moment`s the sealed reading holds. They are not ranked. */
+  marked: number;
+  /**
+   * The chances lost by the flagged counted Moves those markers point at. A Move
+   * counts **once**, so adding markers cannot inflate this beyond what they
+   * genuinely name — which is why several `Key moment`s need no special rule.
+   */
+  damageFound: number;
+  /**
+   * The chances lost by **all** the Player's flagged counted Moves — the Game's
+   * own `flaggedLoss`, read rather than recomputed. Confronted against the
+   * Player's own faults and never against the Game's biggest swing, which may
+   * well be the *opponent*'s blunder: faulting the Player for missing a gift
+   * teaches nothing.
+   *
+   * `0` means **no score** — not a zero. A zero would make a sound reading look
+   * like a failed one, so the division is refused where there was nothing to find.
+   */
+  damageTotal: number;
+  /**
+   * The `Drift`, **beside the score and out of the division**. Out, because
+   * Drift has **no Move to point at**: counting it would put 100% beyond the
+   * reach of a perfect reading. Beside, because that is where it teaches most —
+   * a Game lost by bleeding had no fault to find, and saying so is the lesson.
+   */
+  drift: number;
+  /** Markers that found nothing, with the distance to what they missed. */
+  misses: KeyMomentMiss[];
+}
+
+/**
+ * A `Key moment` that cost the Player nothing to point at, and **how far off it
+ * was**. Shown rather than credited: "your marker is on 21.Rd1, which cost
+ * nothing — the loss is on 22.Nxe5, one Move later" says more than a silent
+ * partial credit, and leaves the calculation additive.
+ */
+export interface KeyMomentMiss {
+  ply: number;
+  /**
+   * The Move in standard notation, so the sentence **names** it rather than
+   * merely numbering it. `null` when the notations were not to hand — a Move
+   * number is a poorer sentence than a name, and still a true one.
+   */
+  notation: string | null;
+  /** What the marked Move actually cost. Often `0`, and that is the point. */
+  lostThere: number;
+  /** The Player's flawed Move nearest to it, or `null` when they had none. */
+  nearest: { ply: number; lost: number; notation: string | null } | null;
+}
+
+/** One of the Player's Moves the analysis excludes, and what they said about it. */
+export interface UncountedMove {
+  ply: number;
+  /** Standard notation, so the entry **names** its Move rather than numbering it. */
+  notation: string | null;
+  reason: UncountedReason;
+  /** `null` when the Player said nothing here — silence, not a verdict. */
+  declared: DeclaredSeverity | null;
+}
+
+/** One mark written after the reveal. Shown as a layer, never compared. */
+export interface PosteriorMark {
+  ply: number;
+  /** Standard notation — the same discipline as everywhere else on this screen. */
+  notation: string | null;
+  declaredSeverity: DeclaredSeverity | null;
+  note: string | null;
+  keyMoment: boolean;
+}
+
+/**
+ * Why there is no `Confrontation` to give. **Two reasons, named apart** — they
+ * are different facts with different next steps: one asks the Player to seal
+ * their reading, the other to run the analysis. A single refusal for both would
+ * leave them unable to tell which road to take, and a bare 404 would say the
+ * Game is not there when it is.
+ *
+ * Modelled on `SealRefusal`: a refusal here is a **business fact**, not a
+ * transport failure.
+ */
+export class ConfrontationRefusal {
+  constructor(readonly reason: "not-sealed" | "not-analyzed") {}
+}
+
+/**
+ * Sets a sealed `Personal analysis` against what the engine found on the same
+ * Game — **a join**, not a second derivation (ADR-0019). Everything the engine
+ * side contributes arrives in `annotations`, exactly as the API already serves
+ * it, so there is no way for this to disagree with the Game's own page.
+ */
+export function confrontGame(
+  analysis: PersonalAnalysis,
+  annotations: GameAnnotations,
+  /**
+   * The Game's half-moves in standard notation, indexed by ply. Optional because
+   * **no figure depends on it**: it names the Moves a distance talks about, and
+   * a distance is still true without a name.
+   */
+  notations: string[] = [],
+): GameConfrontation | ConfrontationRefusal {
+  // The Player's own act is checked first: sending someone to go and analyse a
+  // Game whose reading they have not finished points them down the wrong road.
+  const { sealedAt } = analysis;
+  if (sealedAt === null) return new ConfrontationRefusal("not-sealed");
+  if (!annotations.analyzed || annotations.recap === null) {
+    return new ConfrontationRefusal("not-analyzed");
+  }
+
+  const verdicts = sealedVerdicts(analysis);
+  const reading: SeverityReading = {
+    countedMoves: annotations.recap.countedMoves,
+    examined: 0,
+    scorable: 0,
+    agreed: 0,
+    matrix: emptyMatrix(),
+    unscored: { good: 0, opponent: 0 },
+  };
+
+  // The Player's verdicts on the OPPONENT's Moves. Counted here rather than in
+  // the loop below, which walks the Player's own counted Moves only. Ply 0 is
+  // excluded: it is nobody's Move, so it is not the opponent's either.
+  for (const move of annotations.plies) {
+    if (move.ply === 0 || move.counted !== null) continue;
+    if (verdicts.has(move.ply)) reading.unscored.opponent += 1;
+  }
+
+  const uncounted: UncountedMove[] = [];
+  // The sealed layer only, and a ply **once**: `Key moment`s are not ranked and
+  // are not counted twice.
+  const marks = analysis.marks.filter((mark) => !mark.posterior);
+  const marked = new Set(marks.filter((mark) => mark.keyMoment).map((mark) => mark.ply));
+  // The Player's own flawed, counted Moves — what a marker is confronted against.
+  const faults = annotations.plies
+    .filter((move) => move.severity !== null && move.counted?.counted)
+    .map((move) => ({ ply: move.ply, lost: move.chancesLost ?? 0 }));
+  const lostAt = new Map(faults.map((fault) => [fault.ply, fault.lost]));
+
+  for (const move of annotations.plies) {
+    // `counted` is `null` for ply 0 and for the **opponent's** Moves: nothing is
+    // derived for them, so they are not "not counted" — they are not the
+    // Player's play at all.
+    if (move.counted === null) continue;
+    if (!move.counted.counted) {
+      // Shown WITH its reason: the two reasons say different things, and a
+      // Player who cannot tell them apart can audit neither.
+      if (move.counted.reason) {
+        uncounted.push({
+          ply: move.ply,
+          notation: notations[move.ply] ?? null,
+          reason: move.counted.reason,
+          declared: verdicts.get(move.ply) ?? null,
+        });
+      }
+      continue;
+    }
+    const declared = verdicts.get(move.ply);
+    if (declared === undefined) continue;
+    reading.examined += 1;
+    // Filled for every examined Move, `Good` included: the matrix shows what the
+    // Player said. What it does NOT do is score the `good` row.
+    reading.matrix[declared][move.severity ?? "none"] += 1;
+    if (!isScorable(declared)) {
+      reading.unscored.good += 1;
+      continue;
+    }
+    reading.scorable += 1;
+    if (agrees(declared, move)) reading.agreed += 1;
+  }
+
+  return {
+    gameId: analysis.gameId,
+    sealedAt,
+    // `false` and `null` both mean "nothing says the engine was shown". The
+    // fallback is deliberately the honest one: guessing "informed" would
+    // discredit the Player's own work, and guessing nothing is not an option
+    // when the label is what makes the figure readable.
+    provenance: analysis.engineSeenBeforeSeal ? "informed" : "unaided",
+    regime: annotations.regime,
+    severity: reading,
+    keyMoments: {
+      marked: marked.size,
+      damageFound: [...marked].reduce((sum, ply) => sum + (lostAt.get(ply) ?? 0), 0),
+      damageTotal: annotations.recap.flaggedLoss,
+      drift: annotations.recap.drift,
+      misses: [...marked]
+        .filter((ply) => !lostAt.get(ply))
+        .sort((a, b) => a - b)
+        .map((ply) => {
+          const nearest = nearestFault(ply, faults);
+          return {
+            ply,
+            notation: notations[ply] ?? null,
+            lostThere: 0,
+            nearest: nearest && { ...nearest, notation: notations[nearest.ply] ?? null },
+          };
+        }),
+    },
+    uncounted,
+    posterior: analysis.marks
+      .filter((mark) => mark.posterior)
+      .map(({ ply, declaredSeverity, note, keyMoment }) => ({
+        ply,
+        notation: notations[ply] ?? null,
+        declaredSeverity,
+        note,
+        keyMoment,
+      })),
+  };
+}
+
+/**
+ * The verdicts that are **confronted**: the sealed layer only. What the Player
+ * writes after the reveal is kept and shown, never compared — seeing the engine
+ * and understanding why is the most fertile moment of the exercise, so
+ * forbidding it would be absurd and counting it would be dishonest.
+ */
+function sealedVerdicts(analysis: PersonalAnalysis): Map<number, DeclaredSeverity> {
+  const verdicts = new Map<number, DeclaredSeverity>();
+  for (const mark of analysis.marks) {
+    if (mark.posterior) continue;
+    if (mark.declaredSeverity === null) continue;
+    // The column is typed, the database is not. A value from outside the five
+    // would index a matrix row that does not exist and take down **the whole
+    // summary** — one unreadable Game costing the Player every other one, which
+    // is exactly what the fold's filter exists to prevent. Dropped here rather
+    // than counted as a sixth band nothing can read.
+    if (!isDeclaredSeverity(mark.declaredSeverity)) continue;
+    verdicts.set(mark.ply, mark.declaredSeverity);
+  }
+  return verdicts;
+}
+
+/** Whether the engine has any band to set this verdict against. */
+function isScorable(declared: DeclaredSeverity): boolean {
+  return declared !== "good";
+}
+
+/**
+ * Whether a declared verdict and a measured one say the same thing. The two
+ * scales share their vocabulary deliberately (CONTEXT.md), so on the three
+ * measured bands this is an equality.
+ *
+ * The case worth naming is the fourth column: the engine flagged **nothing**.
+ * That is a fact, not an absence, and `Sound` set against it is an **agreement**
+ * — which is the entire reason `Sound` is a value the Player poses. Without it a
+ * confrontation could only ever expose the Player's misses, never their hits.
+ */
+function agrees(declared: DeclaredSeverity, move: MoveAnnotation): boolean {
+  return move.severity === null ? declared === "sound" : declared === move.severity;
+}
+
+/**
+ * The Player's flawed Move nearest a marker that found nothing. Ties go to the
+ * **later** Move, because a marker placed just before the loss is the common
+ * near miss and naming the Move that follows it is what teaches.
+ *
+ * `null` when the Player had no flawed Move at all: there was nothing to point
+ * at, so there is no distance to state.
+ */
+function nearestFault(
+  ply: number,
+  faults: { ply: number; lost: number }[],
+): { ply: number; lost: number } | null {
+  if (faults.length === 0) return null;
+  return faults.reduce((best, fault) => {
+    const d = Math.abs(fault.ply - ply);
+    const bestD = Math.abs(best.ply - ply);
+    if (d < bestD) return fault;
+    if (d === bestD && fault.ply > best.ply) return fault;
+    return best;
+  });
+}
+
+/**
+ * The Player's readings **folded across their whole history** — the figure US-16b
+ * exists for. "Where I read well and where I read badly" is a claim about **tens**
+ * of readings, never about one.
+ *
+ * No `misses`, no `uncounted`, no `posterior`: those are facts about **one** Game,
+ * and a corpus has nothing to do with them.
+ */
+export interface ConfrontationSummary {
+  /** How many sealed readings this rests on. Three readings are not a tendency. */
+  readings: number;
+  /**
+   * How those readings were written — **counted, never used to cut the figures**.
+   * A reader has to know what a comparison is worth; but two sets of three
+   * figures on a sample this size would say less than these counts beside one set.
+   */
+  provenance: Record<Provenance, number>;
+  severity: SeverityReading;
+  /** The Key moment reading, without the per-Game `misses`. */
+  keyMoments: Omit<KeyMomentReading, "misses">;
+}
+
+/**
+ * **The aggregate IS the sum** (ADR-0017). Not a query of its own: two
+ * implementations of a method agree only by luck and diverge in silence, and the
+ * reader has no way to tell which is wrong. Reconciliation here is the
+ * **definition**, not a test we hope goes green — which is what lets the Player
+ * open one Game they know and see how a global figure was arrived at.
+ *
+ * **Numerators and denominators are summed separately**, never the rates
+ * averaged: a reading of three Moves must not weigh as much as one of sixty.
+ * The division still belongs where it is read, so an empty corpus yields empty
+ * denominators and the screen says **no score** rather than printing `0 %`.
+ */
+export function foldConfrontations(games: GameConfrontation[]): ConfrontationSummary {
+  const summary: ConfrontationSummary = {
+    readings: games.length,
+    provenance: { unaided: 0, informed: 0 },
+    severity: {
+      countedMoves: 0,
+      examined: 0,
+      scorable: 0,
+      agreed: 0,
+      matrix: emptyMatrix(),
+      unscored: { good: 0, opponent: 0 },
+    },
+    keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0 },
+  };
+
+  for (const game of games) {
+    summary.provenance[game.provenance] += 1;
+    for (const field of ["countedMoves", "examined", "scorable", "agreed"] as const) {
+      summary.severity[field] += game.severity[field];
+    }
+    summary.severity.unscored.good += game.severity.unscored.good;
+    summary.severity.unscored.opponent += game.severity.unscored.opponent;
+    // Folded whole, so the direction of the bias reads at the corpus scale from
+    // the very same cells — one derivation, two altitudes.
+    for (const declared of DECLARED_SEVERITIES) {
+      for (const label of MEASURED_LABELS) {
+        summary.severity.matrix[declared][label] += game.severity.matrix[declared][label];
+      }
+    }
+    for (const field of ["marked", "damageFound", "damageTotal", "drift"] as const) {
+      summary.keyMoments[field] += game.keyMoments[field];
+    }
+  }
+
+  return summary;
+}

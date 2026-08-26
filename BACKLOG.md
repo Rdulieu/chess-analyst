@@ -57,48 +57,6 @@
   > Dépendance **levée** : US-11 (Profils) est mergée, `games` et `analysis_passes` portent
   > `profile_id`, donc tout agrégat de l'EPIC naît cloisonné par construction.
 
-- **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
-  > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
-  >
-  > **Trois lectures côte à côte, jamais un score composite** — un total exigerait des poids
-  > arbitraires, et un chiffre unique s'optimise en **imitant le moteur**, le seul résultat contre
-  > lequel la story existe. On suit trois valeurs dans le temps.
-  > 1. `Declared severity` vs mesurée : **couverture** (part des coups examinés — le silence n'est pas
-  >    un verdict) et **justesse**, jamais fondues.
-  > 2. `Key moment` : **part des dégâts trouvée** = chances de gain perdues par les coups flagués
-  >    désignés / perdues par **tous** les coups flagués du joueur. Une seule division, dans la monnaie
-  >    déjà utilisée. Crédit partiel par construction, `Key moment`s multiples **additifs et non
-  >    trichables** (un coup compte une fois). Dénominateur **hors `Drift`** (le Drift n'a aucun coup à
-  >    désigner) mais Drift **rapporté à côté** : « tu as cherché une faute, il n'y en avait pas ».
-  >    Dénominateur nul = **pas de score**, pas un zéro. **Aucune fenêtre de tolérance** : l'écart est
-  >    **affiché** au lieu d'être crédité.
-  > 3. Le **sens du biais**, gratuit (l'asymétrie de la matrice) : sur-estimer ou sous-estimer le danger
-  >    sont deux défauts opposés qu'aucun des trois scores ne distingue seul.
-  >
-  > **À vérifier à l'usage** (accepté provisoirement par le demandeur, jugé « un peu compliqué ») : la
-  > matrice se lit sur les **`Counted Move`s** seulement. Le cas qui l'impose : un coup **forcé**
-  > catastrophique mesure une `Blunder` mais n'est « nobody's mistake », donc un joueur qui le déclare
-  > `Sound` **a raison** et une matrice naïve le compterait faux. Si à l'usage la complexité ne paye
-  > pas, c'est ce point-là qu'on rouvre.
-  >
-  > **Agrégat en dernière tranche** (ADR-0017, repliement) + entrée de Nav. **Aucun axe en v1** :
-  > l'échantillon est de quelques dizaines de lectures écrites à la main. L'axe `Phase` est le premier
-  > qui méritera sa place, mais il est **exclu tant que la détection des phases n'est pas fiable**
-  > (terrain d'US-15a-bis) — décision explicite du demandeur. `Opening` (échantillon nul) et
-  > `Time control category` (confond jouer et analyser : une partie est lue à froid) ne sont pas
-  > candidats.
-  >
-  > **La circularité du bonus, assumée** : juger *notre* moteur d'analyse par l'accord joueur/moteur
-  > suppose le joueur juste. Un désaccord est une **divergence** — où regarder, jamais qui se trompe.
-  >
-  > **À lire avant de griller 16b** (ajouté le 2026-08-25) : la `Confrontation` s'installe dans le
-  > panneau latéral de la route de lecture, **déjà dense et au format instable** — voir **US-22**,
-  > dont le grilling est volontairement placé **après** celle-ci. Deux conséquences pour 16b : tout
-  > bloc qu'elle ajoute et qui **apparaît selon le ply** aggrave le défaut de reflow signalé là-bas,
-  > et le dénominateur de la **couverture** livré par US-16a (demi-coups, ply 0 exclu) devra être
-  > tranché ici, puisque la justesse portera sur les coups **du joueur** — deux chiffres côte à côte
-  > sur des bases différentes sinon (arbitrage ouvert sur la PR #70).
-
 - **US-16c**: Explorer mes variantes et savoir ce qu'elles valent.
   > **Grillée le 2026-08-24.** Sort **en dernier** : c'est la partie la plus chère (éditer un arbre sur
   > l'échiquier), la seule qui coûte du temps moteur, et la seule abandonnable si l'exercice ne prend
@@ -681,7 +639,66 @@
 
 ## Doing
 
+- **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
+  > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
+  >
+  > **Trois lectures côte à côte, jamais un score composite** — un total exigerait des poids
+  > arbitraires, et un chiffre unique s'optimise en **imitant le moteur**, le seul résultat contre
+  > lequel la story existe. On suit trois valeurs dans le temps.
+  > 1. `Declared severity` vs mesurée : **couverture** (part des coups examinés — le silence n'est pas
+  >    un verdict) et **justesse**, jamais fondues.
+  > 2. `Key moment` : **part des dégâts trouvée** = chances de gain perdues par les coups flagués
+  >    désignés / perdues par **tous** les coups flagués du joueur. Une seule division, dans la monnaie
+  >    déjà utilisée. Crédit partiel par construction, `Key moment`s multiples **additifs et non
+  >    trichables** (un coup compte une fois). Dénominateur **hors `Drift`** (le Drift n'a aucun coup à
+  >    désigner) mais Drift **rapporté à côté** : « tu as cherché une faute, il n'y en avait pas ».
+  >    Dénominateur nul = **pas de score**, pas un zéro. **Aucune fenêtre de tolérance** : l'écart est
+  >    **affiché** au lieu d'être crédité.
+  > 3. Le **sens du biais**, gratuit (l'asymétrie de la matrice) : sur-estimer ou sous-estimer le danger
+  >    sont deux défauts opposés qu'aucun des trois scores ne distingue seul.
+  >
+  > **À vérifier à l'usage** (accepté provisoirement par le demandeur, jugé « un peu compliqué ») : la
+  > matrice se lit sur les **`Counted Move`s** seulement. Le cas qui l'impose : un coup **forcé**
+  > catastrophique mesure une `Blunder` mais n'est « nobody's mistake », donc un joueur qui le déclare
+  > `Sound` **a raison** et une matrice naïve le compterait faux. Si à l'usage la complexité ne paye
+  > pas, c'est ce point-là qu'on rouvre.
+  >
+  > **Agrégat en dernière tranche** (ADR-0017, repliement) + entrée de Nav. **Aucun axe en v1** :
+  > l'échantillon est de quelques dizaines de lectures écrites à la main. L'axe `Phase` est le premier
+  > qui méritera sa place, mais il est **exclu tant que la détection des phases n'est pas fiable**
+  > (terrain d'US-15a-bis) — décision explicite du demandeur. `Opening` (échantillon nul) et
+  > `Time control category` (confond jouer et analyser : une partie est lue à froid) ne sont pas
+  > candidats.
+  >
+  > **La circularité du bonus, assumée** : juger *notre* moteur d'analyse par l'accord joueur/moteur
+  > suppose le joueur juste. Un désaccord est une **divergence** — où regarder, jamais qui se trompe.
+  >
+  > **À lire avant de griller 16b** (ajouté le 2026-08-25) : la `Confrontation` s'installe dans le
+  > panneau latéral de la route de lecture, **déjà dense et au format instable** — voir **US-22**,
+  > dont le grilling est volontairement placé **après** celle-ci. Deux conséquences pour 16b : tout
+  > bloc qu'elle ajoute et qui **apparaît selon le ply** aggrave le défaut de reflow signalé là-bas,
+  > et le dénominateur de la **couverture** livré par US-16a (demi-coups, ply 0 exclu) devra être
+  > tranché ici, puisque la justesse portera sur les coups **du joueur** — deux chiffres côte à côte
+  > sur des bases différentes sinon (arbitrage ouvert sur la PR #70).
+  >
+  > **Passée en Doing le 2026-08-25**, US-16a étant mergée. PRD : `.scratch/confrontation/PRD.md`.
+  > Six tranches sur `integration/US-16-my-own-analysis` :
+  > `01-a-confrontation-exists` (couverture et justesse, provenance, les deux refus nommés) →
+  > `02-how-i-get-it-wrong` (matrice et sens du biais) →
+  > `03-shown-without-being-scored` (`Good`, coups adverses, coups non comptés avec leur raison,
+  > couche postérieure) → `04-where-i-looked` (`Key moment`s, part des dégâts, `Drift`, distance)
+  > → `05-where-i-read-well` (le bilan et son entrée de `Nav`) → `06-hp-suite-and-story-exit`
+  > (**HITL** : fusion HP-02+HP-03, nouvelle HP dédiée, suite complète, PR vers `develop`).
+  >
+  > **Livrée le 2026-08-25** — six tranches (PR #71→#76), toutes FP vertes, suite HP **3/3** plus son
+  > prérequis. PR `integration → develop` ouverte, en attente du merge humain.
+  > Décisions prises en chemin, consignées dans les issues : la **couverture** de la `Confrontation`
+  > prend la base de la justesse (les `Counted Move`s du joueur) et le chiffre d'US-16a perd le nom de
+  > couverture pour devenir un **avancement** — l'arbitrage que la PR #70 avait laissé ouvert.
+
 ## In review
+
+## Done
 
 - **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
   désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
@@ -758,8 +775,8 @@
   > - La remise à `Départ` du niveau de l'explorateur quand on quitte l'écran, trouvée par HP-02 :
   >   aucune assertion ne la couvre, et la formulation « après avoir été piloté » de sa passe de
   >   thème suppose un état que l'app ne garde pas.
-
-## Done
+  >
+  > **Livrée le 2026-08-25** — PR #70 mergée dans `develop`. Six tranches, HP 3/3.
 
 - **US-17**: Importer un historique Lichess sans payer une requête par mois vide.
   > **Grillée** (2026-08-23) — décisions **D1→D8** dans

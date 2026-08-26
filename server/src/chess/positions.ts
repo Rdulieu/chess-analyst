@@ -57,3 +57,16 @@ export function gamePositions(pgn: string): string[] {
   const chess = loadGame(pgn);
   return [chess.setUpFen(), ...chess.history().map((move) => move.fen)];
 }
+
+/**
+ * A Game's half-moves in **standard notation**, indexed by ply — `[0]` is empty,
+ * because ply 0 is the starting Position and no Move at all.
+ *
+ * Used where a sentence has to **name** a Move rather than merely number it:
+ * "21.Rd1" and "22.Nxe5" are two Moves a Player can find on their board, where
+ * "21." and "22." are two numbers — and worse, two plies of the same Move number
+ * render nearly alike.
+ */
+export function gameNotations(pgn: string): string[] {
+  return ["", ...loadGame(pgn).history().map((move: { san: string }) => move.san)];
+}

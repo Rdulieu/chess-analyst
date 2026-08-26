@@ -13,4 +13,7 @@ export {
   sealPersonalAnalysis,
   GameNotThisProfiles,
   SealRefused,
+  fetchConfrontation,
+  fetchConfrontationSummary,
+  ConfrontationRefused,
 } from "./personal";

@@ -146,7 +146,8 @@ imported, 0 already present" against a database that already holds them.
    and nowhere else (ADR-0014).
 10. Stop the server and **take the imported snapshot** → a copy of the database file holding the
     three Profiles, the chess.com range under `DudulSmash`, the Lichess range under `Metalyst` and
-    nothing under `Nonomoho`. This is what HP-02 and HP-03 restore.
+    nothing under `Nonomoho`. This is what HP-02 and HP-03 restore — HP-03 then running its own
+    `Analysis pass` on top of it, which is why the snapshot carries no analysed Game.
 
 ## Checks
 ### UI

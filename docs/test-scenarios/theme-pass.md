@@ -3,7 +3,7 @@
 Since US-13 the app has a stylesheet and a dark theme that follows the operating-system
 preference. A style is only observable on a **rendered** screen, so it is validated where the app
 actually runs: each of the three Happy Paths ends with **this** step, walking the navigation across
-**all eight screens**, first in the light theme and then with the dark preference emulated.
+**all nine screens**, first in the light theme and then with the dark preference emulated.
 
 It is written once, here, and referenced by each scenario's final step rather than copied three
 times — three copies of an assertion list drift, and the whole point of the pass is that the three
@@ -33,7 +33,7 @@ happen is a scenario creating a Profile, importing or analysing *for the sake of
 
 The extra cost is rendering, not journey: on a warm app it is sixteen navigations.
 
-## The eight screens
+## The nine screens
 
 | # | Screen | Reached by |
 |---|---|---|
@@ -42,14 +42,15 @@ The extra cost is rendering, not journey: on a warm app it is sixteen navigation
 | 3 | Ouvertures (`/openings`) | navigation |
 | 4 | Positions dangereuses (`/danger`) | navigation |
 | 5 | Stats (`/stats`) | navigation |
-| 6 | Analyse (`/analyse/:gameId`) | selecting a Game in "Mes parties" — it is Game-scoped and deliberately absent from the navigation. **The Game row is a `button`, not a link**: a driver hunting for an `href` matching `/analyse/` finds nothing and wrongly records the screen as unreachable (measured on the 2026-08-19 run). Click the row's button, or navigate to the URL directly. |
-| 7 | Profils (`/profiles`) | navigation — where the current `Profile` is chosen |
-| 8 | Profil (`/profiles/:id`) | selecting a Profile in the list — it is Profile-scoped, like Analyse is Game-scoped |
+| 6 | Mes lectures (`/confrontation`) | navigation — the `Confrontation` summary (US-16b). **Added 2026-08-25**, and it went one run un-audited: the passes said "eight screens" while the navigation had grown to nine, so a screen reachable from the nav belonged to no scenario. A count in prose does not follow a `Nav` on its own — when a route joins the navigation, this table is what has to change. |
+| 7 | Analyse (`/analyse/:gameId`) | selecting a Game in "Mes parties" — it is Game-scoped and deliberately absent from the navigation. **The Game row is a `button`, not a link**: a driver hunting for an `href` matching `/analyse/` finds nothing and wrongly records the screen as unreachable (measured on the 2026-08-19 run). Click the row's button, or navigate to the URL directly. |
+| 8 | Profils (`/profiles`) | navigation — where the current `Profile` is chosen |
+| 9 | Profil (`/profiles/:id`) | selecting a Profile in the list — it is Profile-scoped, like Analyse is Game-scoped |
 
-All eight, in both themes. Two of them the navigation cannot reach on its own: open any Game from
-the list for the sixth, and any Profile from the list for the eighth. If the scenario's state holds
+All nine, in both themes. Two of them the navigation cannot reach on its own: open any Game from
+the list for Analyse, and any Profile from the list for the Profile page. If the scenario's state holds
 no Game at all, record the sixth as *not reachable in this scenario's state* rather than importing
-one; the eighth is always reachable, since every scenario has selected a Profile before reading
+one; the Profile page is always reachable, since every scenario has selected a Profile before reading
 anything.
 
 Since US-11 the two profiles screens joined the inventory and **none was removed** — "Mes parties"
@@ -98,8 +99,8 @@ in both themes like any other.
 6. **No console error** across the walk.
 
 **A cue rule with no subject on the screen proves nothing.** The audit drops rules that find nothing,
-so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's and
-HP-03's states only the weak-opening ⚠, the current tab and the two `Profile` cues have subjects at
+so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's
+state only the weak-opening ⚠, the current tab and the two `Profile` cues have subjects at
 all, and HP-01 is the scenario that carries the danger cards, the severity glyphs and the "analysée"
 badge. Read the three passes together, and read `subjects` before reading `failures`.
 

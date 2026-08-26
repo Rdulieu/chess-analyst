@@ -4,12 +4,21 @@ import type { Db } from "../db";
 import { games } from "../db/schema";
 import {
   getPersonalAnalysis,
+  sealedReadingGames,
   writeMark,
   sealAnalysis,
   SealRefusal,
   type MarkPatch,
 } from "../personal/repository";
 import { isDeclaredSeverity } from "../personal/severity";
+import {
+  confrontGame,
+  foldConfrontations,
+  ConfrontationRefusal,
+  type GameConfrontation,
+} from "../personal/confrontation";
+import { getGameAnnotations } from "../annotations/repository";
+import { gameNotations } from "../chess/positions";
 import { scopedProfile } from "./scope";
 
 /**
@@ -30,6 +39,10 @@ export function createPersonalRouter(db: Db): Router {
   const router = Router();
 
   /** The Game this request is about, once the Profile has vouched for it. */
+  /** The Game row itself, when a route needs more of it than its id. */
+  const gameRow = (gameId: number) =>
+    db.select().from(games).where(eq(games.id, gameId)).get();
+
   const scopedGame = (
     req: Parameters<Parameters<Router["get"]>[1]>[0],
     res: Parameters<Parameters<Router["get"]>[1]>[1],
@@ -46,6 +59,78 @@ export function createPersonalRouter(db: Db): Router {
     }
     return { gameId };
   };
+
+  /**
+   * The `Confrontation` **summary** across the Player's whole history (US-16b) —
+   * where they read well and where they read badly, which is a claim about tens
+   * of readings and never about one.
+   *
+   * **Declared before `/:gameId`**, and that is load-bearing: Express matches in
+   * order, so with the parameter route first `confrontation` would be read as a
+   * Game id and the failure would be **silent** — a 404 on a route that exists.
+   *
+   * The summary is the per-Game records **summed** (ADR-0017), not a query of its
+   * own: reconciliation is the definition, which is what lets the Player audit a
+   * global figure on one Game they know.
+   */
+  router.get("/confrontation", (req, res) => {
+    const profile = scopedProfile(db, req, res);
+    if (!profile) return;
+
+    const confrontations = sealedReadingGames(db, profile.id)
+      .map((gameId) => {
+        const annotations = getGameAnnotations(db, gameId);
+        const analysis = getPersonalAnalysis(db, gameId);
+        if (!annotations || !analysis) return null;
+        const game = gameRow(gameId);
+        return confrontGame(analysis, annotations, game ? gameNotations(game.pgn) : []);
+      })
+      // A refusal here is not an error to report: it is a Game that simply does
+      // not belong in the fold, and the query already excluded every reason we
+      // know of. Filtering rather than throwing keeps one unreadable Game from
+      // costing the Player their whole summary.
+      .filter((result): result is GameConfrontation => result !== null && !(result instanceof ConfrontationRefusal));
+
+    res.json(foldConfrontations(confrontations));
+  });
+
+  /**
+   * The `Confrontation` of one Game (US-16b) — the sealed reading set against
+   * what the engine found. **A join** (ADR-0019), computed on the spot from rows
+   * two other routes already serve: nothing here is stored, so retuning a
+   * threshold retunes this with no re-analysis (ADR-0009).
+   *
+   * Its two refusals are **409s, named apart**, never a 404: the Game is there,
+   * and the Player has two different things to go and do — seal, or analyse.
+   */
+  router.get("/:gameId/confrontation", (req, res) => {
+    const scoped = scopedGame(req, res);
+    if (!scoped) return;
+    const annotations = getGameAnnotations(db, scoped.gameId);
+    const analysis = getPersonalAnalysis(db, scoped.gameId);
+    // `scopedGame` already vouched for the Game, so neither can be absent here.
+    if (!annotations || !analysis) {
+      res.status(404).json({ error: "Partie introuvable." });
+      return;
+    }
+
+    // The notations name the Moves a distance talks about. Read from this one
+    // Game's PGN, not the corpus: US-10b's lesson was that replaying PGNs on a
+    // whole-history read costs 3111 ms, and this is a single Game.
+    const game = gameRow(scoped.gameId);
+    const confrontation = confrontGame(
+      analysis,
+      annotations,
+      game ? gameNotations(game.pgn) : [],
+    );
+    if (confrontation instanceof ConfrontationRefusal) {
+      res
+        .status(409)
+        .json({ reason: confrontation.reason, error: CONFRONTATION_REFUSAL[confrontation.reason] });
+      return;
+    }
+    res.json(confrontation);
+  });
 
   router.get("/:gameId", (req, res) => {
     const scoped = scopedGame(req, res);
@@ -122,6 +207,18 @@ export function createPersonalRouter(db: Db): Router {
 
   return router;
 }
+
+/**
+ * What each refusal to confront is told to the Player. **Two sentences, because
+ * there are two roads**: one goes back to the reading to seal it, the other
+ * launches an `Analysis pass`. A single message would leave the Player guessing.
+ */
+const CONFRONTATION_REFUSAL: Record<ConfrontationRefusal["reason"], string> = {
+  "not-sealed":
+    "Cette lecture n'est pas encore scellée : il n'y a rien de figé à confronter. Retournez à votre lecture et scellez-la quand elle vous convient.",
+  "not-analyzed":
+    "Cette partie n'a pas été analysée : le moteur n'a rien dit dont on puisse rapprocher votre lecture. Lancez son analyse depuis la page Analyse.",
+};
 
 /** What each refusal is told to the Player — its reason, in their own terms. */
 const SEAL_REFUSAL: Record<SealRefusal["reason"], string> = {

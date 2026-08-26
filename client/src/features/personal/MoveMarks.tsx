@@ -1,4 +1,4 @@
-import { markKinds } from "./coverage";
+import { markKinds } from "./progress";
 import type { PersonalMark } from "../../types";
 
 /**

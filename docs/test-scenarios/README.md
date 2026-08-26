@@ -8,12 +8,14 @@ from `CONTEXT.md`.
 **At most 3 HP.** To add a 4th: merge two, drop a non-critical one, or graft a
 drive-by onto an existing HP.
 
-> **Decided for US-16b**, so the next reader does not have to rediscover it: HP-02 and HP-03 are to be
-> **merged** into one "read my aggregates" journey — they open on the same sentence, run on the same
-> path-0 snapshot, and both assert *shape and internal consistency, not fixed numbers* — and the slot
-> that frees up receives a **dedicated** HP: *read a Game blind, seal, confront*. The cap is not
-> raised. US-16a itself is a **graft** onto HP-01 (step 9b) precisely because a Happy Path carries a
-> core value, and this one is not whole until the `Confrontation` exists.
+> **Done at US-16b** (2026-08-25), and recorded because the shape of the suite is not obvious from
+> the files alone: the former HP-02 (*move habits*) and HP-03 (*weak openings*) were **merged** into
+> today's [HP-02](./HP-02-read-my-aggregates.md). They opened on the same sentence, restored the same
+> snapshot, and both asserted *shape and internal consistency rather than fixed numbers* — what was
+> duplicated was the preamble, not the journeys, so the merge cost no assertion. The freed slot went
+> to [HP-03](./HP-03-read-blind-and-confront.md), *read a Game blind, seal, confront*, because a
+> Happy Path carries a core value and US-16a was only ever a **graft** onto HP-01 (step 9b) for want
+> of the `Confrontation`. The cap was not raised.
 
 **[Path 0](./path-0-bootstrap.md) is a prerequisite, not a fourth journey, and sits outside the
 cap.** It is run **first, once per suite run**: it creates **three** reference `Profile`s — one that
@@ -28,14 +30,16 @@ Each HP still runs **independently** — each restores a snapshot into its **own
 starts from untouched data. What path 0 removes is a repeated network round-trip, not a clean start.
 HP-01 restores the **empty-history** snapshot (it imports for real: that is its subject, and its
 "82 imported / 0 already present" is unassertable against a populated database); HP-02 and HP-03
-restore the **imported** snapshot.
+restore the **imported** snapshot. HP-03 then runs an `Analysis pass` of its own on two short Games —
+it is the only scenario besides HP-01 that spends real engine time, and it has to: a `Confrontation`
+set against a fixture verdict would assert nothing about the method.
 
 | ID | Title | Covers | Status |
 |---|---|---|---|
 | path 0 | Bootstrap: three reference Profiles, two Platforms, two histories | Profile, Platform, Import, Monthly import, Game, Time control category | prerequisite — **not an HP** |
 | HP-01 | Import and explore my chess.com history | Profile, Platform, Import, Game, Move, Position, Personal analysis, Theme | active |
-| HP-02 | Explore my move habits | Move habit, Position, Move, Profile, Theme | active |
-| HP-03 | Spot my weak openings | Weak opening, Opening, Win rate, Profile, Theme | active |
+| HP-02 | Read my aggregates | Move habit, Opponent reply, Weak opening, Opening, Win rate, Position, Move, Profile, Board orientation, Theme | active |
+| HP-03 | Read a Game blind, seal it, confront it | Personal analysis, Declared severity, Key moment, Note, Confrontation, Counted Move, Drift, Review mode, Analysis pass, Search regime, Profile, Theme | active |
 
 > The `Covers` column is a summary; each scenario's own `covers:` frontmatter is the source of
 > truth and has drifted ahead of it before. Check the files, not this table.
@@ -60,11 +64,15 @@ Since US-11 the inventory is **eight** screens, not six: `/profiles` and `/profi
 and **none was removed** — "Mes parties" stays, it merely lost the import form, which moved onto the
 Profile's page. The pass costs four more audits per scenario.
 
-The three passes are not redundant: each audits the eight screens **in its own scenario's state**.
+The three passes are not redundant: each audits the nine screens **in its own scenario's state**.
 HP-01 sees a populated `/danger`, two analysed Games, a real `Evaluation curve` and a Profile page
-carrying real counters; HP-02 sees the explorer after it has been driven, arrows on the board; HP-03
-sees the weak-opening highlight. HP-02 and HP-03 see `/danger` in its empty state, deliberately — an
-empty state is a rendered screen too, and so is a Profile page whose history is still empty.
+carrying real counters. HP-02 sees the explorer after it has been driven — arrows on the board — and
+the weak-opening highlight, the two duties it inherited from the pair it replaces; its state analyses
+nothing, so it is the pass that sees `/danger` **empty**, deliberately, an empty state being a
+rendered screen too. HP-03 analyses two Games of its own, so it audits `/danger`, the
+`Evaluation curve` and the advantage bar **populated**, and it is the **only** pass that reaches the
+reading route and the `Confrontation` at all — including the confusion matrix, the one table on that
+screen where a colour ramp could quietly replace the information.
 
 The cap of **at most 3 HP** holds: the theme is not a journey, so it costs one step per scenario, not
 a fourth scenario.
@@ -81,7 +89,22 @@ already completed on the first check. A backgrounded command re-invokes the agen
 wait for that. If a readout must be watched, poll the status endpoint and break on `running:false`,
 never on a fixed number of iterations.
 
-**Pick the shortest Games for the analysis pass.** HP-01 step 9 asserts that a pass completes, that
+**Pick the cheapest Games that still carry the assertion — and "cheapest" is not always "shortest".**
+The two scenarios that spend engine time want different things from it, so they select differently,
+and the difference is deliberate rather than an inconsistency:
+
+- **HP-01** wants a pass to *complete* and `/danger` to *populate*. Neither needs a fault, so the
+  shortest Games do — see the rule below.
+- **HP-03** wants a `Confrontation` to have something in it, and that needs **faults**. The shortest
+  Games have none: measured on the reference range, the two shortest are a **6-half-move** Game and a
+  21-half-move one, and both runs of HP-03 on that rule produced **one** flagged Move between them
+  and no excluded Move at all. It therefore selects **losses of ordinary length**, at roughly three
+  times the engine cost — which is what the assertion costs. See that scenario's step 2.
+
+The lesson generalises: **a selection rule tuned for cost will quietly tune the assertion down with
+it**, and the suite will stay green while asserting less every run. Say what a rule is *for*.
+
+**For HP-01, the shortest Games.** HP-01 step 9 asserts that a pass completes, that
 its confirmation is exact, and that `/danger` populates — never that it covered a long Game. Taking
 whichever Game happens to be first cost 78 Positions (~10 min at depth 16); selecting by fewest
 half-moves roughly halves that. Selection by characteristic is already the suite's rule — apply it
@@ -114,12 +137,14 @@ import — which is HP-01's subject, not a duplicate.
 
 **Three Profiles, always, one of them current, one of them on the other Platform.** The suite held exactly one Profile until 2026-08-21,
 and that blind spot let a `/profiles` screen ship overflowing its own card by 24px in ordinary use —
-green across eight screens and two themes, because the defect needs two rows with one of them
+green across the eight screens of the time and two themes, because the defect needs two rows with one of them
 marked "Profil actuel" to appear at all (two rows unselected fit; add the selection and they do
 not). More than one Profile is also what US-11 *exists for*: studying other players. So path 0
 builds both, at the cost of **one extra chess.com validation request and no import**, and no
-scenario may quietly reduce itself to a single Profile. HP-03 goes further and **switches** Profile,
-which is where the partitioning of ADR-0014 stops being an assumption.
+scenario may quietly reduce itself to a single Profile. HP-02 goes further and **switches** Profile
+mid-run, which is where the partitioning of ADR-0014 stops being an assumption — and HP-03 switches
+too, to show that a `Profile` with no sealed reading gets its own screen rather than a summary of
+zeros.
 
 Since US-12 a **third** Profile joins them, `Metalyst` on **lichess.org**, and this one is not free:
 path 0 imports its full 71-month span against the live Lichess API, which is now the longest single
@@ -185,7 +210,7 @@ seconds per run and are simultaneously too slow and too flaky. Wait for the elem
 - **Do not reuse the state another scenario left behind.** Even when it looks identical, a scenario
   that never starts clean cannot catch an ordering or precomputation side effect. A snapshot restored
   by file copy **is** a clean start; a database another scenario has been driving is not.
-- **Do not shorten the theme pass to the screens the journey already crossed.** The eight screens
+- **Do not shorten the theme pass to the screens the journey already crossed.** The nine screens
   are the coverage, and the two themes are the point; a pass over four screens in one theme is a
   pass over nothing in particular. The profiles screens are audited **as the scenario left them**,
   empty counters included.
