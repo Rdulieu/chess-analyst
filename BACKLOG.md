@@ -371,6 +371,81 @@
   > À grillier avec de vraies parties sous les yeux, pas en salle : c'est une story de **mesure et
   > d'arbitrage**, pas de construction.
 
+- **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
+  ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
+  > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
+  > réel du dépôt. **Relevé complet, avec les commandes de vérification :**
+  > [`docs/factory-coherence-audit-2026-08-24.md`](docs/factory-coherence-audit-2026-08-24.md) —
+  > 11 incohérences, 6 points d'incomplétude, et ce qu'il ne faut pas casser.
+  >
+  > ### Le constat : l'usine a évolué plus vite que sa propre documentation
+  >
+  > Rien de cassé au sens d'une panne. Le problème est plus insidieux : **la méthode décrit un
+  > projet qui n'est plus tout à fait celui-ci**, et un agent obéit à ce qu'il lit. Trois exemples,
+  > du plus grave au plus visible :
+  >
+  > | Constat | Ce que ça coûte |
+  > | --- | --- |
+  > | Le gabarit `CLAUDE.md` de `build-factory` a divergé du vrai (il ignore « Dev phase » et tout l'orchestrateur HP) | rejouer `/build-factory` **régresse** la méthode — c'est la seule incohérence qui détruit du travail |
+  > | `agentic-tests` §4 dit « limite de 20 sous-agents », §5.7 dit `min(3, floor(nproc/4))` = **2** | un agent qui s'arrête à la §4 refige le poste (cf. US-20) |
+  > | 17 PRD livrés lisent encore `ready-for-agent`, et `done` (55 fichiers) n'existe pas dans les cinq rôles canoniques | la file censée piloter l'autonomie est **majoritairement du bruit** |
+  >
+  > Le cas de `done` n'est pas un oubli de mise à jour mais **un manque dans le modèle** : la machine
+  > à états du triage n'a jamais eu d'état terminal, donc la pratique en a inventé un hors
+  > vocabulaire, et la glose de merge s'est logée dans le champ de statut faute d'un endroit pour
+  > elle. Le grill devra trancher : ajouter un sixième rôle, ou séparer l'état du triage de l'état
+  > de livraison.
+  >
+  > ### La lacune la plus coûteuse n'est pas une incohérence
+  >
+  > Quatre recettes **load-bearing** ne vivent que dans la mémoire personnelle de l'agent, pas dans
+  > le dépôt : le worktree obligatoire avant toute modification, les trois symlinks `node_modules`
+  > d'un worktree frais, la recette de migration `NOT NULL` SQLite (`foreign_keys OFF`,
+  > `defer_foreign_keys` inopérant), et le throttle Lichess **par IP**. Un agent frais — ou tout
+  > autre contributeur — **repaie chaque piège**. C'est la seule dette de l'audit que l'usine ne peut
+  > pas découvrir seule.
+  >
+  > ### Pistes, à trancher au grill
+  >
+  > 1. **Faire de l'hygiène ce qu'on peut mécaniser.** Les `_Avoid_` de `CONTEXT.md` sont une liste
+  >    explicite : un grep sur le code, les issues et les scénarios en ferait un test. Même logique
+  >    pour la colonne `Covers` du README HP, qui se régénère depuis les frontmatters `covers:` ou
+  >    disparaît — aujourd'hui elle est **conservée avec un avertissement disant qu'elle est fausse**.
+  > 2. **Séparer les règles des preuves dans `agentic-tests`** (550 lignes, dont cinq paragraphes
+  >    datés qui disent la même chose). Les règles impératives dans la skill, le journal daté à côté.
+  >    **Attention** : le mécanisme d'auto-audit de la §5.6 est la meilleure invention de l'usine —
+  >    ses défauts sont d'**application**, pas de conception. L'alléger sans le casser.
+  > 3. **Rapatrier les quatre recettes** dans le dépôt, à l'endroit où un agent les lit sans les
+  >    chercher.
+  > 4. **Supprimer l'outillage mort** : tout le triage vise GitHub (`gh issue list --label`, « posté
+  >    sur une issue GitHub », le disclaimer IA sur chaque commentaire) alors que le tracker est
+  >    markdown local et que `gh issue list` renvoie zéro. Ces instructions occupent du contexte à
+  >    chaque session et désignent le mauvais endroit.
+  >
+  > ### Deux tensions à nommer plutôt qu'à trancher ici
+  >
+  > - **`/tdd` exige « get user approval on the plan »** alors que `ready-for-agent` signifie « an
+  >   agent can pick this up with no human context ». Les deux ne tiennent pas ensemble ; en pratique
+  >   c'est le TDD qui plie, mais rien ne l'écrit, donc chaque agent tranche seul et différemment.
+  >   C'est une **décision de méthode**, pas un nettoyage.
+  > - **Le plafond de concurrence appartient aussi à US-18 et US-20.** Corriger la contradiction
+  >   documentaire (20 vs 2) est de l'hygiène et revient ici. Décider de la **valeur** du plafond est
+  >   un arbitrage commun aux deux autres stories et **n'appartient pas à celle-ci**.
+  >
+  > ### Réserves consignées
+  >
+  > Que `/build-factory` régresse effectivement le `CLAUDE.md` est un constat de **divergence
+  > textuelle** — ce n'est pas testé, et ça ne devrait l'être que sur une branche jetable. Les HP
+  > (47 Ko) et les 76 issues n'ont pas été relus ligne à ligne : l'audit compte des statuts et des
+  > tailles, il ne juge pas leur contenu. Enfin, une partie du chantier est de la suppression, donc
+  > **le risque est de jeter un garde-fou qu'on croyait mort** : l'audit liste explicitement ce qui
+  > tient bien, à lire avant de couper.
+  >
+  > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
+  > rien d'autre, ne prenne aucune décision que le dépôt contredit.
+
+## Doing
+
 - **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
   rien céder de ce qu'elle teste.
   > **Grillée le 2026-08-26**, conjointement avec US-20 — **abandonnée à l'issue du grill** (voir
@@ -491,80 +566,9 @@
   > **Critère de succès** : à fixer sur le grand livre de D7, une fois qu'il tourne sur les deux runs
   > déjà en boîte — pas avant, et pas sur un chiffre rond (D2).
 
-- **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
-  ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
-  > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
-  > réel du dépôt. **Relevé complet, avec les commandes de vérification :**
-  > [`docs/factory-coherence-audit-2026-08-24.md`](docs/factory-coherence-audit-2026-08-24.md) —
-  > 11 incohérences, 6 points d'incomplétude, et ce qu'il ne faut pas casser.
-  >
-  > ### Le constat : l'usine a évolué plus vite que sa propre documentation
-  >
-  > Rien de cassé au sens d'une panne. Le problème est plus insidieux : **la méthode décrit un
-  > projet qui n'est plus tout à fait celui-ci**, et un agent obéit à ce qu'il lit. Trois exemples,
-  > du plus grave au plus visible :
-  >
-  > | Constat | Ce que ça coûte |
-  > | --- | --- |
-  > | Le gabarit `CLAUDE.md` de `build-factory` a divergé du vrai (il ignore « Dev phase » et tout l'orchestrateur HP) | rejouer `/build-factory` **régresse** la méthode — c'est la seule incohérence qui détruit du travail |
-  > | `agentic-tests` §4 dit « limite de 20 sous-agents », §5.7 dit `min(3, floor(nproc/4))` = **2** | un agent qui s'arrête à la §4 refige le poste (cf. US-20) |
-  > | 17 PRD livrés lisent encore `ready-for-agent`, et `done` (55 fichiers) n'existe pas dans les cinq rôles canoniques | la file censée piloter l'autonomie est **majoritairement du bruit** |
-  >
-  > Le cas de `done` n'est pas un oubli de mise à jour mais **un manque dans le modèle** : la machine
-  > à états du triage n'a jamais eu d'état terminal, donc la pratique en a inventé un hors
-  > vocabulaire, et la glose de merge s'est logée dans le champ de statut faute d'un endroit pour
-  > elle. Le grill devra trancher : ajouter un sixième rôle, ou séparer l'état du triage de l'état
-  > de livraison.
-  >
-  > ### La lacune la plus coûteuse n'est pas une incohérence
-  >
-  > Quatre recettes **load-bearing** ne vivent que dans la mémoire personnelle de l'agent, pas dans
-  > le dépôt : le worktree obligatoire avant toute modification, les trois symlinks `node_modules`
-  > d'un worktree frais, la recette de migration `NOT NULL` SQLite (`foreign_keys OFF`,
-  > `defer_foreign_keys` inopérant), et le throttle Lichess **par IP**. Un agent frais — ou tout
-  > autre contributeur — **repaie chaque piège**. C'est la seule dette de l'audit que l'usine ne peut
-  > pas découvrir seule.
-  >
-  > ### Pistes, à trancher au grill
-  >
-  > 1. **Faire de l'hygiène ce qu'on peut mécaniser.** Les `_Avoid_` de `CONTEXT.md` sont une liste
-  >    explicite : un grep sur le code, les issues et les scénarios en ferait un test. Même logique
-  >    pour la colonne `Covers` du README HP, qui se régénère depuis les frontmatters `covers:` ou
-  >    disparaît — aujourd'hui elle est **conservée avec un avertissement disant qu'elle est fausse**.
-  > 2. **Séparer les règles des preuves dans `agentic-tests`** (550 lignes, dont cinq paragraphes
-  >    datés qui disent la même chose). Les règles impératives dans la skill, le journal daté à côté.
-  >    **Attention** : le mécanisme d'auto-audit de la §5.6 est la meilleure invention de l'usine —
-  >    ses défauts sont d'**application**, pas de conception. L'alléger sans le casser.
-  > 3. **Rapatrier les quatre recettes** dans le dépôt, à l'endroit où un agent les lit sans les
-  >    chercher.
-  > 4. **Supprimer l'outillage mort** : tout le triage vise GitHub (`gh issue list --label`, « posté
-  >    sur une issue GitHub », le disclaimer IA sur chaque commentaire) alors que le tracker est
-  >    markdown local et que `gh issue list` renvoie zéro. Ces instructions occupent du contexte à
-  >    chaque session et désignent le mauvais endroit.
-  >
-  > ### Deux tensions à nommer plutôt qu'à trancher ici
-  >
-  > - **`/tdd` exige « get user approval on the plan »** alors que `ready-for-agent` signifie « an
-  >   agent can pick this up with no human context ». Les deux ne tiennent pas ensemble ; en pratique
-  >   c'est le TDD qui plie, mais rien ne l'écrit, donc chaque agent tranche seul et différemment.
-  >   C'est une **décision de méthode**, pas un nettoyage.
-  > - **Le plafond de concurrence appartient aussi à US-18 et US-20.** Corriger la contradiction
-  >   documentaire (20 vs 2) est de l'hygiène et revient ici. Décider de la **valeur** du plafond est
-  >   un arbitrage commun aux deux autres stories et **n'appartient pas à celle-ci**.
-  >
-  > ### Réserves consignées
-  >
-  > Que `/build-factory` régresse effectivement le `CLAUDE.md` est un constat de **divergence
-  > textuelle** — ce n'est pas testé, et ça ne devrait l'être que sur une branche jetable. Les HP
-  > (47 Ko) et les 76 issues n'ont pas été relus ligne à ligne : l'audit compte des statuts et des
-  > tailles, il ne juge pas leur contenu. Enfin, une partie du chantier est de la suppression, donc
-  > **le risque est de jeter un garde-fou qu'on croyait mort** : l'audit liste explicitement ce qui
-  > tient bien, à lire avant de couper.
-  >
-  > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
-  > rien d'autre, ne prenne aucune décision que le dépôt contredit.
+## In review
 
-## Doing
+## Done
 
 - **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
   > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
@@ -617,15 +621,27 @@
   > → `05-where-i-read-well` (le bilan et son entrée de `Nav`) → `06-hp-suite-and-story-exit`
   > (**HITL** : fusion HP-02+HP-03, nouvelle HP dédiée, suite complète, PR vers `develop`).
   >
-  > **Livrée le 2026-08-25** — six tranches (PR #71→#76), toutes FP vertes, suite HP **3/3** plus son
-  > prérequis. PR `integration → develop` ouverte, en attente du merge humain.
+  > **Livrée le 2026-08-25**, **fusionnée dans `develop`** — décision humaine
+  > `integration → develop`, **PR #77**, mergée le **2026-08-26** (`f61b105`). Six tranches
+  > (PR #71→#76), toutes FP vertes, suite HP **3/3** plus son prérequis, et l'import Lichess
+  > mesuré à **35,7 s** contre ~210 s de référence — US-17 continue de payer.
+  >
+  > **Cinq décisions produit restent ouvertes** (PR #77, aucune bloquante, toutes consignées dans
+  > les issues) : le défilement latéral de `/profiles` sous ~669 px dans les deux thèmes ; la porte
+  > vers la `Confrontation` offerte sur une partie scellée mais non analysée, qui mène au refus ;
+  > les refus métier passés en statuts HTTP d'erreur, donc une console qui rougit sur un parcours
+  > nominal ; le compteur de la route de lecture qui annonce 4 `Key moment`s là où la confrontation
+  > en compte 2 (l'un additionne les couches, l'autre ne confronte que la scellée) ; et un lot de
+  > détails d'intitulés (un libellé pour deux situations dans l'explorateur, un résumé d'import qui
+  > mélange les langues, un dialogue de scellement sans focus initial).
+  >
+  > **Réserve d'honnêteté portée par la PR** : le jeu de données local ne porte pas cette story —
+  > une partie analysée, un coup flagué, aucun coup exclu. Le crédit partiel, les coups forcés et
+  > le bilan multi-lectures ont tourné sur des **fixtures fabriquées**, dit à chaque fois plutôt
+  > que masqué. La suite HP, elle, tourne sur ses propres passes moteur réelles.
   > Décisions prises en chemin, consignées dans les issues : la **couverture** de la `Confrontation`
   > prend la base de la justesse (les `Counted Move`s du joueur) et le chiffre d'US-16a perd le nom de
   > couverture pour devenir un **avancement** — l'arbitrage que la PR #70 avait laissé ouvert.
-
-## In review
-
-## Done
 
 - **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
   désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
