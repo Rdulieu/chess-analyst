@@ -47,7 +47,7 @@ set against a fixture verdict would assert nothing about the method.
 ## Screen coverage, and the theme pass
 
 Each of the three scenarios **ends with the same final step**: a walk of the navigation across all
-**eight** screens, in the light theme and then under an emulated dark preference. That step is
+**nine** screens, in the light theme and then under an emulated dark preference. That step is
 written once, in [`theme-pass.md`](./theme-pass.md), and referenced by the three — three copies of
 one assertion list drift, and the point of the pass is that the three scenarios apply the *same*
 rules to the state each of them built. **`theme-pass.md` is the only place the inventory is edited**;
@@ -60,9 +60,12 @@ that never sees a screen proves nothing about it. Every screen is now visited by
 scenarios, in both themes, and the journeys stay journeys of value rather than becoming coverage
 sweeps.
 
-Since US-11 the inventory is **eight** screens, not six: `/profiles` and `/profiles/:id` joined it
-and **none was removed** — "Mes parties" stays, it merely lost the import form, which moved onto the
-Profile's page. The pass costs four more audits per scenario.
+The inventory has grown twice and **nothing was ever removed**. US-11 took it from six screens to
+eight — `/profiles` and `/profiles/:id` joined it, and "Mes parties" stayed, it merely lost the import
+form, which moved onto the Profile's page. US-16b took it to **nine** with `/confrontation`. Each
+addition costs two audits per scenario, one per theme. The count is stated here only to be read;
+`theme-pass.md`'s table is what a walk follows, and a count in prose that drifts from it is how a
+screen reachable from the navigation once belonged to no scenario for a whole run.
 
 The three passes are not redundant: each audits the nine screens **in its own scenario's state**.
 HP-01 sees a populated `/danger`, two analysed Games, a real `Evaluation curve` and a Profile page
@@ -166,8 +169,8 @@ before copying (`PRAGMA wal_checkpoint(TRUNCATE)`), and that is not always enoug
 Prefer `.backup`; whichever you use, **read the copy back** before trusting it.
 
 **Do not pay for the theme pass twice.** It reuses the state its scenario has already built: it must
-trigger no Import, no analysis and no `Profile` creation, and it must not restart the app. Sixteen
-navigations on a warm app is the whole budget. Inject `tools/theme-audit.js` once per document and call `themeAudit()` per
+trigger no Import, no analysis and no `Profile` creation, and it must not restart the app. Eighteen
+audits on a warm app is the whole budget. Inject `tools/theme-audit.js` once per document and call `themeAudit()` per
 screen rather than re-implementing the measurements per scenario; switch the theme with the driver's
 media emulation, never by reloading with a different setting.
 
