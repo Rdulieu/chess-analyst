@@ -479,6 +479,8 @@
   > README a tranché explicitement (« US-17 does not reopen this rule »). **Et D6 ajoute un item à
   > cette liste : l'analyse de l'agent.**
   >
+  > **PRD** : [`.scratch/hp-suite-speed/PRD.md`](.scratch/hp-suite-speed/PRD.md) (`ready-for-agent`).
+  >
   > **Critère de succès** : à fixer sur le grand livre de D7, une fois qu'il tourne sur les deux runs
   > déjà en boîte — pas avant, et pas sur un chiffre rond (D2).
 
