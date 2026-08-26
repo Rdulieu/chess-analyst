@@ -480,6 +480,13 @@
   > cette liste : l'analyse de l'agent.**
   >
   > **PRD** : [`.scratch/hp-suite-speed/PRD.md`](.scratch/hp-suite-speed/PRD.md) (`ready-for-agent`).
+  > **Six sous-issues** créées le 2026-08-27 sur `integration/US-18-faster-hp-suite`, toutes
+  > `ready-for-agent` (`.scratch/hp-suite-speed/issues/`) :
+  > `01-the-ledger-of-a-run` · `02-the-theme-pass-in-one-call` ·
+  > `03-app-lifecycle-launch-restore-stop` · `04-navigate-and-read-back` ·
+  > `05-no-scenario-left-waiting` · `06-remeasure-and-set-the-criterion` (**HITL** — le critère de
+  > succès est une décision du demandeur). 01 et 05 sont prenables immédiatement ; 02/03/04 attendent
+  > 01, faute de quoi elles ne peuvent pas prouver leur gain.
   >
   > **Critère de succès** : à fixer sur le grand livre de D7, une fois qu'il tourne sur les deux runs
   > déjà en boîte — pas avant, et pas sur un chiffre rond (D2).
