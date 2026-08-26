@@ -18,8 +18,10 @@ réellement travaillé que **43**.
 Le problème n'est pas là où on le cherchait. Trois croyances de l'entrée d'origine sont fausses,
 maintenant qu'on a mesuré :
 
-- Ce n'était pas « ~35-40 min » : c'était **28 min** au portail d'US-17 et **43 min** à celui
-  d'US-16b. La suite a grossi de ×1,5, pas doublé.
+- Ce n'était pas « ~35-40 min » : c'était **28 min** au portail d'**US-16a** et **43 min** à celui
+  d'US-16b. La suite a grossi de ×1,5, pas doublé. *(Étiquette corrigée le 2026-08-27 par le grand
+  livre de la tranche 01 : deux portails ont tourné le 2026-08-24, et celui d'US-17 coûte 24,8/24,3
+  — c'est celui d'US-16a qui fait les 28 min.)*
 - Ce n'est plus **path 0** : il est passé de 15-20 min à **7,2 min**, US-17 ayant supprimé les
   71 requêtes d'export et les six pauses d'une minute. Il n'y a plus rien à y prendre.
 - Ce n'est ni le moteur, ni le réseau, ni « un scénario aberrant » : les trois HP coûtent **15 à

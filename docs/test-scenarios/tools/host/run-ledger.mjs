@@ -167,19 +167,32 @@ export function hpPassOfSession(subagentsDir) {
     .sort((a, b) => a.startedAt - b.startedAt);
 
   const scenarios = entries.filter((e) => e.role === "scenario");
-  const prerequisite = entries.find((e) => e.role === "prerequisite") || null;
+  /* Every run of the prerequisite, not the first one. Path 0 has been dispatched
+     twice in a session (2026-08-19, after it failed), and keeping one of the two
+     drops its minutes out of the wall without a word — a quietly smaller number,
+     which is the one failure mode the library is written against. */
+  const prerequisites = entries.filter((e) => e.role === "prerequisite");
 
   if (scenarios.length === 0) {
     return {
       found: false,
-      prerequisite,
+      prerequisites,
       scenarios: [],
-      reason: prerequisite
+      reason: prerequisites.length
         ? "this session dispatched the prerequisite but no HP scenario — that is not a pass"
         : "this session dispatched no HP scenario: there is no pass here to cost",
     };
   }
-  return { found: true, prerequisite, scenarios };
+  if (scenarios.every((s) => s.startedAt === null)) {
+    return {
+      found: false,
+      prerequisites,
+      scenarios,
+      reason:
+        "every HP scenario this session dispatched has an empty transcript: they never spoke, so there is nothing to cost",
+    };
+  }
+  return { found: true, prerequisites, scenarios };
 }
 
 /* --------------------------------------------------------- the pass as a whole */
@@ -251,7 +264,7 @@ export function suiteOf(agents) {
 /** The whole reading of one session: its pass, if it held one, and the suite's line. */
 export function ledgerOfSession(subagentsDir) {
   const pass = hpPassOfSession(subagentsDir);
-  const agents = pass.prerequisite ? [pass.prerequisite, ...pass.scenarios] : pass.scenarios;
+  const agents = [...pass.prerequisites, ...pass.scenarios];
   return { ...pass, suite: pass.found ? suiteOf(agents) : null };
 }
 
@@ -288,22 +301,36 @@ function table(rows) {
  * looks like a fact.
  */
 export function formatLedger(ledger) {
-  if (!ledger.found) {
+  if (!ledger.found || !ledger.suite) {
     return [
       "No Happy Path pass in this session.",
       "",
-      ledger.reason,
-      ledger.prerequisite ? `(the prerequisite "${ledger.prerequisite.description}" did run)` : "",
+      ledger.reason ||
+        "the pass holds no agent that ever spoke: there are no turns to cost, so nothing is reported",
+      ledger.prerequisites && ledger.prerequisites.length
+        ? `(the prerequisite ran ${ledger.prerequisites.length} time(s): ${ledger.prerequisites
+            .map((p) => p.description)
+            .join(", ")})`
+        : "",
     ]
       .filter(Boolean)
       .join("\n");
   }
 
-  const agents = ledger.prerequisite ? [ledger.prerequisite, ...ledger.scenarios] : ledger.scenarios;
+  const agents = [...ledger.prerequisites, ...ledger.scenarios];
   const header = ["", "wall", "worked", ...BUCKETS.map((k) => BUCKET_LABELS[k]), "calls"];
-  const rows = [header, ...agents.map((a) => row(a.description, a))];
-
   const s = ledger.suite;
+  const rows = [
+    header,
+    ...agents.map((a) => row(a.description, a)),
+    /* The suite's own split, and it is the figure everything else quotes: "tool
+       round-trips 39-48 %, composing 32-39 %, analysis 17-19 %" is a statement about
+       the pass, never about one scenario. Its shares are taken over the summed walls,
+       because that is the denominator those percentages were computed against — the
+       lived wall would divide parallel work by a smaller number and flatter nothing
+       consistently. */
+    ["Suite", min(s.sumOfWalls), min(s.workedWall), ...BUCKETS.map((k) => `${min(s.buckets[k])} (${pct(s.buckets[k], s.sumOfWalls)})`), String(s.toolCalls)],
+  ];
   return [
     "Ledger of the pass — minutes, and the share of each agent's own wall.",
     "",
@@ -337,6 +364,22 @@ export function projectTranscriptRoots(repoPath, home) {
     return [];
   }
   return all.filter((d) => d === slug || d.startsWith(`${slug}-`)).map((d) => join(root, d));
+}
+
+/**
+ * The story a session belongs to, read off the branches its dispatches worked on.
+ * Nothing records it; the branch name is the only trace, and it is enough to tell two
+ * gates of the same day apart.
+ */
+function storyOf(subagentsDir) {
+  const stories = new Set();
+  for (const f of readdirSync(subagentsDir)) {
+    if (!f.endsWith(".meta.json")) continue;
+    const said = JSON.parse(readFileSync(join(subagentsDir, f), "utf8")).description || "";
+    const m = said.match(/\bUS-\d+[a-z]?\b/i);
+    if (m) stories.add(m[0].toUpperCase());
+  }
+  return [...stories].sort().join(", ");
 }
 
 function sessionsUnder(projectDir) {
@@ -400,10 +443,14 @@ function main(argv) {
     .filter(({ pass }) => pass.found)
     .sort((a, b) => a.pass.suite.startedAt - b.pass.suite.startedAt);
   for (const { dir, pass } of found) {
-    const day = new Date(pass.scenarios[0].startedAt).toISOString().slice(0, 10);
+    const day = new Date(pass.suite.startedAt).toISOString().slice(0, 10);
+    /* Two gates ran on 2026-08-24, and a date alone cannot tell them apart. What can
+       is what ELSE the session dispatched: a gate is named by the story whose Feature
+       Paths sit beside it. */
     console.log(
       `  ${day}  ${pass.scenarios.length} scenario(s)  ` +
-        `lived ${min(pass.suite.livedWall)} / worked ${min(pass.suite.workedWall)} min  ${dir}`,
+        `lived ${min(pass.suite.livedWall)} / worked ${min(pass.suite.workedWall)} min  ` +
+        `${storyOf(dir) || "—"}  ${basename(dirname(dir))}`,
     );
   }
   if (found.length === 0) console.log("  (none)");

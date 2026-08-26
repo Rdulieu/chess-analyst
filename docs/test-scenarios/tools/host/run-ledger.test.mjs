@@ -82,7 +82,7 @@ describe("telling a pass apart from everything else the session dispatched", () 
     const pass = hpPassOfSession(FIXTURES);
 
     expect(pass.found).toBe(true);
-    expect(pass.prerequisite.description).toBe("Path 0 — prérequis suite HP");
+    expect(pass.prerequisites.map((p) => p.description)).toEqual(["Path 0 — prérequis suite HP"]);
     expect(pass.scenarios.map((s) => s.description)).toEqual([
       "HP-01 import and explore",
       "HP-03 read blind and confront",
@@ -107,8 +107,8 @@ describe("the ledger of the whole pass", () => {
   });
 
   it("keeps the suite's wall apart from the sum of its scenarios, which overlap", () => {
-    const { suite, prerequisite, scenarios } = ledgerOfSession(FIXTURES);
-    const summed = [prerequisite, ...scenarios].reduce((t, a) => t + a.wall, 0);
+    const { suite, prerequisites, scenarios } = ledgerOfSession(FIXTURES);
+    const summed = [...prerequisites, ...scenarios].reduce((t, a) => t + a.wall, 0);
 
     // Two scenarios run at a time, so adding their walls counts the same minutes twice.
     expect(minutes(summed)).toBeCloseTo(108.43, 2);
@@ -116,8 +116,8 @@ describe("the ledger of the whole pass", () => {
   });
 
   it("counts the tool calls of the pass, prerequisite included", () => {
-    const { suite, prerequisite, scenarios } = ledgerOfSession(FIXTURES);
-    expect(suite.toolCalls).toBe([prerequisite, ...scenarios].reduce((t, a) => t + a.toolCalls, 0));
+    const { suite, prerequisites, scenarios } = ledgerOfSession(FIXTURES);
+    expect(suite.toolCalls).toBe([...prerequisites, ...scenarios].reduce((t, a) => t + a.toolCalls, 0));
     expect(suite.toolCalls).toBeGreaterThan(150);
   });
 });
@@ -166,5 +166,51 @@ describe("what the ledger hands to a reader", () => {
 
     expect(text).toMatch(/no HP scenario/i);
     expect(text).not.toMatch(/lived wall/i);
+  });
+});
+
+describe("a pass whose prerequisite had to be run twice", () => {
+  /*
+   * The 2026-08-19 gate dispatched path 0, it failed, and it was dispatched again.
+   * Keeping one of the two loses 3.8 minutes and says nothing about it — which is the
+   * one failure mode ADR-0020 refuses: not a wrong number, a quietly smaller one.
+   */
+  const RETRIED = join(FIXTURES, "..", "retried-prerequisite-2026-08-19");
+
+  it("keeps both runs of the prerequisite, each as its own line", () => {
+    const { prerequisites } = ledgerOfSession(RETRIED);
+
+    expect(prerequisites.map((p) => p.description)).toEqual([
+      "Run path 0 bootstrap",
+      "Run path 0 bootstrap (retry)",
+    ]);
+  });
+
+  it("counts the retry into the suite, rather than dropping it out of the wall", () => {
+    const { suite, prerequisites } = ledgerOfSession(RETRIED);
+    const retry = prerequisites[1];
+
+    expect(retry.wall).toBeGreaterThan(3 * 60 * 1000);
+    expect(formatLedger(ledgerOfSession(RETRIED))).toContain("(retry)");
+    expect(suite.toolCalls).toBeGreaterThanOrEqual(retry.toolCalls);
+  });
+});
+
+describe("what the suite line owes a reader", () => {
+  it("prints the suite's own split, which is the figure the PRD and the ADR quote", () => {
+    const text = formatLedger(ledgerOfSession(FIXTURES));
+
+    // "tool round-trips 39-48 %, composing 32-39 %, analysis 17-19 %" is a statement
+    // about the SUITE, not about any one scenario. Leaving it computed but unprinted
+    // means importing the module to read the only number anybody cites.
+    expect(text).toMatch(/^Suite\b.*%/m);
+  });
+});
+
+describe("an HP scenario that was dispatched and never spoke", () => {
+  it("refuses the pass loudly instead of throwing a bare TypeError on a null suite", () => {
+    const empty = { found: true, prerequisites: [], scenarios: [], suite: null };
+    expect(() => formatLedger(empty)).not.toThrow();
+    expect(formatLedger(empty)).toMatch(/no.*turn|never spoke|nothing to cost/i);
   });
 });
