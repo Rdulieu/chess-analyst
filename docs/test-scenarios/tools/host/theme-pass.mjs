@@ -156,11 +156,21 @@ const stateExpr = (port) => `(() => {
  * whether the content is right, which stays the scenario's business.
  */
 async function waitForScreen(session, port, matches, { timeoutMs = 20000, settleMs = 180 } = {}) {
+  /* No soft fallback here, and that is deliberate. A `session.pendingRequests ? … :
+     true` would let a session without the capability walk straight back into the
+     defect this function was rewritten to close — measured: the same pass then audits
+     `/confrontation` at thirteen text nodes again, reports eighteen green readings and
+     warns nobody. Missing capability, loud refusal. */
+  if (typeof session.pendingRequests !== "function") {
+    throw new Error(
+      "this session cannot report requests in flight, so it cannot tell a rendered screen from a loading one — attach with cdp.mjs",
+    );
+  }
   const until = Date.now() + timeoutMs;
   let previous = null;
   let last = null;
   while (Date.now() < until) {
-    const quiet = session.pendingRequests ? session.pendingRequests() === 0 : true;
+    const quiet = session.pendingRequests() === 0;
     const state = JSON.parse(await session.evaluate(stateExpr(port)));
     last = { ...state, quiet };
     if (matches(state.path) && state.len > 0 && quiet && previous && previous.len === state.len) {

@@ -207,6 +207,13 @@ export async function attach(wsUrl) {
    * How many requests are still out, ignoring any that has been out longer than
    * `staleMs`. A stream or a long poll never finishes and must not hold a walk
    * hostage; a fetch a screen is waiting on comes back in well under a second.
+   *
+   * Five seconds against this app's slowest screen content, which lands at 1.25 s —
+   * a margin of about four (measured 2026-08-27). Two consequences worth knowing
+   * rather than rediscovering: a legitimate fetch **slower** than this would be
+   * ignored and would reopen the hole on that screen; and a screen that opens a
+   * persistent stream costs the walk a flat five seconds, so a pass would slow from
+   * 15 s to about 105 rather than lie about what it measured.
    */
   const pendingRequests = (staleMs = 5000) => {
     const now = Date.now();
