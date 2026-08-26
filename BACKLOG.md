@@ -436,6 +436,8 @@
   >   relit, et rend des **valeurs brutes** : aucun `expect`, aucun seuil, aucune comparaison. Une
   >   bibliothèque qui jugerait ferait passer la suite au vert en cessant d'affirmer, et **c'est la
   >   suite qui sert de filet** — personne ne le verrait.
+  > - **D4 et D5 sont consignées en ADR** :
+  >   [`docs/adr/0020-the-driver-library-drives-the-scenario-judges.md`](docs/adr/0020-the-driver-library-drives-the-scenario-judges.md).
   > - **D5 — Elle n'est nommée que dans `SKILL.md`, jamais dans les scénarios.** Les quatre scénarios
   >   contiennent aujourd'hui **zéro** commande de lancement : c'est ce qui leur a permis de survivre
   >   à un changement complet de pilote (MCP hier, puppeteer piloté par `Bash` aujourd'hui — les
