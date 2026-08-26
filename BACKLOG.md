@@ -465,14 +465,20 @@
   >
   > | Portail | Mur **utile** | Outils | Composition de scripts | **Analyse** | Rapport |
   > | --- | --- | --- | --- | --- | --- |
-  > | 2026-08-24 (US-17, ancienne forme) | **28 min** | 39 % | 39 % | **19 %** | 3 % |
+  > | 2026-08-24 (**US-16a**, ancienne forme) | **28 min** | 39 % | 39 % | **19 %** | 3 % |
   > | 2026-08-25 (US-16b, forme actuelle) | **43 min** | 48 % | 32 % | **17 %** | 2 % |
   >
   > **Les trois corrections :**
   >
   > 1. **Le « ~35-40 min » n'a jamais été mesuré et n'est vrai ni avant ni après.** La suite coûtait
-  >    **28 min** de travail réel au portail d'US-17, et **43 min** à celui d'US-16b. La croissance
+  >    **28 min** de travail réel au portail d'US-16a, et **43 min** à celui d'US-16b. La croissance
   >    est ×1,5, pas le doublement qu'un décompte naïf du mur laisse croire.
+  >
+  >    > **Étiquette corrigée le 2026-08-27**, par le grand livre de la tranche 01 : ce « 28 min »
+  >    > est le portail d'**US-16a** (session `b59434a5`, 28,4 vécues / 27,3 travaillées, répartition
+  >    > 40/38/19/3), pas celui d'US-17 — deux portails ont tourné le 2026-08-24 et celui d'US-17
+  >    > (`3e763365`) coûte **24,8 / 24,3**. Le chiffre était juste, l'étiquette non ; la première
+  >    > chose que l'outil a rendue visible est un « avant » mal nommé.
   > 2. **path 0 est réglé, il n'y a plus rien à y prendre** : 15-20 min → **7,2 min**. US-17 a livré
   >    son gain là où on l'attendait (1 requête d'export au lieu de 71, 0 pause, 33,6 s).
   > 3. **Aucun scénario n'est aberrant.** Les trois HP coûtent **15 à 21 min** chacun ; le nouveau

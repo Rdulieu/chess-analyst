@@ -9,7 +9,7 @@ tech-agnostic and keeps judging.
 
 The measurement is the reason this ADR exists rather than a README paragraph. Subagent transcripts
 are timestamped per message, so a Happy Path run can be costed after the fact without replaying it.
-Over the runs of **2026-08-24** (28 min of real work) and **2026-08-25** (43 min), the split is
+Over the runs of **2026-08-24** (US-16a's gate, 28 min of real work) and **2026-08-25** (43 min), the split is
 stable: **tool round-trips 39-48 %, composing driver scripts 32-39 %, the agent's own analysis
 17-19 %, writing the report 2-3 %**. A library attacks the first two at once — fewer and larger
 calls, nothing left to invent — and leaves the third untouched. That ordering matters: **analysis is
