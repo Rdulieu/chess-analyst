@@ -168,6 +168,21 @@ export async function attach(wsUrl) {
 
   await send("Page.enable");
   await send("Runtime.enable");
+  await send("Network.enable");
+
+  /*
+   * What the network is doing, which is the half of "the screen has rendered" that
+   * the DOM cannot answer. A screen showing a stable loading placeholder looks
+   * settled to anything watching text alone — measured 2026-08-27 on `/confrontation`,
+   * where the placeholder held steady for 400 ms and the real content arrived at
+   * 600: an audit taken in that hole reported thirteen text nodes out of seventy and
+   * still called itself a pass.
+   */
+  const inflight = new Map();
+  on("Network.requestWillBeSent", ({ requestId }) => inflight.set(requestId, Date.now()));
+  const settled = ({ requestId }) => inflight.delete(requestId);
+  on("Network.loadingFinished", settled);
+  on("Network.loadingFailed", settled);
 
   /**
    * Evaluate an expression and return its value. A raised exception on the page
@@ -188,7 +203,17 @@ export async function attach(wsUrl) {
     return result.value;
   };
 
-  return { send, on, once, close, evaluate };
+  /**
+   * How many requests are still out, ignoring any that has been out longer than
+   * `staleMs`. A stream or a long poll never finishes and must not hold a walk
+   * hostage; a fetch a screen is waiting on comes back in well under a second.
+   */
+  const pendingRequests = (staleMs = 5000) => {
+    const now = Date.now();
+    return [...inflight.values()].filter((started) => now - started < staleMs).length;
+  };
+
+  return { send, on, once, close, evaluate, pendingRequests };
 }
 
 /**

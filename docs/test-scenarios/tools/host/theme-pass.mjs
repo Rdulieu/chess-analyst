@@ -39,14 +39,31 @@ export const THEMES = ["light", "dark"];
  * The screens `theme-pass.md` declares, read off its own table.
  *
  * Each row is `| n | Name (\`/route\`) | reached by … |`. A screen is *in the
- * navigation* when its "Reached by" cell says so; the other two are opened from a
- * list, and forgetting them is how a pass silently shrinks.
+ * navigation* when its "Reached by" cell starts with that word; the other two are
+ * opened from a list, and forgetting them is how a pass silently shrinks. (Starts
+ * with, not contains: screen 7's cell explains that it is "deliberately absent from
+ * the navigation", and a looser test would read that as the opposite of what it says.)
+ *
+ * Only the screens section is read. The document is prose with tables in it and prose
+ * grows: the known-open findings below it are numbered too, and a parse that swept the
+ * whole file would quietly enrol them. An inventory that grows or shrinks on its own
+ * is the single thing this function must never do.
  */
 export function parseScreenInventory(markdown) {
-  const rows = markdown
-    .split("\n")
+  const lines = markdown.split("\n");
+  const start = lines.findIndex((l) => /^#{2,}\s.*\bscreens\b/i.test(l.trim()));
+  if (start === -1) {
+    throw new Error("theme-pass.md declares no screens section: refusing to guess the inventory");
+  }
+  const end = lines.findIndex((l, i) => i > start && /^#{1,}\s/.test(l.trim()));
+
+  const rows = lines
+    .slice(start, end === -1 ? lines.length : end)
     .map((l) => l.trim())
     .filter((l) => /^\|\s*\d+\s*\|/.test(l));
+  if (rows.length === 0) {
+    throw new Error("the screens section of theme-pass.md holds no numbered rows");
+  }
 
   return rows.map((line) => {
     const cells = line.split("|").slice(1, -1).map((c) => c.trim());
@@ -115,9 +132,7 @@ const guard = (port) =>
   `if (location.port !== ${JSON.stringify(String(port))}) throw new Error("port guard: this is " + location.port + ", not ${port}");`;
 
 /**
- * What the screen currently is: its path, and how much text its main landmark
- * holds. Two identical readings in a row is this library's definition of "rendered" —
- * a mechanism postcondition, not a judgement about the content.
+ * What the screen currently is: its path, and how much text its main landmark holds.
  */
 const stateExpr = (port) => `(() => {
   ${guard(port)}
@@ -125,15 +140,33 @@ const stateExpr = (port) => `(() => {
   return JSON.stringify({ path: location.pathname, len: main.innerText.length });
 })()`;
 
+/**
+ * Wait until the screen has actually rendered, which takes **two** conditions and not
+ * one.
+ *
+ * Text stability alone is not enough, and believing it was cost this library its
+ * first real defect: a screen showing "Chargement du bilan…" has perfectly stable
+ * text, so two identical samples 180 ms apart agreed instantly and the audit ran on a
+ * placeholder — thirteen text nodes out of seventy, `problems: 0`, a clean green over
+ * a screen that had never been painted. Measured on `/confrontation`, seven times out
+ * of seven, warm cache included.
+ *
+ * So the screen is rendered when the app has **stopped fetching** *and* the DOM has
+ * stopped changing. Both are mechanism postconditions; neither says anything about
+ * whether the content is right, which stays the scenario's business.
+ */
 async function waitForScreen(session, port, matches, { timeoutMs = 20000, settleMs = 180 } = {}) {
   const until = Date.now() + timeoutMs;
   let previous = null;
   let last = null;
   while (Date.now() < until) {
+    const quiet = session.pendingRequests ? session.pendingRequests() === 0 : true;
     const state = JSON.parse(await session.evaluate(stateExpr(port)));
-    last = state;
-    if (matches(state.path) && state.len > 0 && previous && previous.len === state.len) return state;
-    previous = matches(state.path) ? state : null;
+    last = { ...state, quiet };
+    if (matches(state.path) && state.len > 0 && quiet && previous && previous.len === state.len) {
+      return state;
+    }
+    previous = matches(state.path) && quiet ? state : null;
     await new Promise((r) => setTimeout(r, settleMs));
   }
   throw new Error(

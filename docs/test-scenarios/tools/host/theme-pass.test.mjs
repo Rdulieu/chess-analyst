@@ -71,3 +71,35 @@ describe("the script that is actually evaluated on the page", () => {
     expect(() => auditScript({ port: "5199", theme: "sepia", source: "" })).toThrow(/sepia/);
   });
 });
+
+describe("reading the inventory out of a document written for humans", () => {
+  /*
+   * The document is prose with a table in it, and prose grows. Scanning the whole
+   * file for rows whose first cell is a number means any future table with a numbered
+   * first column silently joins the inventory — and an inventory that silently grows
+   * or shrinks is the one thing this parse must never do.
+   */
+  const withASecondTable = `
+## The nine screens
+
+| # | Screen | Reached by |
+| --- | --- | --- |
+| 1 | Mes parties (\`/\`) | navigation |
+| 2 | Analyse (\`/analyse/:gameId\`) | selecting a Game |
+
+## Known-open findings
+
+| # | Finding | Ratio |
+| --- | --- | --- |
+| 1 | A disabled control's label (\`2.63:1\`) | tolerated |
+`;
+
+  it("takes the screens table and leaves every other numbered table alone", () => {
+    const screens = parseScreenInventory(withASecondTable);
+    expect(screens.map((s) => s.route)).toEqual(["/", "/analyse/:gameId"]);
+  });
+
+  it("refuses a document with no screens table, rather than reporting an empty pass", () => {
+    expect(() => parseScreenInventory("# A document with no inventory\n")).toThrow(/screens/i);
+  });
+});

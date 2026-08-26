@@ -493,7 +493,13 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   one place the screens are edited.
 - **It throws rather than hand back a thinner green.** The port guard and the in-script theme
   assertion are both live: falsify the emulation and the call fails with the theme it actually
-  measured. Measured 2026-08-27: eighteen audits over nine screens in **13 seconds**.
+  measured. Measured 2026-08-27: eighteen audits over nine screens in **15 seconds**.
+- **"The screen has rendered" is two conditions, not one** — and getting that wrong is the defect
+  this slice's own Feature Path caught. Text stability alone is satisfied *instantly* by a loading
+  placeholder: "Chargement du bilan…" holds perfectly steady, so `/confrontation` was audited at
+  ~300 ms while its content arrived at ~600, reporting thirteen text nodes out of seventy with
+  `problems: 0`. The helper now waits for the app to have **stopped fetching** as well. If you ever
+  write your own wait, wait for both.
 
 A screen the scenario's state cannot reach comes back as `unreachable` **with its reason**, not
 missing — read those before reading the readings.
