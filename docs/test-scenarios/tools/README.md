@@ -1,0 +1,67 @@
+# The driver library
+
+Everything a scenario's agent would otherwise re-derive at every run: launching the app,
+restoring a snapshot, navigating, running the theme pass, reading a field back, and costing a
+pass after the fact. It exists because measurement said so — **composing driver scripts is a
+third of what the Happy Path suite costs**, and the scripts that get reinvented every run are
+also where the suite's false findings came from (ADR-0020).
+
+**It drives; it never judges.** No `expect`, no threshold, no comparison with an expected value.
+It returns raw values and it **throws** when the *mechanism* failed — the server did not answer,
+the screen did not render, the field did not read back what was set, the measured theme is not
+the requested one. What the application *says* is asserted by the scenario, read and judged by
+the agent. A library that quietly asserts less every run would keep the suite green while it
+stopped looking, and nothing else is watching.
+
+**It is named only in `.claude/skills/agentic-tests/SKILL.md` — never in a scenario.** The four
+journeys under `docs/test-scenarios/` carry no launch command at all, which is why they survived
+a complete change of pilot without one line moving.
+
+## Two halves, and they do not import each other
+
+| | | |
+|---|---|---|
+| **host/** | runs on the machine | launch, restore, stop, read transcripts |
+| *page* | runs inside the page under test | navigate, audit, read a field back |
+
+Plain JavaScript, no build step: `.mjs` on the host side, injectable `.js` on the page side. The
+library is not part of the application, is in neither workspace, and does not participate in
+`npm run build`.
+
+> `theme-audit.js` still sits at the root of this directory rather than under a `page/`
+> folder. It is the page half — browser-side, dependency-free, driver-agnostic — and it moves
+> when the theme pass gains its host half (US-18 slice 02).
+
+## Testing
+
+Its own cycle, its own command:
+
+```bash
+npm run test:tools      # this directory
+npm test                # the application — unchanged, and it does not run these
+```
+
+**A slice that touches this directory passes both.** The rule is written into the skill because
+"build + tests" reads as `npm test` alone, and that is how `theme-audit.js` spent four months
+shipped, relied upon by every theme pass, and tested by nobody.
+
+Only the **pure** parts are unit-tested — bucketing a transcript, building a URL, parsing a
+command's output. Unit-testing "launch the app" would manufacture exactly the false confidence
+ADR-0020 is written against; the real check of each helper is a **Feature Path** run with it.
+
+## What is here
+
+- **`host/run-ledger.mjs`** — the ledger of a pass. Reconstructs what an agentic run cost from
+  the subagent transcripts, afterwards and without replaying it: per scenario the wall and five
+  buckets (tools, composing, analysis, reporting, inert wait), plus the suite's *lived* and
+  *worked* walls, which are two different numbers.
+
+  ```bash
+  node docs/test-scenarios/tools/host/run-ledger.mjs            # sessions that hold a pass
+  node docs/test-scenarios/tools/host/run-ledger.mjs <session>  # cost one of them
+  ```
+
+- **`theme-audit.js`** — the measurable half of the theme pass (see `../theme-pass.md`).
+
+- **`test-fixtures/`** — a real pass, truncated: the 2026-08-25 gate, with every field the ledger
+  does not read stripped out. `rebuild-fixture.mjs` says what was kept and why.

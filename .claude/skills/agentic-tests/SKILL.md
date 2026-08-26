@@ -45,6 +45,15 @@ When ambiguous (on `develop`/`main`, no argument), ask which mode to run.
 finding** is raised — on top of green build + tests. On red or a blocking finding: **do not
 merge**, report.
 
+> **"Tests" is two commands when the driver library is touched** (US-18, 2026-08-27). `npm test`
+> checks the *application*; `npm run test:tools` checks the tooling under
+> `docs/test-scenarios/tools/` that drives it, and it is deliberately **outside** `npm test` so the
+> app's suite stays fast and a broken helper does not read as a broken app. A slice that touches
+> that directory passes **both**. Without the rule spelled out, an agent reading "build + tests"
+> runs `npm test` alone and the library becomes unguarded code — which is exactly what
+> `theme-audit.js` was for four months: shipped, relied on by every theme pass, and tested by
+> nobody.
+
 ## 4. HP mode (integration → develop gate, human decision)
 
 1. Read the inventory in `docs/test-scenarios/README.md` first: it names the scenarios **and any
