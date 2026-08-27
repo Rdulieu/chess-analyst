@@ -17,7 +17,8 @@ sub-work from it and merge back into it via PR, **not** `develop`. Auto-merges o
 
 **Ne plus laisser un scénario fini attendre.** Au portail du 2026-08-25, HP-03 a rendu son rapport à
 12:41:44 et n'a plus rien fait jusqu'à 13:15:13 — **33,5 minutes**, terminées par une notification de
-tâche de fond. Sur les 74 minutes vécues ce jour-là, **~30 n'étaient pas du travail**.
+tâche de fond. Sur les 74 minutes vécues ce jour-là, **~30 n'étaient pas du travail** — *prémisse
+fausse, voir ci-dessous*.
 
 > **La prémisse ci-dessus est fausse, découverte le 2026-08-27 par la Feature Path de cette tranche
 > même.** Chaque rapport de ce portail a été collecté en quelques secondes (HP-03 : envoyé 12:41:27,
