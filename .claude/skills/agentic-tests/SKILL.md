@@ -125,7 +125,7 @@ Neither was true, and the second error was found by re-reading the transcript th
 | gate delivered (PR #77) | `12:52:30` |
 
 **Every report was collected within seconds of arriving.** The requester waited **57.7 minutes**, of
-which the suite itself spanned **43.0 minutes** against **42.6 minutes of work** — about **twenty-four
+which the suite itself spanned **43.0 minutes** against **42.6 minutes of work** — about **twenty-one
 seconds** of collection slack across the whole pass. There was nothing to reclaim.
 
 **So where did "74 minutes, 31 of them waiting" come from?** From the ledger's *first turn → last

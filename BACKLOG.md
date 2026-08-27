@@ -549,9 +549,16 @@
   >   outils, composition, analyse, rapport, attente inerte). Coût : **zéro run**. Il vaut
   >   **rétroactivement**, donc il n'y a **aucun chemin critique** — contrairement à ce que le plan
   >   supposait d'abord, aucune mesure n'est perdue si une story atteint son portail avant lui.
-  > - **D8 — L'attente de collecte est dans le périmètre.** ~30 min sur 74 au dernier portail, pour
-  >   zéro travail. C'est de l'orchestration (§5.1), pas du contenu de scénario, et c'est le gain le
-  >   moins cher de la story.
+  > - **D8 — L'attente de collecte est dans le périmètre.** ~~~30 min sur 74 au dernier portail, pour
+  >   zéro travail, le gain le moins cher de la story.~~ C'est de l'orchestration (§5.1), pas du
+  >   contenu de scénario — ça, ça tient.
+  >
+  >   > **Motif corrigé le 2026-08-27**, cf. la rétractation plus haut. Chaque rapport du portail du
+  >   > 25/08 a été collecté en quelques secondes et le battement de toute la passe valait **~21 s** :
+  >   > il n'y avait pas 30 minutes à récupérer. Les 30 minutes étaient un sous-agent **fini**,
+  >   > réveillé pour rien 23 min **après** l'ouverture de la PR. Le périmètre reste bon, le geste
+  >   > change : **arrêter ce qu'on a dépêché une fois son rapport collecté**, plutôt que venir le
+  >   > chercher plus tôt.
   >
   > ### Arbitrages laissés ouverts
   >

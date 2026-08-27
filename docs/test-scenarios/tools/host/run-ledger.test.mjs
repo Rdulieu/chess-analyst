@@ -95,15 +95,17 @@ describe("telling a pass apart from everything else the session dispatched", () 
 describe("the ledger of the whole pass", () => {
   const minutes = (ms) => ms / 60000;
 
-  it("reproduces the two figures the requester actually lived on 2026-08-25", () => {
+  it("measures 42.6 minutes of work, and a 31-minute tail nobody waited through", () => {
     const { suite } = ledgerOfSession(FIXTURES);
 
-    // He waited 74 minutes in front of a suite that worked 43 — the pair of numbers
-    // this whole story was opened on, and they come out of the transcripts unaided.
-    // Reporting only the second flatters the suite; reporting only the first blames
-    // it for an orchestration defect it does not have.
-    expect(minutes(suite.livedWall)).toBeCloseTo(73.88, 2);
+    // Exact properties of the fixture. What they are NOT is the pair of numbers this
+    // story was opened on: "the requester waited 74 minutes for 43 of work" was this
+    // figure read as somebody's wait, and it was wrong. He waited 57.7; the suite
+    // spanned 43.0 for 42.6 of work, about 21 seconds of slack. The 31.29 below is the
+    // tail — a finished subagent woken by a stray watcher 23 minutes after the gate
+    // shipped — and this test exists to keep that reading attached to the number.
     expect(minutes(suite.workedWall)).toBeCloseTo(42.59, 2);
+    expect(minutes(suite.livedWall)).toBeCloseTo(73.88, 2);
     expect(minutes(suite.livedWall - suite.workedWall)).toBeCloseTo(31.29, 2);
   });
 
@@ -148,8 +150,12 @@ describe("what the ledger hands to a reader", () => {
     for (const bucket of ["tools", "composing", "analysis", "reporting", "idle"]) {
       expect(text.toLowerCase()).toContain(bucket);
     }
-    expect(text).toMatch(/lived/i);
     expect(text).toMatch(/worked/i);
+    /* Not "lived": that word was removed on 2026-08-27 with the claim it carried. The
+       span is printed under a name that describes it — first turn to last line — with
+       what it is not, right there beside it. */
+    expect(text).not.toMatch(/lived wall/i);
+    expect(text).toMatch(/First turn → last/);
   });
 
   it("passes no judgement — it holds no verdict on how long any of it took", () => {

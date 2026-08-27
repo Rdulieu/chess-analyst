@@ -22,14 +22,15 @@ import { execFileSync } from "node:child_process";
 export const BUCKETS = ["tools", "composing", "analysis", "reporting", "idleWait"];
 
 /*
- * Two reservations that belong WITH the figures, never beside them. A reader who
- * gets the percentages without these will read them as facts.
+ * The reservations that belong WITH the figures, never beside them. A reader who gets
+ * the percentages without these will read them as facts — and one of them was read
+ * that way for two days.
  */
 export const RESERVATIONS = [
   "composing includes API latency and any queueing: the transcript timestamps a message when it lands, so the model's own generation cannot be separated from the wait for it.",
   "The content of thinking blocks is not persisted. This measures how long analysis took, never what it was made of.",
   "The worst wait counts every idle minute, the ones the orchestrator spent legitimately elsewhere included. On a parallel fan-out it should read seconds; on a run resumed between rounds of work it will not, and that is not a defect.",
-  "It also reads 0.0 for an agent nobody ever came back to, since the wait after a transcript's last line cannot be measured — 0.0 means either collected at once or abandoned, and only the lived wall tells you which.",
+  "It also reads 0.0 for an agent nobody ever came back to, since the wait after a transcript's last line cannot be measured — 0.0 means either collected at once or abandoned, and only the orchestrator's own session tells you which.",
   "None of these figures can see the orchestrator's own session, so none of them is the requester's wait. They measure the subagents, and nothing else.",
 ];
 
@@ -266,14 +267,17 @@ function unionLength(spans) {
 /**
  * The suite's own line. Two walls, and they are different numbers:
  *
- * - `livedWall` — first agent's first turn to last agent's last turn. This is the
- *   time somebody actually spent waiting for the suite.
- * - `workedWall` — the same span, minus every minute during which **no** agent was
- *   working. Scenarios run two at a time, so this is a union and never a sum: adding
- *   the scenarios' walls counts the parallel minutes twice.
- *
- * On 2026-08-25 those were 74 and 43 minutes. The gap is not a rounding difference,
- * it is a scenario that had rendered its report and was left waiting to be collected.
+ * - `workedWall` — every minute during which **at least one** agent was working,
+ *   counted once. A union, never a sum: adding the scenarios' walls would count the
+ *   parallel minutes twice.
+ * - `livedWall` — first agent's first turn to the last **line** of any transcript.
+ *   **This is not the time anybody spent waiting**, and reading it as such is the
+ *   mistake this file made for two days. On 2026-08-25 it read 74 minutes against 43
+ *   of work; the requester waited 57.7, the suite spanned 43.0 for 42.6 of work, and
+ *   the extra 31 minutes were a finished subagent whose transcript gained one more
+ *   line at 13:15 — twenty-three minutes after the gate had shipped — because a stray
+ *   background watcher woke it for nothing. This ledger reads subagent transcripts and
+ *   never the orchestrator's session, so none of its figures is anybody's wait.
  */
 export function suiteOf(agents) {
   const withTurns = agents.filter((a) => a.startedAt !== null);
@@ -378,7 +382,7 @@ export function formatLedger(ledger) {
        lived wall would divide parallel work by a smaller number and flatter nothing
        consistently. */
     [
-      "Suite",
+      ledger.every ? "All agents" : "Suite",
       min(s.sumOfWalls),
       min(s.workedWall),
       ...BUCKETS.map((k) => `${min(s.buckets[k])} (${pct(s.buckets[k], s.sumOfWalls)})`),
@@ -394,7 +398,7 @@ export function formatLedger(ledger) {
     "",
     table(rows),
     "",
-    `Suite worked wall  ${min(s.workedWall)} min   (every minute at least one agent was working, counted once)`,
+    `${(ledger.every ? "Worked, all agents" : "Suite worked wall").padEnd(18)} ${min(s.workedWall)} min   (every minute at least one agent was working, counted once)`,
     `First turn → last  ${min(s.livedWall)} min   (NOT the requester's wait: this ledger cannot see the orchestrator's session. Its right edge is the last LINE of any transcript, and an agent stays resident after its report — on 2026-08-25 one was woken 34 min later by a stray watcher and stretched this figure from 43 to 74)`,
     `Sum of the walls   ${min(s.sumOfWalls)} min   (not the suite's span: scenarios overlap, so this counts parallel minutes twice)`,
     `Tool calls         ${s.toolCalls}`,

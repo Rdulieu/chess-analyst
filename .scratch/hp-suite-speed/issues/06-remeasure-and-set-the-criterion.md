@@ -18,9 +18,18 @@ sub-work from it and merge back into it via PR, **not** `develop`. Auto-merges o
 
 ## What to build
 
+> **Deux corrections d'étiquette, faites le 2026-08-27, à prendre avant de comparer quoi que ce soit.**
+> Les « 28 min » sont le portail d'**US-16a** (`b59434a5`), pas celui d'US-17 (`3e763365`, qui coûte
+> 24,8/24,3) — deux portails ont tourné le 24/08. Et le « 74 min vécues » du 25/08 est **rétracté** :
+> c'était le *premier tour → dernière ligne* du grand livre, dont le bord droit était un sous-agent
+> **fini** réveillé pour rien 23 minutes après l'ouverture de la PR. Le demandeur a attendu
+> **57,7 min**, dont 43,0 de suite. L'« avant » sur lequel cette tranche compare est donc **42,6 min
+> de travail réel**, jamais 74 de vécu.
+
 **Re-mesurer, et fixer le critère de succès sur la mesure.** La suite HP est jouée avec la
 bibliothèque, le grand livre en rend le relevé, et ce relevé est comparé aux deux portails d'avant :
-**28 min de travail réel au 2026-08-24, 43 min au 2026-08-25** (74 min vécues), avec la répartition
+**28 min de travail réel au 2026-08-24 (portail d'US-16a), et 42,6 min au 2026-08-25** pour 43,0
+d'empan, avec la répartition
 outils 39-48 % / composition 32-39 % / analyse 17-19 % / rapport 2-3 %.
 
 C'est aussi la tranche qui **vérifie que rien n'a disparu**, et c'est sa part la plus importante. Une

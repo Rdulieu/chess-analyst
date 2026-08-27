@@ -32,7 +32,8 @@ tâche de fond. Sur les 74 minutes vécues ce jour-là, **~30 n'étaient pas du 
 > collecté**, pas de venir le chercher plus tôt.
 
 C'est le gain le moins cher de la story : il ne touche **aucun scénario**, ne change rien à ce que la
-suite affirme, et rend au demandeur la moitié de sa plainte d'origine.
+suite affirme. ~~Et rend au demandeur la moitié de sa plainte d'origine.~~ — cette dernière promesse
+est **rétractée** (voir l'encart ci-dessus) : il n'y avait pas de moitié à rendre.
 
 C'est de l'orchestration, donc ça vit dans `SKILL.md` §5.1 — qui décrit déjà finement la livraison
 des rapports (livraison qui **marche**, double livraison attendue, `idle_notification` qui ne signifie
