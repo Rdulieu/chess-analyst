@@ -31,7 +31,9 @@ as much as for the rest: they are audited **as the scenario left them**, counter
 Profile page whose history is still empty is a rendered screen like any other. What must never
 happen is a scenario creating a Profile, importing or analysing *for the sake of the theme pass*.
 
-The extra cost is rendering, not journey: on a warm app it is sixteen navigations.
+The extra cost is rendering, not journey: on a warm app it is eighteen audits — nine screens in two
+themes. Measured 2026-08-27 over three runs: **~15.6 seconds** for the eighteen, against the several
+minutes the same walk cost when each agent re-derived it.
 
 ## The nine screens
 
@@ -49,8 +51,12 @@ The extra cost is rendering, not journey: on a warm app it is sixteen navigation
 
 All nine, in both themes. Two of them the navigation cannot reach on its own: open any Game from
 the list for Analyse, and any Profile from the list for the Profile page. If the scenario's state holds
-no Game at all, record the sixth as *not reachable in this scenario's state* rather than importing
-one; the Profile page is always reachable, since every scenario has selected a Profile before reading
+no Game at all, record the **seventh** as *not reachable in this scenario's state* rather than
+importing one. **And say which Game it must open when that matters**: on 2026-08-27 two scenarios
+audited Analyse on whichever Game came first in the list — an unanalysed one, so the pass saw no
+evaluation curve, no advantage bar and no severity glyph, which is exactly what HP-01's pass is the
+strongest of the three at seeing. It reported green, on the wrong Game. The pilot takes the choice
+from the scenario now (`agentic-tests` skill §5.8), but the *decision* is the scenario's; the Profile page is always reachable, since every scenario has selected a Profile before reading
 anything.
 
 Since US-11 the two profiles screens joined the inventory and **none was removed** — "Mes parties"
@@ -71,8 +77,10 @@ list is one row taller than the measurement above. The pairing rule is unchanged
 list only makes it stricter; what is added is that a site name is now **rendered text on these
 screens**, and must stay legible in both themes like any other ink.
 
-The **banner naming the current `Profile`** rides in the chrome of screens 1 to 6 and is deliberately
-absent from 7 and 8 — there the Profile is what the page is *about*. It is audited as chrome
+The **banner naming the current `Profile`** rides in the chrome of screens **1 to 7** and is
+deliberately absent from **8 and 9** — there the Profile is what the page is *about*. (Corrected
+2026-08-27: this said "1 to 6" and "7 and 8". Measured on the run: `[data-banner="profile"]` is
+present on Analyse too, and absent from Profils and Profil — which is also the more coherent rule.) It is audited as chrome
 wherever it appears: its label is words, never a tint (assertion 4), and its link must hold contrast
 in both themes like any other.
 
@@ -104,12 +112,16 @@ state only the weak-opening ⚠, the current tab and the two `Profile` cues have
 all, and HP-01 is the scenario that carries the danger cards, the severity glyphs and the "analysée"
 badge. Read the three passes together, and read `subjects` before reading `failures`.
 
-Assertions 1 to 5 are measured, not eyeballed: `tools/theme-audit.js` implements them as one
-browser-side function returning a report per screen. Inject it and call `themeAudit()` on each
-screen in each theme; compare the `constants` block between the two themes for assertion 5. The
-theme itself is switched by the **driver** emulating `prefers-color-scheme: dark` (CDP
-`Emulation.setEmulatedMedia`), never from inside the page — the app ships a media query, so the media
-query is what must be exercised.
+Assertions 1 to 5 are **measured, not eyeballed**: one browser-side function returns a report per
+screen, and the two themes are compared on the `constants` block for assertion 5. The theme itself is
+switched by **emulating** `prefers-color-scheme: dark` and never from inside the page — the app ships
+a media query, so the media query is what must be exercised.
+
+> How the pass is driven is not named here. It is one call of the driver library, described in the
+> `agentic-tests` skill (§5.8), and this document deliberately does not know which file that is: a
+> scenario that names its pilot is coupled to it, and this suite has already survived one complete
+> change of pilot without a line moving (ADR-0020). What belongs here is **what is asserted**, and
+> the nine screens it is asserted on.
 
 **Emulate the light half explicitly too, and assert the theme you think you are in.** A browser is
 not neutral: a headless Chrome launched with its own profile defaulted to `prefers-color-scheme:

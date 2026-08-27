@@ -283,13 +283,17 @@ corpus keeps, and only the latter is assertable on screen.
 - Both snapshots are copies of the SQLite file taken with the **server stopped**: SQLite keeps
   serving a deleted or replaced inode, so a copy taken under a running server can capture a state no
   scenario will actually see.
-- **Checkpoint the WAL before copying.** The database runs in WAL mode, so stopping the server
-  leaves the run's data in the `-wal` sidecar and the main file nearly empty — measured on the
-  2026-08-19 run: **4 KB** of `.db` beside **95 KB** of `-wal`, and a plain `cp` of the `.db` alone
-  produced a snapshot with **no `profiles` table at all**. Run `PRAGMA wal_checkpoint(TRUNCATE)`
-  against the file (or copy the `-wal`/`-shm` sidecars alongside it) and **verify the copy by
-  reading it back** — a snapshot that restores to an empty database fails every scenario downstream
-  with a precondition error that looks like an app defect.
+- **A snapshot must hold what it claims, and copying a SQLite database in WAL mode is not a file
+  copy.** Measured on the 2026-08-19 run: **4 KB** of `.db` beside **95 KB** of `-wal`, and a plain
+  copy of the `.db` alone produced a snapshot with **no `profiles` table at all**. A snapshot that
+  restores to an empty database fails every scenario downstream with a precondition error that looks
+  like an app defect — so the copy is **read back** before it is used.
+
+  > *How* to take that copy is no longer written here. It is one call of the driver library, named
+  > in the `agentic-tests` skill (§5.8). This bullet carried the recipe until 2026-08-27, when the
+  > recipe was found to be wrong — a checkpoint can be silently refused, and a copy that reads back
+  > clean can still have lost a whole table — and a superseded instruction sitting where the copy is
+  > actually performed is the worst place for one to survive.
 - The empty-history snapshot holds **three** `profiles` rows — one of them with
   `platform = 'lichess'` — `Metalyst`'s Games and **zero** Games carrying `DudulSmash`'s or
   `Nonomoho`'s id.

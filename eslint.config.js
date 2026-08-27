@@ -24,7 +24,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.config.{js,ts}", "client/vite.config.ts"],
+    files: ["**/*.config.{js,mjs,ts}", "client/vite.config.ts"],
     languageOptions: { globals: { ...globals.node } },
   },
   {
@@ -35,5 +35,13 @@ export default tseslint.config(
     files: ["docs/test-scenarios/tools/**/*.js"],
     languageOptions: { globals: { ...globals.browser } },
     rules: { "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^themeAudit$" }] },
+  },
+  {
+    // The other half of the same library, the one that runs **on the machine**:
+    // it launches the app, restores snapshots and reads transcripts, so it lives
+    // in node's globals. The two halves never import each other, and they do not
+    // share a globals block either.
+    files: ["docs/test-scenarios/tools/**/*.mjs"],
+    languageOptions: { globals: { ...globals.node } },
   },
 );

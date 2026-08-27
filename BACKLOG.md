@@ -371,199 +371,6 @@
   > À grillier avec de vraies parties sous les yeux, pas en salle : c'est une story de **mesure et
   > d'arbitrage**, pas de construction.
 
-- **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
-  rien céder de ce qu'elle teste.
-  > **Pas encore grillée.** Demandée le 2026-08-23 après la passe HP d'US-15a : la suite est verte
-  > mais lente, et une suite lente est une suite qu'on lance moins souvent — donc une suite qui
-  > protège moins.
-  >
-  > ### Ce que la course du 2026-08-23 a coûté
-  >
-  > | Étape | Durée | Provenance de la mesure | Dont, mesuré |
-  > | --- | --- | --- | --- |
-  > | path 0 (bootstrap) | **~15-20 min** | non instrumenté — borne basse déduite | import Lichess **~10 min** (12:59→13:09), dont **~6 min de pure attente** (6 pauses de 60 s) |
-  > | HP-01 (import + explore) | **~19 min** | déduit des horodatages de fin | import chess.com **6,5 s** · passe moteur 29 positions **34,7 s** · calcul `/danger` **0,9 s** |
-  > | HP-02 (habitudes de coup) | **~13 min** | déduit des horodatages de fin | — |
-  > | HP-03 (ouvertures faibles) | **~12 min** | déduit des horodatages de fin | — |
-  > | **Total mur** | **~35-40 min** | path 0 en série, puis les trois HP en parallèle | |
-  >
-  > **Ces chiffres sont déduits, pas mesurés** — sauf ceux de la dernière colonne. Les trois durées
-  > d'HP viennent de l'écart entre le lancement groupé et l'horodatage de fin de chaque sous-agent ;
-  > le total de path 0 n'a pas de début connu. **C'est la première chose à corriger** : que chaque
-  > scénario rende sa propre durée, et celle de ses phases (import, passe moteur, parcours, passe de
-  > thème). On ne peut pas optimiser ce qu'on déduit.
-  >
-  > ### Ce qui a cessé d'être le coût
-  >
-  > **Le moteur n'est plus le problème** : 29 positions en **34,7 s**. La suite a longtemps été
-  > dominée par lui (« ~3,5 min » traîne encore dans un commentaire de `README.md`, d'avant le
-  > backend natif). Le coût s'est déplacé sur **le réseau** et sur **la longueur des parcours**.
-  >
-  > ### Pistes, à instruire — pas encore des décisions
-  >
-  > - **Le plus gros levier est un jeu de données, comme pressenti.** L'import Lichess de `Metalyst`
-  >   couvre **71 mois dont 51 vides** et paie ~6 min de bridage. Or l'assertion qu'il porte est
-  >   « un mois vide est listé à zéro, donc un trou d'historique se distingue d'un trou de
-  >   récupération » : elle a besoin de **quelques** mois vides entre des mois peuplés, pas de 51.
-  >   Un compte de référence à **span court et troué** tiendrait la même assertion pour une fraction
-  >   des requêtes. `README.md` dit aujourd'hui « ne pas raccourcir le span » — **cette US est
-  >   l'endroit où rediscuter cette règle**, en séparant ce qui est testé de ce qui est payé.
-  > - **Le bridage Lichess est par IP** sur l'export : moins de requêtes, moins de pauses. Le gain
-  >   est donc superlinéaire, pas proportionnel.
-  > - **Réutiliser le snapshot entre deux courses.** Tous les mois des deux plages sont immuables, donc
-  >   le snapshot ne périme pas. Mais `README.md` veut le **contrat réseau réel exercé une fois par
-  >   course** : mettre le snapshot en cache, c'est cesser d'exercer l'adaptateur Lichess en direct.
-  >   **Arbitrage du demandeur**, à poser explicitement — par exemple un cache avec une péremption, ou
-  >   un import live réduit à un mois témoin.
-  > - **Instrumenter avant d'optimiser** (cf. ci-dessus), puis regarder où passent les ~12 min
-  >   d'HP-02 et d'HP-03, qui n'importent rien et n'analysent rien. Sur ces deux scénarios, le
-  >   parcours et la passe de thème sont **tout** le coût.
-  > - **Le pilotage lui-même a coûté cher** : les trois scénarios se sont fait voler leur page par le
-  >   navigateur partagé, deux ont dû rebasculer sur leur propre Chrome **en cours de route**. Partir
-  >   directement sur un navigateur privé (déjà consigné dans le skill) supprime des reprises.
-  >
-  > ### Ce qui n'est pas à brader
-  >
-  > `docs/test-scenarios/README.md` §« What not to trim » reste la référence, et cette US ne l'annule
-  > pas : **pas** de profondeur moteur abaissée, **pas** d'archive fixture à la place du contrat
-  > chess.com réel, **pas** de second profil supprimé, **pas** d'état hérité d'un autre scénario,
-  > **pas** de passe de thème raccourcie aux écrans déjà traversés. La seule règle que cette US met
-  > explicitement sur la table est la longueur du span Lichess — parce que c'est la seule où le prix
-  > payé et l'assertion tenue se sont visiblement décorrélés.
-  >
-  > **Critère de succès à définir au grill**, mais l'ordre de grandeur visé est « la suite tourne en
-  > moins de dix minutes, et rien de ce qu'elle affirmait n'a disparu ».
-
-- **US-19**: Finir de rendre la liste des parties lisible — la colonne qu'on ne voit pas, l'en-tête
-  qui flotte, et la date qu'il faut décoder.
-  > **Pas encore grillée.** Quatre observations remontées par les **Feature Paths** des PR #59 et
-  > #60 (2026-08-23), qui ont fait passer la liste des parties en tableau six colonnes, les plus
-  > récentes en premières. **Aucune n'est un bug** : les deux tranches sont vertes et mergées. Ce
-  > sont quatre décisions produit que le demandeur n'a pas encore prises, regroupées ici plutôt que
-  > laissées dans des rapports de test.
-  >
-  > Le fil commun : le tableau demande **788 px** de largeur intrinsèque (cellules en
-  > `white-space: nowrap`), et tout ce qui suit découle de ce chiffre.
-  >
-  > ### Les quatre points
-  >
-  > **1. Le bandeau d'en-tête reste sur la mesure étroite pendant que le contenu est large.** Depuis
-  > la PR #60, `/` porte `data-width="wide"` : la colonne de contenu va de 16 à 1408.8 px, alors que
-  > le bandeau nav/titre reste centré sur ~382 → 1042. L'en-tête se lit détaché du tableau qu'il
-  > coiffe. **Préexistant** sur `/openings` et `/profiles`, qui portent le même attribut depuis plus
-  > longtemps — mais `/` est la page d'atterrissage, donc c'est là qu'on le voit. Deux directions
-  > opposées, à trancher : le bandeau suit le contenu, ou la chrome garde délibérément sa propre
-  > mesure et il faut alors l'assumer visuellement.
-  >
-  > **2. Rien ne signale la colonne `État` quand elle déborde.** Le tableau rentre jusqu'à 900 px ;
-  > **entre 900 et 800 px** le conteneur `[data-scroll="x"]` reprend la main (débordement mesuré
-  > 35 px à 800, 135 à 700, 235 à 600). Il fonctionne — la page ne défile jamais latéralement — mais
-  > les barres de défilement sont en **overlay** : à 600 px la pastille « analysée » est hors écran
-  > et **rien à l'écran n'indique qu'une colonne existe à droite**. C'est le finding que les deux FP
-  > ont soulevé indépendamment. Une colonne dont rien n'indique l'existence est une colonne que
-  > personne ne lit. Pistes non instruites : une affordance de défilement visible, un dégradé de
-  > bord, ou reconnaître qu'`État` est la colonne la moins large et la remonter dans l'ordre.
-  >
-  > **3. Les dates s'affichent en ISO brut dans une UI en français.** `2023-08-04` sur les 351
-  > lignes. Ça trie parfaitement (le tri lexicographique de `date` **est** le chronologique, c'est
-  > ce sur quoi repose l'ordre serveur `date DESC, id DESC`) et c'est sans ambiguïté, mais ça se
-  > décode au lieu de se lire. À noter que **la donnée ne porte pas d'heure** — c'est un jour, pas
-  > un instant — donc tout format retenu doit rester un jour, et plusieurs parties le même jour
-  > resteront une vraie égalité. Question ouverte : un format français, un format relatif
-  > (« il y a 3 jours »), ou l'ISO assumé pour sa non-ambiguïté.
-  >
-  > **4. `/stats` est le dernier écran resté sur la mesure étroite.** Après la PR #60, `/`,
-  > `/openings`, `/profiles`, `/analyse`, `/explorer` et `/danger` sont larges ; `/stats` seule
-  > garde 382.9 → 1041.9. Son tableau y tient (c'est bien pour ça qu'elle est étroite), donc ce
-  > n'est **pas** un défaut — mais c'est une exception d'un seul, et une exception d'un seul est
-  > soit une intention à écrire, soit un oubli. À décider, pas à corriger par réflexe.
-  >
-  > ### Ce que cette US n'est pas
-  >
-  > Pas le hors-périmètre du plan d'origine, qui reste hors périmètre tant qu'il n'est pas demandé :
-  > **pas** d'en-têtes de colonne triables, **pas** de `caption`, **pas** de pagination, **pas** de
-  > changement des faits affichés. Et **pas** de retrait du conteneur `[data-scroll="x"]` : il est le
-  > filet qui garantit que c'est le conteneur qui défile et jamais la page (`_tables.scss`), et le
-  > point 2 demande de le **signaler**, pas de le supprimer.
-  >
-  > ### Pourquoi ces quatre-là ensemble
-  >
-  > Aucune n'était visible sous le tier agentique : jsdom ne charge pas la feuille de style et ne
-  > fait pas de mise en page. Les quatre viennent d'une **mesure sur l'app réelle**, et trois
-  > d'entre elles (1, 2, 4) sont des questions de **mesure de colonne** — la même question posée à
-  > trois endroits. Elles se grillent probablement mieux ensemble que séparément.
-  >
-  > **Critère de succès à définir au grill.**
-
-- **US-20**: Reprendre la main sur les processus des tests agentiques — pour qu'un run interrompu ne
-  laisse ni serveur qui sert dans le vide, ni machine à genoux.
-  > **Pas encore grillée.** Demandée le 2026-08-24, après que le poste a gelé pendant la passe HP
-  > d'US-17 et qu'il a fallu l'arrêter au bouton.
-  >
-  > ### Le constat : il n'existe aucun mécanisme, seulement une consigne
-  >
-  > La skill `agentic-tests` dit « teardown by pid, jamais `pkill` par motif », et chaque agent
-  > l'applique lui-même. **Aucun hook n'est configuré**, ni côté projet ni côté utilisateur : rien
-  > n'est automatique. Ça tient tant que l'agent **termine**. Le trou est là — un agent tué en cours
-  > de route laisse tout tourner, et ce n'est pas un cas d'école : c'est arrivé **deux fois le
-  > 2026-08-24**.
-  >
-  > | Incident | Ce qui a survécu | Comment ça s'est réglé |
-  > | --- | --- | --- |
-  > | Sortie de session pendant la FP d'US-17-05 | un **Vite orphelin sur 5271**, servant un backend mort | tué à la main, après identification par `/proc/<pid>/environ` |
-  > | Gel du poste pendant la suite HP | tous les processus des 4 agents | **le reboot** — nettoyage par accident, pas par conception |
-  >
-  > « Libérer la mémoire » n'a pas d'existence séparée : ce sont les processus qui la retiennent, et
-  > les tuer *est* le mécanisme. À côté, sur disque, les scratchpads accumulent des bases `.db` de
-  > run et des `node_modules` posés en `--no-save` — 55 Mo au moment du constat, négligeable en soi
-  > mais sur une partition à **86 %**.
-  >
-  > ### Le piège du grand-enfant, redécouvert à chaque run
-  >
-  > `npx` interpose un wrapper : **le processus qui écoute n'est pas celui qu'on a lancé**. Tuer le
-  > pid retourné laisse le vrai serveur debout. C'est re-confirmé sur **absolument chaque run** —
-  > encore sur le dernier (listener 7965 sous wrapper 7954). Aujourd'hui chaque agent le
-  > redécouvre, le contourne à la main, et le consigne. C'est du travail répété qui devrait être
-  > structurel.
-  >
-  > ### Pistes, par ordre d'efficacité (à trancher au grill)
-  >
-  > 1. **`systemd-run --user --scope --unit=…` autour de chaque processus lancé.** Correction à la
-  >    racine : `systemctl --user stop <unit>` tue **l'arbre entier**, grand-enfants compris. Le
-  >    piège ci-dessus disparaît structurellement. Demande de toucher la recette de lancement de la
-  >    skill.
-  > 2. **Un script de récupération** dans `docs/test-scenarios/tools/`, **`--dry-run` par défaut**,
-  >    identifiant les processus de test par signature (port dans la plage agentique, `cwd` sous
-  >    `.claude/worktrees/`, `DB_FILE` pointant un scratchpad, Chrome en `--user-data-dir` sous
-  >    `/tmp/claude-*`). Filet pour les orphelins, purement additif.
-  >
-  > ### Une piste explicitement déconseillée, et pourquoi
-  >
-  > **Un hook Claude Code qui nettoie automatiquement.** C'est le réflexe tentant et c'est un
-  > piège : un hook `Stop` se déclenche à la fin du tour de l'agent principal, or **les sous-agents
-  > tournent en arrière-plan** — il tuerait l'app d'un agent en pleine FP. Le nettoyage automatique
-  > et les runs en arrière-plan s'opposent, sauf à savoir précisément quels processus appartiennent
-  > à un agent encore vivant, ce qui est le problème même qu'on cherche à résoudre. Préférer un
-  > outil explicite qu'on lance en connaissance de cause.
-  >
-  > ### Tension à arbitrer avec US-18
-  >
-  > Le gel a produit une contre-mesure immédiate : la skill plafonne désormais la concurrence à
-  > `min(3, floor(nproc / 4))`, soit **2** sur ce poste (§5.7). C'est **la direction opposée à
-  > US-18**, qui veut accélérer la suite. Les deux ne s'excluent pas — reprendre la main sur les
-  > processus pourrait permettre de **remonter** le plafond en sécurité — mais l'ordre compte, et
-  > c'est un sujet de grill commun aux deux stories. Les mesures et le diagnostic sont dans la
-  > skill §5.7, avec leurs limites : aucun kill OOM, `systemd-oomd` inactif, rien de thermique,
-  > aucun *GPU hang* — donc **famine CPU** plutôt que mémoire, et **le déclencheur de la sortie de
-  > session n'est pas établi**.
-  >
-  > Le demandeur signale que le gel s'est produit **plusieurs fois en trois jours**, corroboré par
-  > `/var/log/apport.log` (2026-08-23 16:23, 2026-08-24 00:29, 2026-08-24 16:49). L'un d'eux ne
-  > coïncide avec aucun run d'agent : **il pourrait donc exister une cause seconde, indépendante**,
-  > que cette story ne corrigerait pas.
-  >
-  > **Critère de succès à définir au grill.**
-
 - **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
   ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
   > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
@@ -639,6 +446,254 @@
 
 ## Doing
 
+## In review
+
+- **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
+  rien céder de ce qu'elle teste.
+  > **Grillée le 2026-08-26**, conjointement avec US-20 — **abandonnée à l'issue du grill** (voir
+  > `## Abandonnées`). Demandée le 2026-08-23 après la passe HP d'US-15a : la suite est verte mais
+  > lente, et une suite lente est une suite qu'on lance moins souvent — donc une suite qui protège
+  > moins.
+  >
+  > ### La mesure existait déjà, et elle a corrigé trois chiffres faux
+  >
+  > **Les transcripts de sous-agents sont horodatés à la milliseconde**, ligne par ligne
+  > (`~/.claude/projects/<slug>/<session>/subagents/agent-*.jsonl`). On peut donc reconstruire le
+  > coût d'une passe **après coup, sans la rejouer** — y compris sur des runs déjà faits. Toute la
+  > section « instrumenter avant d'optimiser » de la version précédente de cette entrée partait d'un
+  > faux problème : rien n'était à instrumenter, seulement à lire. **Aucun script du dépôt ne peut
+  > mesurer ce qui coûte** (le temps se passe dans les allers-retours agent↔outil et dans la
+  > génération du modèle, pas dans l'app) — mais le transcript, lui, l'a déjà mesuré.
+  >
+  > | Portail | Mur **utile** | Outils | Composition de scripts | **Analyse** | Rapport |
+  > | --- | --- | --- | --- | --- | --- |
+  > | 2026-08-24 (**US-16a**, ancienne forme) | **28 min** | 39 % | 39 % | **19 %** | 3 % |
+  > | 2026-08-25 (US-16b, forme actuelle) | **43 min** | 48 % | 32 % | **17 %** | 2 % |
+  >
+  > **Les trois corrections :**
+  >
+  > 1. **Le « ~35-40 min » n'a jamais été mesuré et n'est vrai ni avant ni après.** La suite coûtait
+  >    **28 min** de travail réel au portail d'US-16a, et **43 min** à celui d'US-16b. La croissance
+  >    est ×1,5, pas le doublement qu'un décompte naïf du mur laisse croire.
+  >
+  >    > **Étiquette corrigée le 2026-08-27**, par le grand livre de la tranche 01 : ce « 28 min »
+  >    > est le portail d'**US-16a** (session `b59434a5`, 28,4 vécues / 27,3 travaillées, répartition
+  >    > 40/38/19/3), pas celui d'US-17 — deux portails ont tourné le 2026-08-24 et celui d'US-17
+  >    > (`3e763365`) coûte **24,8 / 24,3**. Le chiffre était juste, l'étiquette non ; la première
+  >    > chose que l'outil a rendue visible est un « avant » mal nommé.
+  > 2. **path 0 est réglé, il n'y a plus rien à y prendre** : 15-20 min → **7,2 min**. US-17 a livré
+  >    son gain là où on l'attendait (1 requête d'export au lieu de 71, 0 pause, 33,6 s).
+  > 3. **Aucun scénario n'est aberrant.** Les trois HP coûtent **15 à 21 min** chacun ; le nouveau
+  >    HP-03 d'US-16b fait **18,6 min** de parcours propre, comparable à HP-01 (20,7). Le « 65 min »
+  >    qu'un décompte brut lui attribue additionne un **rejeu légitime** (+10,1 min, après un finding
+  >    sur le scénario lui-même) et **33,5 min d'attente inerte** — rapport rendu, plus rien à faire,
+  >    en attente d'une notification de tâche de fond.
+  >
+  > ~~**Le poste de coût le plus gros du run du 25/08 n'était donc pas du travail** : sur les 74
+  > minutes vécues, ~30 étaient de l'attente de collecte, la moitié de la plainte d'origine.~~
+  >
+  > > **Rétracté le 2026-08-27**, par la Feature Path de la tranche 05 qui a relu la session mère au
+  > > lieu de faire confiance au grand livre. Les faits : le demandeur a demandé à `11:54:47`, le
+  > > dernier rapport a été consolidé à `12:44:32` et le portail livré à `12:52:30` — **57,7 min
+  > > vécues, pas 74**. La suite a couru de `12:01:35` à `12:44:32`, soit **43,0 min pour 42,6 min de
+  > > travail** : ~24 secondes de battement de collecte sur toute la passe, et **chaque rapport
+  > > collecté en quelques secondes** (HP-03 : envoyé `12:41:27`, reçu `12:41:30`, traité `12:41:40`).
+  > >
+  > > Les « 74 min » étaient le *premier tour → dernière ligne* du grand livre, lu comme s'il était
+  > > l'attente du demandeur. Son bord droit était HP-03 gagnant une ligne de plus à `13:15:13`,
+  > > **vingt-trois minutes après l'ouverture de la PR**, réveillé pour rien par un guetteur
+  > > d'arrière-plan résiduel de son propre run précédent.
+  > >
+  > > Ce qui reste, et qui est le vrai enseignement : **un sous-agent qui a fini reste vivant**, peut
+  > > être réveillé, répond, et fait grandir son transcript — ce qui corrompt toute mesure dont le
+  > > bord droit est « la dernière ligne écrite ». **Arrêter ce qu'on a dépêché une fois son rapport
+  > > collecté**, et ne jamais lire un tel empan comme l'attente de quelqu'un.
+  >
+  > *Réserves de méthode, à garder avec les chiffres* : les postes sont déduits de l'enchaînement des
+  > messages (`outils` = `tool_use` → `tool_result` ; `composition` = génération d'un message portant
+  > un appel d'outil ; `analyse` = génération d'un message de réflexion suivant un résultat) ; la
+  > « composition » inclut donc la latence et d'éventuelles files d'attente d'API, qu'on ne sait pas
+  > séparer. Et **le contenu des blocs de réflexion n'est pas persisté** : on mesure la *durée* de
+  > l'analyse, jamais sa matière.
+  >
+  > ### Décisions du grill
+  >
+  > - **D1 — Le plafond de concurrence reste à `min(3, floor(nproc/4))`, soit 2 ici.** US-20 est
+  >   abandonnée, donc rien ne vient sécuriser une remontée : le gain de cette story se trouve
+  >   **entièrement dans le contenu**, jamais dans le parallélisme.
+  > - **D2 — « moins de dix minutes » n'est pas un but**, seulement un repère (décision du demandeur).
+  >   Le critère de succès se fixe sur la mesure, pas sur un chiffre rond.
+  > - **D3 — Le levier principal est une bibliothèque de pilotage** dans le dépôt : lancer l'app,
+  >   restaurer un snapshot, sélectionner un profil, naviguer, faire la passe de thème, relire un
+  >   champ. Aujourd'hui **chaque agent réécrit ses scripts à chaque run** (59 à 100 appels `Bash`
+  >   par scénario, ~10 s l'appel) en les dérivant d'une skill de 491 lignes. La bibliothèque attaque
+  >   les **deux premiers postes à la fois** — moins d'appels et plus gros (outils, 39-48 %), plus
+  >   rien à inventer (composition, 32-39 %) — soit **~72-78 % du temps**. Elle se paie une fois et se
+  >   touche à chaque portail. C'est aussi le principe du projet appliqué à l'usine : une feature est
+  >   portée par une fonction dédiée, jamais réinlinée à chaque appel.
+  > - **D4 — La bibliothèque pilote, elle ne juge jamais.** Elle lance, navigue, restaure, mesure,
+  >   relit, et rend des **valeurs brutes** : aucun `expect`, aucun seuil, aucune comparaison. Une
+  >   bibliothèque qui jugerait ferait passer la suite au vert en cessant d'affirmer, et **c'est la
+  >   suite qui sert de filet** — personne ne le verrait.
+  > - **D4 et D5 sont consignées en ADR** :
+  >   [`docs/adr/0020-the-driver-library-drives-the-scenario-judges.md`](docs/adr/0020-the-driver-library-drives-the-scenario-judges.md).
+  > - **D5 — Elle n'est nommée que dans `SKILL.md`, jamais dans les scénarios.** Les quatre scénarios
+  >   contiennent aujourd'hui **zéro** commande de lancement : c'est ce qui leur a permis de survivre
+  >   à un changement complet de pilote (MCP hier, puppeteer piloté par `Bash` aujourd'hui — les
+  >   scénarios n'ont pas bougé d'une ligne). Les faire appeler des helpers les transformerait en
+  >   scripts couplés à un pilote, donc supprimerait l'agent, donc l'analyse, donc les findings.
+  > - **D6 — L'analyse est protégée.** 17-19 % du temps, stable sur les deux runs, et **le plus petit
+  >   des trois postes réels** — contre l'intuition qui en faisait le principal suspect. C'est la
+  >   seule part du temps qui **produit** les findings : aucun levier ne doit la réduire. Une suite
+  >   dont on comprime l'analyse reste verte en cessant de regarder.
+  > - **D7 — La première tranche est le grand livre, pas une optimisation.** Un outil qui lit les
+  >   transcripts d'une session et rend le tableau ci-dessus (par scénario et pour la suite : mur,
+  >   outils, composition, analyse, rapport, attente inerte). Coût : **zéro run**. Il vaut
+  >   **rétroactivement**, donc il n'y a **aucun chemin critique** — contrairement à ce que le plan
+  >   supposait d'abord, aucune mesure n'est perdue si une story atteint son portail avant lui.
+  > - **D8 — L'attente de collecte est dans le périmètre.** ~~~30 min sur 74 au dernier portail, pour
+  >   zéro travail, le gain le moins cher de la story.~~ C'est de l'orchestration (§5.1), pas du
+  >   contenu de scénario — ça, ça tient.
+  >
+  >   > **Motif corrigé le 2026-08-27**, cf. la rétractation plus haut. Chaque rapport du portail du
+  >   > 25/08 a été collecté en quelques secondes et le battement de toute la passe valait **~21 s** :
+  >   > il n'y avait pas 30 minutes à récupérer. Les 30 minutes étaient un sous-agent **fini**,
+  >   > réveillé pour rien 23 min **après** l'ouverture de la PR. Le périmètre reste bon, le geste
+  >   > change : **arrêter ce qu'on a dépêché une fois son rapport collecté**, plutôt que venir le
+  >   > chercher plus tôt.
+  >
+  > ### Arbitrages laissés ouverts
+  >
+  > - **Réutiliser le snapshot entre deux courses.** Tous les mois des deux plages sont immuables,
+  >   donc le snapshot ne périme pas — mais `README.md` veut le **contrat réseau réel exercé une fois
+  >   par course**. Mettre le snapshot en cache, c'est cesser d'exercer l'adaptateur Lichess en
+  >   direct. **Décision du demandeur**, non prise.
+  > - **Régler la dépêche** (effort/modèle par scénario) : gardé **en réserve**, à n'arbitrer
+  >   qu'après une mesure — ça touche directement la capacité de l'agent à *voir* un défaut, et D6
+  >   s'y oppose par défaut.
+  > - **Incohérence de doc à trancher** : `theme-pass.md` fait foi avec **neuf** écrans (donc
+  >   **18 audits par scénario**, 54 pour la suite), et `README.md` dit encore « eight » à deux
+  >   endroits. À corriger ici en passant, ou à verser à US-21.
+  >
+  > ### Ce qui n'est pas à brader
+  >
+  > `docs/test-scenarios/README.md` §« What not to trim » reste la référence et cette US ne l'annule
+  > pas : pas de profondeur moteur abaissée, pas d'archive fixture à la place du contrat chess.com
+  > réel, pas de second profil supprimé, pas d'état hérité d'un autre scénario, pas de passe de thème
+  > raccourcie. **Le span Lichess n'est plus sur la table** : la version précédente de cette entrée
+  > proposait de le raccourcir, mais US-17 a supprimé son *coût* sans toucher à l'assertion et le
+  > README a tranché explicitement (« US-17 does not reopen this rule »). **Et D6 ajoute un item à
+  > cette liste : l'analyse de l'agent.**
+  >
+  > **PRD** : [`.scratch/hp-suite-speed/PRD.md`](.scratch/hp-suite-speed/PRD.md) (`ready-for-agent`).
+  > **Six sous-issues** créées le 2026-08-27 sur `integration/US-18-faster-hp-suite`, toutes
+  > `ready-for-agent` (`.scratch/hp-suite-speed/issues/`) :
+  > `01-the-ledger-of-a-run` · `02-the-theme-pass-in-one-call` ·
+  > `03-app-lifecycle-launch-restore-stop` · `04-navigate-and-read-back` ·
+  > `05-no-scenario-left-waiting` · `06-remeasure-and-set-the-criterion` (**HITL** — le critère de
+  > succès est une décision du demandeur). 01 et 05 sont prenables immédiatement ; 02/03/04 attendent
+  > 01, faute de quoi elles ne peuvent pas prouver leur gain.
+  >
+  > **Critère de succès** : à fixer sur le grand livre de D7, une fois qu'il tourne sur les deux runs
+  > déjà en boîte — pas avant, et pas sur un chiffre rond (D2).
+  >
+  > ---
+  >
+  > **PR `integration → develop` : [#87](https://github.com/Rdulieu/chess-analyst/pull/87)**, ouverte le
+  > 2026-08-27, en attente de la décision humaine.
+  >
+  > ### Le portail du 2026-08-27 — le relevé, et ce qu'il dit
+  >
+  > **Suite complète, path 0 + 3/3 HP verts**, jouée avec la bibliothèque, plafond de concurrence
+  > `min(3, floor(nproc / 4))` = **2**, inchangé.
+  >
+  > | Portail | mur travaillé | outils | composition | **analyse** | rapport | appels |
+  > | --- | --- | --- | --- | --- | --- | --- |
+  > | 2026-08-24 (US-16a) | 27,3 min | 40 % | 38 % | **19 %** | 3 % | 179 |
+  > | 2026-08-25 (US-16b) | 42,6 min | 49 % | 31 % | **18 %** | 2 % | 242 |
+  > | **2026-08-27 (US-18)** | **51,4 min** | **23 %** | **29 %** | **45 %** | 4 % | 234 |
+  >
+  > *(Parts calculées sur le temps **travaillé**, même dénominateur que les chiffres du grill.)*
+  >
+  > **En minutes absolues d'agent** : outils **34,7 → 16,1** (moitié), composition **21,9 → 20,4**
+  > (plate), analyse **12,6 → 32,4** (×2,6).
+  >
+  > **Le levier visé a fonctionné, exactement là où il visait.** La passe de thème — 18 audits sur
+  > neuf écrans dans les deux thèmes — coûtait **~4,8 min et 8 appels** de pilotage écrits à la main ;
+  > elle coûte **15,5 / 15,8 / 16,7 s et un appel** sur les trois scénarios. Le cycle complet
+  > restaurer → lancer → 18 audits → démonter avec les ports prouvés libres tient en **20,3 s**.
+  >
+  > **Et le mur a monté quand même : 42,6 → 51,4 min.** Trois causes, toutes nommées :
+  >
+  > 1. **La composition n'a pas bougé.** La bibliothèque couvre la navigation, le cycle de vie, le
+  >    navigateur et la passe de thème — soit le tiers mécanique. Le reste des scripts d'un scénario
+  >    est ailleurs : path 0 a écrit **329 de ses 369 lignes hors bibliothèque**, pour **12 sites
+  >    d'appel**. Ce qui manque se concentre sur deux écrans (`/profiles`, le formulaire d'import) et
+  >    sur une session de navigateur qui survive d'un appel shell au suivant — **trois des quatre
+  >    agents ont écrit le même petit serveur de contrôle de ~45 lignes**.
+  > 2. **L'analyse a occupé la place rendue**, et c'était le but : `README.md` porte depuis ce jour une
+  >    règle écrite pour la protéger, et les dépêches l'ont dit explicitement.
+  > 3. **La suite a grossi** depuis le portail du 24/08 : HP-03 est passée au parcours lecture +
+  >    `Confrontation` en quinze étapes, et la passe de thème est passée de huit à neuf écrans.
+  >
+  > **Ce que l'analyse a acheté, et c'est le chiffre qui mérite d'être lu à côté du mur** :
+  > **huit findings réels sur l'application** ce portail-ci, contre zéro à deux aux précédents — dont
+  > un débordement latéral de `/profiles` sous 700 px (assertion 3 en échec, même famille que celui du
+  > 21/08), la diagonale de la matrice de `Confrontation` marquée par une teinte à **1,09:1**, et une
+  > phrase de « raté » qui contredit le 100 % au-dessus d'elle. Aucun faux défaut d'app n'a atteint un
+  > rapport ; quatre artefacts de pilote ont été attrapés par re-mesure.
+  >
+  > **Ce qui n'a pas bougé, dit plutôt que passé sous silence** : le plafond de concurrence (2), la
+  > profondeur moteur, le contrat chess.com réel, le span Lichess à 71 mois, les trois `Profile`s, un
+  > état propre par scénario, et la passe de thème complète. L'import Lichess reste à **33,5 s** —
+  > reproduit à 0,03 s près du run de livraison d'US-17, donc ni gagné ni perdu.
+  >
+  > **Une assertion avait été affaiblie par la story elle-même**, trouvée par deux scénarios
+  > indépendamment et corrigée avant la PR : `reachScreen` ouvrait toujours la **première** ligne de
+  > la liste des parties, laquelle n'est pas analysée — la passe auditait donc `Analyse` sans courbe,
+  > sans barre d'avantage et sans glyphe de sévérité. Vert, sur la mauvaise partie. Le choix appartient
+  > désormais à l'appelant (`openers`).
+  >
+  > ### Critère de succès — **aucun seuil** (décision du demandeur, 2026-08-27)
+  >
+  > **US-18 se conclut sur « la suite coûte ce qu'elle teste ».** Le PRD nommait déjà ce résultat comme
+  > acceptable — *à condition d'être mesuré, et non supposé* — et il l'est : le relevé ci-dessus est
+  > reproductible, gratuit, et rétroactif sur tous les portails passés.
+  >
+  > **Ce que la décision refuse**, et c'est ce qui la motive : un seuil sur le mur récompenserait une
+  > suite qui regarde moins, alors que ce portail montre le mur **et** la valeur produite monter
+  > ensemble (51,4 min pour huit findings d'application, contre 42,6 min pour zéro à deux). Un seuil
+  > sur une part serait défendable mais deviendrait un chiffre à défendre, et cette story vient
+  > précisément de passer trois jours à rétracter un chiffre qu'on défendait sans l'avoir vérifié.
+  >
+  > **Ce qui reste acquis sans seuil** : le grand livre, qui mesure chaque portail pour rien et rend
+  > toute dérive visible ; la passe de thème à **15,6 s** au lieu de ~4,8 min ; les outils à **16,1 min**
+  > au lieu de 34,7 ; et une règle écrite protégeant l'analyse. **Le repère des dix minutes est
+  > abandonné explicitement** : il n'est pas atteint, et il ne l'aurait été qu'en rognant sur ce que la
+  > suite regarde.
+  >
+  > **Ce à quoi on renonce** : une cible chiffrée. La conséquence est qu'un ralentissement futur ne
+  > déclenchera aucune alarme automatique — c'est le grand livre collé dans chaque PR de portail qui
+  > joue ce rôle, et il faut donc le coller vraiment.
+  >
+  > <details><summary>Les trois candidats écartés, et leurs chiffres</summary>
+  >
+  > Le seuil est une décision (D2 : « moins de dix minutes » est un **repère, pas un but »**). Ce que la
+  > mesure permettait de dire :
+  >
+  > - **le repère des dix minutes n'est pas atteint et ne le sera pas par ce levier** : la mécanique
+  >   qu'il visait est déjà tombée d'un ordre de grandeur et le mur a quand même monté ;
+  > - **un critère sur le mur récompenserait une suite qui regarde moins.** Sur ce portail, le mur a
+  >   monté et la valeur produite aussi ;
+  > - les candidats qui se défendent : un critère sur la **part mécanique** (outils + composition
+  >   ≤ 50 % du travaillé — ici 52 %, contre 78 % et 80 % avant) ; un critère sur la **part d'analyse**
+  >   (≥ 35 % — ici 45 %) ; ou **aucun seuil**, et la story se conclut sur « la suite coûte ce qu'elle
+  >   teste », ce que le PRD nommait déjà comme un résultat acceptable à condition d'être mesuré.
+  >
+  > </details>
+
+## Done
+
 - **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
   > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
   >
@@ -690,15 +745,27 @@
   > → `05-where-i-read-well` (le bilan et son entrée de `Nav`) → `06-hp-suite-and-story-exit`
   > (**HITL** : fusion HP-02+HP-03, nouvelle HP dédiée, suite complète, PR vers `develop`).
   >
-  > **Livrée le 2026-08-25** — six tranches (PR #71→#76), toutes FP vertes, suite HP **3/3** plus son
-  > prérequis. PR `integration → develop` ouverte, en attente du merge humain.
+  > **Livrée le 2026-08-25**, **fusionnée dans `develop`** — décision humaine
+  > `integration → develop`, **PR #77**, mergée le **2026-08-26** (`f61b105`). Six tranches
+  > (PR #71→#76), toutes FP vertes, suite HP **3/3** plus son prérequis, et l'import Lichess
+  > mesuré à **35,7 s** contre ~210 s de référence — US-17 continue de payer.
+  >
+  > **Cinq décisions produit restent ouvertes** (PR #77, aucune bloquante, toutes consignées dans
+  > les issues) : le défilement latéral de `/profiles` sous ~669 px dans les deux thèmes ; la porte
+  > vers la `Confrontation` offerte sur une partie scellée mais non analysée, qui mène au refus ;
+  > les refus métier passés en statuts HTTP d'erreur, donc une console qui rougit sur un parcours
+  > nominal ; le compteur de la route de lecture qui annonce 4 `Key moment`s là où la confrontation
+  > en compte 2 (l'un additionne les couches, l'autre ne confronte que la scellée) ; et un lot de
+  > détails d'intitulés (un libellé pour deux situations dans l'explorateur, un résumé d'import qui
+  > mélange les langues, un dialogue de scellement sans focus initial).
+  >
+  > **Réserve d'honnêteté portée par la PR** : le jeu de données local ne porte pas cette story —
+  > une partie analysée, un coup flagué, aucun coup exclu. Le crédit partiel, les coups forcés et
+  > le bilan multi-lectures ont tourné sur des **fixtures fabriquées**, dit à chaque fois plutôt
+  > que masqué. La suite HP, elle, tourne sur ses propres passes moteur réelles.
   > Décisions prises en chemin, consignées dans les issues : la **couverture** de la `Confrontation`
   > prend la base de la justesse (les `Counted Move`s du joueur) et le chiffre d'US-16a perd le nom de
   > couverture pour devenir un **avancement** — l'arbitrage que la PR #70 avait laissé ouvert.
-
-## In review
-
-## Done
 
 - **US-16a**: Analyser moi-même une de mes parties — commenter chaque coup, juger sa qualité,
   désigner les moments où la partie a tourné — puis sceller ma lecture, pour exercer mon analyse.
@@ -1739,3 +1806,115 @@
 
 - **US-1**: Squelette de l'application — structure React + serveur Node local + persistance SQLite en place, avec un plateau interactif capable d'afficher et de naviguer dans une partie fixture (pas d'import chess.com, pas d'analyse).
   > PRD : `.scratch/app-skeleton/PRD.md`. Les 3 issues techniques implémentées et fusionnées dans `integration/US-1-chess-history-analysis` (01 boot+plateau, 02 navigation avant/arrière, 03 saut vers un coup), chacune validée par sa Feature Path (agentic, Chrome réel). Fusionnée dans `develop` (décision humaine `integration → develop` du 2026-07-21). Pas de suite Happy Path pour cette US infrastructurelle (à reconsidérer une fois US-2/3/4).
+
+## Abandonnées
+
+> Stories retirées de la file : elles ne sont **pas** à prendre. Leur relevé est conservé pour que
+> ce qui a été établi en les instruisant ne soit pas repayé si elles reviennent.
+
+- **US-20** *(abandonnée le 2026-08-26)*: Reprendre la main sur les processus des tests agentiques —
+  pour qu'un run interrompu ne laisse ni serveur qui sert dans le vide, ni machine à genoux.
+  > **Abandonnée à l'issue de son grill** (2026-08-26, mené conjointement avec US-18). Raison du
+  > demandeur, mot pour mot : « elle ne résout pas mon problème, je me fiche des processus morts, je
+  > veux seulement réduire la durée des tests agentiques ». Le grill avait établi la même chose par
+  > un autre chemin : la story traite les processus **morts**, alors que le gel vient de la charge
+  > des processus **vivants**.
+  >
+  > **Ce qui reste ouvert et assumé** : le gel du poste reste possible (famine CPU, déclencheur non
+  > établi, et un des trois plantages du 23-24/08 ne coïncide avec aucun run — donc **cause seconde
+  > indépendante** plausible) ; le plafond de concurrence **reste à 2** ; les orphelins continuent de
+  > se nettoyer à la main. US-18 en tire sa décision D1 : son gain doit venir du contenu, pas du
+  > parallélisme.
+  >
+  > **Ce que le grill a établi, à ne pas repayer si la story revient** — neuf sondes sur ce poste,
+  > `systemd-run --user` (`systemd-run` disponible, contrôleurs `cpu memory pids` **délégués**) :
+  > - `--scope` fait un **`exec`** : le pid rendu est le vrai processus, donc le piège du
+  >   grand-enfant d'`npx` disparaît côté pid ; `cwd`, `DB_FILE` et l'environnement sont **hérités**,
+  >   et la sortie standard arrive normalement dans le log.
+  > - `--property=RuntimeMaxSec=N` **fonctionne aussi sur un scope** (mesuré : arbre tué à
+  >   l'échéance, port libéré, `Result=timeout`) — c'est le seul mécanisme qui nettoie **sans que
+  >   personne ne décide**, donc sans hook.
+  > - Une **slice parente** (`--slice=agentic.slice`) regroupe les scopes et **un seul
+  >   `systemctl --user stop agentic.slice` tue tout l'agentique**.
+  > - **Trois pièges neufs, non négociables si on adopte le mécanisme** : (a) tuer le pid rendu
+  >   laisse le grand-enfant en écoute et l'unité `active` — **le scope n'apporte rien si le teardown
+  >   ne passe pas à `systemctl stop`** ; (b) un nom d'unité déjà chargé fait **échouer** le
+  >   lancement ; (c) après une échéance l'unité reste `failed` et le nom **refuse** d'être réutilisé
+  >   jusqu'à `reset-failed`.
+  > - **Le risque qui disqualifiait la version naïve** : `agentic.slice` se place en *frère* de
+  >   `app.slice`, donc à poids par défaut les agents passeraient d'une fraction de la part du
+  >   terminal à **la moitié du CPU utilisateur** — un mécanisme plausible pour **aggraver** le gel.
+  >   Un `CPUWeight` explicite est obligatoire. `MemoryMax` est à refuser : il *tue*, et sur une passe
+  >   moteur ça produit un faux rouge indistinguable d'un bug d'app.
+  > - **Rayon de souffle documentaire** : la mécanique de lancement vit dans **un seul fichier**
+  >   (`.claude/skills/agentic-tests/SKILL.md`, ~25 lignes), plus 3 lignes du README et 1 de
+  >   `theme-pass.md`. Les **quatre scénarios n'en contiennent aucune** — ils sont tech-agnostiques.
+  >
+  > Relevé d'origine (2026-08-24), conservé tel quel :
+  laisse ni serveur qui sert dans le vide, ni machine à genoux.
+  > **Pas encore grillée.** Demandée le 2026-08-24, après que le poste a gelé pendant la passe HP
+  > d'US-17 et qu'il a fallu l'arrêter au bouton.
+  >
+  > ### Le constat : il n'existe aucun mécanisme, seulement une consigne
+  >
+  > La skill `agentic-tests` dit « teardown by pid, jamais `pkill` par motif », et chaque agent
+  > l'applique lui-même. **Aucun hook n'est configuré**, ni côté projet ni côté utilisateur : rien
+  > n'est automatique. Ça tient tant que l'agent **termine**. Le trou est là — un agent tué en cours
+  > de route laisse tout tourner, et ce n'est pas un cas d'école : c'est arrivé **deux fois le
+  > 2026-08-24**.
+  >
+  > | Incident | Ce qui a survécu | Comment ça s'est réglé |
+  > | --- | --- | --- |
+  > | Sortie de session pendant la FP d'US-17-05 | un **Vite orphelin sur 5271**, servant un backend mort | tué à la main, après identification par `/proc/<pid>/environ` |
+  > | Gel du poste pendant la suite HP | tous les processus des 4 agents | **le reboot** — nettoyage par accident, pas par conception |
+  >
+  > « Libérer la mémoire » n'a pas d'existence séparée : ce sont les processus qui la retiennent, et
+  > les tuer *est* le mécanisme. À côté, sur disque, les scratchpads accumulent des bases `.db` de
+  > run et des `node_modules` posés en `--no-save` — 55 Mo au moment du constat, négligeable en soi
+  > mais sur une partition à **86 %**.
+  >
+  > ### Le piège du grand-enfant, redécouvert à chaque run
+  >
+  > `npx` interpose un wrapper : **le processus qui écoute n'est pas celui qu'on a lancé**. Tuer le
+  > pid retourné laisse le vrai serveur debout. C'est re-confirmé sur **absolument chaque run** —
+  > encore sur le dernier (listener 7965 sous wrapper 7954). Aujourd'hui chaque agent le
+  > redécouvre, le contourne à la main, et le consigne. C'est du travail répété qui devrait être
+  > structurel.
+  >
+  > ### Pistes, par ordre d'efficacité (à trancher au grill)
+  >
+  > 1. **`systemd-run --user --scope --unit=…` autour de chaque processus lancé.** Correction à la
+  >    racine : `systemctl --user stop <unit>` tue **l'arbre entier**, grand-enfants compris. Le
+  >    piège ci-dessus disparaît structurellement. Demande de toucher la recette de lancement de la
+  >    skill.
+  > 2. **Un script de récupération** dans `docs/test-scenarios/tools/`, **`--dry-run` par défaut**,
+  >    identifiant les processus de test par signature (port dans la plage agentique, `cwd` sous
+  >    `.claude/worktrees/`, `DB_FILE` pointant un scratchpad, Chrome en `--user-data-dir` sous
+  >    `/tmp/claude-*`). Filet pour les orphelins, purement additif.
+  >
+  > ### Une piste explicitement déconseillée, et pourquoi
+  >
+  > **Un hook Claude Code qui nettoie automatiquement.** C'est le réflexe tentant et c'est un
+  > piège : un hook `Stop` se déclenche à la fin du tour de l'agent principal, or **les sous-agents
+  > tournent en arrière-plan** — il tuerait l'app d'un agent en pleine FP. Le nettoyage automatique
+  > et les runs en arrière-plan s'opposent, sauf à savoir précisément quels processus appartiennent
+  > à un agent encore vivant, ce qui est le problème même qu'on cherche à résoudre. Préférer un
+  > outil explicite qu'on lance en connaissance de cause.
+  >
+  > ### Tension à arbitrer avec US-18
+  >
+  > Le gel a produit une contre-mesure immédiate : la skill plafonne désormais la concurrence à
+  > `min(3, floor(nproc / 4))`, soit **2** sur ce poste (§5.7). C'est **la direction opposée à
+  > US-18**, qui veut accélérer la suite. Les deux ne s'excluent pas — reprendre la main sur les
+  > processus pourrait permettre de **remonter** le plafond en sécurité — mais l'ordre compte, et
+  > c'est un sujet de grill commun aux deux stories. Les mesures et le diagnostic sont dans la
+  > skill §5.7, avec leurs limites : aucun kill OOM, `systemd-oomd` inactif, rien de thermique,
+  > aucun *GPU hang* — donc **famine CPU** plutôt que mémoire, et **le déclencheur de la sortie de
+  > session n'est pas établi**.
+  >
+  > Le demandeur signale que le gel s'est produit **plusieurs fois en trois jours**, corroboré par
+  > `/var/log/apport.log` (2026-08-23 16:23, 2026-08-24 00:29, 2026-08-24 16:49). L'un d'eux ne
+  > coïncide avec aucun run d'agent : **il pourrait donc exister une cause seconde, indépendante**,
+  > que cette story ne corrigerait pas.
+  >
+  > **Critère de succès à définir au grill.**

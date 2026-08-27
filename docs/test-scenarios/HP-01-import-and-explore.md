@@ -302,5 +302,8 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   both months are in the past, so they should stay put. If they drift, **re-check the account and
   update the table** rather than loosening the checks — the point of anchoring on immutable months
   is to keep this scenario assertable on real data.
-- The range covers 2 months, so the Import is 2 sequential fetches. The 54-game month dominates the
-  run; expect the readout to sit on `1/2` for most of it.
+- The range covers 2 months, so the Import is 2 sequential fetches. **Do not expect to see `1/2`**:
+  measured 2026-08-27 at frame resolution, the whole two-month import takes ~590 ms while the client
+  polls `/api/import/status` about every 500 ms, so exactly one poll lands and the readout goes
+  `0/2 → 2/2`. The Check is unchanged — determinate, counted in months, reaches N/N, then goes away —
+  only this expectation was stale. (It dated from before US-17 removed the per-month requests.)
