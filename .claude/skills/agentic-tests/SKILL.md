@@ -531,6 +531,18 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   directly. Previous runs each installed a driver into a scratch directory of their own.
 - **The inventory of screens is read from `theme-pass.md`**, never copied. That document stays the
   one place the screens are edited.
+- **It does not choose which Game or which Profile the pass opens — you do.** Left to itself it takes
+  the first row, and on 2026-08-27 that was an *unanalysed* Game for two scenarios running, so the
+  pass audited `Analyse` with no evaluation curve, no advantage bar and no severity glyph. Green, on
+  the wrong Game. Pass `openers` when your assertions depend on it:
+  ```js
+  import { gameRows, openGameRow } from "<repo>/docs/test-scenarios/tools/host/navigate.mjs";
+  const rows = await gameRows(session, { port });            // raw; you decide which
+  await runThemePass({ …, openers: {
+    "/analyse/:gameId": (s, { port, waitOptions }) =>
+      openGameRow(s, { port, index: rows.findIndex((r) => r.text.includes("analysée")), waitOptions }),
+  } });
+  ```
 - **A field is read back before anything is submitted.** `setField` puts the value in through the
   native setter, reads it out again, and **throws** if it did not take. The import form's month
   fields keep their default when a driver assigns `value` — measured 2026-08-19, where a run nearly

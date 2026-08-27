@@ -48,12 +48,27 @@ var agenticDriver = {
     return true;
   },
 
-  /** Open the first Game from the list. The row is a `button`, not a link. */
-  openFirstGame() {
-    const button = document.querySelector("table tbody tr button");
+  /** What the Game list currently offers, so a caller can choose which row to open. */
+  gameRows() {
+    return [...document.querySelectorAll("table tbody tr")].map((tr, index) => ({
+      index,
+      text: tr.innerText.replace(/\s+/g, " ").trim(),
+      openable: Boolean(tr.querySelector("button")),
+    }));
+  },
+
+  /** Open a Game from the list. The row is a `button`, not a link. */
+  openGameRow(index = 0) {
+    const rows = [...document.querySelectorAll("table tbody tr")];
+    const button = rows[index] && rows[index].querySelector("button");
     if (!button) return false;
     button.click();
     return true;
+  },
+
+  /** Open the first Game from the list. */
+  openFirstGame() {
+    return this.openGameRow(0);
   },
 
   /** Open the first Profile from the list of Profiles. */

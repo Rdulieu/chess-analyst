@@ -104,3 +104,24 @@ describe("the two halves stay apart", () => {
     }
   });
 });
+
+describe("which Game the walk opens", () => {
+  /*
+   * `openFirstGame()` takes the first row, and two scenarios found independently on
+   * 2026-08-27 that the first row is an **unanalysed** Game — so the theme pass audited
+   * the Analyse screen with no evaluation curve, no advantage bar and no severity
+   * glyph, which is precisely what HP-01 says its pass is the strongest of the three at
+   * seeing. It reported green, and it was green: on the wrong Game.
+   *
+   * The library must not choose. It must let the caller choose — and say so.
+   */
+  it("lets the caller supply the opener for a screen the navigation cannot reach", async () => {
+    const { openerFor } = await import("./navigate.mjs");
+    const mine = async () => "opened by the caller";
+    const openers = { "/analyse/:gameId": mine };
+
+    expect(openerFor(openers, { route: "/analyse/:gameId" })).toBe(mine);
+    expect(openerFor(openers, { route: "/profiles/:id" })).toBe(undefined);
+    expect(openerFor(undefined, { route: "/analyse/:gameId" })).toBe(undefined);
+  });
+});
