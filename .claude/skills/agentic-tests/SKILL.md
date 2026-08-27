@@ -209,93 +209,83 @@ silence.
 
 ### 5.4 Isolation kit — what every dispatch prompt must pin
 
-Parallel scenarios share a machine, and the failure mode is one agent's action landing in another
-agent's app. Everything below was measured on the 2026-08-21 run; re-check it (§5.6). Give each
-subagent, explicitly:
+**Rewritten 2026-08-27 (US-18 slice 03), in replacement.** What this section used to be was
+a recipe: eleven mechanics an agent had to re-derive, each one written up with the run it cost.
+Those mechanics now live in `docs/test-scenarios/tools/host/app-lifecycle.mjs` (§5.8) and are
+executed rather than read. Only two things belong here now — **what a dispatch must pin**, and
+**the evidence** for why the library does what it does, so nobody "simplifies" it back.
 
-- **Its own ports and its own `DB_FILE`.** Never the project's default command if that command
-  hard-codes ports — start the parts separately with the env vars.
-- **A guard on every injected script**, keyed to its own port
-  (`if (location.port !== '<its port>') throw …`). This is **load-bearing, not belt-and-braces**:
-  a shared browser had its selected page stolen ~20 times across one parallel run, and the guard
-  is what kept every action off the siblings' apps. Prefer in-page SPA navigation over
-  driver-level page navigation, which is the operation that lands on the wrong page.
-- **Its own browser instance — a private one, as the DEFAULT and not the fallback** (measured
-  2026-08-23, and this is the run's strongest operational finding). On the parallel HP fan-out the
-  shared devtools browser stole the selected page from **all three** scenarios: ~7 steals over half
-  of one agent's calls, 2 within the first 3 calls of another, 7 of 12 consecutive calls of the
-  third — where one early `take_snapshot` returned **a sibling's full accessibility tree** before any
-  guard could fire. Two of the three abandoned the shared browser mid-run and finished against their
-  own Chrome; both reported zero theft afterwards. So do that from the start:
-  - launch the bundled Chrome directly (on this host:
-    `~/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome`), with **its own `userDataDir`** and
-    **its own `--remote-debugging-port`**, and drive it with `puppeteer-core`;
-  - **`--no-sandbox` is required on this host** — the bundled Chrome aborts with "No usable sandbox"
-    otherwise;
-  - do **not** expect to re-attach to an MCP page from a script: `browserContexts()` does not expose
-    the MCP's isolated contexts, so `pages()` sees only the default context.
-- **Run the theme pass with the driver library** (§5.8), not by re-deriving it. It re-asserts the
-  viewport and the emulated colour scheme, and it asserts the theme *inside* the audited script,
-  failing loudly when it is wrong. Measured 2026-08-23: the MCP's
-  `emulate colorScheme` **did not survive page-selection churn** (a page emulated `light` later
-  measured `prefers-color-scheme: dark` with nothing having asked for it). A theme audit that trusts
-  the theme it requested can silently audit one theme twice.
+An old, well-evidenced instruction that keeps sitting beside a new one always wins; that is why
+this is a replacement and not an addition.
 
-  **Colour-scheme emulation has now failed in BOTH directions, on four separate runs — so never
-  trust a theme you merely requested.** Over the US-16a slices (2026-08-24): emulation set over a
-  CDP session that was then **detached** silently **reverted**, so a light pass measured `dark`
-  (slices 04 and 05, two independent agents); and on another run the same emulation **survived** a
-  detach into a later screenshot, which is the opposite failure (slice 02). Do not encode a
-  mechanism — the two observations contradict any single one. What worked every time: keep **one CDP
-  session alive** for the whole pass, and put a `matchMedia` **assertion inside** the audited script
-  so a wrong theme throws instead of producing a plausible green. That assertion caught every one of
-  these cases; nothing else did.
-- **Teardown by pid, and NEVER `pkill` by pattern.** `pkill node` kills every sibling's server
-  mid-run. Also: a dev wrapper often **orphans its listener** — killing the pid the package
-  manager returned can leave the real server still serving. Verify the port is actually free
-  (`ss -lptn 'sport = :<port>'`) and confirm a pid is yours before killing it. `/proc/<pid>/environ`
-  is the first proof, but it is **often empty of anything identifying** — measured 2026-08-23 (FP),
-  where neither the vite nor the Chrome pid carried a scratch path in `environ`. `/proc/<pid>/cmdline`
-  is the second proof and worked where `environ` did not: the worktree path, `--strictPort <your
-  port>`, `--user-data-dir` under your own scratch. Use whichever actually names you; do not treat an
-  uninformative `environ` as evidence that a pid is not yours. **Re-confirmed 2026-08-24** on a
-  vite listener started from the project directory: `environ` answered "not mine" about a process
-  that was; `cwd` + `cmdline` + the `API_TARGET` it was given settled it. Note which way this fails —
-  a check that wrongly says "not mine" leaves your own orphan for the next run to trip over. Two agents on one run believed they had stopped an app that was still up, and
-  one of them copied a database out from under it.
-- **`npx` interposes a wrapper, so the listener is usually a GRANDCHILD** (re-confirmed by three
-  agents on 2026-08-23). Killing the pid you spawned leaves the real server listening. Kill the
-  tree, then check the port — every agent on that run had to come back for a grandchild, and each
-  one found it because it verified rather than assumed.
-- **Kill the watcher, not just the listener — and prefer no watcher at all** (measured
-  2026-08-22, US-15a FP). Killing the listener under a `tsx watch` wrapper leaves the **wrapper**
-  alive, and a *free port is not proof of a stopped app*: the next edit to a source file makes the
-  watcher **resurrect a server on that port**. On this run the port was verified free at 09:57, a
-  commit touched the sources at 09:59, and the relaunch then failed `EADDRINUSE` against a server
-  nobody had started. Worse than the nuisance: what is then serving is **code the agent never
-  meant to test**. So kill the whole tree (wrapper included), and for a run that is *validating a
-  specific commit* start the server **without watch** (`npx tsx src/main.ts`) — one pid, no
-  resurrection, and no doubt about which code answered.
-- **Ports are not necessarily free just because they were assigned to you** (2026-08-22): two
-  orphans from the previous day still held the assigned pair. A subagent should **not** kill
-  processes it cannot prove are its own — it should shift to a free pair, say which, and report the
-  orphans for their owner.
-- **Restore state before starting the server**, not after: a server usually creates its database
-  file on open, so a copy made afterwards is overwritten by a live process.
-- **`cp` can produce a corrupt copy even after a truncating checkpoint** — measured 2026-08-24
-  (US-16a slice 04): a `cp` taken after `PRAGMA wal_checkpoint(TRUNCATE)` gave a database whose
-  `evaluations` table read back as **"database disk image is malformed"**. `sqlite3 <src>
-  ".backup <dst>"` worked on the same source. This is **stronger than the standing
-  checkpoint-then-copy advice**, which three later runs followed without trouble — so the failure is
-  not universal and its cause is not established. Prefer `.backup`, and **read the copy back**
-  before trusting it either way.
-- **But *seed* AFTER the server is up** (measured 2026-08-23, games-table-wide FP) — restoring and
-  seeding are not the same operation and want opposite orders. An agent copied the database, wrote
-  `analyzed = 1` into the copy, started the server, and read the rows back as **0**: the copied
-  `-wal`/`-shm` sidecars and the open-time checkpoint discarded the write. The same `UPDATE` against
-  the running server took immediately. So: **copy the database, start the server, then seed** — and
-  read the seeded rows back through the app before trusting them. Note that seeding is a fallback:
-  prefer state the UI can produce, and say in the report what you seeded and why the UI could not.
+**What every dispatch prompt must still pin**, because no helper can choose these for an agent:
+
+- [ ] **Its own server port, its own client port, its own CDP port, and its own `DB_FILE`.**
+      `launchApp` refuses to fall back on the project's defaults — an agent that forgets its
+      ports gets an error rather than somebody else's app on `:3001`.
+- [ ] **Ports it has *checked*, not merely been assigned.** On 2026-08-22 two orphans from the
+      previous day still held an assigned pair. `launchApp` throws naming the port; the agent
+      then **shifts to a free pair, says which, and reports the orphans for their owner** — it
+      does not kill what it cannot prove is its own.
+- [ ] **Its own private browser.** `launchBrowser` gives it one, with its own `--user-data-dir`
+      and its own debugging port.
+- [ ] **The state it is handed**, with figures, and which parts of that state are deliberate.
+- [ ] **Teardown, and the proof of it.** `stopApp` frees the ports and verifies them; it throws
+      if anything is still listening that it did not deliberately spare.
+
+**The evidence the library encodes.** Each of these cost a run. They are recorded so that a
+future reader knows the helper's shape is measured rather than defensive — and so that a bug in
+a helper is recognised as *this* returning, not as a new mystery.
+
+- **Restore before starting.** A server creates its database when it opens it, so a copy laid
+  down afterwards is overwritten by a live process.
+- **`PRAGMA wal_checkpoint(TRUNCATE)` → `.backup` → read the copy back.** A `.db` copied alone
+  gave a database with no table in it (4 KB of `.db` beside 95 KB of `-wal`). Worse, on
+  **2026-08-24** a `cp` taken *after* a truncating checkpoint gave `evaluations` reading back as
+  **"database disk image is malformed"**, where `sqlite3 .backup` worked on the same source. The
+  failure is **not universal** — re-measured 2026-08-27, a `cp` of the same database read back
+  perfectly — so the thing that actually protects you is the **read-back**, not the choice of
+  copy tool. `restoreSnapshot` does both and returns the row counts.
+- **But *seed* AFTER the server is up** (2026-08-23): restoring and seeding want opposite orders.
+  An agent copied the database, wrote `analyzed = 1` into the copy, started the server and read
+  the rows back as **0** — the copied sidecars and the open-time checkpoint discarded the write.
+  Seeding is a fallback: prefer state the UI can produce, and say in the report what you seeded
+  and why the UI could not.
+- **The listener is usually a GRANDCHILD.** `npx` interposes a wrapper, so killing the pid you
+  spawned leaves the real server serving. Re-confirmed on every run since 2026-08-23 and again
+  2026-08-27, where `launchApp` spawned 636937/636938 while the listeners were 636997/636974.
+  `stopApp` walks the port's holders for exactly this reason.
+- **No watcher at all for a run that validates a commit** (2026-08-22). Killing the listener
+  under a `tsx watch` wrapper leaves the wrapper alive, and *a free port is not proof of a
+  stopped app*: the next edit to a source file makes the watcher **resurrect a server on that
+  port**. Worse than the nuisance — what is then serving is code the agent never meant to test.
+  `launchApp` starts `tsx src/main.ts`, one pid, no resurrection.
+- **Never `pkill` by pattern**: it kills every sibling's server mid-run.
+- **Never kill what you cannot prove is yours.** `/proc/<pid>/environ` has lied in **both**
+  directions — uninformative on a vite and a Chrome pid (2026-08-23), and answering "not mine"
+  about a process that was (2026-08-24). `cwd` and `cmdline` are the proofs that worked, and
+  `namesMe` returns the **reason** with the verdict: a check that wrongly says "not mine" leaves
+  your own orphan for the next run to trip over, and one that wrongly says "mine" takes down a
+  sibling's run.
+- **A private browser is the default, not the fallback.** On the parallel fan-out of
+  2026-08-23 the shared devtools browser stole the selected page from **all three** scenarios —
+  one early `take_snapshot` returned a sibling's entire accessibility tree. 2026-08-24, with a
+  private Chrome each: **zero thefts across four agents**. Also: do not expect to re-attach to an
+  MCP page from a script.
+- **A `location.port` guard on every injected script.** Load-bearing, not belt-and-braces: it is
+  what kept every action off the siblings' apps during those ~20 thefts. `theme-pass.mjs` puts
+  one on everything it evaluates.
+- **Never trust a theme you merely requested.** Colour-scheme emulation has failed in **both**
+  directions across four runs — set over a CDP session then detached, it silently reverted (two
+  agents, 2026-08-24, each auditing the dark palette twice); on another run the same emulation
+  **survived** a detach, which is the opposite failure. Four observations disagree about the
+  mechanism; none disagrees about the remedy: **keep one session alive for the whole pass, and
+  assert the theme inside the audited script.** That assertion caught every one of these cases;
+  nothing else did.
+- **"The screen has rendered" is two conditions.** Text stability alone is satisfied instantly by
+  a loading placeholder — measured 2026-08-27 on `/confrontation`, audited at ~300 ms while its
+  content landed at ~600, reporting thirteen text nodes out of seventy with `problems: 0`. Wait
+  for the app to have **stopped fetching** as well.
 
 ### 5.5 What to tell every subagent
 
@@ -466,23 +456,32 @@ the only part that produces findings.
 
 | What | Where | What it gives you |
 |---|---|---|
+| Restore, launch, stop the app | `host/app-lifecycle.mjs` | `restoreSnapshot`, `readBack`, `launchApp`, `stopApp`, `holdersOf`, `namesMe`, `describeProcess` |
 | A private Chrome, and one CDP session kept alive | `host/cdp.mjs` | `launchBrowser`, `attach`, `open`, `setViewport`, `emulateTheme`, `session.evaluate`, `session.stop` |
 | The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md` in both themes, eighteen raw readings |
 | What a pass cost, after the fact | `host/run-ledger.mjs` | per scenario the wall and five buckets; the suite's lived and worked walls |
 
 ```js
+import { restoreSnapshot, launchApp, stopApp } from "<repo>/docs/test-scenarios/tools/host/app-lifecycle.mjs";
 import { launchBrowser, setViewport } from "<repo>/docs/test-scenarios/tools/host/cdp.mjs";
 import { runThemePass } from "<repo>/docs/test-scenarios/tools/host/theme-pass.mjs";
+
+// Restore BEFORE starting, and read the copy back before trusting it.
+const { tables } = restoreSnapshot({ from: snapshot, to: "/my/scratch/scenario.db" });
+const app = await launchApp({
+  repoRoot, serverPort: 3211, clientPort: 5211, dbFile: "/my/scratch/scenario.db",
+});                                                          // throws if a port is taken, naming it
 
 const session = await launchBrowser({ cdpPort: 9299 });      // your own browser, your own port
 await setViewport(session, { width: 1280, height: 900 });
 const readings = await runThemePass({
   session,
-  baseUrl: "http://localhost:5199/",
-  port: "5199",                                              // guards every injected script
+  baseUrl: app.baseUrl,
+  port: "5211",                                              // guards every injected script
   profile: "DudulSmash",                                     // a fresh browser has none current
 });
 await session.stop();
+await stopApp(app);   // frees the ports, grandchildren included, and throws if one is still held
 ```
 
 Three things it is worth knowing it does for you, each of which cost somebody a run:
@@ -543,9 +542,11 @@ one that silently loses runs.
 - [ ] **Concurrency derived from the machine**, `min(3, floor(nproc / 4))` — §5.7. One private
       browser per agent is what makes a fan-out expensive, and three trios wedged this machine
       repeatedly between 2026-08-22 and 2026-08-24. Never carry a number over from another host
-- [ ] Restore state **before** starting the server
-- [ ] A `location.port` guard on every injected script
-- [ ] Teardown **by pid**, never `pkill` by pattern; verify the port is free afterwards
+- [ ] **Drive with the library (§5.8)**, not with a script re-derived on the spot — `restoreSnapshot`
+      / `launchApp` / `stopApp` for the app, `launchBrowser` for the browser, `runThemePass` for the
+      theme. Restoring before starting, the `location.port` guard, teardown by pid down to the
+      grandchild and the check that the port is really free are all inside those calls; they are
+      listed in §5.4 as **evidence**, not as a recipe to retype
 - [ ] The state it is handed, with figures, and what about it is deliberate
 - [ ] Re-measure before calling anything a defect; partial beats silent
 - [ ] A truthful red beats an optimistic green; an abridged step reported as green is worse than a red

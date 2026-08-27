@@ -61,6 +61,14 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   node docs/test-scenarios/tools/host/run-ledger.mjs <session>  # cost one of them
   ```
 
+- **`host/app-lifecycle.mjs`** — restore a snapshot, launch the app on ports and a database of
+  your own, stop what you started. `restoreSnapshot` checkpoints the WAL, uses `.backup` rather
+  than `cp`, and **reads the copy back** before handing it over — the read-back is what protects,
+  because the `cp` failure of 2026-08-24 turned out not to be universal. `launchApp` refuses the
+  project's defaults, throws naming a port that is taken, and starts **no file watcher**.
+  `stopApp` walks the port's holders (the listener is usually an `npx` grandchild), spares and
+  **reports** anything it cannot prove is its own, and throws unless the ports end up free.
+
 - **`host/cdp.mjs`** — a private Chrome and one CDP session kept alive, spoken over node 22's
   global `WebSocket`. No `puppeteer-core`, no install: the library is usable by being checked out.
 
