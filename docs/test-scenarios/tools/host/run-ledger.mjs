@@ -29,6 +29,8 @@ export const RESERVATIONS = [
   "composing includes API latency and any queueing: the transcript timestamps a message when it lands, so the model's own generation cannot be separated from the wait for it.",
   "The content of thinking blocks is not persisted. This measures how long analysis took, never what it was made of.",
   "The worst wait counts every idle minute, the ones the orchestrator spent legitimately elsewhere included. On a parallel fan-out it should read seconds; on a run resumed between rounds of work it will not, and that is not a defect.",
+  "It also reads 0.0 for an agent nobody ever came back to, since the wait after a transcript's last line cannot be measured — 0.0 means either collected at once or abandoned, and only the lived wall tells you which.",
+  "None of these figures can see the orchestrator's own session, so none of them is the requester's wait. They measure the subagents, and nothing else.",
 ];
 
 /* ------------------------------------------------------------------ reading */
@@ -298,7 +300,7 @@ export function suiteOf(agents) {
 export function ledgerOfSession(subagentsDir, options = {}) {
   const pass = hpPassOfSession(subagentsDir, options);
   const agents = [...pass.prerequisites, ...pass.scenarios];
-  return { ...pass, suite: pass.found ? suiteOf(agents) : null };
+  return { ...pass, every: Boolean(options.every), suite: pass.found ? suiteOf(agents) : null };
 }
 
 /* ------------------------------------------------------------------ rendering */
@@ -311,6 +313,7 @@ const BUCKET_LABELS = {
   idleWait: "idle wait",
 };
 const TRAILING = "worst wait";
+const SINCE = "since";
 
 const min = (ms) => (ms / 60000).toFixed(1);
 const pct = (part, whole) => (whole ? `${((100 * part) / whole).toFixed(0)} %` : "—");
@@ -318,7 +321,18 @@ const pct = (part, whole) => (whole ? `${((100 * part) / whole).toFixed(0)} %` :
 function row(label, agent) {
   const b = agent.buckets;
   const cells = BUCKETS.map((k) => `${min(b[k])} (${pct(b[k], agent.wall)})`);
-  return [label, min(agent.wall), min(agent.worked), ...cells, min(agent.waitAfterReport), String(agent.toolCalls)];
+  const since = agent.waitedFrom ? new Date(agent.waitedFrom).toISOString().slice(11, 19) : "—";
+  return [
+    label,
+    min(agent.wall),
+    min(agent.worked),
+    ...cells,
+    min(agent.waitAfterReport),
+    /* When the worst wait started, because 33.5 minutes means two opposite things
+       depending on whether the gate had already shipped. */
+    since,
+    String(agent.toolCalls),
+  ];
 }
 
 function table(rows) {
@@ -352,7 +366,7 @@ export function formatLedger(ledger) {
   }
 
   const agents = [...ledger.prerequisites, ...ledger.scenarios];
-  const header = ["", "wall", "worked", ...BUCKETS.map((k) => BUCKET_LABELS[k]), TRAILING, "calls"];
+  const header = ["", "wall", "worked", ...BUCKETS.map((k) => BUCKET_LABELS[k]), TRAILING, SINCE, "calls"];
   const s = ledger.suite;
   const rows = [
     header,
@@ -369,17 +383,20 @@ export function formatLedger(ledger) {
       min(s.workedWall),
       ...BUCKETS.map((k) => `${min(s.buckets[k])} (${pct(s.buckets[k], s.sumOfWalls)})`),
       min(Math.max(...agents.map((a) => a.waitAfterReport))),
+      "—",
       String(s.toolCalls),
     ],
   ];
   return [
-    "Ledger of the pass — minutes, and the share of each agent's own wall.",
+    ledger.every
+      ? "Ledger of every subagent this session dispatched — minutes, and the share of each agent's own wall. This is not a Happy Path pass; the totals below are a sum over unrelated agents."
+      : "Ledger of the pass — minutes, and the share of each agent's own wall.",
     "",
     table(rows),
     "",
-    `Suite lived wall   ${min(s.livedWall)} min   (first agent's first turn → last agent's last turn)`,
-    `Suite worked wall  ${min(s.workedWall)} min   (the same span, less every minute no agent was working)`,
-    `Sum of the walls   ${min(s.sumOfWalls)} min   (not the suite's wall: scenarios overlap, so this counts parallel minutes twice)`,
+    `Suite worked wall  ${min(s.workedWall)} min   (every minute at least one agent was working, counted once)`,
+    `First turn → last  ${min(s.livedWall)} min   (NOT the requester's wait: this ledger cannot see the orchestrator's session. Its right edge is the last LINE of any transcript, and an agent stays resident after its report — on 2026-08-25 one was woken 34 min later by a stray watcher and stretched this figure from 43 to 74)`,
+    `Sum of the walls   ${min(s.sumOfWalls)} min   (not the suite's span: scenarios overlap, so this counts parallel minutes twice)`,
     `Tool calls         ${s.toolCalls}`,
     "",
     "Reservations of method — read the shares with these or not at all:",

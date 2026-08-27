@@ -59,9 +59,14 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   ```
 
   Per agent it also prints the **worst wait**: the longest stretch during which that agent had
-  handed back and nothing came for it. At the 2026-08-25 gate that column read **33.5 minutes**
-  against 0.0 / 0.0 / 0.2 for the others — one scenario left standing while its siblings were
-  collected in seconds, and 31 of the requester's 74 minutes.
+  handed back and nothing came for it. Read it with its two traps, which are written into the tool's
+  own reservations: **`0.0` can mean "abandoned"** as easily as "collected at once", since the wait
+  after a transcript's last line cannot be measured; and a **large value can be a dead tail** after
+  the gate has shipped. At the 2026-08-25 gate the column read 33.5 minutes for HP-03 — and that was
+  the second case: every report had been collected within seconds, and the 33.5 minutes were a
+  finished subagent woken by a stray watcher twenty-three minutes after the pull request was open.
+  The ledger reads subagent transcripts and cannot see the orchestrator's session, so **none of its
+  figures is the requester's wait**.
 
 - **`host/app-lifecycle.mjs`** — restore a snapshot, launch the app on ports and a database of
   your own, stop what you started. `restoreSnapshot` checkpoints the WAL, uses `.backup` rather

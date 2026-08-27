@@ -76,9 +76,9 @@ merge**, report.
 6. Produce a per-scenario report (pass/fail) + a consolidated **Findings** section, ready to
    paste into the integration→develop PR. Report the prerequisite's own result as its own line.
    **Paste the run ledger with it** (§5.8): per scenario the wall, the five buckets and the **worst
-   wait**, then the suite's *lived* and *worked* walls, which are two different numbers. A gate that
-   carries its own measurement lets a reviewer see a trend rather than an anecdote — and the worst
-   wait column is what makes "nobody was left standing" a fact instead of an intention.
+   wait**, then the suite's worked wall. A gate that carries its own measurement lets a reviewer see
+   a trend rather than an anecdote — provided the figures are read for what they are (§5.1: the
+   ledger cannot see the orchestrator, so none of them is the requester's wait).
 7. **Audit §5 against what this run actually observed, and correct it** — §5.6. It is written from
    one incident and is knowingly ahead of its evidence; a run that leaves a stale warning standing
    makes every later run obey it.
@@ -102,67 +102,72 @@ others instead of being added to them.
 2. **Then the HPs, one subagent each — but not all at once. Derive how many from the machine**
    (§5.7). On the 8-thread laptop this suite runs on that is **two**; run the third when a slot
    frees.
-3. The orchestrator **collects each report the moment it arrives** and consolidates as it goes
-   (§5.1). Waiting for a further signal after a report is in hand is what put **31 of the
-   2026-08-25 gate's 74 minutes** into a scenario that had already finished.
+3. The orchestrator **collects each report the moment it arrives**, consolidates as it goes, and
+   **stops the task once its report is in** (§5.1) — a finished subagent stays resident and can be
+   woken for nothing long after the gate has shipped.
 
-### 5.1 Collecting the reports — the cost is the waiting, not the losing
+### 5.1 Collecting the reports — what the 2026-08-25 gate actually did
 
-**Rewritten 2026-08-27 (US-18 slice 05), in replacement.** This section spent a year answering the
-wrong question. It was written after one run lost four reports (2026-08-21) and it argued, at
-length, that delivery might not work. Five suites and several FP runs since have all delivered, and
-**the run ledger has now measured what the section was missing**: at the 2026-08-25 gate the
-requester waited **74 minutes for 43 minutes of work**, and **31 of the 74 were a scenario that had
-already finished**. HP-03 rendered its report at 12:41:44 and heard nothing until 13:15:28 —
-**33.5 minutes**, 56 % of its own wall — while its two siblings were picked up in seconds.
+**Rewritten 2026-08-27 (US-18 slice 05), in replacement — and then corrected the same day, because
+the first rewrite got its facts wrong.** Both versions are worth knowing about: this section spent a
+year arguing that delivery might fail, and then spent an afternoon arguing that collection was slow.
+Neither was true, and the second error was found by re-reading the transcript the claim was built on.
 
-So the problem was never that a report might be lost. It is that **the orchestrator waits for a
-signal instead of coming to collect what has already arrived.**
+**What the parent session of the 2026-08-25 gate says, line by line:**
 
-**What is established, and each claim carries its date:**
+| | |
+|---|---|
+| requester asks | `11:54:47` |
+| path 0 dispatched | `12:01:33` · report received `12:08:32` · acted on `12:08:41` |
+| HP-01, HP-03 dispatched | `12:09:18`, `12:09:53` |
+| HP-03's report sent | `12:41:27` · **received `12:41:30`** · acted on `12:41:40` |
+| HP-02's report | **received `12:44:22`** · consolidated `12:44:32` |
+| gate delivered (PR #77) | `12:52:30` |
 
-- **Delivery works, parallel fan-out included.** 2026-08-23 (4 of 4), 2026-08-24 (4 of 4, full
-  suite), 2026-08-24 (5 of 5, consecutive FP runs), 2026-08-25. Treat it as working.
-- **Expect each report twice** — once by the subagent's own `SendMessage`, once as the completion
-  notification, identical content. Confirmed on every run since 2026-08-23. **The second copy is not
-  a second report**, and consolidating it as one would double a scenario in the gate report.
-- **An `idle_notification` says nothing about delivery.** It says a turn ended, and it routinely
-  arrives *after* a report you already hold.
-- **The 2026-08-21 loss remains unexplained, and is history rather than a live warning.** Never
-  reproduced. Keep §5.2 as a recovery path; do not design a run around the fear.
+**Every report was collected within seconds of arriving.** The requester waited **57.7 minutes**, of
+which the suite itself spanned **43.0 minutes** against **42.6 minutes of work** — about **twenty-four
+seconds** of collection slack across the whole pass. There was nothing to reclaim.
 
-**What the orchestrator does, then:**
+**So where did "74 minutes, 31 of them waiting" come from?** From the ledger's *first turn → last
+line* figure, read as if it were the requester's wait. Its right edge was HP-03's transcript gaining
+one more line at **13:15:13** — twenty-three minutes *after* the gate had shipped — when a residual
+background watcher left over from HP-03's own earlier run woke it for nothing. A subagent **stays
+resident after it reports**, and a stray watcher can poke it long after anybody cares.
 
-1. **Act on the first arrival.** A report in hand is a scenario done. Consolidate it and move on —
-   do not wait for the notification that will restate it, and do not wait for the other scenarios
-   before starting to assemble.
-2. **Check what you already hold before relancing.** A relance on a report already received costs a
-   duplicate at best and a re-run of real engine and network time at worst. On 2026-08-22 exactly
-   that happened, and the subagent itself believed its first send had been lost — a sender cannot
-   tell whether its message landed.
-3. **Ask only when a report is genuinely absent** — nothing received at all for that scenario. Then
-   §5.2, and only then a re-run.
-4. **Relaunch nothing on a report you have.** This slice adds no retry, no re-dispatch and no
-   assumption of loss: three suites contradict the one that lost anything.
+That is the real finding of this slice, and it is not the one it was written for:
 
-**And measure it, because this is the part that was invisible.** The ledger
-(`host/run-ledger.mjs`, §5.8) prints a **worst wait** per agent: the longest stretch during which
-that agent had handed back and nothing came for it. On the 2026-08-25 gate that column reads
-**33.5 minutes against 0.0 / 0.0 / 0.2** for the others — the defect names itself. Paste the ledger
-into the gate report (§4, step 6) and the next run either shows seconds in that column or shows who
-was left standing.
+> **A finished subagent is still alive.** It costs nothing while idle, but it can be woken, it will
+> answer, and its transcript will keep growing — which then corrupts any figure whose right edge is
+> "the last line anybody wrote". **Stop what you dispatched once you have its report**, and never
+> read a wall-clock span that ends on a transcript's last line as somebody's wait.
 
-> Note it is the **longest single stretch**, not the tail: a transcript ends on the last thing
-> written, so the wait after the final message is always zero and measuring it would find nothing.
-> The silence that cost half an hour sat in the middle.
+**What is established about delivery itself, each claim with its date:**
 
-> **And read the column in context, because it counts every idle minute — including the ones the
-> orchestrator spent legitimately elsewhere.** On a parallel HP fan-out the orchestrator has nothing
-> else to do, so seconds is the right answer and minutes is a defect. On an FP run where the same
-> agent is resumed between rounds of fixes, the column reads tens of minutes and nothing is wrong:
-> measured 2026-08-27 on this very story's own subagents — 24.0 and 6.4 minutes, all of it the
-> orchestrator writing code between rounds. The figure means "nobody came"; whether nobody *should*
-> have come is the reader's call, and it is a different question.
+- **Delivery works, parallel fan-out included** — 2026-08-23 (4/4), 2026-08-24 (4/4 and 5/5),
+  2026-08-25 (4/4, seconds each). Treat it as working.
+- **Expect each report twice**, once by the subagent's `SendMessage` and once as the completion
+  notification. **The second copy is not a second report.** (On 2026-08-27 the harness absorbed the
+  duplicate before it reached the conversation, so that run demonstrates nothing either way — the
+  rule rests on the runs of 23 and 24 August.)
+- **An `idle_notification` says nothing about delivery.**
+- **The 2026-08-21 loss remains unexplained and is history**, never reproduced. §5.2 stays as a
+  recovery path; do not design a run around the fear.
+
+**What the orchestrator does:**
+
+1. **Act on the first arrival**, and consolidate as you go.
+2. **Check what you already hold before relancing.** A relance costs a duplicate at best and a re-run
+   of real engine and network time at worst.
+3. **Ask only when a report is genuinely absent**, then §5.2, then — last — a re-run.
+4. **Stop the task once its report is in.** Not for speed: so that nothing wakes it afterwards, and
+   so the run's own measurement stays readable.
+
+**And read the ledger's figures for what they are.** It reads subagent transcripts and **cannot see
+the orchestrator's session**, so none of its numbers is the requester's wait. Its `worst wait` column
+is worth reading — it names the agent that sat longest with nobody coming — but with both traps in
+mind: **0.0 also means "nobody ever came back"**, since the wait after a transcript's last line
+cannot be measured, and a **large value may be a dead tail after the gate shipped** rather than
+anybody waiting. Cross-check against the orchestrator's own timeline before calling either a defect.
 
 ### 5.2 Recovering a report that never arrived
 
@@ -322,8 +327,12 @@ Beyond its scenario and its ports:
 ### 5.6 These instructions are provisional — verify them, and correct them
 
 **§5 is written from a single run.** One incident, one machine, one day (2026-08-21). Its remedies
-work, but its picture of *why* is incomplete by construction — and §5.1's central symptom is
-explicitly at odds with what the official documentation promises. That gap is unresolved.
+work, but its picture of *why* is incomplete by construction.
+
+> The sentence that stood here until 2026-08-27 said the gap between §5.1's symptom and the official
+> documentation was unresolved. It is resolved: delivery works, and §5.1 no longer argues otherwise.
+> What follows is a **dated audit log**, kept as written — some of its notes now point at text that
+> has been replaced, and that is the nature of a log rather than a defect in it.
 
 **So the next HP run carries a second job: audit this section against what it actually observes.**
 Not as a chore at the end — as part of the run, because the run is the only experiment that can
@@ -355,9 +364,9 @@ Answer these, and write the answers down:
   This question is closed unless a run contradicts it; if one does, say so here rather than
   reverting the section wholesale. **Re-confirmed 2026-08-23 (games-table FP)**: the report arrived
   **twice** — once via the subagent's own `SendMessage`, once as the completion notification, with
-  identical content. Three consecutive runs. The belt-and-braces instruction of §5.1 is what produces
-  the duplicate; it is worth the cost, but expect the double delivery rather than reading the second
-  copy as a second report. **2026-08-24 (full suite): 4 of 4, every one delivered twice.** The
+  identical content. Three consecutive runs. The belt-and-braces instruction (now in §8) is what
+  produces the duplicate; it is worth the cost, but expect the double delivery rather than reading
+  the second copy as a second report. **2026-08-24 (full suite): 4 of 4, every one delivered twice.** The
   question stays closed.)*
 - **Did the `SendMessage`-on-idle relance work?** For how many agents? *(2026-08-23: **not needed
   once** — nothing to relance. Separately confirmed the same day that `SendMessage` **resumes a
@@ -411,11 +420,18 @@ for that edit:
   contradicted; the observation was sound, the explanation invented. Report the symptom and the
   cure, and leave the cause open until something actually demonstrates it.
 
-> **Update 2026-08-27 (US-18 slice 05).** §5.1's central question is no longer open, and it was
-> settled by *measurement* rather than by another observation: the ledger showed that the 2026-08-25
-> gate spent 31 of its 74 minutes on a scenario that had already finished. That section was rewritten
-> in replacement. Every future run can re-check it for free — cost the run and read the worst wait
-> column — which is the shape the rest of this section should aspire to.
+> **Update 2026-08-27 (US-18 slice 05).** §5.1 was rewritten in replacement, and the questions below
+> about delivery are answered there rather than here — delivery works, each report arrives twice, and
+> the `SendMessage` relance has not been needed since 2026-08-22. Two of this section's older notes
+> now point at text that no longer exists; they are kept because this is a dated audit log, not a
+> statement of the current rules.
+>
+> The update is worth reading for **how** it went wrong. The first version of the rewrite announced
+> that the 2026-08-25 gate had wasted 31 of its 74 minutes waiting to collect, on the strength of the
+> ledger's first-turn-to-last-line figure. Its own Feature Path re-read the parent transcript and
+> refuted it: every report was collected in seconds, the requester waited 58 minutes, and the extra
+> 31 were a finished subagent woken by a stray watcher **after** the gate had shipped. A measurement
+> is not evidence for a story until somebody checks that the story is what it measures.
 
 > A runner's instructions describe a system that moves. This section is the only part of the skill
 > that is knowingly written ahead of its evidence, and it stays honest only if each run pays a few
@@ -590,6 +606,7 @@ And after the run: **no report ⇒ ask via `SendMessage` ⇒ still nothing ⇒ r
 transcript (§5.2)**. Only then is a scenario genuinely unrun — and even then, check the transcript
 before paying for the network and the engine a second time.
 
-And when the reports are in: **cost the run** (§5.8) and read the **worst wait** column. If a
-scenario shows minutes there, nobody came to collect it, and that is a finding about the run rather
-than about the app.
+And when the reports are in: **stop the tasks**, then **cost the run** (§5.8) and read the **worst
+wait** column with §5.1's two traps in mind — `0.0` can mean "abandoned" as easily as "collected at
+once", and a large value can be a dead tail after the gate shipped. Cross-check against your own
+timeline before calling either a defect.

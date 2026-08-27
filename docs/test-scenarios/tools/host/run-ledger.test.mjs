@@ -3,6 +3,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  RESERVATIONS,
   readTranscript,
   ledgerOfAgent,
   classifyDispatch,
@@ -253,5 +254,33 @@ describe("costing a session that is not a Happy Path pass", () => {
     expect(all.found).toBe(true);
     expect(all.scenarios.length + all.prerequisites.length).toBe(5);
     expect(all.scenarios.map((s) => s.description)).toContain("FP US-16b tranche 01");
+  });
+});
+
+describe("what the first-turn-to-last figure is, and what it is not", () => {
+  /*
+   * It is NOT the requester's wait, and saying so cost two days of a wrong headline.
+   *
+   * On 2026-08-25 this ledger read 73.9 minutes, and "the requester waited 74 minutes
+   * for 43 minutes of work" went into the PRD, the BACKLOG, the ADR and a slice of its
+   * own. The parent session says otherwise: he asked at 11:54:47, the last report was
+   * consolidated at 12:44:32 and the gate was delivered at 12:52:30 — 57.7 minutes,
+   * and every report was collected within seconds of arriving. The extra 31 minutes are
+   * HP-03's transcript gaining one more line at 13:15, when a stray background watcher
+   * from its own earlier run woke it for nothing, twenty-three minutes after the gate
+   * had shipped.
+   *
+   * No rule inside the transcripts separates that from real work — the zombie made real
+   * tool calls. The only witness is the orchestrator's own session, which this ledger
+   * does not read. So the figure is reported with what it is, and the output says so.
+   */
+  it("says plainly that it is not the requester's wait", () => {
+    const text = formatLedger(ledgerOfSession(FIXTURES));
+    expect(text).toMatch(/NOT the requester's wait/);
+    expect(text).toMatch(/cannot see the orchestrator/i);
+  });
+
+  it("carries the reservation that it cannot see the orchestrator at all", () => {
+    expect(RESERVATIONS.join(" ")).toMatch(/none of them is the requester's wait/i);
   });
 });
