@@ -31,7 +31,9 @@ as much as for the rest: they are audited **as the scenario left them**, counter
 Profile page whose history is still empty is a rendered screen like any other. What must never
 happen is a scenario creating a Profile, importing or analysing *for the sake of the theme pass*.
 
-The extra cost is rendering, not journey: on a warm app it is sixteen navigations.
+The extra cost is rendering, not journey: on a warm app it is eighteen audits — nine screens in two
+themes. Measured 2026-08-27 with the driver library: **13 seconds** for the eighteen, against the
+several minutes the same walk cost when each agent re-derived it.
 
 ## The nine screens
 
@@ -49,8 +51,8 @@ The extra cost is rendering, not journey: on a warm app it is sixteen navigation
 
 All nine, in both themes. Two of them the navigation cannot reach on its own: open any Game from
 the list for Analyse, and any Profile from the list for the Profile page. If the scenario's state holds
-no Game at all, record the sixth as *not reachable in this scenario's state* rather than importing
-one; the Profile page is always reachable, since every scenario has selected a Profile before reading
+no Game at all, record the **seventh** as *not reachable in this scenario's state* rather than
+importing one; the Profile page is always reachable, since every scenario has selected a Profile before reading
 anything.
 
 Since US-11 the two profiles screens joined the inventory and **none was removed** — "Mes parties"

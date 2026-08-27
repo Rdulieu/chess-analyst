@@ -21,8 +21,8 @@ a complete change of pilot without one line moving.
 
 | | | |
 |---|---|---|
-| **host/** | runs on the machine | launch, restore, stop, read transcripts |
-| *page* | runs inside the page under test | navigate, audit, read a field back |
+| **host/** | runs on the machine | launch a browser, drive it, emulate a theme, read transcripts |
+| *page* | runs inside the page under test | audit a screen, and soon navigate and read a field back |
 
 Plain JavaScript, no build step: `.mjs` on the host side, injectable `.js` on the page side. The
 library is not part of the application, is in neither workspace, and does not participate in
@@ -61,7 +61,17 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   node docs/test-scenarios/tools/host/run-ledger.mjs <session>  # cost one of them
   ```
 
-- **`theme-audit.js`** — the measurable half of the theme pass (see `../theme-pass.md`).
+- **`host/cdp.mjs`** — a private Chrome and one CDP session kept alive, spoken over node 22's
+  global `WebSocket`. No `puppeteer-core`, no install: the library is usable by being checked out.
+
+- **`host/theme-pass.mjs`** — the theme pass behind one call. Walks the nine screens
+  `../theme-pass.md` declares, in both themes, and returns eighteen raw readings. It **throws**
+  when the theme it measured is not the theme it asked for — emulation has failed in both
+  directions across four runs, and an assertion inside the audited script is the only thing that
+  ever caught it. Eighteen audits in 13 seconds, measured 2026-08-27.
+
+- **`theme-audit.js`** — the measurable half of the theme pass (see `../theme-pass.md`), unchanged:
+  it is the page half, and `host/theme-pass.mjs` is what was missing around it.
 
 - **`test-fixtures/`** — a real pass, truncated: the 2026-08-25 gate, with every field the ledger
   does not read stripped out. `rebuild-fixture.mjs` says what was kept and why.

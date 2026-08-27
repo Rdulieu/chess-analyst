@@ -234,8 +234,9 @@ subagent, explicitly:
     otherwise;
   - do **not** expect to re-attach to an MCP page from a script: `browserContexts()` does not expose
     the MCP's isolated contexts, so `pages()` sees only the default context.
-- **Re-assert viewport and emulated colour scheme before trusting any measurement** — and assert the
-  theme *inside* the audited script, failing loudly when it is wrong. Measured 2026-08-23: the MCP's
+- **Run the theme pass with the driver library** (§5.8), not by re-deriving it. It re-asserts the
+  viewport and the emulated colour scheme, and it asserts the theme *inside* the audited script,
+  failing loudly when it is wrong. Measured 2026-08-23: the MCP's
   `emulate colorScheme` **did not survive page-selection churn** (a page emulated `light` later
   measured `prefers-color-scheme: dark` with nothing having asked for it). A theme audit that trusts
   the theme it requested can silently audit one theme twice.
@@ -446,6 +447,62 @@ reason for the divisor rather than a share to be subtracted.
 named, and it walks straight back into the page theft of 2026-08-23, where one `take_snapshot`
 returned a sibling's entire accessibility tree. The private browser is the expensive half of a
 trade that was made deliberately. **Pay it in serialisation, not in isolation.**
+
+### 5.8 The driver library — call it, do not re-derive it
+
+**Added 2026-08-27 (US-18, ADR-0020).** The mechanics below used to be re-written by every agent on
+every run, and measurement said that composing those scripts is **a third of what the suite costs** —
+and the source of the suite's false findings besides. They now live in the repository, under
+`docs/test-scenarios/tools/`, split into a **host** half (`host/`, runs on the machine) and a **page**
+half (runs inside the page under test). The two halves never import each other.
+
+**Name it here and nowhere else.** The scenarios under `docs/test-scenarios/` carry no launch command
+and must keep carrying none — that property is why they survived a complete change of pilot without a
+line moving. A scenario that calls a helper is a script coupled to a pilot.
+
+**It drives; it never judges** (ADR-0020). It returns raw values and it throws when the *mechanism*
+failed. What the app says is still yours to read and judge — that is the part no helper touches, and
+the only part that produces findings.
+
+| What | Where | What it gives you |
+|---|---|---|
+| A private Chrome, and one CDP session kept alive | `host/cdp.mjs` | `launchBrowser`, `attach`, `open`, `setViewport`, `emulateTheme`, `session.evaluate`, `session.stop` |
+| The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md` in both themes, eighteen raw readings |
+| What a pass cost, after the fact | `host/run-ledger.mjs` | per scenario the wall and five buckets; the suite's lived and worked walls |
+
+```js
+import { launchBrowser, setViewport } from "<repo>/docs/test-scenarios/tools/host/cdp.mjs";
+import { runThemePass } from "<repo>/docs/test-scenarios/tools/host/theme-pass.mjs";
+
+const session = await launchBrowser({ cdpPort: 9299 });      // your own browser, your own port
+await setViewport(session, { width: 1280, height: 900 });
+const readings = await runThemePass({
+  session,
+  baseUrl: "http://localhost:5199/",
+  port: "5199",                                              // guards every injected script
+  profile: "DudulSmash",                                     // a fresh browser has none current
+});
+await session.stop();
+```
+
+Three things it is worth knowing it does for you, each of which cost somebody a run:
+
+- **No `puppeteer-core` to install.** Node 22 ships a global `WebSocket`, so the library speaks CDP
+  directly. Previous runs each installed a driver into a scratch directory of their own.
+- **The inventory of screens is read from `theme-pass.md`**, never copied. That document stays the
+  one place the screens are edited.
+- **It throws rather than hand back a thinner green.** The port guard and the in-script theme
+  assertion are both live: falsify the emulation and the call fails with the theme it actually
+  measured. Measured 2026-08-27: eighteen audits over nine screens in **15 seconds**.
+- **"The screen has rendered" is two conditions, not one** — and getting that wrong is the defect
+  this slice's own Feature Path caught. Text stability alone is satisfied *instantly* by a loading
+  placeholder: "Chargement du bilan…" holds perfectly steady, so `/confrontation` was audited at
+  ~300 ms while its content arrived at ~600, reporting thirteen text nodes out of seventy with
+  `problems: 0`. The helper now waits for the app to have **stopped fetching** as well. If you ever
+  write your own wait, wait for both.
+
+A screen the scenario's state cannot reach comes back as `unreachable` **with its reason**, not
+missing — read those before reading the readings.
 
 ## 6. Execution rules (agent)
 
