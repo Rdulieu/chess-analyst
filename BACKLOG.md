@@ -594,6 +594,74 @@
   >
   > **Critère de succès** : à fixer sur le grand livre de D7, une fois qu'il tourne sur les deux runs
   > déjà en boîte — pas avant, et pas sur un chiffre rond (D2).
+  >
+  > ---
+  >
+  > ### Le portail du 2026-08-27 — le relevé, et ce qu'il dit
+  >
+  > **Suite complète, path 0 + 3/3 HP verts**, jouée avec la bibliothèque, plafond de concurrence
+  > `min(3, floor(nproc / 4))` = **2**, inchangé.
+  >
+  > | Portail | mur travaillé | outils | composition | **analyse** | rapport | appels |
+  > | --- | --- | --- | --- | --- | --- | --- |
+  > | 2026-08-24 (US-16a) | 27,3 min | 40 % | 38 % | **19 %** | 3 % | 179 |
+  > | 2026-08-25 (US-16b) | 42,6 min | 49 % | 31 % | **18 %** | 2 % | 242 |
+  > | **2026-08-27 (US-18)** | **51,4 min** | **23 %** | **29 %** | **45 %** | 4 % | 234 |
+  >
+  > *(Parts calculées sur le temps **travaillé**, même dénominateur que les chiffres du grill.)*
+  >
+  > **En minutes absolues d'agent** : outils **34,7 → 16,1** (moitié), composition **21,9 → 20,4**
+  > (plate), analyse **12,6 → 32,4** (×2,6).
+  >
+  > **Le levier visé a fonctionné, exactement là où il visait.** La passe de thème — 18 audits sur
+  > neuf écrans dans les deux thèmes — coûtait **~4,8 min et 8 appels** de pilotage écrits à la main ;
+  > elle coûte **15,5 / 15,8 / 16,7 s et un appel** sur les trois scénarios. Le cycle complet
+  > restaurer → lancer → 18 audits → démonter avec les ports prouvés libres tient en **20,3 s**.
+  >
+  > **Et le mur a monté quand même : 42,6 → 51,4 min.** Trois causes, toutes nommées :
+  >
+  > 1. **La composition n'a pas bougé.** La bibliothèque couvre la navigation, le cycle de vie, le
+  >    navigateur et la passe de thème — soit le tiers mécanique. Le reste des scripts d'un scénario
+  >    est ailleurs : path 0 a écrit **329 de ses 369 lignes hors bibliothèque**, pour **12 sites
+  >    d'appel**. Ce qui manque se concentre sur deux écrans (`/profiles`, le formulaire d'import) et
+  >    sur une session de navigateur qui survive d'un appel shell au suivant — **trois des quatre
+  >    agents ont écrit le même petit serveur de contrôle de ~45 lignes**.
+  > 2. **L'analyse a occupé la place rendue**, et c'était le but : `README.md` porte depuis ce jour une
+  >    règle écrite pour la protéger, et les dépêches l'ont dit explicitement.
+  > 3. **La suite a grossi** depuis le portail du 24/08 : HP-03 est passée au parcours lecture +
+  >    `Confrontation` en quinze étapes, et la passe de thème est passée de huit à neuf écrans.
+  >
+  > **Ce que l'analyse a acheté, et c'est le chiffre qui mérite d'être lu à côté du mur** :
+  > **huit findings réels sur l'application** ce portail-ci, contre zéro à deux aux précédents — dont
+  > un débordement latéral de `/profiles` sous 700 px (assertion 3 en échec, même famille que celui du
+  > 21/08), la diagonale de la matrice de `Confrontation` marquée par une teinte à **1,09:1**, et une
+  > phrase de « raté » qui contredit le 100 % au-dessus d'elle. Aucun faux défaut d'app n'a atteint un
+  > rapport ; quatre artefacts de pilote ont été attrapés par re-mesure.
+  >
+  > **Ce qui n'a pas bougé, dit plutôt que passé sous silence** : le plafond de concurrence (2), la
+  > profondeur moteur, le contrat chess.com réel, le span Lichess à 71 mois, les trois `Profile`s, un
+  > état propre par scénario, et la passe de thème complète. L'import Lichess reste à **33,5 s** —
+  > reproduit à 0,03 s près du run de livraison d'US-17, donc ni gagné ni perdu.
+  >
+  > **Une assertion avait été affaiblie par la story elle-même**, trouvée par deux scénarios
+  > indépendamment et corrigée avant la PR : `reachScreen` ouvrait toujours la **première** ligne de
+  > la liste des parties, laquelle n'est pas analysée — la passe auditait donc `Analyse` sans courbe,
+  > sans barre d'avantage et sans glyphe de sévérité. Vert, sur la mauvaise partie. Le choix appartient
+  > désormais à l'appelant (`openers`).
+  >
+  > ### Critère de succès — **en attente du demandeur**
+  >
+  > Le relevé ci-dessus est la mesure ; le seuil est une décision (D2 : « moins de dix minutes » est un
+  > **repère, pas un but »**). Ce que la mesure permet de dire honnêtement :
+  >
+  > - **le repère des dix minutes n'est pas atteint et ne le sera pas par ce levier** : la mécanique
+  >   qu'il visait est déjà tombée d'un ordre de grandeur et le mur a quand même monté ;
+  > - **un critère sur le mur récompenserait une suite qui regarde moins.** Sur ce portail, le mur a
+  >   monté et la valeur produite aussi ;
+  > - les candidats qui se défendent : un critère sur la **part mécanique** (outils + composition
+  >   ≤ 50 % du travaillé — ici 52 %, contre 78 % et 80 % avant) ; un critère sur la **part d'analyse**
+  >   (≥ 35 % — ici 45 %) ; ou **aucun seuil**, et la story se conclut sur « la suite coûte ce qu'elle
+  >   teste », ce que le PRD nommait déjà comme un résultat acceptable à condition d'être mesuré.
 
 ## In review
 
