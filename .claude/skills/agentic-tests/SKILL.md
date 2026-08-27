@@ -512,7 +512,7 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   `href` records `Analyse` as unreachable.
 - **It throws rather than hand back a thinner green.** The port guard and the in-script theme
   assertion are both live: falsify the emulation and the call fails with the theme it actually
-  measured. Measured 2026-08-27: eighteen audits over nine screens in **15 seconds**.
+  measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**.
 - **"The screen has rendered" is two conditions, not one** — and getting that wrong is the defect
   this slice's own Feature Path caught. Text stability alone is satisfied *instantly* by a loading
   placeholder: "Chargement du bilan…" holds perfectly steady, so `/confrontation` was audited at

@@ -17,9 +17,17 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const PAGE_DRIVER = join(HERE, "..", "page", "app-driver.js");
 
-/** The page half's source, to inject as it stands. */
+/**
+ * The page half's source, to inject as it stands.
+ *
+ * Read once. It is embedded in every evaluated expression, `waitForScreen`'s 180 ms
+ * poll included, so re-reading it from disk each time is a syscall per poll for a file
+ * that cannot change during a run.
+ */
+let cachedSource = null;
 export function pageDriverSource() {
-  return readFileSync(PAGE_DRIVER, "utf8");
+  if (cachedSource === null) cachedSource = readFileSync(PAGE_DRIVER, "utf8");
+  return cachedSource;
 }
 
 /* ---------------------------------------------------------------- the guard */
@@ -66,7 +74,12 @@ export function setFieldScript({ port, selector, value }) {
   const outcome = agenticDriver.setField(${JSON.stringify(selector)}, ${JSON.stringify(value)});
   if (outcome.missing) throw new Error("no field matching " + outcome.missing + " on this screen");
   if (outcome.read !== ${JSON.stringify(value)}) {
-    throw new Error("the field " + ${JSON.stringify(selector)} + " reads back " + JSON.stringify(outcome.read) + " after being set to " + ${JSON.stringify(JSON.stringify(value))} + " — the value did not take, and nothing has been submitted");
+    throw new Error(
+      "the field " + ${JSON.stringify(selector)} + " reads back " + JSON.stringify(outcome.read) +
+      " after being set to " + ${JSON.stringify(JSON.stringify(value))} +
+      " — the value did not take. Nothing has been submitted, and the field has been put back to " +
+      JSON.stringify(outcome.restored)
+    );
   }
   return JSON.stringify(outcome);`,
   );
@@ -152,7 +165,23 @@ export async function followNav(session, { port, route, waitOptions }) {
 /** Make a `Profile` current. A fresh browser has none, and the scoped screens redirect. */
 export async function selectProfile(session, { port, username, waitOptions }) {
   await followNav(session, { port, route: "/profiles", waitOptions });
-  const picked = await act(session, port, `selectProfile(${JSON.stringify(username)})`, `the Profile ${username}`, waitOptions);
+  let picked;
+  try {
+    picked = await act(session, port, `selectProfile(${JSON.stringify(username)})`, `the Profile ${username}`, waitOptions);
+  } catch (cause) {
+    /* The retry is right — rows arrive asynchronously — but a timeout that only says
+       "nothing to click" cannot tell a slow list from a name that is not there. Say
+       what the screen was offering when the wait ran out, and the reader knows which
+       of the two it is. Before the walk was extracted this failed at once and named
+       the Profile; the retry must not cost that. */
+    const offered = JSON.parse(await session.evaluate(driverCall(port, "profilesOffered()")));
+    throw new Error(
+      `no Profile named ${JSON.stringify(username)} to select — this screen offers ${
+        offered.length ? offered.map((o) => JSON.stringify(o)).join(", ") : "no Profile at all"
+      }`,
+      { cause },
+    );
+  }
   await waitForScreen(session, port, matcherFor("/profiles"), waitOptions);
   return picked;
 }

@@ -72,7 +72,7 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   `../theme-pass.md` declares, in both themes, and returns eighteen raw readings. It **throws**
   when the theme it measured is not the theme it asked for — emulation has failed in both
   directions across four runs, and an assertion inside the audited script is the only thing that
-  ever caught it. Eighteen audits in 13 seconds, measured 2026-08-27.
+  ever caught it. Eighteen audits in ~15.6 seconds, measured 2026-08-27.
 
 - **`host/navigate.mjs` + `page/app-driver.js`** — the gestures every scenario repeats. Navigation
   happens **in the page**, never at the driver level; every injected script carries a

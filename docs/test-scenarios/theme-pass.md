@@ -32,8 +32,8 @@ Profile page whose history is still empty is a rendered screen like any other. W
 happen is a scenario creating a Profile, importing or analysing *for the sake of the theme pass*.
 
 The extra cost is rendering, not journey: on a warm app it is eighteen audits — nine screens in two
-themes. Measured 2026-08-27 with the driver library: **13 seconds** for the eighteen, against the
-several minutes the same walk cost when each agent re-derived it.
+themes. Measured 2026-08-27 over three runs: **~15.6 seconds** for the eighteen, against the several
+minutes the same walk cost when each agent re-derived it.
 
 ## The nine screens
 
@@ -106,12 +106,16 @@ state only the weak-opening ⚠, the current tab and the two `Profile` cues have
 all, and HP-01 is the scenario that carries the danger cards, the severity glyphs and the "analysée"
 badge. Read the three passes together, and read `subjects` before reading `failures`.
 
-Assertions 1 to 5 are measured, not eyeballed: `tools/page/theme-audit.js` implements them as one
-browser-side function returning a report per screen. Inject it and call `themeAudit()` on each
-screen in each theme; compare the `constants` block between the two themes for assertion 5. The
-theme itself is switched by the **driver** emulating `prefers-color-scheme: dark` (CDP
-`Emulation.setEmulatedMedia`), never from inside the page — the app ships a media query, so the media
-query is what must be exercised.
+Assertions 1 to 5 are **measured, not eyeballed**: one browser-side function returns a report per
+screen, and the two themes are compared on the `constants` block for assertion 5. The theme itself is
+switched by **emulating** `prefers-color-scheme: dark` and never from inside the page — the app ships
+a media query, so the media query is what must be exercised.
+
+> How the pass is driven is not named here. It is one call of the driver library, described in the
+> `agentic-tests` skill (§5.8), and this document deliberately does not know which file that is: a
+> scenario that names its pilot is coupled to it, and this suite has already survived one complete
+> change of pilot without a line moving (ADR-0020). What belongs here is **what is asserted**, and
+> the nine screens it is asserted on.
 
 **Emulate the light half explicitly too, and assert the theme you think you are in.** A browser is
 not neutral: a headless Chrome launched with its own profile defaulted to `prefers-color-scheme:

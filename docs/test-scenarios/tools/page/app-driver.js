@@ -22,7 +22,11 @@
  * navigation is the operation that lands on the wrong page, and it throws away the
  * document anything injected was injected into.
  */
-const agenticDriver = {
+// `var`, not `const`, and for the same reason `theme-audit.js` declares a function:
+// this file is injected into a live document, sometimes more than once. A top-level
+// `const` makes the second injection a `SyntaxError` — which is not how a file that
+// advertises "paste or inject the whole file" should behave.
+var agenticDriver = {
   /** Where we are and how much the main landmark currently holds. */
   where() {
     const main = document.querySelector("main") || document.body;
@@ -60,6 +64,13 @@ const agenticDriver = {
     return true;
   },
 
+  /** The Profiles this screen currently offers, so a miss can say what it saw. */
+  profilesOffered() {
+    return [...document.querySelectorAll('a[href*="/profiles/"]:not([href*="#"])')].map((a) =>
+      a.textContent.trim(),
+    );
+  },
+
   /** Make a Profile current, by clicking it the way a Player would. */
   selectProfile(username) {
     const row = [...document.querySelectorAll("tr, li")].find(
@@ -88,10 +99,23 @@ const agenticDriver = {
     if (!el) return { missing: selector };
     const prototype = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(prototype, "value").set;
-    setter.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-    return { set: value, read: el.value };
+    const before = el.value;
+    const put = (v) => {
+      setter.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    put(value);
+    const read = el.value;
+    /* If the value did not land, put the field back where it was. The setter has
+       already reached the framework by then, so a failed attempt would otherwise leave
+       the form holding an empty value — and a scenario that caught the error and
+       carried on would submit that. */
+    if (read !== value) {
+      put(before);
+      return { set: value, read, restored: el.value, was: before };
+    }
+    return { set: value, read };
   },
 };
 
