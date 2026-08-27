@@ -26,7 +26,7 @@
  */
 
 import { spawn, execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readlinkSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readlinkSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /* --------------------------------------------------------------- the database */
@@ -74,12 +74,26 @@ export function readBack(dbFile) {
  */
 export function restoreSnapshot({ from, to }) {
   if (!existsSync(from)) throw new Error(`no snapshot at ${from}`);
-  if (existsSync(`${to}-wal`)) {
-    throw new Error(`${to}-wal exists: a live process may be holding ${to} open — stop it before restoring`);
+  /* A `-wal` with frames in it means somebody is mid-write on the destination, and
+     overwriting it is how one run copied a database out from under another. An empty
+     one is only residue from a process that was killed — say what it is and go on,
+     rather than accusing a process that is not there. */
+  if (existsSync(`${to}-wal`) && statSync(`${to}-wal`).size > 0) {
+    throw new Error(
+      `${to}-wal holds ${statSync(`${to}-wal`).size} bytes of pending frames: something is writing to ${to} — stop it before restoring`,
+    );
   }
 
+  /*
+   * `PRAGMA wal_checkpoint(TRUNCATE)` can be **refused in silence**: under a writer
+   * holding a transaction it returns `1|0|0` — the leading 1 meaning busy — with exit
+   * status 0. Measured 2026-08-27. Discarding that output is how a caller comes to
+   * believe the WAL was merged when it was not, so it is reported instead.
+   */
+  let checkpoint;
   try {
-    sqlite3([from, "PRAGMA wal_checkpoint(TRUNCATE);"]);
+    const [busy, log, merged] = sqlite3([from, "PRAGMA wal_checkpoint(TRUNCATE);"]).split("|");
+    checkpoint = { busy: busy === "1", framesInLog: Number(log), framesMerged: Number(merged) };
   } catch (e) {
     throw new Error(`cannot checkpoint ${from}: ${String(e.stderr || e.message).trim()}`, { cause: e });
   }
@@ -91,7 +105,7 @@ export function restoreSnapshot({ from, to }) {
     throw new Error(`.backup of ${from} failed: ${String(e.stderr || e.message).trim()}`, { cause: e });
   }
 
-  return { file: to, tables: readBack(to) };
+  return { file: to, tables: readBack(to), checkpoint };
 }
 
 /* ------------------------------------------------------------------- the ports */
@@ -118,26 +132,39 @@ export function holdersOf(port) {
 /**
  * Whether a process is one of mine, and — always — why.
  *
- * The reason travels with the verdict because of how this fails: a check that wrongly
- * says "not mine" leaves my own orphan behind for the next run to trip over, and a
- * check that wrongly says "mine" kills a sibling agent's server mid-run. Neither can
- * be diagnosed from a bare boolean.
+ * **The tree is the proof; the port is not.** A process is mine when it runs under my
+ * root, in its working directory or in its command line. Naming my port is
+ * corroboration and never sufficient on its own: measured 2026-08-27, a
+ * `python3 -m http.server 3222` started from `/tmp` by nobody in particular was
+ * declared mine and killed, purely because "3222" appears in its arguments. A
+ * substring of somebody else's command line is not evidence.
+ *
+ * The reason travels with the verdict because of how this fails, and the two
+ * directions are not equal: a check that wrongly says "not mine" leaves my own orphan
+ * for the next run to trip over, which costs a port to shift off; one that wrongly
+ * says "mine" takes down a sibling agent's run. Neither is diagnosable from a bare
+ * boolean.
  *
  * `environ` is accepted and deliberately never decisive: it has answered "not mine"
- * about a process that was, and has carried nothing identifying at all on both a vite
- * and a Chrome pid.
+ * about a process that was, and carried nothing identifying at all on both a vite and
+ * a Chrome pid.
  */
 export function namesMe({ cwd = "", cmdline = "" } = {}, { port, root } = {}) {
   const byPort = port !== undefined && cmdline.includes(String(port));
   const byRoot = Boolean(root) && (cwd.startsWith(root) || cmdline.includes(root));
-  if (byPort && byRoot) return { mine: true, why: `its command line names port ${port} and it runs under ${root}` };
-  if (byPort) return { mine: true, why: `its command line names port ${port}` };
-  if (byRoot) return { mine: true, why: `it runs under ${root}` };
+  if (byRoot) {
+    return {
+      mine: true,
+      why: byPort
+        ? `it runs under ${root} and its command line names port ${port}`
+        : `it runs under ${root}`,
+    };
+  }
   return {
     mine: false,
-    why: `neither its working directory (${cwd || "unknown"}) nor its command line names ${
-      [port !== undefined ? `port ${port}` : null, root].filter(Boolean).join(" or ") || "me"
-    } — nothing here proves it is mine`,
+    why: byPort
+      ? `its command line mentions port ${port}, but that is not a proof of ownership — it does not run under ${root || "any root I was given"}`
+      : `nothing about it names me: its working directory is ${cwd || "unknown"} and it does not run under ${root || "any root I was given"}`,
   };
 }
 
@@ -216,14 +243,26 @@ export async function launchApp({ repoRoot, serverPort, clientPort, dbFile, time
     }
   }
 
+  /*
+   * Detached, and unref'd, on purpose. An agent drives in several shell calls — launch,
+   * then navigate, then audit — and children tied to the launching script die with it:
+   * measured 2026-08-27, a multi-phase pilot was killed at three minutes and took the
+   * app with it, which makes launching in one call and driving in the next impossible.
+   *
+   * The cost is that a script which dies before `stopApp` leaves the app running. That
+   * is recoverable and loud: the next `launchApp` throws naming the port, and `stopApp`
+   * works from a plain `{ repoRoot, serverPort, clientPort }` — it finds what is
+   * listening rather than trusting a pid it was handed.
+   */
   const started = [];
   const start = (cwd, command, args, env) => {
     const child = spawn(command, args, {
       cwd: join(repoRoot, cwd),
       env: { ...process.env, ...env },
       stdio: ["ignore", "ignore", "ignore"],
-      detached: false,
+      detached: true,
     });
+    child.unref();
     started.push(child);
     return child;
   };

@@ -239,13 +239,20 @@ a helper is recognised as *this* returning, not as a new mystery.
 
 - **Restore before starting.** A server creates its database when it opens it, so a copy laid
   down afterwards is overwritten by a live process.
-- **`PRAGMA wal_checkpoint(TRUNCATE)` → `.backup` → read the copy back.** A `.db` copied alone
-  gave a database with no table in it (4 KB of `.db` beside 95 KB of `-wal`). Worse, on
-  **2026-08-24** a `cp` taken *after* a truncating checkpoint gave `evaluations` reading back as
-  **"database disk image is malformed"**, where `sqlite3 .backup` worked on the same source. The
-  failure is **not universal** — re-measured 2026-08-27, a `cp` of the same database read back
-  perfectly — so the thing that actually protects you is the **read-back**, not the choice of
-  copy tool. `restoreSnapshot` does both and returns the row counts.
+- **`PRAGMA wal_checkpoint(TRUNCATE)` → `.backup` → read the copy back — and the two halves
+  catch different things.** Measured 2026-08-27 against a **2 MB `-wal` held open by a writer**:
+  a `cp` without a checkpoint produced a copy that **read back clean** while having silently lost
+  an entire table and its 400 rows. So the read-back is **not** what saves you from the WAL trap:
+  it catches corruption (`database disk image is malformed`, a table that will not open, a file
+  with no table in it) and it is blind to silent loss. **`.backup` is what protects; the
+  read-back is what catches corruption.** Both are needed, and neither substitutes for the other.
+
+  Two corollaries, both measured the same day. The checkpoint **can be refused in silence** — under
+  a writer it returns `1|0|0` with exit status 0, the leading 1 meaning busy — so on a database an
+  app is holding (path 0's case) the checkpoint may be a no-op and `.backup` is doing all the work.
+  And `cp` is not *reliably* wrong: on a database whose `-wal` is empty it copies perfectly, which
+  is exactly why "it worked when I tried it" is no argument. `restoreSnapshot` does the whole
+  sequence and returns both the row counts and whether the checkpoint was refused.
 - **But *seed* AFTER the server is up** (2026-08-23): restoring and seeding want opposite orders.
   An agent copied the database, wrote `analyzed = 1` into the copy, started the server and read
   the rows back as **0** — the copied sidecars and the open-time checkpoint discarded the write.
@@ -261,11 +268,14 @@ a helper is recognised as *this* returning, not as a new mystery.
   port**. Worse than the nuisance — what is then serving is code the agent never meant to test.
   `launchApp` starts `tsx src/main.ts`, one pid, no resurrection.
 - **Never `pkill` by pattern**: it kills every sibling's server mid-run.
-- **Never kill what you cannot prove is yours.** `/proc/<pid>/environ` has lied in **both**
-  directions — uninformative on a vite and a Chrome pid (2026-08-23), and answering "not mine"
-  about a process that was (2026-08-24). `cwd` and `cmdline` are the proofs that worked, and
-  `namesMe` returns the **reason** with the verdict: a check that wrongly says "not mine" leaves
-  your own orphan for the next run to trip over, and one that wrongly says "mine" takes down a
+- **Never kill what you cannot prove is yours, and the proof is the tree — not the port.**
+  `/proc/<pid>/environ` has lied in **both** directions: uninformative on a vite and a Chrome pid
+  (2026-08-23), and answering "not mine" about a process that was (2026-08-24). `cwd` and
+  `cmdline` are the proofs that worked. What is *not* a proof is your port appearing in somebody's
+  arguments — measured 2026-08-27, a `python3 -m http.server 3222` started from `/tmp` was
+  declared mine and killed on that basis alone. `namesMe` now requires the process to run under
+  your root, and returns the **reason** with the verdict, because the two error directions are not
+  equal: wrongly "not mine" leaves your own orphan for the next run, wrongly "mine" takes down a
   sibling's run.
 - **A private browser is the default, not the fallback.** On the parallel fan-out of
   2026-08-23 the shared devtools browser stole the selected page from **all three** scenarios —
@@ -282,10 +292,6 @@ a helper is recognised as *this* returning, not as a new mystery.
   mechanism; none disagrees about the remedy: **keep one session alive for the whole pass, and
   assert the theme inside the audited script.** That assertion caught every one of these cases;
   nothing else did.
-- **"The screen has rendered" is two conditions.** Text stability alone is satisfied instantly by
-  a loading placeholder — measured 2026-08-27 on `/confrontation`, audited at ~300 ms while its
-  content landed at ~600, reporting thirteen text nodes out of seventy with `problems: 0`. Wait
-  for the app to have **stopped fetching** as well.
 
 ### 5.5 What to tell every subagent
 
