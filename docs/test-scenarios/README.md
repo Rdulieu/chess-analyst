@@ -126,14 +126,14 @@ job.** Each scenario must start from its own pristine state, but "pristine" does
 network round-trip per scenario. What used to be a repeated instruction here is a step that is run
 once and verified once: path 0 imports the reference range against the real API and leaves an
 **empty-history** snapshot (HP-01's clean state, Profile created and no Games) and an **imported**
-snapshot (HP-02's and HP-03's). Restore by file copy **into each scenario's own database file** —
-never point two scenarios at the shared snapshot, which they would then both write to. **Stop the
-server before copying or deleting the file**: SQLite keeps serving a deleted or replaced inode, so a
-copy on a running server silently leaves the old data in place. **And checkpoint the WAL before
-copying** — the database runs in WAL mode, so a stopped server leaves the data in the `-wal` sidecar
-and a plain copy of the `.db` captures almost nothing (2026-08-19: 4 KB of `.db` beside 95 KB of
-`-wal`, restoring to a database with no tables). `PRAGMA wal_checkpoint(TRUNCATE)`, then read the
-copy back to confirm it holds what you think.
+snapshot (HP-02's and HP-03's). Each scenario restores that snapshot **into its own database file** — never point two scenarios at
+the shared snapshot, which they would then both write to — and restores it **before** starting its
+server, since a server creates its database when it opens it.
+
+> **How to copy a live SQLite database is no longer written here.** It is one call of the driver
+> library, and the library is named in the `agentic-tests` skill (§5.8) rather than in this
+> inventory. This paragraph used to carry the recipe, and by 2026-08-27 it carried a version of it
+> that had been overtaken by measurement — which is the whole argument for having one place.
 
 The real chess.com contract is therefore exercised **once per suite run** in path 0, plus HP-01's own
 import — which is HP-01's subject, not a duplicate.
@@ -162,25 +162,18 @@ database (ADR-0014). Every scenario selects `DudulSmash` as its own first step, 
 suite asserts anyway: a scenario that never selected a Profile has not shown that the banner names
 the right one.
 
-**Beware what a database copy actually captures.** The suite already says to checkpoint the WAL
-before copying (`PRAGMA wal_checkpoint(TRUNCATE)`), and that is not always enough: on **2026-08-24** a
-`cp` taken *after* a truncating checkpoint produced a copy whose `evaluations` table read back as
-**"database disk image is malformed"**. `sqlite3 <src> ".backup <dst>"` worked where `cp` did not.
-Prefer `.backup`; whichever you use, **read the copy back** before trusting it.
-
 **Do not pay for the theme pass twice.** It reuses the state its scenario has already built: it must
 trigger no Import, no analysis and no `Profile` creation, and it must not restart the app. Eighteen
-audits on a warm app is the whole budget. Inject `tools/theme-audit.js` once per document and call `themeAudit()` per
-screen rather than re-implementing the measurements per scenario; switch the theme with the driver's
-media emulation, never by reloading with a different setting.
+audits on a warm app is the whole budget, and since 2026-08-27 it is one call of the driver library
+(`agentic-tests` skill, §5.8) rather than a script rewritten per scenario: fifteen seconds for the
+eighteen.
 
 **Pin the app you are driving, and own your browser.** Measured on the 2026-08-17 run, where two
 scenarios ran in parallel: a shared browser had its selected page stolen mid-run repeatedly, and two
-actions landed on the *other* agent's app — one of them nearly filling a stranger's import form. Run
-each scenario on its own ports and its own `DB_FILE`, guard every injected script with a
-`location.port` check, re-assert the viewport and the emulated colour scheme before trusting a
-measurement, and drive a browser instance of your own. Likewise, never `pkill` by a pattern that
-matches another agent's server — kill your own process by pid.
+actions landed on the *other* agent's app — one of them nearly filling a stranger's import form. So
+each scenario is **isolated from its siblings**: that is a property of the suite, and how it is
+obtained is the driver library's business. What a dispatch must still **pin** is listed in the
+`agentic-tests` skill, §5.4.
 
 **Drive React-controlled fields with real events.** The import form's month fields keep their default
 value if a driver assigns `value` directly or uses a high-level fill helper on the composite month
@@ -190,7 +183,9 @@ that has nothing to do with the app. Use the native value setter plus an `input`
 **read the field back before submitting**.
 
 **Wait on conditions, not on clocks.** Fixed sleeps sprinkled through a driver add up to tens of
-seconds per run and are simultaneously too slow and too flaky. Wait for the element or the state.
+seconds per run and are simultaneously too slow and too flaky. Wait for the element or the state —
+and, since 2026-08-27, for the app to have **stopped fetching** as well: a loading placeholder holds
+perfectly still, and a wait that watches only the DOM audits it as though it were the screen.
 
 ### What not to trim
 

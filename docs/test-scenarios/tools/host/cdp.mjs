@@ -22,10 +22,12 @@
  * the evaluated script raised.
  */
 
-import { spawn } from "node:child_process";
-import { readdirSync, mkdtempSync } from "node:fs";
+import { spawn, execFileSync } from "node:child_process";
+import { readdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+
+import { holdersOf } from "./app-lifecycle.mjs";
 
 /** `--no-sandbox` is required on this host: the bundled Chrome aborts without it. */
 const CHROME_FLAGS = [
@@ -70,6 +72,19 @@ async function waitForJson(url, deadlineMs) {
  */
 export async function launchBrowser({ cdpPort, userDataDir, chrome = findChrome(), headless = true } = {}) {
   if (!cdpPort) throw new Error("launchBrowser needs its own cdpPort: a shared browser steals pages.");
+  /*
+   * Refuse a debugging port somebody is already on. Measured 2026-08-27: a second
+   * launch against a busy port did **not** fail — Chrome could not bind, and
+   * `/json/list` was answered by the FIRST browser, so the caller was handed a page
+   * belonging to another agent. That is the page theft this library exists to prevent,
+   * arriving through the front door.
+   */
+  const onIt = holdersOf(cdpPort);
+  if (onIt.length) {
+    throw new Error(
+      `CDP port ${cdpPort} is already held by ${onIt.join(", ")} — attaching would drive somebody else's browser. Take another port and say which.`,
+    );
+  }
   const profile = userDataDir || mkdtempSync(join(tmpdir(), "agentic-chrome-"));
 
   const child = spawn(
@@ -87,29 +102,114 @@ export async function launchBrowser({ cdpPort, userDataDir, chrome = findChrome(
   child.stderr.on("data", (b) => {
     stderr += b.toString();
   });
+  /*
+   * A browser that dies on its own is **recorded**, never thrown from here. Throwing
+   * inside an event listener is an `uncaughtException`: it kills the whole script, and
+   * since this slice made the app's children detached, the scenario then dies *before*
+   * `stopApp` and leaves an app orphaned on two ports. This was the last place where
+   * housekeeping could still fail a teardown; the crash surfaces on the next call
+   * instead, where it can be reported and where `stop()` still runs.
+   */
+  const crash = { seen: null };
   child.on("exit", (code) => {
     if (code !== null && code !== 0 && !child.stopping) {
-      throw new Error(`Chrome exited with ${code}: ${stderr.slice(-400)}`);
+      crash.seen = `Chrome exited on its own with ${code}: ${stderr.slice(-400)}`;
     }
   });
 
-  const targets = await waitForJson(`http://127.0.0.1:${cdpPort}/json/list`, 20000);
-  const page = targets.find((t) => t.type === "page");
-  if (!page) throw new Error(`Chrome on ${cdpPort} exposes no page target.`);
-
-  const session = await attach(page.webSocketDebuggerUrl);
-  session.stop = async () => {
+  /* A launch that fails must not leave fourteen Chrome processes and a profile behind —
+     measured 2026-08-27 on a CDP port that was already taken. Cleanup existed only on
+     the success path, which is the path that needs it least. */
+  let page;
+  try {
+    const targets = await waitForJson(`http://127.0.0.1:${cdpPort}/json/list`, 20000);
+    page = targets.find((t) => t.type === "page");
+    if (!page) throw new Error(`Chrome on ${cdpPort} exposes no page target.`);
+  } catch (e) {
     child.stopping = true;
-    await session.close();
-    child.kill("SIGTERM");
-    await new Promise((r) => child.once("exit", r));
-  };
+    child.kill("SIGKILL");
+    if (!userDataDir) await removeProfile(profile);
+    throw e;
+  }
+
+  const session = await attach(page.webSocketDebuggerUrl, crash);
+  session.stop = stopper(child, profile, session, !userDataDir);
+  Object.defineProperty(session, "browserCrash", { get: () => crash.seen });
   session.profile = profile;
   return session;
 }
 
+/** Is anything still running out of this profile? Chrome's children outlive its main process. */
+function stillUsing(profile) {
+  try {
+    return execFileSync("pgrep", ["-f", profile], { encoding: "utf8" }).trim().length > 0;
+  } catch {
+    return false; // pgrep exits non-zero when it matches nothing
+  }
+}
+
+/**
+ * Remove the temporary profile, patiently, and never let it fail a teardown.
+ *
+ * It is Chrome's **children** that hold the directory: the main process exits in tens
+ * of milliseconds while a zygote or a crashpad handler is still writing into
+ * `Default/`. Measured 2026-08-27 — a straight `rmSync` threw `ENOTEMPTY` six times in
+ * twelve, and four profiles survived even once the throw was swallowed. So wait for
+ * the descendants to go, then remove; and report the outcome rather than raising it.
+ */
+async function removeProfile(profile, { timeoutMs = 4000 } = {}) {
+  const until = Date.now() + timeoutMs;
+  while (stillUsing(profile) && Date.now() < until) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tear the browser down, once, and never fail on housekeeping.
+ *
+ * Two rules, both learnt the hard way on 2026-08-27:
+ *
+ * - **Removing the temporary profile must never fail a teardown.** `rmSync(…, { force })`
+ *   only swallows `ENOENT`, and Chrome keeps writing into `Default/` after its main
+ *   process has exited: the removal threw `ENOTEMPTY` **six times in twelve** — failing
+ *   the stop *and* leaving the profile behind. Worse than the litter: in a scenario
+ *   `session.stop()` runs before `stopApp`, so a throw here aborts the teardown, and
+ *   since the app's children are detached it survives as an orphan on two ports. So:
+ *   retry, then give up quietly and say so in the result.
+ * - **Stopping twice must be safe.** `child.kill()` on a dead process is a no-op and
+ *   `once("exit")` then never fires, so the obvious `finally { await stop() }` hung
+ *   forever. A teardown that cannot be called twice is a teardown nobody can write a
+ *   `finally` around.
+ */
+function stopper(child, profile, session, ours) {
+  let done = null;
+  return () => {
+    if (done) return done;
+    done = (async () => {
+      child.stopping = true;
+      await session.close();
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill("SIGTERM");
+        await new Promise((resolve) => {
+          if (child.exitCode !== null || child.signalCode !== null) return resolve();
+          child.once("exit", resolve);
+          setTimeout(resolve, 5000).unref();
+        });
+      }
+      return { profile, profileRemoved: ours ? await removeProfile(profile) : false };
+    })();
+    return done;
+  };
+}
+
 /** One live websocket to one page target, and it stays open for the whole pass. */
-export async function attach(wsUrl) {
+export async function attach(wsUrl, crash = { seen: null }) {
   const ws = new WebSocket(wsUrl);
   const pending = new Map();
   const listeners = new Map();
@@ -190,6 +290,8 @@ export async function attach(wsUrl) {
    * swallowed it would hand back `undefined` and read as an empty measurement.
    */
   const evaluate = async (expression, { timeoutMs = 30000 } = {}) => {
+    /* Say the browser died rather than letting a dead socket produce a riddle. */
+    if (crash.seen) throw new Error(crash.seen);
     const { result, exceptionDetails } = await send("Runtime.evaluate", {
       expression,
       awaitPromise: true,
