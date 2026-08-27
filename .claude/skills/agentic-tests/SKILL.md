@@ -248,8 +248,10 @@ a helper is recognised as *this* returning, not as a new mystery.
   read-back is what catches corruption.** Both are needed, and neither substitutes for the other.
 
   Two corollaries, both measured the same day. The checkpoint **can be refused in silence** — under
-  a writer it returns `1|0|0` with exit status 0, the leading 1 meaning busy — so on a database an
-  app is holding (path 0's case) the checkpoint may be a no-op and `.backup` is doing all the work.
+  a writer it returns `1|0|0` with exit status 0, the leading 1 meaning busy. Refused does not mean
+  without effect: a busy checkpoint has been seen merging 49 frames of 49 and failing only to
+  *truncate*, so read `framesMerged` rather than assuming either way — and never assume the WAL was
+  emptied, which is why `.backup` is the half that must not be dropped.
   And `cp` is not *reliably* wrong: on a database whose `-wal` is empty it copies perfectly, which
   is exactly why "it worked when I tried it" is no argument. `restoreSnapshot` does the whole
   sequence and returns both the row counts and whether the checkpoint was refused.
@@ -267,6 +269,10 @@ a helper is recognised as *this* returning, not as a new mystery.
   stopped app*: the next edit to a source file makes the watcher **resurrect a server on that
   port**. Worse than the nuisance — what is then serving is code the agent never meant to test.
   `launchApp` starts `tsx src/main.ts`, one pid, no resurrection.
+  **The client is a different case and is left alone deliberately**: the suite drives the Vite dev
+  server, which *is* a watcher — but it hot-reloads rather than resurrecting anything, and building
+  the client instead would change what is being tested (a production bundle rather than the app the
+  whole suite drives). Known constraint, not a defect to rediscover.
 - **Never `pkill` by pattern**: it kills every sibling's server mid-run.
 - **Never kill what you cannot prove is yours, and the proof is the tree — not the port.**
   `/proc/<pid>/environ` has lied in **both** directions: uninformative on a vite and a Chrome pid

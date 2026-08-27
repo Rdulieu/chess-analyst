@@ -151,7 +151,12 @@ export function holdersOf(port) {
  */
 export function namesMe({ cwd = "", cmdline = "" } = {}, { port, root } = {}) {
   const byPort = port !== undefined && cmdline.includes(String(port));
-  const byRoot = Boolean(root) && (cwd.startsWith(root) || cmdline.includes(root));
+  /* Where it *runs*, not what it mentions. A path in somebody's arguments is a
+     substring like a port number is, only longer — and measured 2026-08-27, a stranger
+     launched from /tmp with `<root>/docs` among its arguments was killed on that basis.
+     Both of this app's own processes are caught by `cwd` alone (`<root>/server` and
+     `<root>/client`); the command line never identified either. */
+  const byRoot = Boolean(root) && cwd.startsWith(root);
   if (byRoot) {
     return {
       mine: true,
@@ -300,6 +305,13 @@ export async function launchApp({ repoRoot, serverPort, clientPort, dbFile, time
  * killing one is somebody else's run.
  */
 export async function stopApp(handle, { timeoutMs = 15000 } = {}) {
+  /* Without a root, nothing can be proved mine, so everything is spared and the call
+     returns having stopped nothing — quietly, unless the caller reads `spared`. Since
+     the recommended way to stop is now a handle rebuilt by hand in a later shell call,
+     a forgotten field must be an error rather than a silent no-op. */
+  if (!handle || !handle.repoRoot) {
+    throw new Error("stopApp needs repoRoot: without it nothing can be proved mine, and it would spare everything");
+  }
   const spared = [];
   const killed = [];
 

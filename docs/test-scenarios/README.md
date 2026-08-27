@@ -170,11 +170,10 @@ eighteen.
 
 **Pin the app you are driving, and own your browser.** Measured on the 2026-08-17 run, where two
 scenarios ran in parallel: a shared browser had its selected page stolen mid-run repeatedly, and two
-actions landed on the *other* agent's app — one of them nearly filling a stranger's import form. Each scenario runs
-on its own ports, its own `DB_FILE` and a browser of its own, every injected script is guarded by a
-`location.port` check, and teardown is by pid and never by pattern — a `pkill` matching another
-agent's server takes down their run. All of that is what the driver library does; what a dispatch
-must still **pin** is in the `agentic-tests` skill, §5.4.
+actions landed on the *other* agent's app — one of them nearly filling a stranger's import form. So
+each scenario is **isolated from its siblings**: that is a property of the suite, and how it is
+obtained is the driver library's business. What a dispatch must still **pin** is listed in the
+`agentic-tests` skill, §5.4.
 
 **Drive React-controlled fields with real events.** The import form's month fields keep their default
 value if a driver assigns `value` directly or uses a high-level fill helper on the composite month
@@ -184,7 +183,9 @@ that has nothing to do with the app. Use the native value setter plus an `input`
 **read the field back before submitting**.
 
 **Wait on conditions, not on clocks.** Fixed sleeps sprinkled through a driver add up to tens of
-seconds per run and are simultaneously too slow and too flaky. Wait for the element or the state.
+seconds per run and are simultaneously too slow and too flaky. Wait for the element or the state —
+and, since 2026-08-27, for the app to have **stopped fetching** as well: a loading placeholder holds
+perfectly still, and a wait that watches only the DOM audits it as though it were the screen.
 
 ### What not to trim
 

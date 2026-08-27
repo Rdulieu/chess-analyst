@@ -46,8 +46,26 @@ async function walHotDatabase(name = "source.db") {
       "INSERT INTO evaluations (cp) VALUES (12),(-30);\n" +
       "SELECT 1;\n",
   );
-  for (let i = 0; i < 100 && !(existsSync(`${file}-wal`) && statSync(`${file}-wal`).size > 0); i += 1) {
-    await new Promise((r) => setTimeout(r, 20));
+  /*
+   * Wait for the LAST write, not for the first frame. `-wal` becomes non-empty as soon
+   * as `CREATE TABLE games` lands, which is three statements before the fixture is
+   * built — and a copy taken in that window holds an empty `games` and no
+   * `evaluations` at all. It failed ~5 % of the time under load and never at rest, so
+   * it read as a flake rather than as the race it is. A gate that goes red one run in
+   * twenty gets re-run until it is green, which is the habit this whole story exists
+   * to remove.
+   */
+  const ready = () => {
+    try {
+      return execFileSync("sqlite3", [file, "SELECT count(*) FROM evaluations;"], { encoding: "utf8" }).trim() === "2";
+    } catch {
+      return false;
+    }
+  };
+  for (let i = 0; i < 200 && !ready(); i += 1) await new Promise((r) => setTimeout(r, 20));
+  if (!ready()) throw new Error("the WAL-hot fixture never finished writing");
+  if (!(existsSync(`${file}-wal`) && statSync(`${file}-wal`).size > 0)) {
+    throw new Error("the WAL-hot fixture produced no -wal: it would prove nothing");
   }
   holders.push(holder);
   return file;
@@ -182,5 +200,20 @@ describe("what the module refuses to be given", () => {
   it("does not start a file watcher, so a run validating a commit cannot be overtaken", () => {
     const source = readFileSync(new URL("./app-lifecycle.mjs", import.meta.url), "utf8");
     expect(source).not.toMatch(/tsx\s+watch|npm:dev|run dev/);
+  });
+});
+
+describe("what stopApp refuses to do quietly", () => {
+  it("refuses a handle with no root, rather than sparing everything and reporting success", async () => {
+    const { stopApp } = await import("./app-lifecycle.mjs");
+    // The recommended way to stop is a handle rebuilt by hand in a later shell call,
+    // so a forgotten field is a likely mistake — and without a root nothing can be
+    // proved mine, so the call would spare the app and return as if it had stopped it.
+    await expect(stopApp({ serverPort: 39187, clientPort: 39188 })).rejects.toThrow(/repoRoot/);
+  });
+
+  it("does not take a path mentioned in a stranger's arguments as proof of ownership", () => {
+    const stranger = { cwd: "/tmp", cmdline: "python3 -m http.server 3222 --directory /home/x/US-18/docs" };
+    expect(namesMe(stranger, { port: 3222, root: "/home/x/US-18" }).mine).toBe(false);
   });
 });

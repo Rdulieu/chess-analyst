@@ -23,7 +23,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { readdirSync, mkdtempSync } from "node:fs";
+import { readdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -98,11 +98,16 @@ export async function launchBrowser({ cdpPort, userDataDir, chrome = findChrome(
   if (!page) throw new Error(`Chrome on ${cdpPort} exposes no page target.`);
 
   const session = await attach(page.webSocketDebuggerUrl);
+  const ours = !userDataDir;
   session.stop = async () => {
     child.stopping = true;
     await session.close();
     child.kill("SIGTERM");
     await new Promise((r) => child.once("exit", r));
+    /* Remove the profile this call created — never one the caller supplied. Without
+       this, every launch leaves a Chrome profile behind: 31 of them, ~600 MB, were
+       found in /tmp across this story's slices alone, and an HP run makes four. */
+    if (ours) rmSync(profile, { recursive: true, force: true });
   };
   session.profile = profile;
   return session;
