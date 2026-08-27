@@ -446,6 +446,8 @@
 
 ## Doing
 
+## In review
+
 - **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
   rien céder de ce qu'elle teste.
   > **Grillée le 2026-08-26**, conjointement avec US-20 — **abandonnée à l'issue du grill** (voir
@@ -597,6 +599,9 @@
   >
   > ---
   >
+  > **PR `integration → develop` : [#87](https://github.com/Rdulieu/chess-analyst/pull/87)**, ouverte le
+  > 2026-08-27, en attente de la décision humaine.
+  >
   > ### Le portail du 2026-08-27 — le relevé, et ce qu'il dit
   >
   > **Suite complète, path 0 + 3/3 HP verts**, jouée avec la bibliothèque, plafond de concurrence
@@ -649,10 +654,32 @@
   > sans barre d'avantage et sans glyphe de sévérité. Vert, sur la mauvaise partie. Le choix appartient
   > désormais à l'appelant (`openers`).
   >
-  > ### Critère de succès — **en attente du demandeur**
+  > ### Critère de succès — **aucun seuil** (décision du demandeur, 2026-08-27)
   >
-  > Le relevé ci-dessus est la mesure ; le seuil est une décision (D2 : « moins de dix minutes » est un
-  > **repère, pas un but »**). Ce que la mesure permet de dire honnêtement :
+  > **US-18 se conclut sur « la suite coûte ce qu'elle teste ».** Le PRD nommait déjà ce résultat comme
+  > acceptable — *à condition d'être mesuré, et non supposé* — et il l'est : le relevé ci-dessus est
+  > reproductible, gratuit, et rétroactif sur tous les portails passés.
+  >
+  > **Ce que la décision refuse**, et c'est ce qui la motive : un seuil sur le mur récompenserait une
+  > suite qui regarde moins, alors que ce portail montre le mur **et** la valeur produite monter
+  > ensemble (51,4 min pour huit findings d'application, contre 42,6 min pour zéro à deux). Un seuil
+  > sur une part serait défendable mais deviendrait un chiffre à défendre, et cette story vient
+  > précisément de passer trois jours à rétracter un chiffre qu'on défendait sans l'avoir vérifié.
+  >
+  > **Ce qui reste acquis sans seuil** : le grand livre, qui mesure chaque portail pour rien et rend
+  > toute dérive visible ; la passe de thème à **15,6 s** au lieu de ~4,8 min ; les outils à **16,1 min**
+  > au lieu de 34,7 ; et une règle écrite protégeant l'analyse. **Le repère des dix minutes est
+  > abandonné explicitement** : il n'est pas atteint, et il ne l'aurait été qu'en rognant sur ce que la
+  > suite regarde.
+  >
+  > **Ce à quoi on renonce** : une cible chiffrée. La conséquence est qu'un ralentissement futur ne
+  > déclenchera aucune alarme automatique — c'est le grand livre collé dans chaque PR de portail qui
+  > joue ce rôle, et il faut donc le coller vraiment.
+  >
+  > <details><summary>Les trois candidats écartés, et leurs chiffres</summary>
+  >
+  > Le seuil est une décision (D2 : « moins de dix minutes » est un **repère, pas un but »**). Ce que la
+  > mesure permettait de dire :
   >
   > - **le repère des dix minutes n'est pas atteint et ne le sera pas par ce levier** : la mécanique
   >   qu'il visait est déjà tombée d'un ordre de grandeur et le mur a quand même monté ;
@@ -662,8 +689,8 @@
   >   ≤ 50 % du travaillé — ici 52 %, contre 78 % et 80 % avant) ; un critère sur la **part d'analyse**
   >   (≥ 35 % — ici 45 %) ; ou **aucun seuil**, et la story se conclut sur « la suite coûte ce qu'elle
   >   teste », ce que le PRD nommait déjà comme un résultat acceptable à condition d'être mesuré.
-
-## In review
+  >
+  > </details>
 
 ## Done
 
