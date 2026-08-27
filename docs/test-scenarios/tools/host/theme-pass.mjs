@@ -1,7 +1,7 @@
 /*
  * The theme pass, behind one call per screen (US-18, ADR-0020).
  *
- * Host half. The page half is `../theme-audit.js`, which is not rewritten here: it
+ * Host half. The page half is `../page/theme-audit.js`, which is not rewritten here: it
  * is browser-side, dependency-free, driver-agnostic, it returns a raw object and it
  * refuses on purpose to emulate the theme. What was missing is everything around it —
  * injecting it once, emulating the two themes, walking the nine screens, and
@@ -26,10 +26,11 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { emulateTheme, open } from "./cdp.mjs";
+import { ANY_SCREEN, matcherFor, reachScreen, selectProfile, waitForScreen } from "./navigate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const THEME_PASS_DOC = join(HERE, "..", "..", "theme-pass.md");
-export const THEME_AUDIT_SOURCE = join(HERE, "..", "theme-audit.js");
+export const THEME_AUDIT_SOURCE = join(HERE, "..", "page", "theme-audit.js");
 
 export const THEMES = ["light", "dark"];
 
@@ -127,155 +128,12 @@ export function screensFromDoc() {
 
 /* ------------------------------------------------------------------- the walk */
 
-
-const guard = (port) =>
-  `if (location.port !== ${JSON.stringify(String(port))}) throw new Error("port guard: this is " + location.port + ", not ${port}");`;
-
-/**
- * What the screen currently is: its path, and how much text its main landmark holds.
+/*
+ * Walking the screens is not the theme pass's own business: it is what every scenario
+ * does, so it lives in `./navigate.mjs` (US-18 slice 04) and is used from here. This
+ * file keeps what is about the *theme* — the two halves of the pass, the emulation,
+ * and the assertion that the theme measured is the theme asked for.
  */
-const stateExpr = (port) => `(() => {
-  ${guard(port)}
-  const main = document.querySelector("main") || document.body;
-  return JSON.stringify({ path: location.pathname, len: main.innerText.length });
-})()`;
-
-/**
- * Wait until the screen has actually rendered, which takes **two** conditions and not
- * one.
- *
- * Text stability alone is not enough, and believing it was cost this library its
- * first real defect: a screen showing "Chargement du bilan…" has perfectly stable
- * text, so two identical samples 180 ms apart agreed instantly and the audit ran on a
- * placeholder — thirteen text nodes out of seventy, `problems: 0`, a clean green over
- * a screen that had never been painted. Measured on `/confrontation`, seven times out
- * of seven, warm cache included.
- *
- * So the screen is rendered when the app has **stopped fetching** *and* the DOM has
- * stopped changing. Both are mechanism postconditions; neither says anything about
- * whether the content is right, which stays the scenario's business.
- */
-async function waitForScreen(session, port, matches, { timeoutMs = 20000, settleMs = 180 } = {}) {
-  /* No soft fallback here, and that is deliberate. A `session.pendingRequests ? … :
-     true` would let a session without the capability walk straight back into the
-     defect this function was rewritten to close — measured: the same pass then audits
-     `/confrontation` at thirteen text nodes again, reports eighteen green readings and
-     warns nobody. Missing capability, loud refusal. */
-  if (typeof session.pendingRequests !== "function") {
-    throw new Error(
-      "this session cannot report requests in flight, so it cannot tell a rendered screen from a loading one — attach with cdp.mjs",
-    );
-  }
-  const until = Date.now() + timeoutMs;
-  let previous = null;
-  let last = null;
-  while (Date.now() < until) {
-    const quiet = session.pendingRequests() === 0;
-    const state = JSON.parse(await session.evaluate(stateExpr(port)));
-    last = { ...state, quiet };
-    if (matches(state.path) && state.len > 0 && quiet && previous && previous.len === state.len) {
-      return state;
-    }
-    previous = matches(state.path) && quiet ? state : null;
-    await new Promise((r) => setTimeout(r, settleMs));
-  }
-  throw new Error(
-    `the screen never rendered within ${timeoutMs} ms — last seen ${JSON.stringify(last)}`,
-  );
-}
-
-/**
- * In-page navigation, deliberately: driver-level navigation is the operation that
- * lands on the wrong page, and it also throws away the document the audit was
- * injected into.
- *
- * The control is **waited for**, not looked up once. A screen whose text has stopped
- * growing is not a screen whose data has arrived: on the first smoke run the Game
- * table's rows were still loading when the walk asked for a row, and the same screen
- * that was "unreachable" in the light half opened fine in the dark one, purely on
- * cache warmth. A helper that reported that as unreachable would have manufactured
- * exactly the kind of false finding this library exists to stop.
- */
-async function clickInPage(session, port, finder, what, { timeoutMs = 20000, settleMs = 180 } = {}) {
-  const until = Date.now() + timeoutMs;
-  for (;;) {
-    const clicked = await session.evaluate(`(() => {
-      ${guard(port)}
-      const target = ${finder};
-      if (!target) return false;
-      target.click();
-      return true;
-    })()`);
-    if (clicked) return;
-    if (Date.now() >= until) {
-      throw new Error(
-        `nothing to click for ${what} after ${timeoutMs} ms: the app does not offer it in this state`,
-      );
-    }
-    await new Promise((r) => setTimeout(r, settleMs));
-  }
-}
-
-const NAV_LINK = (route) =>
-  `[...document.querySelectorAll('nav[aria-label="main"] a')].find((a) => new URL(a.href).pathname === ${JSON.stringify(route)})`;
-
-/* The Game row is a `button`, not a link. A driver hunting for an `href` matching
-   `/analyse/` finds nothing and records the screen as unreachable — measured on the
-   2026-08-19 run, and still the single most re-discovered fact about this app. */
-const FIRST_GAME_BUTTON = `document.querySelector("table tbody tr button")`;
-const FIRST_PROFILE_LINK = `document.querySelector('a[href*="/profiles/"]:not([href*="#"])')`;
-
-const ANY_SCREEN = () => true;
-const isExactly = (route) => (path) => path === route;
-const looksLike = (pattern) => (path) => pattern.test(path);
-
-/** Reach one screen of the inventory from wherever the walk currently stands. */
-export async function reachScreen(session, { port, screen, waitOptions }) {
-  if (screen.inNav) {
-    await clickInPage(session, port, NAV_LINK(screen.route), screen.name, waitOptions);
-    return waitForScreen(session, port, isExactly(screen.route), waitOptions);
-  }
-  if (screen.route.startsWith("/analyse/")) {
-    await clickInPage(session, port, NAV_LINK("/"), "Mes parties", waitOptions);
-    await waitForScreen(session, port, isExactly("/"), waitOptions);
-    await clickInPage(session, port, FIRST_GAME_BUTTON, "a Game row", waitOptions);
-    return waitForScreen(session, port, looksLike(/^\/analyse\/[^/]+$/), waitOptions);
-  }
-  if (screen.route.startsWith("/profiles/")) {
-    await clickInPage(session, port, NAV_LINK("/profiles"), "Profils", waitOptions);
-    await waitForScreen(session, port, isExactly("/profiles"), waitOptions);
-    await clickInPage(session, port, FIRST_PROFILE_LINK, "a Profile row", waitOptions);
-    return waitForScreen(session, port, looksLike(/^\/profiles\/[^/]+$/), waitOptions);
-  }
-  throw new Error(`theme-pass.md declares ${screen.route} out of the navigation without saying how to reach it`);
-}
-
-/**
- * Make a `Profile` current, by clicking it in the list the way a Player would.
- *
- * A fresh browser has no `Profile` selected, and the scoped screens redirect to the
- * list until one is — so without this the walk audits the same screen nine times and
- * reports eight of them unreachable. Slice 04 lifts this into the navigation helper;
- * it lives here because the pass cannot start without it.
- */
-export async function selectProfile(session, { port, username, waitOptions }) {
-  await clickInPage(session, port, NAV_LINK("/profiles"), "Profils", waitOptions);
-  await waitForScreen(session, port, isExactly("/profiles"), waitOptions);
-  const picked = await session.evaluate(`(() => {
-    ${guard(port)}
-    const row = [...document.querySelectorAll("tr, li")].find(
-      (r) => r.textContent.includes(${JSON.stringify(username)}) && r.querySelector("button"),
-    );
-    if (!row) return null;
-    const button = [...row.querySelectorAll("button")].find((b) => /s[ée]lectionner/i.test(b.textContent));
-    if (!button) return "already";
-    button.click();
-    return "clicked";
-  })()`);
-  if (picked === null) throw new Error(`no Profile row named ${username} on this screen`);
-  await waitForScreen(session, port, isExactly("/profiles"), waitOptions);
-  return picked;
-}
 
 /**
  * The whole pass: every screen the document declares, in both themes.
@@ -310,15 +168,13 @@ export async function runThemePass({
     if (profile) await selectProfile(session, { port, username: profile, waitOptions });
 
     for (const screen of screens) {
-      let reached = true;
       let unreachable = null;
       try {
         await reachScreen(session, { port, screen, waitOptions });
       } catch (e) {
-        reached = false;
         unreachable = e.message;
       }
-      if (!reached) {
+      if (unreachable) {
         readings.push({ theme, screen: screen.name, route: screen.route, unreachable });
         continue;
       }
@@ -328,3 +184,6 @@ export async function runThemePass({
   }
   return readings;
 }
+
+/** Re-exported so a caller reaching one screen does not need two imports. */
+export { matcherFor, reachScreen, selectProfile, waitForScreen };

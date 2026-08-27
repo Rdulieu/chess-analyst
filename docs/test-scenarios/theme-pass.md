@@ -106,7 +106,7 @@ state only the weak-opening ⚠, the current tab and the two `Profile` cues have
 all, and HP-01 is the scenario that carries the danger cards, the severity glyphs and the "analysée"
 badge. Read the three passes together, and read `subjects` before reading `failures`.
 
-Assertions 1 to 5 are measured, not eyeballed: `tools/theme-audit.js` implements them as one
+Assertions 1 to 5 are measured, not eyeballed: `tools/page/theme-audit.js` implements them as one
 browser-side function returning a report per screen. Inject it and call `themeAudit()` on each
 screen in each theme; compare the `constants` block between the two themes for assertion 5. The
 theme itself is switched by the **driver** emulating `prefers-color-scheme: dark` (CDP

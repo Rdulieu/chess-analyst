@@ -21,16 +21,12 @@ a complete change of pilot without one line moving.
 
 | | | |
 |---|---|---|
-| **host/** | runs on the machine | launch a browser, drive it, emulate a theme, read transcripts |
-| *page* | runs inside the page under test | audit a screen, and soon navigate and read a field back |
+| **host/** | runs on the machine | restore, launch, stop; a private browser; emulate a theme; read transcripts |
+| **page/** | runs inside the page under test | audit a screen, navigate, read a field back |
 
 Plain JavaScript, no build step: `.mjs` on the host side, injectable `.js` on the page side. The
 library is not part of the application, is in neither workspace, and does not participate in
 `npm run build`.
-
-> `theme-audit.js` still sits at the root of this directory rather than under a `page/`
-> folder. It is the page half — browser-side, dependency-free, driver-agnostic — and it moves
-> when the theme pass gains its host half (US-18 slice 02).
 
 ## Testing
 
@@ -78,8 +74,14 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   directions across four runs, and an assertion inside the audited script is the only thing that
   ever caught it. Eighteen audits in 13 seconds, measured 2026-08-27.
 
-- **`theme-audit.js`** — the measurable half of the theme pass (see `../theme-pass.md`), unchanged:
-  it is the page half, and `host/theme-pass.mjs` is what was missing around it.
+- **`host/navigate.mjs` + `page/app-driver.js`** — the gestures every scenario repeats. Navigation
+  happens **in the page**, never at the driver level; every injected script carries a
+  `location.port` guard, and building one without a port is an error. `setField` puts a value in
+  through the native setter and **reads it back**, throwing if it did not take — before anything is
+  submitted.
+
+- **`page/theme-audit.js`** — the measurable half of the theme pass (see `../theme-pass.md`),
+  unchanged: it is the page half, and `host/theme-pass.mjs` is what was missing around it.
 
 - **`test-fixtures/`** — a real pass, truncated: the 2026-08-25 gate, with every field the ledger
   does not read stripped out. `rebuild-fixture.mjs` says what was kept and why.
