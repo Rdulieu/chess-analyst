@@ -487,9 +487,25 @@
   >    sur le scénario lui-même) et **33,5 min d'attente inerte** — rapport rendu, plus rien à faire,
   >    en attente d'une notification de tâche de fond.
   >
-  > **Le poste de coût le plus gros du run du 25/08 n'était donc pas du travail** : sur les 74 minutes
-  > vécues, **~30 étaient de l'attente de collecte**, la moitié de la plainte d'origine. Ça
-  > n'appartient pas au contenu de la suite mais à son orchestration (skill `agentic-tests` §5.1).
+  > ~~**Le poste de coût le plus gros du run du 25/08 n'était donc pas du travail** : sur les 74
+  > minutes vécues, ~30 étaient de l'attente de collecte, la moitié de la plainte d'origine.~~
+  >
+  > > **Rétracté le 2026-08-27**, par la Feature Path de la tranche 05 qui a relu la session mère au
+  > > lieu de faire confiance au grand livre. Les faits : le demandeur a demandé à `11:54:47`, le
+  > > dernier rapport a été consolidé à `12:44:32` et le portail livré à `12:52:30` — **57,7 min
+  > > vécues, pas 74**. La suite a couru de `12:01:35` à `12:44:32`, soit **43,0 min pour 42,6 min de
+  > > travail** : ~24 secondes de battement de collecte sur toute la passe, et **chaque rapport
+  > > collecté en quelques secondes** (HP-03 : envoyé `12:41:27`, reçu `12:41:30`, traité `12:41:40`).
+  > >
+  > > Les « 74 min » étaient le *premier tour → dernière ligne* du grand livre, lu comme s'il était
+  > > l'attente du demandeur. Son bord droit était HP-03 gagnant une ligne de plus à `13:15:13`,
+  > > **vingt-trois minutes après l'ouverture de la PR**, réveillé pour rien par un guetteur
+  > > d'arrière-plan résiduel de son propre run précédent.
+  > >
+  > > Ce qui reste, et qui est le vrai enseignement : **un sous-agent qui a fini reste vivant**, peut
+  > > être réveillé, répond, et fait grandir son transcript — ce qui corrompt toute mesure dont le
+  > > bord droit est « la dernière ligne écrite ». **Arrêter ce qu'on a dépêché une fois son rapport
+  > > collecté**, et ne jamais lire un tel empan comme l'attente de quelqu'un.
   >
   > *Réserves de méthode, à garder avec les chiffres* : les postes sont déduits de l'enchaînement des
   > messages (`outils` = `tool_use` → `tool_result` ; `composition` = génération d'un message portant
@@ -533,9 +549,16 @@
   >   outils, composition, analyse, rapport, attente inerte). Coût : **zéro run**. Il vaut
   >   **rétroactivement**, donc il n'y a **aucun chemin critique** — contrairement à ce que le plan
   >   supposait d'abord, aucune mesure n'est perdue si une story atteint son portail avant lui.
-  > - **D8 — L'attente de collecte est dans le périmètre.** ~30 min sur 74 au dernier portail, pour
-  >   zéro travail. C'est de l'orchestration (§5.1), pas du contenu de scénario, et c'est le gain le
-  >   moins cher de la story.
+  > - **D8 — L'attente de collecte est dans le périmètre.** ~~~30 min sur 74 au dernier portail, pour
+  >   zéro travail, le gain le moins cher de la story.~~ C'est de l'orchestration (§5.1), pas du
+  >   contenu de scénario — ça, ça tient.
+  >
+  >   > **Motif corrigé le 2026-08-27**, cf. la rétractation plus haut. Chaque rapport du portail du
+  >   > 25/08 a été collecté en quelques secondes et le battement de toute la passe valait **~21 s** :
+  >   > il n'y avait pas 30 minutes à récupérer. Les 30 minutes étaient un sous-agent **fini**,
+  >   > réveillé pour rien 23 min **après** l'ouverture de la PR. Le périmètre reste bon, le geste
+  >   > change : **arrêter ce qu'on a dépêché une fois son rapport collecté**, plutôt que venir le
+  >   > chercher plus tôt.
   >
   > ### Arbitrages laissés ouverts
   >

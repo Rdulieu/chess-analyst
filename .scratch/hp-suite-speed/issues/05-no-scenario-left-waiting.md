@@ -17,10 +17,24 @@ sub-work from it and merge back into it via PR, **not** `develop`. Auto-merges o
 
 **Ne plus laisser un scénario fini attendre.** Au portail du 2026-08-25, HP-03 a rendu son rapport à
 12:41:44 et n'a plus rien fait jusqu'à 13:15:13 — **33,5 minutes**, terminées par une notification de
-tâche de fond. Sur les 74 minutes vécues ce jour-là, **~30 n'étaient pas du travail**.
+tâche de fond. Sur les 74 minutes vécues ce jour-là, **~30 n'étaient pas du travail** — *prémisse
+fausse, voir ci-dessous*.
+
+> **La prémisse ci-dessus est fausse, découverte le 2026-08-27 par la Feature Path de cette tranche
+> même.** Chaque rapport de ce portail a été collecté en quelques secondes (HP-03 : envoyé 12:41:27,
+> reçu 12:41:30, traité 12:41:40) ; la suite a couru 43,0 min pour 42,6 de travail, soit ~24 secondes
+> de battement ; le demandeur a attendu 57,7 min, pas 74. Les 33,5 minutes sont **postérieures à la
+> livraison du portail** (PR ouverte à 12:52:30) : un sous-agent fini, resté résident, réveillé pour
+> rien par un guetteur d'arrière-plan de son propre run précédent.
+>
+> La tranche a donc été livrée sur un enseignement différent et réel : **un sous-agent qui a fini
+> reste vivant**, et toute mesure dont le bord droit est « la dernière ligne écrite » peut être
+> gonflée par un réveil sans objet. Le remède est d'**arrêter ce qu'on a dépêché une fois son rapport
+> collecté**, pas de venir le chercher plus tôt.
 
 C'est le gain le moins cher de la story : il ne touche **aucun scénario**, ne change rien à ce que la
-suite affirme, et rend au demandeur la moitié de sa plainte d'origine.
+suite affirme. ~~Et rend au demandeur la moitié de sa plainte d'origine.~~ — cette dernière promesse
+est **rétractée** (voir l'encart ci-dessus) : il n'y avait pas de moitié à rendre.
 
 C'est de l'orchestration, donc ça vit dans `SKILL.md` §5.1 — qui décrit déjà finement la livraison
 des rapports (livraison qui **marche**, double livraison attendue, `idle_notification` qui ne signifie

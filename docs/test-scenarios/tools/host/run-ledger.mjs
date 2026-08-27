@@ -22,12 +22,16 @@ import { execFileSync } from "node:child_process";
 export const BUCKETS = ["tools", "composing", "analysis", "reporting", "idleWait"];
 
 /*
- * Two reservations that belong WITH the figures, never beside them. A reader who
- * gets the percentages without these will read them as facts.
+ * The reservations that belong WITH the figures, never beside them. A reader who gets
+ * the percentages without these will read them as facts — and one of them was read
+ * that way for two days.
  */
 export const RESERVATIONS = [
   "composing includes API latency and any queueing: the transcript timestamps a message when it lands, so the model's own generation cannot be separated from the wait for it.",
   "The content of thinking blocks is not persisted. This measures how long analysis took, never what it was made of.",
+  "The worst wait counts every idle minute, the ones the orchestrator spent legitimately elsewhere included. On a parallel fan-out it should read seconds; on a run resumed between rounds of work it will not, and that is not a defect.",
+  "It also reads 0.0 for an agent nobody ever came back to, since the wait after a transcript's last line cannot be measured — 0.0 means either collected at once or abandoned, and only the orchestrator's own session tells you which.",
+  "None of these figures can see the orchestrator's own session, so none of them is the requester's wait. They measure the subagents, and nothing else.",
 ];
 
 /* ------------------------------------------------------------------ reading */
@@ -107,12 +111,40 @@ export function ledgerOfAgent({ agentId, turns }) {
   const first = turns.length ? turns[0].at : null;
   const last = turns.length ? turns[turns.length - 1].at : null;
   const wall = turns.length ? last - first : 0;
+
+  /*
+   * **The longest wait after a report** — the single worst stretch during which the
+   * agent had handed back and nothing came for it.
+   *
+   * Not the wait after its *last* message, which is always zero: a transcript ends on
+   * the last thing written. The silence that cost half an hour at the 2026-08-25 gate
+   * sits in the middle — HP-03 rendered its report at 12:41:44 and heard nothing until
+   * 13:15:28, then answered and ended. Measuring the tail would have found nothing.
+   *
+   * It is reported per agent rather than folded into the suite, because folding it in
+   * is how it stayed invisible: averaged, that gate is a suite running a little long;
+   * itemised, it is one scenario left standing in the corridor while its two siblings
+   * were picked up in seconds.
+   */
+  let waitAfterReport = 0;
+  let waitedFrom = null;
+  for (let i = 1; i < turns.length; i += 1) {
+    if (bucketOf(turns[i - 1], turns[i]) !== "idleWait") continue;
+    const gap = turns[i].at - turns[i - 1].at;
+    if (gap > waitAfterReport) {
+      waitAfterReport = gap;
+      waitedFrom = turns[i - 1].at;
+    }
+  }
+
   return {
     agentId,
     startedAt: first,
     endedAt: last,
     wall,
     worked: wall - buckets.idleWait,
+    waitAfterReport,
+    waitedFrom,
     buckets,
     toolCalls: turns.filter((t) => t.kind === "tool_use").length,
   };
@@ -149,13 +181,17 @@ export function classifyDispatch(description) {
  * scenarios, in the order they started, each with its own ledger. Everything else
  * the session dispatched is left out.
  */
-export function hpPassOfSession(subagentsDir) {
+export function hpPassOfSession(subagentsDir, { every = false } = {}) {
   const entries = readdirSync(subagentsDir)
     .filter((f) => f.endsWith(".meta.json"))
     .map((f) => {
       const description = JSON.parse(readFileSync(join(subagentsDir, f), "utf8")).description || "";
       const transcript = join(subagentsDir, f.replace(".meta.json", ".jsonl"));
-      return { description, role: classifyDispatch(description), transcript };
+      /* `every` costs the whole session rather than the pass inside it. The suite is
+         not the only fan-out worth measuring — a Feature Path dispatching two agents
+         wants the same figures, and the wait after a report is the same wait. */
+      const role = classifyDispatch(description);
+      return { description, role: every && role === "other" ? "scenario" : role, transcript };
     })
     .filter((e) => e.role !== "other")
     .map((e) => {
@@ -231,14 +267,17 @@ function unionLength(spans) {
 /**
  * The suite's own line. Two walls, and they are different numbers:
  *
- * - `livedWall` — first agent's first turn to last agent's last turn. This is the
- *   time somebody actually spent waiting for the suite.
- * - `workedWall` — the same span, minus every minute during which **no** agent was
- *   working. Scenarios run two at a time, so this is a union and never a sum: adding
- *   the scenarios' walls counts the parallel minutes twice.
- *
- * On 2026-08-25 those were 74 and 43 minutes. The gap is not a rounding difference,
- * it is a scenario that had rendered its report and was left waiting to be collected.
+ * - `workedWall` — every minute during which **at least one** agent was working,
+ *   counted once. A union, never a sum: adding the scenarios' walls would count the
+ *   parallel minutes twice.
+ * - `livedWall` — first agent's first turn to the last **line** of any transcript.
+ *   **This is not the time anybody spent waiting**, and reading it as such is the
+ *   mistake this file made for two days. On 2026-08-25 it read 74 minutes against 43
+ *   of work; the requester waited 57.7, the suite spanned 43.0 for 42.6 of work, and
+ *   the extra 31 minutes were a finished subagent whose transcript gained one more
+ *   line at 13:15 — twenty-three minutes after the gate had shipped — because a stray
+ *   background watcher woke it for nothing. This ledger reads subagent transcripts and
+ *   never the orchestrator's session, so none of its figures is anybody's wait.
  */
 export function suiteOf(agents) {
   const withTurns = agents.filter((a) => a.startedAt !== null);
@@ -262,10 +301,10 @@ export function suiteOf(agents) {
 }
 
 /** The whole reading of one session: its pass, if it held one, and the suite's line. */
-export function ledgerOfSession(subagentsDir) {
-  const pass = hpPassOfSession(subagentsDir);
+export function ledgerOfSession(subagentsDir, options = {}) {
+  const pass = hpPassOfSession(subagentsDir, options);
   const agents = [...pass.prerequisites, ...pass.scenarios];
-  return { ...pass, suite: pass.found ? suiteOf(agents) : null };
+  return { ...pass, every: Boolean(options.every), suite: pass.found ? suiteOf(agents) : null };
 }
 
 /* ------------------------------------------------------------------ rendering */
@@ -277,6 +316,8 @@ const BUCKET_LABELS = {
   reporting: "reporting",
   idleWait: "idle wait",
 };
+const TRAILING = "worst wait";
+const SINCE = "since";
 
 const min = (ms) => (ms / 60000).toFixed(1);
 const pct = (part, whole) => (whole ? `${((100 * part) / whole).toFixed(0)} %` : "—");
@@ -284,7 +325,18 @@ const pct = (part, whole) => (whole ? `${((100 * part) / whole).toFixed(0)} %` :
 function row(label, agent) {
   const b = agent.buckets;
   const cells = BUCKETS.map((k) => `${min(b[k])} (${pct(b[k], agent.wall)})`);
-  return [label, min(agent.wall), min(agent.worked), ...cells, String(agent.toolCalls)];
+  const since = agent.waitedFrom ? new Date(agent.waitedFrom).toISOString().slice(11, 19) : "—";
+  return [
+    label,
+    min(agent.wall),
+    min(agent.worked),
+    ...cells,
+    min(agent.waitAfterReport),
+    /* When the worst wait started, because 33.5 minutes means two opposite things
+       depending on whether the gate had already shipped. */
+    since,
+    String(agent.toolCalls),
+  ];
 }
 
 function table(rows) {
@@ -318,7 +370,7 @@ export function formatLedger(ledger) {
   }
 
   const agents = [...ledger.prerequisites, ...ledger.scenarios];
-  const header = ["", "wall", "worked", ...BUCKETS.map((k) => BUCKET_LABELS[k]), "calls"];
+  const header = ["", "wall", "worked", ...BUCKETS.map((k) => BUCKET_LABELS[k]), TRAILING, SINCE, "calls"];
   const s = ledger.suite;
   const rows = [
     header,
@@ -329,16 +381,26 @@ export function formatLedger(ledger) {
        because that is the denominator those percentages were computed against — the
        lived wall would divide parallel work by a smaller number and flatter nothing
        consistently. */
-    ["Suite", min(s.sumOfWalls), min(s.workedWall), ...BUCKETS.map((k) => `${min(s.buckets[k])} (${pct(s.buckets[k], s.sumOfWalls)})`), String(s.toolCalls)],
+    [
+      ledger.every ? "All agents" : "Suite",
+      min(s.sumOfWalls),
+      min(s.workedWall),
+      ...BUCKETS.map((k) => `${min(s.buckets[k])} (${pct(s.buckets[k], s.sumOfWalls)})`),
+      min(Math.max(...agents.map((a) => a.waitAfterReport))),
+      "—",
+      String(s.toolCalls),
+    ],
   ];
   return [
-    "Ledger of the pass — minutes, and the share of each agent's own wall.",
+    ledger.every
+      ? "Ledger of every subagent this session dispatched — minutes, and the share of each agent's own wall. This is not a Happy Path pass; the totals below are a sum over unrelated agents."
+      : "Ledger of the pass — minutes, and the share of each agent's own wall.",
     "",
     table(rows),
     "",
-    `Suite lived wall   ${min(s.livedWall)} min   (first agent's first turn → last agent's last turn)`,
-    `Suite worked wall  ${min(s.workedWall)} min   (the same span, less every minute no agent was working)`,
-    `Sum of the walls   ${min(s.sumOfWalls)} min   (not the suite's wall: scenarios overlap, so this counts parallel minutes twice)`,
+    `${(ledger.every ? "Worked, all agents" : "Suite worked wall").padEnd(18)} ${min(s.workedWall)} min   (every minute at least one agent was working, counted once)`,
+    `First turn → last  ${min(s.livedWall)} min   (NOT the requester's wait: this ledger cannot see the orchestrator's session. Its right edge is the last LINE of any transcript, and an agent stays resident after its report — on 2026-08-25 one was woken 34 min later by a stray watcher and stretched this figure from 43 to 74)`,
+    `Sum of the walls   ${min(s.sumOfWalls)} min   (not the suite's span: scenarios overlap, so this counts parallel minutes twice)`,
     `Tool calls         ${s.toolCalls}`,
     "",
     "Reservations of method — read the shares with these or not at all:",
@@ -411,7 +473,8 @@ function mainWorktree() {
 }
 
 function main(argv) {
-  const [arg] = argv;
+  const every = argv.includes("--every");
+  const [arg] = argv.filter((a) => a !== "--every");
   const repo = mainWorktree();
   if (arg && arg !== "--list") {
     let dir = arg;
@@ -427,7 +490,7 @@ function main(argv) {
       }
       dir = found;
     }
-    console.log(formatLedger(ledgerOfSession(dir)));
+    console.log(formatLedger(ledgerOfSession(dir, { every })));
     return;
   }
 

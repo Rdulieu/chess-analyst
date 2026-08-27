@@ -12,8 +12,14 @@ Voir `BACKLOG.md` — US-18 (décisions D1→D8) et `## Abandonnées` — US-20.
 
 La suite Happy Path est le seul filet du projet, et elle est verte. Mais la faire tourner coûte assez
 cher pour qu'on hésite : **une suite qu'on lance moins souvent est une suite qui protège moins**. Au
-portail d'US-16b (2026-08-25), le demandeur a attendu **74 minutes** devant une suite qui n'a
-réellement travaillé que **43**.
+portail d'US-16b (2026-08-25), la suite a coûté **43 minutes** — 43,0 d'empan pour 42,6 de travail
+réel, c'est-à-dire une passe tassée au maximum de ce que le plafond de concurrence permet.
+
+> **Corrigé le 2026-08-27.** Cette phrase disait « le demandeur a attendu 74 minutes devant une suite
+> qui n'a réellement travaillé que 43 ». Faux : les 74 min étaient le *premier tour → dernière ligne*
+> du grand livre, dont le bord droit était un sous-agent réveillé pour rien 23 minutes après
+> l'ouverture de la PR. Le demandeur a attendu **57,7 min** au total, dont 43 de suite ; le reste
+> était la restructuration de la suite avant, et la PR après.
 
 Le problème n'est pas là où on le cherchait. Trois croyances de l'entrée d'origine sont fausses,
 maintenant qu'on a mesuré :
@@ -33,9 +39,12 @@ scénario, à ~10 s l'appel, dérivés à la main d'une skill de 491 lignes. Mes
 rédaction du rapport 2-3 %.** Et le travail réinventé se paie deux fois : il est aussi la source des
 **faux findings** (deux « défauts » du run du 2026-08-13 étaient des bugs du pilote, pas de l'app).
 
-Enfin, une part du temps vécu n'est pas du travail du tout : au dernier portail, **~30 minutes sur 74
-étaient de l'attente de collecte** — HP-03 avait rendu son rapport et attendait qu'on vienne le
-chercher.
+~~Enfin, une part du temps vécu n'est pas du travail du tout : au dernier portail, ~30 minutes sur 74
+étaient de l'attente de collecte.~~ **Rétracté le 2026-08-27** : chaque rapport a été collecté en
+quelques secondes, et le battement de collecte de toute la passe est d'environ **24 secondes**. Ce
+que la relecture a trouvé à la place : **un sous-agent qui a fini reste vivant** et peut être réveillé
+pour rien — HP-03 l'a été 23 minutes après la livraison du portail, par un guetteur résiduel de son
+propre run précédent.
 
 ## Solution
 
@@ -209,8 +218,11 @@ que 95 scripts jetables faux — elle est réutilisée et elle inspire confiance
   consigne d'ailleurs qu'un écran est resté **un run entier non audité** pour cette raison. À corriger
   en passant dans la tranche 2, ou à verser à US-21 — décision à prendre, pas à laisser traîner.
 - **Le mur vécu et le mur travaillé sont deux chiffres différents**, et il faut les rapporter tous les
-  deux. Le 2026-08-25 : 74 min vécues, 43 travaillées. Ne rapporter que le second flatte ; ne
-  rapporter que le premier accuse la suite d'un défaut d'orchestration.
+  deux — mais **le grand livre ne peut pas mesurer le vécu**, parce qu'il lit les transcripts de
+  sous-agents et jamais celui de l'orchestrateur. Son *premier tour → dernière ligne* n'est pas
+  l'attente de quelqu'un : le 2026-08-25 il valait 74 min pour une suite de 43, la différence étant
+  un sous-agent réveillé après la livraison. Le vécu se lit dans la session de l'orchestrateur
+  (demande → réponse finale), et il valait **57,7 min** ce jour-là.
 - **Ce qui restera irréductible** : l'analyse (17-19 %) et une part des aller-retours d'outils. Il est
   possible que cette story se conclue sur « la suite coûte ce qu'elle teste » plutôt que sur un gain
   spectaculaire — c'est un résultat acceptable, à condition qu'il soit **mesuré** et non supposé.

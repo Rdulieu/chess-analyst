@@ -3,6 +3,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  RESERVATIONS,
   readTranscript,
   ledgerOfAgent,
   classifyDispatch,
@@ -94,15 +95,17 @@ describe("telling a pass apart from everything else the session dispatched", () 
 describe("the ledger of the whole pass", () => {
   const minutes = (ms) => ms / 60000;
 
-  it("reproduces the two figures the requester actually lived on 2026-08-25", () => {
+  it("measures 42.6 minutes of work, and a 31-minute tail nobody waited through", () => {
     const { suite } = ledgerOfSession(FIXTURES);
 
-    // He waited 74 minutes in front of a suite that worked 43 — the pair of numbers
-    // this whole story was opened on, and they come out of the transcripts unaided.
-    // Reporting only the second flatters the suite; reporting only the first blames
-    // it for an orchestration defect it does not have.
-    expect(minutes(suite.livedWall)).toBeCloseTo(73.88, 2);
+    // Exact properties of the fixture. What they are NOT is the pair of numbers this
+    // story was opened on: "the requester waited 74 minutes for 43 of work" was this
+    // figure read as somebody's wait, and it was wrong. He waited 57.7; the suite
+    // spanned 43.0 for 42.6 of work, about 21 seconds of slack. The 31.29 below is the
+    // tail — a finished subagent woken by a stray watcher 23 minutes after the gate
+    // shipped — and this test exists to keep that reading attached to the number.
     expect(minutes(suite.workedWall)).toBeCloseTo(42.59, 2);
+    expect(minutes(suite.livedWall)).toBeCloseTo(73.88, 2);
     expect(minutes(suite.livedWall - suite.workedWall)).toBeCloseTo(31.29, 2);
   });
 
@@ -147,8 +150,12 @@ describe("what the ledger hands to a reader", () => {
     for (const bucket of ["tools", "composing", "analysis", "reporting", "idle"]) {
       expect(text.toLowerCase()).toContain(bucket);
     }
-    expect(text).toMatch(/lived/i);
     expect(text).toMatch(/worked/i);
+    /* Not "lived": that word was removed on 2026-08-27 with the claim it carried. The
+       span is printed under a name that describes it — first turn to last line — with
+       what it is not, right there beside it. */
+    expect(text).not.toMatch(/lived wall/i);
+    expect(text).toMatch(/First turn → last/);
   });
 
   it("passes no judgement — it holds no verdict on how long any of it took", () => {
@@ -212,5 +219,74 @@ describe("an HP scenario that was dispatched and never spoke", () => {
     const empty = { found: true, prerequisites: [], scenarios: [], suite: null };
     expect(() => formatLedger(empty)).not.toThrow();
     expect(formatLedger(empty)).toMatch(/no.*turn|never spoke|nothing to cost/i);
+  });
+});
+
+describe("the longest wait after a scenario has rendered its report", () => {
+  const minutes = (ms) => ms / 60000;
+
+  it("names the scenario that was left standing, instead of averaging it away", () => {
+    const { scenarios } = ledgerOfSession(FIXTURES);
+    const byName = Object.fromEntries(scenarios.map((s) => [s.description.slice(0, 5), s]));
+
+    // HP-03 rendered its report at 12:41:44Z and heard nothing until 13:15:28. Its two
+    // siblings were picked up in seconds. That is not a suite running long: it is one
+    // scenario waiting in the corridor, and only a per-scenario figure says so.
+    expect(minutes(byName["HP-03"].waitAfterReport)).toBeGreaterThan(33);
+    expect(minutes(byName["HP-01"].waitAfterReport)).toBeLessThan(0.2);
+    expect(minutes(byName["HP-02"].waitAfterReport)).toBeLessThan(1);
+    expect(new Date(byName["HP-03"].waitedFrom).toISOString()).toMatch(/T12:41:44/);
+  });
+
+  it("is the worst single stretch, never the tail — a transcript ends on what was written", () => {
+    const { scenarios } = ledgerOfSession(FIXTURES);
+    for (const s of scenarios) {
+      expect(s.waitAfterReport).toBeLessThanOrEqual(s.buckets.idleWait);
+      expect(s.waitAfterReport).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("is printed, because a figure nobody reads changes nothing", () => {
+    expect(formatLedger(ledgerOfSession(FIXTURES))).toMatch(/worst wait/i);
+  });
+});
+
+describe("costing a session that is not a Happy Path pass", () => {
+  it("costs every subagent when asked, so a Feature Path fan-out can be measured too", () => {
+    // The suite is not the only thing worth costing: slice 05's own Feature Path
+    // dispatches two ordinary subagents and needs the same figures about them.
+    const all = ledgerOfSession(FIXTURES, { every: true });
+
+    expect(all.found).toBe(true);
+    expect(all.scenarios.length + all.prerequisites.length).toBe(5);
+    expect(all.scenarios.map((s) => s.description)).toContain("FP US-16b tranche 01");
+  });
+});
+
+describe("what the first-turn-to-last figure is, and what it is not", () => {
+  /*
+   * It is NOT the requester's wait, and saying so cost two days of a wrong headline.
+   *
+   * On 2026-08-25 this ledger read 73.9 minutes, and "the requester waited 74 minutes
+   * for 43 minutes of work" went into the PRD, the BACKLOG, the ADR and a slice of its
+   * own. The parent session says otherwise: he asked at 11:54:47, the last report was
+   * consolidated at 12:44:32 and the gate was delivered at 12:52:30 — 57.7 minutes,
+   * and every report was collected within seconds of arriving. The extra 31 minutes are
+   * HP-03's transcript gaining one more line at 13:15, when a stray background watcher
+   * from its own earlier run woke it for nothing, twenty-three minutes after the gate
+   * had shipped.
+   *
+   * No rule inside the transcripts separates that from real work — the zombie made real
+   * tool calls. The only witness is the orchestrator's own session, which this ledger
+   * does not read. So the figure is reported with what it is, and the output says so.
+   */
+  it("says plainly that it is not the requester's wait", () => {
+    const text = formatLedger(ledgerOfSession(FIXTURES));
+    expect(text).toMatch(/NOT the requester's wait/);
+    expect(text).toMatch(/cannot see the orchestrator/i);
+  });
+
+  it("carries the reservation that it cannot see the orchestrator at all", () => {
+    expect(RESERVATIONS.join(" ")).toMatch(/none of them is the requester's wait/i);
   });
 });
