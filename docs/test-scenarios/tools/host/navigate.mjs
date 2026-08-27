@@ -187,23 +187,61 @@ export async function selectProfile(session, { port, username, waitOptions }) {
 }
 
 /**
+ * The opener a caller supplied for this screen, if any.
+ *
+ * The library must not choose **which** Game or **which** Profile a pass opens: that is
+ * a judgement about the state, and it belongs to the scenario. It chose for two
+ * scenarios on 2026-08-27 — always the first row — and both had an **unanalysed** Game
+ * there, so the theme pass audited an `Analyse` screen with no evaluation curve, no
+ * advantage bar and no severity glyph. It reported green and it was green, on the wrong
+ * Game: a thinner green, the one failure mode ADR-0020 forbids.
+ *
+ * Both agents caught it and audited the right Game by hand, so nothing was lost that
+ * run. The library as it stood would have lost it every run after.
+ */
+export function openerFor(openers, screen) {
+  return openers && openers[screen.route];
+}
+
+/** The Game rows the list currently offers, raw, for a caller that needs to choose. */
+export async function gameRows(session, { port }) {
+  return JSON.parse(await session.evaluate(driverCall(port, "gameRows()")));
+}
+
+/** Open one Game of the list by its row index. The caller is already on the list. */
+export async function openGameRow(session, { port, index, waitOptions }) {
+  return act(session, port, `openGameRow(${Number(index)})`, `Game row ${index}`, waitOptions);
+}
+
+/**
  * Reach one screen of the inventory from wherever the walk currently stands.
  *
  * The two screens the navigation cannot reach are opened from their lists — and the
  * Game row is a `button`, which is the single most re-discovered fact about this app.
+ * Which row, though, is the caller's call: pass `openers` when the assertions depend
+ * on it.
  */
-export async function reachScreen(session, { port, screen, waitOptions }) {
+export async function reachScreen(session, { port, screen, waitOptions, openers }) {
   if (screen.inNav) return followNav(session, { port, route: screen.route, waitOptions });
 
-  if (screen.route.startsWith("/analyse/")) {
-    await followNav(session, { port, route: "/", waitOptions });
-    await act(session, port, "openFirstGame()", "a Game row", waitOptions);
-    return waitForScreen(session, port, matcherFor(screen.route), waitOptions);
+  /*
+   * The library keeps what it knows — **where the list is** — and hands over only the
+   * choice of row. An opener called from wherever the walk happened to stand would
+   * click into the wrong screen; an opener that had to navigate for itself would be
+   * re-deriving what the library already has.
+   */
+  const from = screen.route.startsWith("/analyse/")
+    ? { list: "/", fallback: "openFirstGame()", what: "a Game row" }
+    : screen.route.startsWith("/profiles/")
+      ? { list: "/profiles", fallback: "openFirstProfile()", what: "a Profile row" }
+      : null;
+  if (!from) {
+    throw new Error(`the inventory declares ${screen.route} out of the navigation without saying how to reach it`);
   }
-  if (screen.route.startsWith("/profiles/")) {
-    await followNav(session, { port, route: "/profiles", waitOptions });
-    await act(session, port, "openFirstProfile()", "a Profile row", waitOptions);
-    return waitForScreen(session, port, matcherFor(screen.route), waitOptions);
-  }
-  throw new Error(`the inventory declares ${screen.route} out of the navigation without saying how to reach it`);
+
+  await followNav(session, { port, route: from.list, waitOptions });
+  const chosen = openerFor(openers, screen);
+  if (chosen) await chosen(session, { port, screen, waitOptions });
+  else await act(session, port, from.fallback, from.what, waitOptions);
+  return waitForScreen(session, port, matcherFor(screen.route), waitOptions);
 }

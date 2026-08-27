@@ -52,7 +52,11 @@ minutes the same walk cost when each agent re-derived it.
 All nine, in both themes. Two of them the navigation cannot reach on its own: open any Game from
 the list for Analyse, and any Profile from the list for the Profile page. If the scenario's state holds
 no Game at all, record the **seventh** as *not reachable in this scenario's state* rather than
-importing one; the Profile page is always reachable, since every scenario has selected a Profile before reading
+importing one. **And say which Game it must open when that matters**: on 2026-08-27 two scenarios
+audited Analyse on whichever Game came first in the list — an unanalysed one, so the pass saw no
+evaluation curve, no advantage bar and no severity glyph, which is exactly what HP-01's pass is the
+strongest of the three at seeing. It reported green, on the wrong Game. The pilot takes the choice
+from the scenario now (`agentic-tests` skill §5.8), but the *decision* is the scenario's; the Profile page is always reachable, since every scenario has selected a Profile before reading
 anything.
 
 Since US-11 the two profiles screens joined the inventory and **none was removed** — "Mes parties"
@@ -73,8 +77,10 @@ list is one row taller than the measurement above. The pairing rule is unchanged
 list only makes it stricter; what is added is that a site name is now **rendered text on these
 screens**, and must stay legible in both themes like any other ink.
 
-The **banner naming the current `Profile`** rides in the chrome of screens 1 to 6 and is deliberately
-absent from 7 and 8 — there the Profile is what the page is *about*. It is audited as chrome
+The **banner naming the current `Profile`** rides in the chrome of screens **1 to 7** and is
+deliberately absent from **8 and 9** — there the Profile is what the page is *about*. (Corrected
+2026-08-27: this said "1 to 6" and "7 and 8". Measured on the run: `[data-banner="profile"]` is
+present on Analyse too, and absent from Profils and Profil — which is also the more coherent rule.) It is audited as chrome
 wherever it appears: its label is words, never a tint (assertion 4), and its link must hold contrast
 in both themes like any other.
 

@@ -153,6 +153,10 @@ export async function runThemePass({
   screens = screensFromDoc(),
   profile,
   waitOptions,
+  /* Per-route openers, for the screens the navigation cannot reach. A scenario whose
+     assertions depend on *which* Game is opened must say so, or the pass will audit
+     whichever row happens to be first (measured 2026-08-27: an unanalysed one, twice). */
+  openers,
 }) {
   const source = themeAuditSource();
   const readings = [];
@@ -170,7 +174,7 @@ export async function runThemePass({
     for (const screen of screens) {
       let unreachable = null;
       try {
-        await reachScreen(session, { port, screen, waitOptions });
+        await reachScreen(session, { port, screen, waitOptions, openers });
       } catch (e) {
         unreachable = e.message;
       }
