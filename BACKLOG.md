@@ -78,10 +78,26 @@
   > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
   > et c'est voulu.
 
+
+## Doing
+
 - **US-22**: Rendre la route de lecture agréable à tenir sur trente coups — pour qu'annoter une
   partie entière soit un exercice et non une corvée.
-  > **Pas encore grillée.** Demandée le 2026-08-25, après revue d'US-16a livrée : « l'US-16a est
-  > bonne mais l'interface pourra être améliorée ».
+  > **Passée en Doing le 2026-08-27**, US-18 étant livrée. Branche d'intégration
+  > `integration/US-22-reading-route-density`, ouverte depuis `develop` à jour (`2f312fa`).
+  >
+  > **Pas encore grillée** — c'est l'étape suivante, et elle écrira son `CONTEXT.md`, ses ADR
+  > éventuelles et son PRD sur cette branche. Demandée le 2026-08-25, après revue d'US-16a livrée :
+  > « l'US-16a est bonne mais l'interface pourra être améliorée ».
+  >
+  > **Ce que la livraison d'US-18 lui apporte**, et qui n'existait pas quand elle a été demandée :
+  > la bibliothèque de pilotage rend une passe de thème sur les neuf écrans en **15,6 s** et un
+  > appel — or cette story est une story de **mise en page**, donc elle vivra ou mourra sur ce que
+  > la passe mesure (débordements, contrastes, indices non chromatiques). Deux findings du portail
+  > du 27/08 la concernent directement : `/profiles` **scrolle latéralement sous ~700 px**, et une
+  > carte `/danger` seule s'étire à 1233 × 1297 px. Aucun des deux n'est sur la route de lecture,
+  > mais tous deux disent que **la suite ne regarde qu'à 1280** — le grill devra décider si US-22
+  > élargit cela.
   >
   > ### Le défaut nommé : **le format de la page change à chaque coup cliqué**
   >
@@ -444,9 +460,9 @@
   > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
   > rien d'autre, ne prenne aucune décision que le dépôt contredit.
 
-## Doing
-
 ## In review
+
+## Done
 
 - **US-18**: Accélérer la suite HP — pour que la faire tourner ne coûte plus quarante minutes, sans
   rien céder de ce qu'elle teste.
@@ -599,8 +615,9 @@
   >
   > ---
   >
-  > **PR `integration → develop` : [#87](https://github.com/Rdulieu/chess-analyst/pull/87)**, ouverte le
-  > 2026-08-27, en attente de la décision humaine.
+  > **Livrée le 2026-08-27** — PR [#87](https://github.com/Rdulieu/chess-analyst/pull/87) mergée dans
+  > `develop` par le demandeur. Six tranches (PR #81 à #86, plus #88 pour le critère), portail HP
+  > 4/4 vert.
   >
   > ### Le portail du 2026-08-27 — le relevé, et ce qu'il dit
   >
@@ -691,8 +708,6 @@
   >   teste », ce que le PRD nommait déjà comme un résultat acceptable à condition d'être mesuré.
   >
   > </details>
-
-## Done
 
 - **US-16b**: Confronter ma lecture à celle du moteur, pour savoir où je lis bien et où je lis mal.
   > **Grillée le 2026-08-24.** Dépend d'US-16a et du relevé par Move d'US-15a (livrée).
