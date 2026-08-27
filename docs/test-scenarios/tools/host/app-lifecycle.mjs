@@ -26,13 +26,16 @@
  */
 
 import { spawn, execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readlinkSync, rmSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readlinkSync, realpathSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /* --------------------------------------------------------------- the database */
 
+/* stderr piped rather than inherited: every message this helper provokes is one it
+   turns into a thrown Error, and a green run that prints errors teaches nobody to read
+   them. */
 const sqlite3 = (args, options = {}) =>
-  execFileSync("sqlite3", args, { encoding: "utf8", ...options }).trim();
+  execFileSync("sqlite3", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...options }).trim();
 
 /**
  * What a database actually holds: a row count per user table.
@@ -149,8 +152,24 @@ export function holdersOf(port) {
  * about a process that was, and carried nothing identifying at all on both a vite and
  * a Chrome pid.
  */
-/** The only three places this app is ever started from. */
-export const ownDirectories = (root) => [root, join(root, "server"), join(root, "client")];
+/**
+ * The only three places this app is ever started from.
+ *
+ * The root is resolved first: `/proc/<pid>/cwd` is a resolved path, so a `repoRoot`
+ * given through a symlink compares equal to nothing and the caller spares its own app.
+ * That error goes the safe way — an orphan rather than a fratricide — and it is loud
+ * (both processes land in `spared`, `portsFree` is false, the next launch throws), but
+ * it is still one `realpathSync` away from not happening.
+ */
+export const ownDirectories = (root) => {
+  let real = root;
+  try {
+    real = realpathSync(root);
+  } catch {
+    /* a root that does not exist compares equal to nothing, which is the safe way */
+  }
+  return [real, join(real, "server"), join(real, "client")];
+};
 
 export function namesMe({ cwd = "", cmdline = "" } = {}, { port, root, dirs } = {}) {
   const byPort = port !== undefined && cmdline.includes(String(port));

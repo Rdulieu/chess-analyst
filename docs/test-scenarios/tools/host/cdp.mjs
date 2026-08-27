@@ -102,9 +102,18 @@ export async function launchBrowser({ cdpPort, userDataDir, chrome = findChrome(
   child.stderr.on("data", (b) => {
     stderr += b.toString();
   });
+  /*
+   * A browser that dies on its own is **recorded**, never thrown from here. Throwing
+   * inside an event listener is an `uncaughtException`: it kills the whole script, and
+   * since this slice made the app's children detached, the scenario then dies *before*
+   * `stopApp` and leaves an app orphaned on two ports. This was the last place where
+   * housekeeping could still fail a teardown; the crash surfaces on the next call
+   * instead, where it can be reported and where `stop()` still runs.
+   */
+  const crash = { seen: null };
   child.on("exit", (code) => {
     if (code !== null && code !== 0 && !child.stopping) {
-      throw new Error(`Chrome exited with ${code}: ${stderr.slice(-400)}`);
+      crash.seen = `Chrome exited on its own with ${code}: ${stderr.slice(-400)}`;
     }
   });
 
@@ -123,8 +132,9 @@ export async function launchBrowser({ cdpPort, userDataDir, chrome = findChrome(
     throw e;
   }
 
-  const session = await attach(page.webSocketDebuggerUrl);
+  const session = await attach(page.webSocketDebuggerUrl, crash);
   session.stop = stopper(child, profile, session, !userDataDir);
+  Object.defineProperty(session, "browserCrash", { get: () => crash.seen });
   session.profile = profile;
   return session;
 }
@@ -199,7 +209,7 @@ function stopper(child, profile, session, ours) {
 }
 
 /** One live websocket to one page target, and it stays open for the whole pass. */
-export async function attach(wsUrl) {
+export async function attach(wsUrl, crash = { seen: null }) {
   const ws = new WebSocket(wsUrl);
   const pending = new Map();
   const listeners = new Map();
@@ -280,6 +290,8 @@ export async function attach(wsUrl) {
    * swallowed it would hand back `undefined` and read as an empty measurement.
    */
   const evaluate = async (expression, { timeoutMs = 30000 } = {}) => {
+    /* Say the browser died rather than letting a dead socket produce a riddle. */
+    if (crash.seen) throw new Error(crash.seen);
     const { result, exceptionDetails } = await send("Runtime.evaluate", {
       expression,
       awaitPromise: true,
