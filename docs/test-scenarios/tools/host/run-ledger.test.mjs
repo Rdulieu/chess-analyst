@@ -214,3 +214,44 @@ describe("an HP scenario that was dispatched and never spoke", () => {
     expect(formatLedger(empty)).toMatch(/no.*turn|never spoke|nothing to cost/i);
   });
 });
+
+describe("the longest wait after a scenario has rendered its report", () => {
+  const minutes = (ms) => ms / 60000;
+
+  it("names the scenario that was left standing, instead of averaging it away", () => {
+    const { scenarios } = ledgerOfSession(FIXTURES);
+    const byName = Object.fromEntries(scenarios.map((s) => [s.description.slice(0, 5), s]));
+
+    // HP-03 rendered its report at 12:41:44Z and heard nothing until 13:15:28. Its two
+    // siblings were picked up in seconds. That is not a suite running long: it is one
+    // scenario waiting in the corridor, and only a per-scenario figure says so.
+    expect(minutes(byName["HP-03"].waitAfterReport)).toBeGreaterThan(33);
+    expect(minutes(byName["HP-01"].waitAfterReport)).toBeLessThan(0.2);
+    expect(minutes(byName["HP-02"].waitAfterReport)).toBeLessThan(1);
+    expect(new Date(byName["HP-03"].waitedFrom).toISOString()).toMatch(/T12:41:44/);
+  });
+
+  it("is the worst single stretch, never the tail — a transcript ends on what was written", () => {
+    const { scenarios } = ledgerOfSession(FIXTURES);
+    for (const s of scenarios) {
+      expect(s.waitAfterReport).toBeLessThanOrEqual(s.buckets.idleWait);
+      expect(s.waitAfterReport).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("is printed, because a figure nobody reads changes nothing", () => {
+    expect(formatLedger(ledgerOfSession(FIXTURES))).toMatch(/worst wait/i);
+  });
+});
+
+describe("costing a session that is not a Happy Path pass", () => {
+  it("costs every subagent when asked, so a Feature Path fan-out can be measured too", () => {
+    // The suite is not the only thing worth costing: slice 05's own Feature Path
+    // dispatches two ordinary subagents and needs the same figures about them.
+    const all = ledgerOfSession(FIXTURES, { every: true });
+
+    expect(all.found).toBe(true);
+    expect(all.scenarios.length + all.prerequisites.length).toBe(5);
+    expect(all.scenarios.map((s) => s.description)).toContain("FP US-16b tranche 01");
+  });
+});

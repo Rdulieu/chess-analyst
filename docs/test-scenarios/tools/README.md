@@ -55,7 +55,13 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   ```bash
   node docs/test-scenarios/tools/host/run-ledger.mjs            # sessions that hold a pass
   node docs/test-scenarios/tools/host/run-ledger.mjs <session>  # cost one of them
+  node docs/test-scenarios/tools/host/run-ledger.mjs --every <s>  # every subagent, not only the pass
   ```
+
+  Per agent it also prints the **worst wait**: the longest stretch during which that agent had
+  handed back and nothing came for it. At the 2026-08-25 gate that column read **33.5 minutes**
+  against 0.0 / 0.0 / 0.2 for the others — one scenario left standing while its siblings were
+  collected in seconds, and 31 of the requester's 74 minutes.
 
 - **`host/app-lifecycle.mjs`** — restore a snapshot, launch the app on ports and a database of
   your own, stop what you started. `restoreSnapshot` checkpoints the WAL, uses `.backup` rather
