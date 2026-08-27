@@ -149,27 +149,40 @@ export function holdersOf(port) {
  * about a process that was, and carried nothing identifying at all on both a vite and
  * a Chrome pid.
  */
-export function namesMe({ cwd = "", cmdline = "" } = {}, { port, root } = {}) {
+/** The only three places this app is ever started from. */
+export const ownDirectories = (root) => [root, join(root, "server"), join(root, "client")];
+
+export function namesMe({ cwd = "", cmdline = "" } = {}, { port, root, dirs } = {}) {
   const byPort = port !== undefined && cmdline.includes(String(port));
-  /* Where it *runs*, not what it mentions. A path in somebody's arguments is a
-     substring like a port number is, only longer — and measured 2026-08-27, a stranger
-     launched from /tmp with `<root>/docs` among its arguments was killed on that basis.
-     Both of this app's own processes are caught by `cwd` alone (`<root>/server` and
-     `<root>/client`); the command line never identified either. */
-  const byRoot = Boolean(root) && cwd.startsWith(root);
+  /*
+   * An **exact place**, not a prefix, and not something merely mentioned.
+   *
+   * Three shapes of the same mistake were killed off in turn, each measured: the port
+   * appearing in a stranger's arguments; the root appearing in them; and finally
+   * `cwd.startsWith(root)`, which adopts both a prefix neighbour (`US-18` and `US-18b`
+   * are one keystroke apart, and this repository really does name worktrees that way)
+   * and — the one that matters — **any worktree nested inside the root**. The worktrees
+   * of this repository live under `<main>/.claude/worktrees/`, so an agent working from
+   * the main checkout would have stopped a colleague's server believing it was its own.
+   * A trailing slash does not fix that; only an exact directory does.
+   *
+   * `launchApp` starts the app from exactly three places, so those three are the proof.
+   */
+  const places = dirs || (root ? ownDirectories(root) : []);
+  const byRoot = places.includes(cwd);
   if (byRoot) {
     return {
       mine: true,
       why: byPort
-        ? `it runs under ${root} and its command line names port ${port}`
-        : `it runs under ${root}`,
+        ? `it runs from ${cwd}, which is one of my own directories, and its command line names port ${port}`
+        : `it runs from ${cwd}, which is one of my own directories`,
     };
   }
   return {
     mine: false,
     why: byPort
-      ? `its command line mentions port ${port}, but that is not a proof of ownership — it does not run under ${root || "any root I was given"}`
-      : `nothing about it names me: its working directory is ${cwd || "unknown"} and it does not run under ${root || "any root I was given"}`,
+      ? `its command line mentions port ${port}, but that is not a proof of ownership — it runs from ${cwd || "somewhere unreadable"}, which is not one of my own directories (${places.join(", ") || "none given"})`
+      : `nothing about it names me: it runs from ${cwd || "somewhere unreadable"}, which is not one of my own directories (${places.join(", ") || "none given"})`,
   };
 }
 

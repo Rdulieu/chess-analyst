@@ -57,7 +57,14 @@ async function walHotDatabase(name = "source.db") {
    */
   const ready = () => {
     try {
-      return execFileSync("sqlite3", [file, "SELECT count(*) FROM evaluations;"], { encoding: "utf8" }).trim() === "2";
+      // stderr piped, not inherited: until the table exists the probe prints
+      // "no such table", and a green run that writes errors teaches nobody to read them.
+      return (
+        execFileSync("sqlite3", [file, "SELECT count(*) FROM evaluations;"], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        }).trim() === "2"
+      );
     } catch {
       return false;
     }
@@ -215,5 +222,35 @@ describe("what stopApp refuses to do quietly", () => {
   it("does not take a path mentioned in a stranger's arguments as proof of ownership", () => {
     const stranger = { cwd: "/tmp", cmdline: "python3 -m http.server 3222 --directory /home/x/US-18/docs" };
     expect(namesMe(stranger, { port: 3222, root: "/home/x/US-18" }).mine).toBe(false);
+  });
+});
+
+describe("the proof of ownership is an exact place, not a prefix", () => {
+  const ROOT = "/home/x/.claude/worktrees/US-18";
+
+  it("accepts the three directories this app actually runs from", () => {
+    for (const cwd of [ROOT, `${ROOT}/server`, `${ROOT}/client`]) {
+      expect(namesMe({ cwd, cmdline: "node whatever" }, { root: ROOT }).mine).toBe(true);
+    }
+  });
+
+  it("refuses a neighbour whose path merely starts the same way", () => {
+    // This repository names its worktrees US-15a, US-16a, US-16b: `US-16` and `US-16a`
+    // are one keystroke apart and one is a prefix of the other.
+    const neighbour = { cwd: "/home/x/.claude/worktrees/US-18b/server", cmdline: "node server" };
+    expect(namesMe(neighbour, { root: ROOT }).mine).toBe(false);
+  });
+
+  it("refuses a worktree nested inside the root — the case that would kill a colleague's server", () => {
+    /*
+     * Measured 2026-08-27, and it is not hypothetical: the worktrees of this repository
+     * live INSIDE the main checkout, so `<main>/.claude/worktrees/US-18/server` starts
+     * with `<main>`. An agent working from the main checkout — the ordinary case —
+     * would have stopped a worktree agent's server as if it were its own. A trailing
+     * slash does not fix this; only an exact place does.
+     */
+    const main = "/home/x/chess-analyst";
+    const inAWorktree = { cwd: `${main}/.claude/worktrees/US-18/server`, cmdline: "node server" };
+    expect(namesMe(inAWorktree, { root: main }).mine).toBe(false);
   });
 });
