@@ -49,19 +49,32 @@ export function findChrome(home = process.env.HOME) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function waitForJson(url, deadlineMs) {
+/**
+ * Wait for what is actually needed, not for the endpoint to answer.
+ *
+ * `/json/list` starts answering before Chrome has registered its first page target, so
+ * a launch that only waited for a response sometimes got an empty list and failed with
+ * "exposes no page target" — a flake, and the kind that reads as a broken helper.
+ */
+async function waitForPageTarget(cdpPort, deadlineMs) {
+  const url = `http://127.0.0.1:${cdpPort}/json/list`;
   const until = Date.now() + deadlineMs;
   let last;
   while (Date.now() < until) {
     try {
       const res = await fetch(url);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const page = (await res.json()).find((t) => t.type === "page");
+        if (page) return page;
+      }
     } catch (e) {
       last = e;
     }
     await sleep(100);
   }
-  throw new Error(`${url} never answered within ${deadlineMs} ms${last ? ` (${last.message})` : ""}`);
+  throw new Error(
+    `Chrome on ${cdpPort} exposed no page target within ${deadlineMs} ms${last ? ` (${last.message})` : ""}`,
+  );
 }
 
 /**
@@ -122,9 +135,7 @@ export async function launchBrowser({ cdpPort, userDataDir, chrome = findChrome(
      the success path, which is the path that needs it least. */
   let page;
   try {
-    const targets = await waitForJson(`http://127.0.0.1:${cdpPort}/json/list`, 20000);
-    page = targets.find((t) => t.type === "page");
-    if (!page) throw new Error(`Chrome on ${cdpPort} exposes no page target.`);
+    page = await waitForPageTarget(cdpPort, 20000);
   } catch (e) {
     child.stopping = true;
     child.kill("SIGKILL");

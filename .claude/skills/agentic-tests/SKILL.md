@@ -471,6 +471,7 @@ the only part that produces findings.
 | Restore, launch, stop the app | `host/app-lifecycle.mjs` | `restoreSnapshot`, `readBack`, `launchApp`, `stopApp`, `holdersOf`, `namesMe`, `describeProcess` |
 | A private Chrome, and one CDP session kept alive | `host/cdp.mjs` | `launchBrowser`, `attach`, `open`, `setViewport`, `emulateTheme`, `session.evaluate`, `session.stop` |
 | The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md` in both themes, eighteen raw readings |
+| Navigate, and read a field back | `host/navigate.mjs` + `page/app-driver.js` | `followNav`, `reachScreen`, `selectProfile`, `setField`, `waitForScreen`, `guarded` |
 | What a pass cost, after the fact | `host/run-ledger.mjs` | per scenario the wall and five buckets; the suite's lived and worked walls |
 
 ```js
@@ -502,9 +503,16 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   directly. Previous runs each installed a driver into a scratch directory of their own.
 - **The inventory of screens is read from `theme-pass.md`**, never copied. That document stays the
   one place the screens are edited.
+- **A field is read back before anything is submitted.** `setField` puts the value in through the
+  native setter, reads it out again, and **throws** if it did not take. The import form's month
+  fields keep their default when a driver assigns `value` — measured 2026-08-19, where a run nearly
+  imported the wrong months for a reason that had nothing to do with the app.
+- **Navigation happens in the page, not at the driver.** Driver-level navigation is the operation
+  that lands on the wrong page. And the Game row is a `button`, not a link: a driver hunting for an
+  `href` records `Analyse` as unreachable.
 - **It throws rather than hand back a thinner green.** The port guard and the in-script theme
   assertion are both live: falsify the emulation and the call fails with the theme it actually
-  measured. Measured 2026-08-27: eighteen audits over nine screens in **15 seconds**.
+  measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**.
 - **"The screen has rendered" is two conditions, not one** — and getting that wrong is the defect
   this slice's own Feature Path caught. Text stability alone is satisfied *instantly* by a loading
   placeholder: "Chargement du bilan…" holds perfectly steady, so `/confrontation` was audited at
