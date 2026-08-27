@@ -189,6 +189,15 @@ perfectly still, and a wait that watches only the DOM audits it as though it wer
 
 ### What not to trim
 
+- **Do not compress the agent's own analysis** (added 2026-08-27, US-18). It is the **smallest** of
+  the three costs of a run — 17-19 % of the wall, against 39-48 % for tool round-trips and 32-39 %
+  for composing driver scripts — and it is the **only one that produces findings**. US-18 attacked
+  the first two on purpose and left this one alone: a suite whose analysis is shortened stays green
+  and stops looking, which is worse than a suite that is slow. Concretely: do not tell a scenario's
+  agent to hurry, do not lower its effort or its model to save minutes, and do not replace its
+  reading of a screen with a helper that decides for it (ADR-0020). Across the four Feature Paths of
+  US-18, **every defect found was in the tooling and none in the application** — that is what
+  analysis time buys.
 - **Do not lower the engine depth.** `Inaccuracy`/`Mistake`/`Blunder` thresholds derive from
   depth-16 winning chances (CONTEXT.md); a shallower run no longer tests the same thing.
 - **Do not swap in a fixture archive.** HP runs exist to exercise the real chess.com contract; that
