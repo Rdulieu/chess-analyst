@@ -312,6 +312,24 @@ section[aria-label="partie"] {
   }
 }
 
+// The keyboard, said on the screen (US-22). Muted like the other notices — it
+// states what is available, it warns about nothing — and the keys drawn as keys,
+// because a `kbd` that looks like prose is a shortcut nobody notices. No new
+// token: the border, the radius and the small size are the ones this pane
+// already uses.
+[data-part="shortcuts"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
+
+  kbd {
+    font-family: var(--mono);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding-inline: var(--space-1);
+  }
+}
+
 // "Notes are never graded" — the sentence that makes the Player willing to
 // write. Muted, because it states a rule rather than warning about anything.
 // Beside it, since US-22, whether the Note is written down: the same treatment,

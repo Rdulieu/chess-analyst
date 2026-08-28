@@ -1195,3 +1195,168 @@ describe("what the Player clicks never moves (ADR-0021)", () => {
     expect(legendOf()?.textContent).toBe("Mon verdict — coups adverses non notés");
   });
 });
+
+describe("posing a verdict from the keyboard (US-22)", () => {
+  const verdicts = () => screen.getByRole("group", { name: /mon verdict/i });
+  const checked = () =>
+    within(verdicts())
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked)
+      .map((r) => (r as HTMLInputElement).value);
+
+  it("poses the five verdicts on 1 to 5, in the order the screen shows them", async () => {
+    // Criterion 40 of US-16a wanted "few clicks, Move after Move". It was held for
+    // the verdict alone, and with a mouse — the app had no keyboard shortcut at
+    // all, and this is its first. The order is the glossary's, worst to best, so
+    // there is nothing arbitrary to memorise: what the screen shows top to bottom
+    // is what `1` to `5` pose.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.keyboard("1");
+    await waitFor(() => expect(checked()).toEqual(["blunder"]));
+
+    await user.keyboard("5");
+    await waitFor(() => expect(checked()).toEqual(["good"]));
+  });
+
+  it("does not move the focus, which is what lets the loop run at all", async () => {
+    // Posing a verdict from the keyboard is a COMMAND, not a click. If it moved
+    // the focus into the radio group, the arrows would then walk the five values
+    // instead of changing Move — and "verdict, next Move, verdict" would stop
+    // after the first verdict.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const before = document.activeElement;
+    await user.keyboard("2");
+    await waitFor(() => expect(checked()).toEqual(["mistake"]));
+    expect(document.activeElement).toBe(before);
+  });
+
+  it("runs the loop: verdict, next Move, verdict, without a single click", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(screen.getByLabelText("current move").textContent).toContain("e4"));
+    await user.keyboard("3");
+    await waitFor(() => expect(checked()).toEqual(["inaccuracy"]));
+
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(screen.getByLabelText("current move").textContent).toContain("e5"));
+    await user.keyboard("1");
+    await waitFor(() => expect(checked()).toEqual(["blunder"]));
+
+    await user.keyboard("{ArrowLeft}");
+    await waitFor(() => expect(checked()).toEqual(["inaccuracy"]));
+  });
+
+  it("toggles the Key moment on k", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const pivot = () => screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement;
+    await user.keyboard("k");
+    await waitFor(() => expect(pivot().checked).toBe(true));
+    await user.keyboard("k");
+    await waitFor(() => expect(pivot().checked).toBe(false));
+  });
+
+  it("is inert while a Note is being typed — the keys write text and nothing else", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.click(box);
+    await user.keyboard("1 coup sur 5, k{ArrowLeft}");
+
+    expect((box as HTMLTextAreaElement).value).toContain("1 coup sur 5, k");
+    expect(checked()).toEqual([]);
+    expect((screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement).checked).toBe(
+      false,
+    );
+    // And the arrow moved the caret, not the Move.
+    expect(screen.getByLabelText("current move").textContent).toContain("e4");
+  });
+
+  it("leaves a focused radio group its arrows — the app takes no arrow it is offered", async () => {
+    // The convention assistive technology takes for granted: inside a radio
+    // group, the arrows walk the group. The app's job is to keep its hands off,
+    // and that is what is asserted here — the *walking* is the browser's, and
+    // jsdom's user-event cannot simulate it (it throws inside `walkRadio`), so a
+    // raw keydown is used and the assertion is that the Move did not change.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const radio = within(verdicts()).getAllByRole("radio")[0];
+    await user.click(radio);
+    expect(checked()).toEqual(["blunder"]);
+
+    const event = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+    radio.dispatchEvent(event);
+
+    // Not ours: not swallowed, and the Move stayed where it was.
+    expect(event.defaultPrevented).toBe(false);
+    expect(screen.getByLabelText("current move").textContent).toContain("e4");
+  });
+
+  it("poses no verdict at the starting Position, where there is no Move to judge", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.keyboard("1");
+    await user.keyboard("k");
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+  });
+
+  it("says on the screen that the shortcuts exist, because one discovered by accident does not", async () => {
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const notice = document.querySelector('[data-part="shortcuts"]');
+    expect(notice?.textContent).toContain("1");
+    expect(notice?.textContent).toContain("5");
+    expect(notice?.textContent).toMatch(/moment clé/i);
+    // The same sentence in every state, so it can never move anything.
+    expect(document.querySelectorAll('[data-part="shortcuts"]')).toHaveLength(1);
+  });
+
+  it("writes into the posterior layer after the seal, exactly as the mouse does", async () => {
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.keyboard("5");
+    await waitFor(() => expect(checked()).toEqual(["good"]));
+    // The sealed layer is beside it, untouched.
+    expect(document.querySelector('[data-part="sealed-mark"]')?.textContent).toContain("Erreur");
+  });
+});
