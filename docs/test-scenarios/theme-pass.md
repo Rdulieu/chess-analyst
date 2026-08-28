@@ -107,8 +107,15 @@ width (332 / 333 px) and the reading panel has the same amplitude — the row ha
 cases. A third width would cost another nine screens per theme and see nothing the second does not.
 
 The price is measured too, on the run of 2026-08-27: **+23,6 s of driving** (20,8 → 44,4 s, ×2,14)
-for eighteen more readings, sixteen of them clean. The number that will matter the day this becomes
+for eighteen more readings, sixteen of them clean — and re-measured on the run that adopted the
+width (2026-08-28): **16,3 → 35,3 s, ×2,17**, the same ratio on a faster machine, with all eighteen
+clean once `/profiles` was sized like a table. The number that will matter the day this becomes
 expensive is not the seconds — it is the **readings a human has to read**.
+
+**Below 380 px the page does scroll sideways again** — measured at 280 px on 2026-08-28: 282 px of
+document against a 280 px viewport, two pixels, seven boxes flagged, in both themes. That is outside
+the two declared widths and contradicts nothing above; it is written down so that a third width, if
+one is ever proposed, starts from what is known rather than from a surprise.
 
 > **This is not a mobile target.** It is one narrow window on the same desktop browser: no touch
 > gesture, no orientation, no device. What is asserted at 380 px is what is asserted at 1280.
