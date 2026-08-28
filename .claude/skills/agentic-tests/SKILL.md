@@ -553,6 +553,16 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   eight. A target absent at a ply (the verdict fieldset does not exist at the starting Position) is
   reported **absent**, never folded into a zero — otherwise ply 0 reads as the most stable transition
   there is.
+- **`launchBrowser` returns the session itself**, carrying `.stop` — not a `{ session }` wrapper.
+  Destructuring it as one throws *before* whatever `try` was meant to guard the teardown, and leaves
+  a Chrome holding the CDP port (2026-08-28; recovered by proving the pid's own `--user-data-dir` in
+  `/proc/<pid>/cmdline`).
+- **A screenshot can be a measurement that measured nothing.** `Page.captureScreenshot`'s `clip` is
+  in **page** coordinates and needs `captureBeyondViewport: true` for anything below the fold —
+  without it the PNG comes back the right size and entirely blank (2026-08-28). Worth knowing here
+  because judging a glyph at its real size is the one check no assertion can replace: the FP of
+  US-16a passed "nothing by tint alone" to the letter while shipping two pencils the eye could not
+  tell apart.
 - **A field is read back before anything is submitted.** `setField` puts the value in through the
   native setter, reads it out again, and **throws** if it did not take. The import form's month
   fields keep their default when a driver assigns `value` — measured 2026-08-19, where a run nearly
