@@ -159,6 +159,12 @@ one is ever proposed, starts from what is known rather than from a surprise.
    carrying a sealed mark and one carrying none — that is the richest state, and the sealed
    readout's height depends on its own content.
 
+   **It is not asserted on the nine screens, and it has one caller.** The reading route is not in
+   the inventory — it is Game-scoped and only HP-03 reaches it — so this is the one assertion of
+   this document that belongs to a single scenario. It is written here because this is where the
+   assertions are edited; it is **played at HP-03's step 16**, and if that step ever disappears the
+   assertion has stopped running whatever this list says.
+
    This assertion exists because the principle was **stated and guarded by nobody**. US-14 already
    held that hiding annotations must not move the Position being read; it was held above the
    diagram, by document order, and never applied from one ply to the next — and eighteen months
