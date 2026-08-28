@@ -314,6 +314,30 @@
   >
   >   On peut s'arrêter après la 2 et avoir gagné l'essentiel.
   >
+  > #### Les cinq sous-issues
+  >
+  > Créées le 2026-08-27 sur `integration/US-22-reading-route-density`, toutes `ready-for-agent`,
+  > toutes **AFK** — le grill a tranché, il ne reste aucun arbitrage humain en cours de route.
+  > PRD : `.scratch/reading-route-density/PRD.md`, issues dans `.scratch/reading-route-density/issues/`.
+  >
+  > | # | Tranche | Bloquée par | Stories |
+  > | --- | --- | --- | --- |
+  > | 01 | `the-suite-looks-at-a-narrow-screen` — la seconde largeur, et `/profiles` qui cesse de déborder | — | 23, 24 |
+  > | 02 | `what-the-player-clicks-stops-moving` — l'ordre, la légende, l'assertion 7 | 01 | 1-7, 25-27, 29 |
+  > | 03 | `the-move-list-says-which-verdict` — les cinq glyphes | 02 | 8-12, 30, 31 |
+  > | 04 | `a-note-is-never-lost` — validée en quittant | 02 | 13-15 |
+  > | 05 | `a-verdict-from-the-keyboard` — les commandes clavier | 02 | 16-22 |
+  >
+  > **La chaîne `01 → 02 → {03, 04, 05}` n'est pas de la prudence.** 01 d'abord parce qu'une assertion
+  > posée à 1280 px ne garderait que le cas le plus facile — l'amplitude y est de 194 px contre 312 sous
+  > 900. 02 avant les trois autres parce que chacune **ajoute** au panneau — une marque, une
+  > confirmation d'enregistrement, une annonce de raccourcis — et qu'ajouter sans garde est exactement
+  > ce qui a produit le défaut. On peut s'arrêter après 02 et avoir gagné l'essentiel ; 03, 04 et 05
+  > sont indépendantes entre elles.
+  >
+  > **La 02 n'est pas divisible** : la notice de coup adverse cause 33 des 45 sauts, donc l'assertion ne
+  > peut pas être verte sans elle — et une tranche ne fusionne pas avec une assertion rouge.
+  >
   > #### Ce qui sort des pistes
   >
   > **« Replier la couche scellée »** est retiré : elle existait parce que le relevé scellé poussait
