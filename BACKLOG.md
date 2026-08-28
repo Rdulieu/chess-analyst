@@ -86,8 +86,8 @@
   > **Passée en Doing le 2026-08-27**, US-18 étant livrée. Branche d'intégration
   > `integration/US-22-reading-route-density`, ouverte depuis `develop` à jour (`2f312fa`).
   >
-  > **Pas encore grillée** — c'est l'étape suivante, et elle écrira son `CONTEXT.md`, ses ADR
-  > éventuelles et son PRD sur cette branche. Demandée le 2026-08-25, après revue d'US-16a livrée :
+  > **Grillée le 2026-08-27** — voir le relevé et les neuf décisions plus bas. Le PRD reste à
+  > produire (`/to-prd`), puis les sous-issues (`/to-issues`). Demandée le 2026-08-25, après revue d'US-16a livrée :
   > « l'US-16a est bonne mais l'interface pourra être améliorée ».
   >
   > **Ce que la livraison d'US-18 lui apporte**, et qui n'existait pas quand elle a été demandée :
@@ -220,6 +220,103 @@
   > 2. **La mesure de la première tranche reste faite tôt si l'occasion se présente** — elle vaut
   >    dans les deux ordres, et une mesure avant 16b donne un point de comparaison qu'on ne pourra
   >    plus obtenir après.
+  >
+  >
+  > ---
+  >
+  > ### Grillée le 2026-08-27 — la mesure, puis neuf décisions
+  >
+  > ADR : [`0021-what-the-player-acts-on-never-moves`](docs/adr/0021-what-the-player-acts-on-never-moves.md)
+  > et [`0022-the-declared-verdict-wears-the-severity-glyph`](docs/adr/0022-the-declared-verdict-wears-the-severity-glyph.md).
+  > `CONTEXT.md` **inchangé** : tout ce qui a été tranché est de la mise en page, et le glossaire ne
+  > porte que le domaine.
+  >
+  > #### La mesure, faite au grill plutôt que promise à une tranche
+  >
+  > Partie 166, lecture **scellée** avec sa couche postérieure, 46 plys parcourus, trois largeurs,
+  > deux thèmes. Consignée ici parce que les transcripts qui la portent s'effacent après 30 jours.
+  >
+  > | largeur | hauteur du panneau | amplitude | déplacement du stepper | débordement latéral |
+  > | --- | --- | --- | --- | --- |
+  > | 1400 | 310 → 504 px | **194 px** | 590 → 784 px | non |
+  > | 900 | 411 → 723 px | **312 px** | 691 → 1003 px | non |
+  > | 380 | 411 → 723 px | **312 px** | 1129 → 1442 px | non |
+  >
+  > **45 transitions de coup sur 45 déplacent le stepper** — 33 × 28 px, 6 × 48 px, 3 × 24 px,
+  > 2 × 80 px, 1 × 114 px. Le défaut n'est pas intermittent : la notice « coup adverse » *alterne*,
+  > donc elle **change à chaque** transition. Deux faits que la mesure ajoute au diagnostic du
+  > backlog : `Board.tsx` rend `controls?.(index)` **au-dessus du stepper dans le même volet**, donc
+  > ce sont les boutons qu'on est en train de cliquer qui se déplacent ; et l'amplitude **grandit**
+  > quand l'écran rétrécit (194 → 312 px), le texte se repliant. À 900 et à 380 le volet fait la même
+  > largeur (332 / 333 px) et le panneau la même amplitude : **une seule largeur étroite les couvre
+  > toutes deux**.
+  >
+  > #### Les décisions
+  >
+  > - **D1 — Une seule story.** Le demandeur garde ensemble la correction (critère binaire) et la
+  >   refonte (arbitrages ouverts), parce que le joueur vit une seule gêne. Conséquence assumée : la
+  >   story mêle deux natures de risque, d'où l'ordre des tranches ci-dessous.
+  > - **D2 — Les contrôles d'abord, la prose ensuite** (ADR-0021). La règle porte sur l'**ordre**,
+  >   pas sur la hauteur. Réserver une hauteur fixe est **écarté** : 194 à 312 px de colonne vide là
+  >   où la place manque le plus, et le relevé scellé n'a pas de maximum connaissable.
+  > - **D3 — La notice de coup adverse passe dans la légende**, raccourcie en « coups adverses non
+  >   notés » (décision du demandeur). Mesuré : les trois légendes tiennent sur **une ligne aux trois
+  >   largeurs**. La combinaison avec l'état postérieur se replierait (+19 px sous 900 px) — elle
+  >   n'existe pas, parce qu'**après scellement rien n'est compté** (`personal/confrontation.ts:298`
+  >   écarte les marques postérieures), donc la clause adverse y est redondante.
+  > - **D4 — La garde est permanente.** `theme-pass.md` gagne une assertion : parcourir les plys et
+  >   exiger **0 px** de déplacement des contrôles de pas et du fieldset de verdict. Le précédent
+  >   décide : US-14 avait énoncé le principe et personne ne l'a gardé d'un coup au suivant.
+  > - **D5 — La passe de thème gagne une seconde largeur, 380 px**, sur les neuf écrans. Mesuré :
+  >   +23,6 s de pilotage (20,8 → 44,4 s, ×2,14) pour 18 relevés de plus, dont **16 propres**. Les
+  >   deux autres nomment un seul défaut réel — `/profiles` déborde, page 676 px contre 380 — que la
+  >   passe attrape donc toute seule. **`/profiles` entre dans le périmètre d'US-22** pour que la
+  >   suite soit verte le jour de l'adoption plutôt que de porter une exception.
+  > - **D6 — La note se valide en quittant le champ ou le coup.** Le grief réel n'était pas le clic
+  >   de trop : `NoteEditor` remet le brouillon à la valeur stockée sur `[ply, note]`, donc **cliquer
+  >   « Next » avec une note non enregistrée la perd en silence**. Rouvre le critère 20 d'US-16a, que
+  >   le bouton explicite lisait strictement.
+  > - **D7 — Raccourcis clavier : des commandes globales qui ne déplacent pas le focus.** `1`–`5`
+  >   posent le verdict dans l'ordre affiché (pire → meilleur), les flèches changent de coup tant que
+  >   le focus n'est pas dans un contrôle, `k` bascule le moment clé, tout est inerte pendant qu'on
+  >   tape une note. Un groupe de radios garde ses flèches natives quand il a le focus — les leur
+  >   retirer casserait une convention que rien dans la suite ne surveille.
+  > - **D8 — La liste des coups porte les cinq glyphes de verdict** (ADR-0022) : `?!` `?` `??`
+  >   partagés avec le moteur, plus `!` pour `Bon` et `✓` pour `Correct`. Renverse une décision
+  >   d'US-16a écrite dans `MoveMarks.tsx`, parce que la confusion qu'elle craignait n'a **aucun
+  >   écran** où se produire. **La liste devient du même geste la vue d'ensemble** que la story
+  >   cherchait — sans ajouter de bloc au panneau qu'elle allège.
+  > - **D9 — Ordre des tranches : le regard d'abord, puis la stabilité.** Une tranche ne peut pas
+  >   fusionner avec une assertion rouge, donc la garde voyage avec son correctif.
+  >
+  >   1. `/profiles` tient à 380 px **+** la seconde largeur → la suite voit enfin l'étroit
+  >   2. contrôles d'abord + légende + **assertion 7**, verte du premier coup
+  >   3. les cinq glyphes dans la liste des coups
+  >   4. la note validée en quittant
+  >   5. le clavier
+  >
+  >   On peut s'arrêter après la 2 et avoir gagné l'essentiel.
+  >
+  > #### Ce qui sort des pistes
+  >
+  > **« Replier la couche scellée »** est retiré : elle existait parce que le relevé scellé poussait
+  > les contrôles, et l'ADR-0021 le place en dessous. S'il faut encore la replier ce sera pour le
+  > confort de lecture, pas pour la stabilité — à redemander le cas échéant.
+  >
+  > **« Le panneau ailleurs qu'à côté de l'échiquier »** devient sans objet : sous ~900 px la rangée
+  > se replie déjà et le panneau prend toute la largeur ; ce qui gênait était le déplacement du
+  > stepper, que D2 supprime.
+  >
+  > #### Ce que le grill a trouvé et qui n'était pas dans l'entrée
+  >
+  > - Le stepper est **dans le même volet, sous le panneau** — le défaut touche les boutons qu'on
+  >   clique, pas seulement la mise en page.
+  > - Une **note tapée et non enregistrée est perdue en silence** au changement de coup.
+  > - `/profiles` **déborde à 380 px** dans les deux thèmes, et la seconde largeur l'attrape seule.
+  > - Les trois autres notices atténuées (« les notes ne sont jamais notées », le pivot du moment
+  >   clé, la couche postérieure) ne coûtent plus la stabilité une fois sous les contrôles ; elles
+  >   coûtent encore de la hauteur. **Non tranché** : les dire moins souvent reste une piste ouverte,
+  >   sous le garde-fou n°1 — moins souvent, jamais moins clairement.
   >
   > ### Ce que cette story ne couvre pas
   >
