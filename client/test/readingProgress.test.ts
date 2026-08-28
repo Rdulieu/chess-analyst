@@ -66,30 +66,43 @@ describe("how far a reading has got", () => {
  */
 describe("what a ply carries", () => {
   it("reports nothing for a ply nobody wrote on", () => {
-    expect(markKinds([], 3)).toEqual({ verdict: false, note: false, keyMoment: false });
+    expect(markKinds([], 3)).toEqual({ verdict: null, note: false, keyMoment: false });
   });
 
-  it("tells the three kinds apart", () => {
+  it("tells the three kinds apart, and says WHICH verdict", () => {
+    // The verdict stopped being a boolean in US-22: the move list draws the value
+    // itself, because "a verdict exists here" sent the Player to open the Move.
     const marks = [
       mark({ ply: 1, declaredSeverity: "mistake" }),
       mark({ ply: 2, note: "pourquoi" }),
       mark({ ply: 3, keyMoment: true }),
     ];
 
-    expect(markKinds(marks, 1)).toEqual({ verdict: true, note: false, keyMoment: false });
-    expect(markKinds(marks, 2)).toEqual({ verdict: false, note: true, keyMoment: false });
-    expect(markKinds(marks, 3)).toEqual({ verdict: false, note: false, keyMoment: true });
+    expect(markKinds(marks, 1)).toEqual({ verdict: "mistake", note: false, keyMoment: false });
+    expect(markKinds(marks, 2)).toEqual({ verdict: null, note: true, keyMoment: false });
+    expect(markKinds(marks, 3)).toEqual({ verdict: null, note: false, keyMoment: true });
   });
 
   it("reports all three when one ply carries all three", () => {
     const marks = [mark({ ply: 1, declaredSeverity: "good", note: "n", keyMoment: true })];
 
-    expect(markKinds(marks, 1)).toEqual({ verdict: true, note: true, keyMoment: true });
+    expect(markKinds(marks, 1)).toEqual({ verdict: "good", note: true, keyMoment: true });
   });
 
   it("folds the two layers together: a ply written on after the seal is still written on", () => {
     const marks = [mark({ ply: 1, note: "après coup", posterior: true })];
 
-    expect(markKinds(marks, 1)).toEqual({ verdict: false, note: true, keyMoment: false });
+    expect(markKinds(marks, 1)).toEqual({ verdict: null, note: true, keyMoment: false });
+  });
+
+  it("draws the LATER layer's verdict when both speak — what the Player says now", () => {
+    // The same rule the panel's own controls follow after the seal. It loses
+    // nothing the list used to carry: `⚖` named no layer either.
+    const marks = [
+      mark({ ply: 1, declaredSeverity: "mistake", posterior: false }),
+      mark({ ply: 1, declaredSeverity: "blunder", posterior: true }),
+    ];
+
+    expect(markKinds(marks, 1).verdict).toBe("blunder");
   });
 });

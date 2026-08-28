@@ -1,4 +1,4 @@
-import type { PersonalMark } from "../../types";
+import type { DeclaredSeverity, PersonalMark } from "../../types";
 
 /** How far the Player has got in writing their reading, figures beside the share. */
 export interface ReadingProgress {
@@ -41,7 +41,12 @@ export function readingProgress(marks: PersonalMark[], moves: number): ReadingPr
 
 /** Which kinds of mark a ply carries — the three, told apart. */
 export interface MarkKinds {
-  verdict: boolean;
+  /**
+   * **Which** verdict, not merely that there is one: the move list is the
+   * Player's overview of their own reading, and `a verdict exists here` sent
+   * them to open the Move to find out which (US-22).
+   */
+  verdict: DeclaredSeverity | null;
   note: boolean;
   keyMoment: boolean;
 }
@@ -50,12 +55,23 @@ export interface MarkKinds {
  * What the Player has written on one ply, **both layers folded together**: the
  * move list answers *where did I write*, and a Move written on after the seal is
  * still a Move written on. Which layer it was is the reading panel's business,
- * not the list's.
+ * not the list's — so `note` and `keyMoment` ask only whether either layer says
+ * it, and the verdict draws the later of the two.
  */
 export function markKinds(marks: PersonalMark[], ply: number): MarkKinds {
   const onPly = marks.filter((m) => m.ply === ply);
+  /*
+   * When both layers speak, the **later** one is drawn — the same rule the
+   * panel's own controls follow (`markAt(reading, ply, sealedAt !== null)`), so
+   * the list says what the Player currently says about the Move. It is not a new
+   * decision, and it loses nothing the list used to carry: `⚖` named no layer
+   * either. Telling the two layers apart *in the list* stays an open finding of
+   * the 2026-08-27 portal, and is not this slice's to close.
+   */
+  const withVerdict = onPly.filter((m) => m.declaredSeverity !== null);
+  const latest = withVerdict.find((m) => m.posterior) ?? withVerdict[0];
   return {
-    verdict: onPly.some((m) => m.declaredSeverity !== null),
+    verdict: latest?.declaredSeverity ?? null,
     note: onPly.some((m) => m.note !== null),
     keyMoment: onPly.some((m) => m.keyMoment),
   };
