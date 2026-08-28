@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-22-reading-route-density` le 2026-08-28 (FP verte ; deux findings de la FP corrigés dans la tranche)
 
 ## Parent
 
@@ -43,14 +43,14 @@ lire, et c'est assez pour un premier temps.
 
 ## Acceptance criteria
 
-- [ ] Les cinq verdicts portent chacun leur glyphe dans la liste des coups
-- [ ] Chaque glyphe garde son **nom accessible**, et aucune teinte n'est le seul indice (ADR-0013)
-- [ ] Un coup jugé `Correct` porte une marque ; un coup jamais regardé n'en porte aucune
-- [ ] Verdict, `Note` et `Key moment` se distinguent **à l'œil** à la taille réelle, pas seulement au nom
-- [ ] Les trois familles peuvent cohabiter sur un même coup sans se confondre
-- [ ] Le commentaire d'US-16a qui interdisait ce vocabulaire est **retiré**, pas laissé à contredire le code
-- [ ] La couche postérieure au scellement reste distinguable de la couche scellée dans la liste
-- [ ] L'assertion 7 reste verte : la liste ne fait bouger aucun contrôle
+- [x] Les cinq verdicts portent chacun leur glyphe dans la liste des coups
+- [x] Chaque glyphe garde son **nom accessible**, et aucune teinte n'est le seul indice (ADR-0013)
+- [x] Un coup jugé `Correct` porte une marque ; un coup jamais regardé n'en porte aucune
+- [x] Verdict, `Note` et `Key moment` se distinguent **à l'œil** à la taille réelle, pas seulement au nom
+- [x] Les trois familles peuvent cohabiter sur un même coup sans se confondre
+- [x] Le commentaire d'US-16a qui interdisait ce vocabulaire est **retiré**, pas laissé à contredire le code
+- [x] La couche postérieure au scellement reste distinguable de la couche scellée dans la liste — au sens strict de « pas aggravée » : la liste dessine la couche **notée**, donc elle ne contredit plus ce que la `Confrontation` compte. Les distinguer *dans la liste* reste le finding ouvert du portail du 2026-08-27, hors périmètre.
+- [x] L'assertion 7 reste verte : la liste ne fait bouger aucun contrôle
 
 ### Feature Path (FP)
 
