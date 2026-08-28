@@ -498,7 +498,7 @@ the only part that produces findings.
 |---|---|---|
 | Restore, launch, stop the app | `host/app-lifecycle.mjs` | `restoreSnapshot`, `readBack`, `launchApp`, `stopApp`, `holdersOf`, `namesMe`, `describeProcess` |
 | A private Chrome, and one CDP session kept alive | `host/cdp.mjs` | `launchBrowser`, `attach`, `open`, `setViewport`, `emulateTheme`, `session.evaluate`, `session.stop` |
-| The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md` in both themes, eighteen raw readings |
+| The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md`, in both themes and at both **widths**, thirty-six raw readings |
 | Navigate, and read a field back | `host/navigate.mjs` + `page/app-driver.js` | `followNav`, `reachScreen`, `selectProfile`, `setField`, `waitForScreen`, `guarded` |
 | What a pass cost, after the fact | `host/run-ledger.mjs` | per scenario the wall, five buckets and the **worst wait**; the suite's lived and worked walls. `--every` costs every subagent of a session rather than the pass inside it |
 
@@ -514,8 +514,7 @@ const app = await launchApp({
 });                                                          // throws if a port is taken, naming it
 
 const session = await launchBrowser({ cdpPort: 9299 });      // your own browser, your own port
-await setViewport(session, { width: 1280, height: 900 });
-const readings = await runThemePass({
+const readings = await runThemePass({                        // it sets the viewport itself, per width
   session,
   baseUrl: app.baseUrl,
   port: "5211",                                              // guards every injected script
@@ -529,8 +528,12 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
 
 - **No `puppeteer-core` to install.** Node 22 ships a global `WebSocket`, so the library speaks CDP
   directly. Previous runs each installed a driver into a scratch directory of their own.
-- **The inventory of screens is read from `theme-pass.md`**, never copied. That document stays the
-  one place the screens are edited.
+- **The inventory of screens is read from `theme-pass.md`**, never copied — and since US-22 the
+  **widths** are read from it too. That document stays the one place either is edited.
+- **The pass owns the viewport.** It walks each width in turn and sets it itself, so do not pin one
+  before calling it — `setViewport` is for a scenario measuring one screen at one size. Each injected
+  script asserts the width it measures, exactly as it asserts the theme, and for the same reason: an
+  override that did not take would report a green narrow screen that never rendered.
 - **It does not choose which Game or which Profile the pass opens — you do.** Left to itself it takes
   the first row, and on 2026-08-27 that was an *unanalysed* Game for two scenarios running, so the
   pass audited `Analyse` with no evaluation curve, no advantage bar and no severity glyph. Green, on
@@ -552,7 +555,7 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   `href` records `Analyse` as unreachable.
 - **It throws rather than hand back a thinner green.** The port guard and the in-script theme
   assertion are both live: falsify the emulation and the call fails with the theme it actually
-  measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**.
+  measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**. Since US-22 the pass is **thirty-six** audits — the second width costs **+23,6 s of driving** (20,8 → 44,4 s) and eighteen more readings to read.
 - **"The screen has rendered" is two conditions, not one** — and getting that wrong is the defect
   this slice's own Feature Path caught. Text stability alone is satisfied *instantly* by a loading
   placeholder: "Chargement du bilan…" holds perfectly steady, so `/confrontation` was audited at

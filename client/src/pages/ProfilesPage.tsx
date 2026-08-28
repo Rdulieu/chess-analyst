@@ -113,45 +113,52 @@ export function ProfilesPage() {
           commencer.
         </p>
       ) : (
-        <ul aria-label="profils">
-          {profiles.map((profile) => {
-            const isCurrent = profile.id === currentId;
-            return (
-              // `data-current` for the sheet, and the words "Profil actuel" in
-              // the row itself: the current Profile is never told by colour
-              // alone (US-13).
-              <li key={profile.id} data-current={isCurrent ? "true" : undefined}>
-                {/* The identity leads to the Profile's own page, where its
-                    Import and its counters live. */}
-                <span data-part="identity">
-                  <Link to={`/profiles/${profile.id}`}>{profile.username}</Link>
-                </span>
-                <span data-part="platform">{platformLabel(profile.platform)}</span>
-                {/* The size of the history, in words rather than bare figures:
-                    which Profile is worth opening is the question this row
-                    answers. */}
-                <span data-part="counts">
-                  {profile.games} {profile.games === 1 ? "partie" : "parties"} · {profile.analyzed}{" "}
-                  {profile.analyzed === 1 ? "analysée" : "analysées"}
-                </span>
-                <span data-part="state">
-                  {isCurrent ? (
-                    <span aria-label="profil actuel">Profil actuel</span>
-                  ) : (
-                    <button type="button" onClick={() => select(profile.id)}>
-                      Sélectionner
+        // The five constant tracks are what makes the rows comparable, so they
+        // do not shrink — and when they no longer fit it is the CONTAINER that
+        // scrolls, never the page. Same device, same attribute and same reason
+        // as the tables next door (`[data-scroll="x"]`, _base): at 380 px this
+        // list used to push the whole document sideways to 676 px.
+        <div data-scroll="x">
+          <ul aria-label="profils">
+            {profiles.map((profile) => {
+              const isCurrent = profile.id === currentId;
+              return (
+                // `data-current` for the sheet, and the words "Profil actuel" in
+                // the row itself: the current Profile is never told by colour
+                // alone (US-13).
+                <li key={profile.id} data-current={isCurrent ? "true" : undefined}>
+                  {/* The identity leads to the Profile's own page, where its
+                      Import and its counters live. */}
+                  <span data-part="identity">
+                    <Link to={`/profiles/${profile.id}`}>{profile.username}</Link>
+                  </span>
+                  <span data-part="platform">{platformLabel(profile.platform)}</span>
+                  {/* The size of the history, in words rather than bare figures:
+                      which Profile is worth opening is the question this row
+                      answers. */}
+                  <span data-part="counts">
+                    {profile.games} {profile.games === 1 ? "partie" : "parties"} · {profile.analyzed}{" "}
+                    {profile.analyzed === 1 ? "analysée" : "analysées"}
+                  </span>
+                  <span data-part="state">
+                    {isCurrent ? (
+                      <span aria-label="profil actuel">Profil actuel</span>
+                    ) : (
+                      <button type="button" onClick={() => select(profile.id)}>
+                        Sélectionner
+                      </button>
+                    )}
+                  </span>
+                  <span data-part="actions">
+                    <button type="button" onClick={() => setDoomed(profile)}>
+                      Supprimer
                     </button>
-                  )}
-                </span>
-                <span data-part="actions">
-                  <button type="button" onClick={() => setDoomed(profile)}>
-                    Supprimer
-                  </button>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       {doomed === null ? null : (
