@@ -107,10 +107,12 @@ width (332 / 333 px) and the reading panel has the same amplitude — the row ha
 cases. A third width would cost another nine screens per theme and see nothing the second does not.
 
 The price is measured too, on the run of 2026-08-27: **+23,6 s of driving** (20,8 → 44,4 s, ×2,14)
-for eighteen more readings, sixteen of them clean — and re-measured on the run that adopted the
-width (2026-08-28): **16,3 → 35,3 s, ×2,17**, the same ratio on a faster machine, with all eighteen
-clean once `/profiles` was sized like a table. The number that will matter the day this becomes
-expensive is not the seconds — it is the **readings a human has to read**.
+for eighteen more readings — sixteen clean then, **all eighteen clean now**: the two that were not
+were `/profiles` at 380 px in each theme, and they were fixed rather than tolerated (the list is
+sized to its own content, the way a `table` is). Re-measured on the run that adopted the width
+(2026-08-28): **16,3 → 35,3 s, ×2,17** for thirty-six readings, every one of them clean. The number
+that will matter the day this becomes expensive is not the seconds — it is the **readings a human
+has to read**.
 
 **Below 380 px the page does scroll sideways again** — measured at 280 px on 2026-08-28: 282 px of
 document against a 280 px viewport, two pixels, seven boxes flagged, in both themes. That is outside
