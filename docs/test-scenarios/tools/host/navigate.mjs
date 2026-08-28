@@ -39,6 +39,11 @@ export function pageDriverSource() {
  * selected page around twenty times, and this guard is the reason not one action
  * landed on a sibling agent's app. Every builder in this module goes through it, and a
  * missing port is an error rather than an unguarded script.
+ *
+ * **The body must `return` its value.** It is wrapped in an IIFE, so an
+ * expression-shaped body evaluates to `undefined` and the caller's `JSON.parse` then
+ * fails with `"undefined" is not valid JSON` — an error that names nothing useful,
+ * and cost one run on 2026-08-28.
  */
 export function guarded(port, body) {
   if (!port) throw new Error("every injected script needs the port it belongs to: refusing to build an unguarded one");

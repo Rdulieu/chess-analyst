@@ -163,10 +163,11 @@ suite asserts anyway: a scenario that never selected a Profile has not shown tha
 the right one.
 
 **Do not pay for the theme pass twice.** It reuses the state its scenario has already built: it must
-trigger no Import, no analysis and no `Profile` creation, and it must not restart the app. Eighteen
-audits on a warm app is the whole budget, and since 2026-08-27 it is one call of the driver library
-(`agentic-tests` skill, §5.8) rather than a script rewritten per scenario: fifteen seconds for the
-eighteen.
+trigger no Import, no analysis and no `Profile` creation, and it must not restart the app. Thirty-six
+audits on a warm app is the whole budget — nine screens, two themes, and since US-22 two **widths** —
+and since 2026-08-27 it is one call of the driver library (`agentic-tests` skill, §5.8) rather than a
+script rewritten per scenario: fifteen seconds for the eighteen of one width, about forty-four for
+the thirty-six.
 
 **Pin the app you are driving, and own your browser.** Measured on the 2026-08-17 run, where two
 scenarios ran in parallel: a shared browser had its selected page stolen mid-run repeatedly, and two

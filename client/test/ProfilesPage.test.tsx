@@ -332,3 +332,21 @@ describe("ProfilesPage — deleting a Profile", () => {
     expect(screen.queryByText(/profil actuel/i)).toBeNull();
   });
 });
+
+describe("ProfilesPage — on a narrow screen", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(async () => json([DUDUL, HIKARU, METALYST])));
+  });
+
+  it("puts the list of Profiles in a declared horizontal scroller, like the tables", async () => {
+    // Measured 2026-08-27 at 380 px: the page itself scrolled sideways, 676 px of
+    // document against a 380 px viewport, in both themes. The row's five constant
+    // tracks do not shrink — that is what makes the columns comparable — so when
+    // they no longer fit, something has to scroll. The tables settled this already:
+    // the CONTAINER scrolls and the page never does.
+    renderPage();
+
+    const list = await screen.findByRole("list", { name: /profils/i });
+    expect(list.closest('[data-scroll="x"]')).not.toBeNull();
+  });
+});
