@@ -500,6 +500,7 @@ the only part that produces findings.
 | A private Chrome, and one CDP session kept alive | `host/cdp.mjs` | `launchBrowser`, `attach`, `open`, `setViewport`, `emulateTheme`, `session.evaluate`, `session.stop` |
 | The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md`, in both themes and at both **widths**, thirty-six raw readings |
 | Navigate, and read a field back | `host/navigate.mjs` + `page/app-driver.js` | `followNav`, `reachScreen`, `selectProfile`, `setField`, `waitForScreen`, `guarded` |
+| Assertion 7 — what the Player acts on never moves | `host/stability.mjs` | `walkPlyStability` — steps the plies and hands back the **displacements** of the stepper and the verdict fieldset, in viewport pixels. It measures; the scenario passes the sentence (zero) |
 | What a pass cost, after the fact | `host/run-ledger.mjs` | per scenario the wall, five buckets and the **worst wait**; the suite's lived and worked walls. `--every` costs every subagent of a session rather than the pass inside it |
 
 ```js
@@ -546,6 +547,12 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
       openGameRow(s, { port, index: rows.findIndex((r) => r.text.includes("analysée")), waitOptions }),
   } });
   ```
+- **Assertion 7 is one call, and it counts steps rather than clicking in a loop.** `walkPlyStability`
+  sends **one** `step('Next')` per evaluation: a loop of clicks inside a single `evaluate` re-clicks a
+  handler the framework has already replaced, which on 2026-08-24 advanced one ply while reporting
+  eight. A target absent at a ply (the verdict fieldset does not exist at the starting Position) is
+  reported **absent**, never folded into a zero — otherwise ply 0 reads as the most stable transition
+  there is.
 - **A field is read back before anything is submitted.** `setField` puts the value in through the
   native setter, reads it out again, and **throws** if it did not take. The import form's month
   fields keep their default when a driver assigns `value` — measured 2026-08-19, where a run nearly

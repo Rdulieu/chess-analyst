@@ -208,7 +208,15 @@ export function openerFor(openers, screen) {
   return openers && openers[screen.route];
 }
 
-/** The Game rows the list currently offers, raw, for a caller that needs to choose. */
+/**
+ * The Game rows the list currently offers, raw, for a caller that needs to choose.
+ *
+ * **Be on the list first.** It reads the table of the screen it is called on, so on
+ * any other screen it returns `[]` — and an empty array reads exactly like a Player
+ * with no Games. `selectProfile` leaves the walk on `/profiles`, which is where this
+ * bites: measured 2026-08-28, where it cost a phase that concluded "no Game in the
+ * list" about a list of seven hundred.
+ */
 export async function gameRows(session, { port }) {
   return JSON.parse(await session.evaluate(driverCall(port, "gameRows()")));
 }

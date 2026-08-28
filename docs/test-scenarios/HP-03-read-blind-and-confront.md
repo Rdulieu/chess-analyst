@@ -119,6 +119,19 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
     > the `Evaluation curve` and the advantage bar are audited populated, and the only one that
     > audits the reading route and the `Confrontation` at all.
 
+16. **Assertion 7 — what the Player acts on never moves** (ADR-0021). Back on **Game B**'s reading
+    route, walk its plies at **both widths** and require **zero pixels** of displacement of the step
+    controls and of the verdict fieldset. Cross the transitions that matter and say which: the
+    Player's Move to the opponent's, the starting Position to the first Move and back, and — on this
+    scenario's **sealed** reading — a ply carrying a sealed mark and a ply carrying none.
+
+    > **It belongs to this scenario and to no other.** Assertion 7 is the one assertion of
+    > `theme-pass.md` that is not about a screen of the inventory: the reading route is not in the
+    > nine, and HP-03 is the only scenario that reaches it at all. An assertion listed among the
+    > rules but called by nobody is exactly what US-14's principle was for eighteen months — stated,
+    > and guarded by no one — which is how every ply transition came to move something. The pilot is
+    > `walkPlyStability` (`agentic-tests` skill, §5.8); it measures, this step passes the sentence.
+
 ## Checks
 ### UI
 - Step 2: the pass reports progress in Positions evaluated (it does not sit at zero), ends with an explicit confirmation, and both Games read as analysed in the list afterwards. *(Start the polling **before** clicking: the in-flight readout is short, and a driver that clicks first has already missed it.)*
