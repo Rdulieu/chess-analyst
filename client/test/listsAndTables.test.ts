@@ -212,3 +212,19 @@ describe("the Profile list on a narrow screen", () => {
     expect(list.get("min-inline-size")).toBe("max-content");
   });
 });
+
+describe("a mark in the move list belongs to its own Move", () => {
+  const list = declarationsFor(css, 'ol[aria-label="moves"]');
+  const item = declarationsFor(css, 'ol[aria-label="moves"] li');
+
+  it("sits closer to the Move it judges than to the next one", () => {
+    // Measured on the FP of 2026-08-28: 4 px before the mark and 4 px after it,
+    // uniformly — the glyph sat exactly halfway between `e3` and `Be6`, giving the
+    // eye no reason to attach `??` to either. Under `⚖` that only mislabelled
+    // "there is a verdict here"; now that the mark says WHICH verdict, a
+    // misattributed `??` mislabels the verdict itself. Chess notation glues the
+    // mark to the Move it judges, and so does this.
+    expect(item.get("gap")).toBe("var(--space-1)");
+    expect(list.get("gap")).toBe("var(--space-1) var(--space-2)");
+  });
+});

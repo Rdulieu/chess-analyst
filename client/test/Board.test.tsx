@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fenStringToPositionObject } from "react-chessboard";
 import { Board } from "../src/components/Board";
+import { MoveMarks } from "../src/features/personal/MoveMarks";
 import { startingPosition } from "../src/chess/history";
 import { OPERA_PGN } from "./fixtures";
 import type { MoveAnnotation } from "../src/types";
@@ -928,5 +929,52 @@ describe("Board — the reviewed Move's record", () => {
     // Document order: the row, then the record. Its height is variable — that is
     // exactly why it may not sit above the diagram.
     expect(row.compareDocumentPosition(record())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+});
+
+describe("the rule that travels with US-22's glyph reversal", () => {
+  /*
+   * US-16a refused the engine's severity marks for the Player's verdicts, on the
+   * grounds that borrowing them "would suggest a measured verdict where there is
+   * only a declared one". US-22 reversed that, and the reason it could is that
+   * the confusion has no screen to happen on: the reading route renders the
+   * diagram with no engine prop, and the Analyse page renders none of the
+   * Player's marks.
+   *
+   * `Board` is the one component that could put both in the same row, and the day
+   * a screen does — the natural slope of US-16b, which exists to hold three
+   * readings side by side WITHOUT ever merging them — an identical glyph will not
+   * be enough. This pins what survives that day: the two are told apart by their
+   * accessible names, and never by the glyph or by a tint.
+   */
+  it("gives a declared verdict and a measured severity different names on the same Move", () => {
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -120, mate: null }, whiteWinChances: 40, severity: "mistake", bestLine: [], phase: "early", counted: null, chancesLost: null },
+    ];
+
+    render(
+      <Board
+        pgn={OPERA_PGN}
+        annotations={annotations}
+        moveMarks={(ply) => (
+          <MoveMarks
+            marks={[
+              { ply, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false },
+            ]}
+            ply={ply}
+          />
+        )}
+      />,
+    );
+
+    const row = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")[0];
+    const declared = within(row).getByLabelText("verdict : Erreur");
+    const measured = within(row).getByLabelText("mistake");
+    // The same mark, deliberately — it is the same scale, and CONTEXT.md makes
+    // the shared vocabulary deliberate down to the glyph.
+    expect(declared.textContent).toBe(measured.textContent);
+    // So the glyph cannot be what tells them apart, and the name is.
+    expect(declared.getAttribute("aria-label")).not.toBe(measured.getAttribute("aria-label"));
   });
 });

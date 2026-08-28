@@ -642,6 +642,88 @@ describe("seeing where I stand in a reading", () => {
     expect(within(items[4]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
   });
 
+  it("says WHICH verdict each Move carries, not merely that one exists", async () => {
+    // `⚖` said "a verdict was posed here" and nothing more: the Player had to
+    // open every marked Move to find out which. The five values take their own
+    // marks — the three shared with the engine written exactly as the engine
+    // writes them, because it is the same scale and the Player has no second
+    // vocabulary to learn (CONTEXT.md → Declared severity).
+    stubReading({
+      ...EMPTY,
+      marks: (["blunder", "mistake", "inaccuracy", "good", "sound"] as const).map((s, i) => ({
+        ply: i + 1,
+        declaredSeverity: s,
+        note: null,
+        keyMoment: false,
+        posterior: false,
+      })),
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const items = moveItems();
+    expect(within(items[0]).getByLabelText(/verdict/i).textContent).toBe("??");
+    expect(within(items[1]).getByLabelText(/verdict/i).textContent).toBe("?");
+    expect(within(items[2]).getByLabelText(/verdict/i).textContent).toBe("?!");
+    // The two the engine has no band for EXTEND the notation rather than borrow
+    // it: `!` is chess notation's own sign for a good Move, and `✓` comes from
+    // another family on purpose — `Correct` is not a judgement of quality but a
+    // statement of examination.
+    expect(within(items[3]).getByLabelText(/verdict/i).textContent).toBe("!");
+    expect(within(items[4]).getByLabelText(/verdict/i).textContent).toBe("✓");
+  });
+
+  it("names the verdict it draws, so the mark is never the only carrier", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    expect(within(moveItems()[0]).getByLabelText(/verdict/i).getAttribute("aria-label")).toBe(
+      "verdict : Correct",
+    );
+  });
+
+  it("marks a Move judged Correct, and leaves a Move never examined bare", async () => {
+    // The glossary forbids folding these two together, word for word: silence is
+    // not a value. Without a mark of its own, "I looked and I find nothing to
+    // fault" would be indistinguishable from "I never came here".
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const items = moveItems();
+    expect(within(items[0]).getByLabelText(/verdict/i)).not.toBeNull();
+    expect(within(items[1]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
+  });
+
+  it("lets a verdict, a Note and a Key moment sit on one Move without merging", async () => {
+    // Three statements, three marks, three names. The FP of US-16a proved that
+    // "nothing by tint alone" can be kept to the letter and missed in practice:
+    // two pencils the accessible names told apart perfectly and the eye did not.
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "good", note: "pourquoi", keyMoment: true, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const row = moveItems()[0];
+    const drawn = [
+      within(row).getByLabelText(/verdict/i),
+      within(row).getByLabelText(/note/i),
+      within(row).getByLabelText(/moment clé/i),
+    ].map((el) => el.textContent);
+    expect(drawn).toEqual(["!", "✎", "◆"]);
+    // Three different marks, not three names over one drawing.
+    expect(new Set(drawn).size).toBe(3);
+  });
+
   it("states how far the reading has got — how many Moves annotated, out of how many", async () => {
     stubReading({
       ...EMPTY,
