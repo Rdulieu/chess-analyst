@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-22-reading-route-density` le 2026-08-28 (FP verte, 240 transitions à 0 px)
 
 ## Parent
 
@@ -54,17 +54,17 @@ icône ou une infobulle n'est pas une option.
 
 ## Acceptance criteria
 
-- [ ] Sur une lecture non scellée, **aucun** déplacement du stepper ni du fieldset de verdict d'un ply au suivant
-- [ ] Idem sur une lecture **scellée**, couche postérieure comprise — l'état le plus riche
-- [ ] Idem à la largeur étroite, où l'amplitude était la pire
-- [ ] Le panneau rend les contrôles **avant** la prose, et l'ordre du DOM le dit — vérifiable en composant
-- [ ] Les trois légendes sont exactes, et une seule paraît à la fois
-- [ ] La légende tient sur **une ligne** aux deux largeurs, dans les deux thèmes
-- [ ] L'avertissement de coup adverse est lisible **avant** que le verdict puisse être posé
-- [ ] Après scellement, l'écran ne répète pas une règle sans objet
-- [ ] Le relevé de la couche scellée reste **lisible tel qu'il était** — aucune économie de hauteur ne le replie
-- [ ] `theme-pass.md` porte l'assertion 7, et elle est **verte** à la livraison
-- [ ] Aucune assertion existante n'est affaiblie ni retirée
+- [x] Sur une lecture non scellée, **aucun** déplacement du stepper ni du fieldset de verdict d'un ply au suivant
+- [x] Idem sur une lecture **scellée**, couche postérieure comprise — l'état le plus riche
+- [x] Idem à la largeur étroite, où l'amplitude était la pire
+- [x] Le panneau rend les contrôles **avant** la prose, et l'ordre du DOM le dit — vérifiable en composant
+- [x] Les trois légendes sont exactes, et une seule paraît à la fois
+- [x] La légende tient sur **une ligne** aux deux largeurs, dans les deux thèmes
+- [x] L'avertissement de coup adverse est lisible **avant** que le verdict puisse être posé
+- [x] Après scellement, l'écran ne répète pas une règle sans objet
+- [x] Le relevé de la couche scellée reste **lisible tel qu'il était** — aucune économie de hauteur ne le replie
+- [x] `theme-pass.md` porte l'assertion 7, et elle est **verte** à la livraison
+- [x] Aucune assertion existante n'est affaiblie ni retirée
 
 ### Feature Path (FP)
 
