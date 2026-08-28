@@ -229,7 +229,10 @@ describe("the reading route", () => {
 
     const note = screen.getByRole("textbox", { name: /ma note/i });
     await user.type(note, "je joue ça par habitude");
-    await user.click(screen.getByRole("button", { name: /enregistrer la note/i }));
+    // Leaving the field is what commits it since US-22 — writing a Note costs no
+    // more clicks than posing a verdict, and the screen says it was kept.
+    await user.tab();
+    expect(screen.getByText("Note enregistrée.")).not.toBeNull();
 
     await waitFor(() =>
       expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
@@ -239,6 +242,219 @@ describe("the reading route", () => {
         "je joue ça par habitude",
       ),
     );
+  });
+
+  it("keeps a Note the Player typed and then stepped away from, with no click at all", async () => {
+    // The loss this slice closes. The draft was local state reset to the stored
+    // value the moment the ply changed, so typing a Note and clicking `Next`
+    // threw it away **in silence** — on the one part of the screen where the
+    // Player thinks. Nothing warned, nothing held it.
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "je joue ça par habitude");
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+
+    // And it is there on the way back.
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je joue ça par habitude",
+      ),
+    );
+  });
+
+  it("says what the Note's state is, and says it from an element that never comes or goes", async () => {
+    // A confirmation that appears and disappears would rebuild, three slices
+    // later, the very defect slice 02 closed — and under the Player's own hands,
+    // since the erase button sits directly below it (ADR-0021). So the element is
+    // always there and only its words change.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const stateLine = () => document.querySelector('[data-part="note-state"]');
+    const count = () => document.querySelectorAll('[data-part="note-state"]').length;
+
+    expect(stateLine()?.textContent).toBe("Aucune note sur ce coup.");
+    expect(count()).toBe(1);
+
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "une idée");
+    expect(stateLine()?.textContent).toBe("Enregistrée en quittant le champ.");
+    expect(count()).toBe(1);
+
+    await user.tab();
+    await waitFor(() => expect(stateLine()?.textContent).toBe("Note enregistrée."));
+    expect(count()).toBe(1);
+  });
+
+  it("does not erase a Note because the box was emptied and left — erasing is its own act", async () => {
+    // The mirror of the loss this slice closes. A select-all-and-delete followed
+    // by a click elsewhere is not a decision to unsay something; the button is.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "à revoir", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.clear(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "à revoir",
+      ),
+    );
+  });
+
+  it("puts the stored Note back when the box is emptied and left, rather than looking erased", async () => {
+    // Measured on the FP of 2026-08-28: after emptying and blurring, the box was
+    // empty, the line said "Note enregistrée." and the erase button was live —
+    // three things that cannot all be true at once, in precisely the moment a
+    // Player is most afraid of having lost something. The Note is safe; the
+    // screen has to say so.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "à revoir", keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.clear(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.tab();
+
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "à revoir",
+    );
+    expect(document.querySelector('[data-part="note-state"]')?.textContent).toBe("Note enregistrée.");
+  });
+
+  it("says what the field is about at the starting Position, where it is about the Game", async () => {
+    // The label already knew; the state line was still saying "ce coup" under a
+    // field labelled "Ma note sur la partie".
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    expect(document.querySelector('[data-part="note-state"]')?.textContent).toBe(
+      "Aucune note sur la partie.",
+    );
+  });
+
+  it("commits an EDIT of a stored Note with the values of the Move being left", async () => {
+    // The sharpest form of the addressing bug: React renders the new ply before
+    // it runs the old ply's cleanup, so anything the cleanup reads from a ref
+    // assigned during render already belongs to the Move stepped TO. Here ply 1
+    // holds a Note and ply 2 holds none, so a stale read would take the new
+    // Move's `null` for the old Move's stored value.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "première idée", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.clear(box);
+    await user.type(box, "je change d'avis");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/2"))).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je change d'avis",
+      ),
+    );
+  });
+
+  it("keeps an edit whose new text happens to equal what the NEXT Move stores", async () => {
+    // The sharpest case, and the FP's rather than mine (2026-08-28). A cleanup
+    // reading the ply stepped TO would compare the edit against *that* Move's
+    // stored text, judge it unchanged, and drop it in silence — the loss this
+    // slice exists to close, hidden behind a coincidence of wording.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "différente", keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "commun", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.clear(box);
+    await user.type(box, "commun");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "commun",
+      ),
+    );
+  });
+
+  it("writes nothing at all when the Player steps away from a Note they did not touch", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "inchangée", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+  });
+
+  it("files a Note under the Move it was written about, not the Move stepped to", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // ply 1
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "sur e4");
+    await user.click(screen.getByRole("button", { name: "Next" })); // ply 2
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/2"))).toBe(false);
+    // And the box is the new Move's, empty — a Note never follows the Player.
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe("");
   });
 
   it("says outright that a Note is never graded — that is the point of it", async () => {
@@ -913,6 +1129,30 @@ describe("what the Player clicks never moves (ADR-0021)", () => {
     ).toBe(true);
     // Unabridged: what was written when the reading was sealed is still there to read.
     expect(screen.getByText(/je pensais tenir le centre/)).not.toBeNull();
+  });
+
+  it("files a Note written after the seal in the posterior layer, as the mouse always did", async () => {
+    // The write path did not change — only what triggers it. A Note committed by
+    // leaving the field must land in the same layer a Note committed by a button
+    // landed in, or slice 04 would have quietly moved data across the seal.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "vu après coup");
+    await user.tab();
+
+    // Written, and read back as the posterior layer: the sealed verdict is still
+    // there beside it, untouched.
+    await waitFor(() => expect(screen.getByText("Note enregistrée.")).not.toBeNull());
+    expect(document.querySelector('[data-part="sealed-mark"]')?.textContent).toContain("Erreur");
   });
 
   it("says nothing about opponents after the seal, because after the seal nothing is counted", async () => {
