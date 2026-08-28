@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-22-reading-route-density` le 2026-08-28 (FP verte, 36/36 relevés propres)
 
 ## Parent
 
@@ -38,14 +38,14 @@ sont édités.
 
 ## Acceptance criteria
 
-- [ ] La passe de thème couvre les neuf écrans **aux deux largeurs et dans les deux thèmes** — 36 relevés
-- [ ] `theme-pass.md` déclare la seconde largeur, et reste le seul endroit où l'inventaire s'édite
-- [ ] La liste des profils **ne fait plus défiler la page** à 380 px, dans les deux thèmes
-- [ ] Quand la liste ne tient plus, c'est **elle** qui défile, pas la page — comme les tables le font déjà
-- [ ] `/profiles/:id` reste propre à 380 px, comme aujourd'hui
-- [ ] Aucun autre écran ne régresse : les 36 relevés sortent sans débordement
-- [ ] Aucune assertion de la passe n'est affaiblie ni retirée
-- [ ] Le surcoût de pilotage est **rapporté**, pour qu'on sache ce qu'on a payé
+- [x] La passe de thème couvre les neuf écrans **aux deux largeurs et dans les deux thèmes** — 36 relevés
+- [x] `theme-pass.md` déclare la seconde largeur, et reste le seul endroit où l'inventaire s'édite
+- [x] La liste des profils **ne fait plus défiler la page** à 380 px, dans les deux thèmes
+- [x] Quand la liste ne tient plus, c'est **elle** qui défile, pas la page — comme les tables le font déjà
+- [x] `/profiles/:id` reste propre à 380 px, comme aujourd'hui
+- [x] Aucun autre écran ne régresse : les 36 relevés sortent sans débordement
+- [x] Aucune assertion de la passe n'est affaiblie ni retirée
+- [x] Le surcoût de pilotage est **rapporté**, pour qu'on sache ce qu'on a payé
 
 ### Feature Path (FP)
 
