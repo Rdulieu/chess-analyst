@@ -190,8 +190,12 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     const move = declarationsFor(css, 'ol[aria-label="moves"] li button');
     expect(move.get("padding")).toBe("0 var(--space-1)");
     expect(move.get("font-size")).toBe("var(--text-s)");
+    // The ROW gap is what compactness turns on — forty half-moves stacked — and
+    // it is unchanged. The COLUMN gap doubled in US-22, so a mark belongs to the
+    // Move it judges instead of sitting halfway to the next one; see
+    // listsAndTables for why that asymmetry is deliberate.
     expect(declarationsFor(css, 'ol[aria-label="moves"]').get("gap")).toBe(
-      "var(--space-1) var(--space-1)",
+      "var(--space-1) var(--space-2)",
     );
     for (const value of move.values()) noAbsoluteLength(value);
   });

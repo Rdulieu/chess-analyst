@@ -95,13 +95,24 @@ describe("what a ply carries", () => {
     expect(markKinds(marks, 1)).toEqual({ verdict: null, note: true, keyMoment: false });
   });
 
-  it("draws the LATER layer's verdict when both speak — what the Player says now", () => {
-    // The same rule the panel's own controls follow after the seal. It loses
-    // nothing the list used to carry: `⚖` named no layer either.
+  it("draws the SEALED verdict when both layers speak — the list must not contradict what is scored", () => {
+    // Measured on the FP of 2026-08-28. Drawing the posterior layer read well in
+    // the abstract and was wrong in practice: the `Confrontation` scores the
+    // sealed layer and discards the posterior one, so a list showing the
+    // posterior verdict tells a Player scanning for what they will be graded on
+    // the opposite of the truth. `⚖` could not do that — it made no claim about
+    // WHICH verdict, so it could not contradict one. Saying which is the whole
+    // point of this slice, and it is what makes the layer matter.
     const marks = [
       mark({ ply: 1, declaredSeverity: "mistake", posterior: false }),
       mark({ ply: 1, declaredSeverity: "blunder", posterior: true }),
     ];
+
+    expect(markKinds(marks, 1).verdict).toBe("mistake");
+  });
+
+  it("still draws a purely posterior verdict — it contradicts nothing, and silence would lose it", () => {
+    const marks = [mark({ ply: 1, declaredSeverity: "blunder", posterior: true })];
 
     expect(markKinds(marks, 1).verdict).toBe("blunder");
   });

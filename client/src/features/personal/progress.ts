@@ -61,17 +61,29 @@ export interface MarkKinds {
 export function markKinds(marks: PersonalMark[], ply: number): MarkKinds {
   const onPly = marks.filter((m) => m.ply === ply);
   /*
-   * When both layers speak, the **later** one is drawn — the same rule the
-   * panel's own controls follow (`markAt(reading, ply, sealedAt !== null)`), so
-   * the list says what the Player currently says about the Move. It is not a new
-   * decision, and it loses nothing the list used to carry: `⚖` named no layer
-   * either. Telling the two layers apart *in the list* stays an open finding of
-   * the 2026-08-27 portal, and is not this slice's to close.
+   * When both layers speak, the **sealed** one is drawn — never the posterior.
+   *
+   * The panel's controls do the opposite, and deliberately: they act on the layer
+   * being written. The list is not a control, it is the overview of a reading, and
+   * the reading the `Confrontation` scores is the sealed one — `confrontation.ts`
+   * filters the posterior marks out wholesale. Drawing the posterior verdict here
+   * would tell a Player scanning the list for what they will be graded on the
+   * opposite of the truth. Measured on the FP of 2026-08-28: sealed `Bévue`,
+   * amended to `Bon`, list saying `!`.
+   *
+   * `⚖` could not make that mistake, because it never said *which*. Saying which
+   * is this slice's whole point, and it is what makes the layer start to matter.
+   * A purely posterior verdict is still drawn — it contradicts nothing, and
+   * silence would lose a mark the list used to carry.
+   *
+   * Telling the two layers apart *in the list* remains an open finding of the
+   * 2026-08-27 portal and is not this slice's to close. What this slice owes is
+   * not to sharpen it, and that is what drawing the scored layer buys.
    */
   const withVerdict = onPly.filter((m) => m.declaredSeverity !== null);
-  const latest = withVerdict.find((m) => m.posterior) ?? withVerdict[0];
+  const scored = withVerdict.find((m) => !m.posterior) ?? withVerdict[0];
   return {
-    verdict: latest?.declaredSeverity ?? null,
+    verdict: scored?.declaredSeverity ?? null,
     note: onPly.some((m) => m.note !== null),
     keyMoment: onPly.some((m) => m.keyMoment),
   };
