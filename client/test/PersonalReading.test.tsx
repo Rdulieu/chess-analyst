@@ -322,6 +322,75 @@ describe("the reading route", () => {
     );
   });
 
+  it("puts the stored Note back when the box is emptied and left, rather than looking erased", async () => {
+    // Measured on the FP of 2026-08-28: after emptying and blurring, the box was
+    // empty, the line said "Note enregistrée." and the erase button was live —
+    // three things that cannot all be true at once, in precisely the moment a
+    // Player is most afraid of having lost something. The Note is safe; the
+    // screen has to say so.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "à revoir", keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.clear(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.tab();
+
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "à revoir",
+    );
+    expect(document.querySelector('[data-part="note-state"]')?.textContent).toBe("Note enregistrée.");
+  });
+
+  it("says what the field is about at the starting Position, where it is about the Game", async () => {
+    // The label already knew; the state line was still saying "ce coup" under a
+    // field labelled "Ma note sur la partie".
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    expect(document.querySelector('[data-part="note-state"]')?.textContent).toBe(
+      "Aucune note sur la partie.",
+    );
+  });
+
+  it("commits an EDIT of a stored Note with the values of the Move being left", async () => {
+    // The sharpest form of the addressing bug: React renders the new ply before
+    // it runs the old ply's cleanup, so anything the cleanup reads from a ref
+    // assigned during render already belongs to the Move stepped TO. Here ply 1
+    // holds a Note and ply 2 holds none, so a stale read would take the new
+    // Move's `null` for the old Move's stored value.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "première idée", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.clear(box);
+    await user.type(box, "je change d'avis");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/2"))).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je change d'avis",
+      ),
+    );
+  });
+
   it("files a Note under the Move it was written about, not the Move stepped to", async () => {
     const calls = stubReading();
     const user = userEvent.setup();

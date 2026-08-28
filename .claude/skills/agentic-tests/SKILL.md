@@ -557,6 +557,14 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   Destructuring it as one throws *before* whatever `try` was meant to guard the teardown, and leaves
   a Chrome holding the CDP port (2026-08-28; recovered by proving the pid's own `--user-data-dir` in
   `/proc/<pid>/cmdline`).
+- **At 380 px, everything below the board is off the screen** — the reading route's Note panel sits
+  at y≈1115 in a 900 px viewport. A real mouse click at those coordinates lands in the void, types
+  nothing, and hands back three *identical* measurements that read as "nothing changed: green" over a
+  step that never happened (measured 2026-08-28). Scroll the target into view, and **assert the focus
+  actually landed** before typing.
+- **`runThemePass` leaves the browser on the last screen of the inventory** (`/profiles/:id`). A
+  follow-up script that assumes it is still where it was reads a missing panel and reports a defect.
+  Navigate explicitly after the pass.
 - **A screenshot can be a measurement that measured nothing.** `Page.captureScreenshot`'s `clip` is
   in **page** coordinates and needs `captureBeyondViewport: true` for anything below the fold —
   without it the PNG comes back the right size and entirely blank (2026-08-28). Worth knowing here
