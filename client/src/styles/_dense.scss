@@ -314,14 +314,18 @@ section[aria-label="partie"] {
 
 // "Notes are never graded" — the sentence that makes the Player willing to
 // write. Muted, because it states a rule rather than warning about anything.
-[data-part="never-graded"] {
+// Beside it, since US-22, whether the Note is written down: the same treatment,
+// because it states a fact about the reading and warns about nothing either.
+[data-part="never-graded"],
+[data-part="note-state"] {
   color: var(--ink-muted);
   font-size: var(--text-s);
   margin-block: 0;
 }
 
-// Save and erase, side by side rather than stacked: two lines here are two lines
-// the diagram does not get.
+// Erasing, on its own line. It was two buttons side by side until US-22, when
+// the Note stopped needing a click to be kept — the field commits itself on
+// being left, and unsaying a Note is the only act left that has to be asked for.
 [data-part="note-actions"] {
   display: flex;
   flex-wrap: wrap;
