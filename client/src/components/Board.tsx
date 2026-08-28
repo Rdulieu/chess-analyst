@@ -237,17 +237,14 @@ export function Board({
             board, which is where the PRD's arrangement puts the readout. They used
             to stack above the row, and the stack was what left the diagram no
             height to be visible in full.
+
+            **They come FIRST in this pane, and that is ADR-0021.** They used to
+            come after the caller's controls, which meant every block that appears
+            and disappears with the ply pushed the very buttons the Player was
+            clicking: 45 of 45 measured ply transitions displaced them, by 24 to
+            114 px. Nothing above them varies now — the readout below is one line
+            in every state — so a ply transition cannot move them at all.
           */}
-          {controls?.(index)}
-          {/*
-            The way to the record, from beside the board. The panel itself is
-            BELOW the row — that is deliberate, its height varies and nothing
-            above the diagram may move — so without this the Player would have to
-            already know it exists. Scrolling to reach it is acceptable; not
-            knowing it is there is not. Only in Detailed, because that is the
-            only level at which there is anything to reach.
-          */}
-          {detailed && <a href="#move-record-heading">Aller au relevé du coup</a>}
           <div data-part="stepper">
             <button type="button" onClick={() => goTo(index - 1)} disabled={atStart}>
               Previous
@@ -263,11 +260,24 @@ export function Board({
             which reports something the Player cannot otherwise observe, over minutes
             (US-8). It keeps its accessible name and its text: still queryable, still
             readable, just no longer interrupting.
+
+            Directly under the stepper because it names the Move the stepper just
+            reached — and it is one line in every state, so it displaces nothing.
           */}
           <p aria-label="current move">
             {currentMove}
             {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
           </p>
+          {controls?.(index)}
+          {/*
+            The way to the record, from beside the board. The panel itself is
+            BELOW the row — that is deliberate, its height varies and nothing
+            above the diagram may move — so without this the Player would have to
+            already know it exists. Scrolling to reach it is acceptable; not
+            knowing it is there is not. Only in Detailed, because that is the
+            only level at which there is anything to reach.
+          */}
+          {detailed && <a href="#move-record-heading">Aller au relevé du coup</a>}
           {annotations && (
             <>
               {/* Landscape, and deliberately so: squeezed into a narrow column the

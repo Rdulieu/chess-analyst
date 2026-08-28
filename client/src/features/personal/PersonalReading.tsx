@@ -166,26 +166,23 @@ export function PersonalReading({
         // locatable without stepping through every Move to find where one wrote.
         moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
         controls={(ply) => (
+          /*
+            ADR-0021 — what the Player acts on comes first and never moves; what
+            explains it, and what varies with the ply, lives below.
+
+            The three controls the Player uses Move after Move lead: the verdict,
+            the pivot, the Note. Then the once-per-reading action. Then, and only
+            then, everything whose presence or height follows the ply — the sealed
+            readout (whose height depends on what was written that day and has no
+            knowable maximum), the whole-Game Note, and the tally.
+
+            The rule is about ORDER, not about reserved height: a fixed height
+            would have cost 194 to 312 px of empty column exactly where the column
+            is scarcest. And it is about order for a second reason — an order is
+            checked in a component test at every commit, where a pixel is only
+            measurable at the portal.
+          */
           <div data-part="reading-controls">
-            {sealedAt !== null && (
-              <>
-                <SealedReadout
-                  sealedAt={sealedAt}
-                  engineSeenBeforeSeal={reading.engineSeenBeforeSeal}
-                />
-                {/* What was written on THIS Move when the reading was sealed,
-                    beside — never replaced by — what has been written since. */}
-                <SealedMarkReadout mark={markAt(reading, ply, false)} ply={ply} />
-                {/* Writing stays open after the seal: seeing the engine and
-                    understanding why is the most fertile moment of the exercise,
-                    so forbidding it would be absurd — and counting it would be
-                    dishonest. Hence the words, on every control below. */}
-                <p data-part="posterior-notice">
-                  Ce que vous écrivez maintenant est conservé comme une couche
-                  <strong> postérieure</strong> au scellement, et reste hors de la confrontation.
-                </p>
-              </>
-            )}
             <DeclaredSeverityControl
               ply={ply}
               posed={markAt(reading, ply, sealedAt !== null)?.declaredSeverity ?? null}
@@ -202,14 +199,6 @@ export function PersonalReading({
               posterior={sealedAt !== null}
               onToggle={(posed) => void write(ply, { keyMoment: posed })}
             />
-            {/* The Note about the whole Game, legible from inside the Game — it
-                was written at the starting Position, but it is not about it. */}
-            <WholeGameNote marks={reading.marks} ply={ply} />
-            <ReadingTally marks={reading.marks} moves={moves} />
-            {sealedAt === null ? (
-              <SealAction empty={reading.marks.length === 0} sealing={sealing} onSeal={seal} />
-            ) : null}
-            {sealRefusal && <p role="alert">{sealRefusal}</p>}
             <NoteEditor
               ply={ply}
               note={markAt(reading, ply, sealedAt !== null)?.note ?? null}
@@ -219,6 +208,37 @@ export function PersonalReading({
               // an omitted field would leave the old text exactly where it was.
               onErase={() => void write(ply, { note: null })}
             />
+            {sealedAt === null ? (
+              <SealAction empty={reading.marks.length === 0} sealing={sealing} onSeal={seal} />
+            ) : null}
+            {sealRefusal && <p role="alert">{sealRefusal}</p>}
+            {sealedAt !== null && (
+              <>
+                <SealedReadout
+                  sealedAt={sealedAt}
+                  engineSeenBeforeSeal={reading.engineSeenBeforeSeal}
+                />
+                {/* What was written on THIS Move when the reading was sealed,
+                    beside — never replaced by — what has been written since.
+                    Below the controls now, and unabridged: it is the block whose
+                    height genuinely varies, and no saving of height is allowed to
+                    fold it away. */}
+                <SealedMarkReadout mark={markAt(reading, ply, false)} ply={ply} />
+                {/* Writing stays open after the seal: seeing the engine and
+                    understanding why is the most fertile moment of the exercise,
+                    so forbidding it would be absurd — and counting it would be
+                    dishonest. Hence the words — and the legend of the verdict
+                    control above says it too, for a Player who scrolled past. */}
+                <p data-part="posterior-notice">
+                  Ce que vous écrivez maintenant est conservé comme une couche
+                  <strong> postérieure</strong> au scellement, et reste hors de la confrontation.
+                </p>
+              </>
+            )}
+            {/* The Note about the whole Game, legible from inside the Game — it
+                was written at the starting Position, but it is not about it. */}
+            <WholeGameNote marks={reading.marks} ply={ply} />
+            <ReadingTally marks={reading.marks} moves={moves} />
           </div>
         )}
       />

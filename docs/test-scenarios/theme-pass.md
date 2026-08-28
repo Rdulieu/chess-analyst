@@ -145,6 +145,26 @@ one is ever proposed, starts from what is known rather than from a surprise.
    `--square-<severity>` tints. White's share must not darken at night, because it denotes a player
    and not a background.
 6. **No console error** across the walk.
+7. **What the Player acts on does not move from one ply to the next** (ADR-0021). On the reading
+   route, walk the plies of a reading and require **zero pixels** of displacement of the step
+   controls (`[data-part="stepper"]`) and of the verdict fieldset
+   (`[data-part="declared-severity"]`) — their viewport position, read before and after each
+   transition, must be identical. Zero, not "roughly stable": a pixel of drift over forty plies is
+   a target that moves under the finger.
+
+   Walk enough plies to cross the transitions that matter, and say which were crossed: **the
+   Player's Move to the opponent's** (the alternation that caused 33 of the 45 measured
+   displacements), and **the starting Position to the first Move and back** (where the verdict
+   fieldset and the pivot control appear and disappear). On a **sealed** reading, cross a ply
+   carrying a sealed mark and one carrying none — that is the richest state, and the sealed
+   readout's height depends on its own content.
+
+   This assertion exists because the principle was **stated and guarded by nobody**. US-14 already
+   held that hiding annotations must not move the Position being read; it was held above the
+   diagram, by document order, and never applied from one ply to the next — and eighteen months
+   later every single transition moved something. The *order* it rests on is checked in a component
+   test at every commit; this is where its consequence in pixels is checked, and it is the only
+   place that consequence exists.
 
 **A cue rule with no subject on the screen proves nothing.** The audit drops rules that find nothing,
 so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's

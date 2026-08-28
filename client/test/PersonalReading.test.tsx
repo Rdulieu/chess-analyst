@@ -175,10 +175,14 @@ describe("the reading route", () => {
 
     await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.queryByText(/ne sera pas (noté|comptabilisé)/i)).toBeNull();
+    // The warning is the fieldset's own accessible NAME since US-22 — it warns
+    // before the verdict can be posed instead of appearing above the radios and
+    // pushing everything below it (ADR-0021). Said less often, never less
+    // clearly: the wording is still there and still in words.
+    expect(screen.queryByRole("group", { name: /non notés/i })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Next" })); // 1... e5, the opponent's
-    expect(screen.getByText(/ne sera pas (noté|comptabilisé)/i)).not.toBeNull();
+    expect(screen.getByRole("group", { name: /coups adverses non notés/i })).not.toBeNull();
 
     await user.click(
       within(screen.getByRole("group", { name: /mon verdict/i })).getByRole("radio", {
@@ -717,5 +721,155 @@ describe("seeing where I stand in a reading", () => {
 
     // An empty panel announcing an absence is noise: silence stays silent here too.
     expect(screen.queryByRole("group", { name: /note sur la partie/i })).toBeNull();
+  });
+});
+
+describe("what the Player clicks never moves (ADR-0021)", () => {
+  /*
+   * Measured 2026-08-27 on a 46-ply reading: **45 ply transitions out of 45**
+   * displaced the step controls, by 24 to 114 px, 194 px of swing at 1400 and
+   * 312 below 900. The panel is rendered in the same pane as the stepper, so what
+   * moved was not decoration — it was the `Previous` / `Next` buttons under the
+   * finger already reaching for them.
+   *
+   * The pixels belong to the theme pass (jsdom computes no geometry). What belongs
+   * here is the ORDER, which is what ADR-0021 actually decides — and an order is
+   * checked at every commit, hours before a portal run.
+   */
+  const legendOf = () => screen.getByRole("group", { name: /mon verdict/i }).querySelector("legend");
+
+  /** Where each part sits in the rendered document, in reading order. */
+  const orderOf = (...parts: string[]) =>
+    parts.map((part) => {
+      const found = [...document.querySelectorAll("[data-part]")].findIndex(
+        (el) => el.getAttribute("data-part") === part,
+      );
+      if (found === -1) throw new Error(`no [data-part="${part}"] on screen`);
+      return found;
+    });
+
+  const ascending = (values: number[]) => values.every((v, i) => i === 0 || v > values[i - 1]);
+
+  it("puts the step controls above everything that varies with the ply", async () => {
+    // The stepper used to be rendered BELOW the whole panel in the same pane, so
+    // every block that came and went with the ply pushed the very buttons the
+    // Player was clicking. The rule is about order, not about height: reserving a
+    // fixed height would have cost 194 to 312 px of empty column exactly where the
+    // column is scarcest, and the sealed readout has no knowable maximum anyway.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(
+      ascending(orderOf("stepper", "declared-severity", "key-moment", "note", "tally")),
+    ).toBe(true);
+  });
+
+
+  it("changes nothing above the stepper when the Player enters or leaves the starting Position", async () => {
+    // Ply 0 has no Move to judge, so the verdict fieldset and the pivot control
+    // are absent there — entering and leaving it is the transition where the most
+    // blocks appear at once. Nothing above the stepper may differ between the two.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const above = () => {
+      const parts = [...document.querySelectorAll("[data-part]")];
+      const stepper = parts.findIndex((el) => el.getAttribute("data-part") === "stepper");
+      return parts.slice(0, stepper).map((el) => el.getAttribute("data-part"));
+    };
+
+    const atStart = above();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(above()).toEqual(atStart);
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(above()).toEqual(atStart);
+  });
+
+  it("keeps the order in the richest state there is — a sealed reading, on a marked Move", async () => {
+    // After the seal the panel gains the sealed readout, the sealed mark and the
+    // posterior notice, and the sealed mark's height depends on what was written
+    // that day. That is the state the defect was worst in, and it is the state the
+    // order has to hold in. Nothing is folded away to buy height: the sealed layer
+    // stays readable exactly as it was.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [
+        {
+          ply: 1,
+          declaredSeverity: "mistake",
+          note: "je pensais tenir le centre",
+          keyMoment: true,
+          posterior: false,
+        },
+      ],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(
+      ascending(
+        orderOf(
+          "stepper",
+          "declared-severity",
+          "key-moment",
+          "note",
+          "sealed",
+          "sealed-mark",
+          "posterior-notice",
+          "tally",
+        ),
+      ),
+    ).toBe(true);
+    // Unabridged: what was written when the reading was sealed is still there to read.
+    expect(screen.getByText(/je pensais tenir le centre/)).not.toBeNull();
+  });
+
+  it("says nothing about opponents after the seal, because after the seal nothing is counted", async () => {
+    // The one combination that WOULD wrap to a second line below 900 px is
+    // "after the seal" + "opponents not scored" — and it is the one state that
+    // cannot occur: `personal/confrontation.ts` filters posterior marks out
+    // wholesale, so the opponent clause there would say nothing about a Move
+    // nothing scores anyway. That is what keeps the fieldset one line tall.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // the Player's own
+    expect(legendOf()?.textContent).toBe("Mon verdict, après le scellement");
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // the opponent's
+    expect(legendOf()?.textContent).toBe("Mon verdict, après le scellement");
+  });
+
+  it("names the opponent's Move in the legend — where it is read BEFORE the verdict can be posed", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    // 1. e4 — White's, and the Player is White.
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(legendOf()?.textContent).toBe("Mon verdict");
+
+    // 1… e5 — the opponent's. The warning alternates every single Move, which is
+    // why it was 33 of the 45 displacements: as a paragraph above the radios it
+    // appeared and vanished under the Player's own stepping.
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(legendOf()?.textContent).toBe("Mon verdict — coups adverses non notés");
   });
 });

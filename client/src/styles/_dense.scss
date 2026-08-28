@@ -260,7 +260,8 @@ section[aria-label="partie"] {
   gap: var(--space-2);
 }
 
-// The `Review mode`'s three levels, at the top of the pane beside the board. A
+// The `Review mode`'s three levels, in the pane beside the board — under the step
+// controls since US-22, which lead the pane and never move (ADR-0021). A
 // narrower gap than a form's fieldset: this one sits in a 14rem column, and the
 // three levels should read as one control rather than wrap one per line.
 [data-part="review-mode"] {
@@ -275,15 +276,6 @@ section[aria-label="partie"] {
 [data-part="declared-severity"] {
   gap: var(--space-1) var(--space-2);
   padding: var(--space-1) var(--space-2) var(--space-2);
-}
-
-// "This Move is the opponent's, your verdict is kept but not scored." A muted
-// note and not a warning: it states a rule, it does not refuse anything. In
-// WORDS, so the meaning never rests on the colour (ADR-0013).
-[data-part="uncounted-notice"] {
-  color: var(--ink-muted);
-  font-size: var(--text-s);
-  margin-block: 0 var(--space-1);
 }
 
 // The Player's `Note` on the Move being read (US-16a). A textarea in a 14rem

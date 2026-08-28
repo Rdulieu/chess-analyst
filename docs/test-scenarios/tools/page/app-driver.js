@@ -79,6 +79,30 @@ var agenticDriver = {
     return true;
   },
 
+  /**
+   * Step one Move, by clicking the button the Player clicks.
+   *
+   * Returns false when the button is missing or disabled — the ends of the Game
+   * are a legitimate answer, not a failure. One call is one click **on purpose**:
+   * a loop of clicks inside a single evaluation re-clicks a handler the framework
+   * has already replaced, and on 2026-08-24 that advanced a single ply while
+   * reporting eight.
+   */
+  step(label) {
+    const stepper = document.querySelector('[data-part="stepper"]');
+    if (!stepper) return false;
+    const button = [...stepper.querySelectorAll("button")].find((b) => b.textContent.trim() === label);
+    if (!button || button.disabled) return false;
+    button.click();
+    return true;
+  },
+
+  /** The Move currently being read, as the screen itself names it. */
+  currentMove() {
+    const readout = document.querySelector('[aria-label="current move"]');
+    return readout ? readout.textContent.trim() : null;
+  },
+
   /** The Profiles this screen currently offers, so a miss can say what it saw. */
   profilesOffered() {
     return [...document.querySelectorAll('a[href*="/profiles/"]:not([href*="#"])')].map((a) =>
