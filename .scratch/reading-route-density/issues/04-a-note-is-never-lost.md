@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-22-reading-route-density` le 2026-08-28 (FP verte ; un vrai bug d'adressage trouvé par la FP et corrigé dans la tranche)
 
 ## Parent
 
@@ -31,15 +31,23 @@ apparaît puis disparaît recréerait exactement le défaut que la tranche 02 vi
 
 ## Acceptance criteria
 
-- [ ] Une note tapée puis suivie d'un changement de coup est **conservée**, sans aucun clic
-- [ ] Une note tapée puis suivie d'une sortie du champ est conservée
-- [ ] L'écran dit que la note est enregistrée
-- [ ] Cette confirmation **ne déplace rien** — hauteur constante, sous les contrôles
-- [ ] Un texte vidé efface la note, comme aujourd'hui
-- [ ] L'effacement explicite reste possible et ne touche pas le verdict posé à côté
-- [ ] Après scellement, une note écrite va bien dans la couche postérieure, comme aujourd'hui
-- [ ] La note d'un coup ne suit pas le joueur sur le coup suivant
-- [ ] L'assertion 7 reste verte
+- [x] Une note tapée puis suivie d'un changement de coup est **conservée**, sans aucun clic
+- [x] Une note tapée puis suivie d'une sortie du champ est conservée
+- [x] L'écran dit que la note est enregistrée
+- [x] Cette confirmation **ne déplace rien** — hauteur constante, sous les contrôles
+- [x] Un texte vidé efface la note, comme aujourd'hui — **lu au sens de « comme aujourd'hui »**, qui
+  est la moitié du critère qui décide : aujourd'hui le bouton `Enregistrer` est *désactivé* sur une
+  boîte vide, donc vider ne supprime rien et la suppression passe par son propre bouton. C'est ce qui
+  a été livré. La lecture littérale — vider puis quitter efface — a été **écartée**, et pas par
+  confort : elle transformerait un select-tout-supprime suivi d'un clic ailleurs en effacement
+  silencieux, c'est-à-dire exactement la perte de données que la tranche ferme, en sens inverse. Le
+  PRD tient les deux bouts (« l'effacement reste explicite » **et** « un texte vide reste un
+  effacement ») ; le second décrit la règle du *chemin d'écriture*, inchangée côté serveur, pas ce
+  que déclenche une boîte vidée. À trancher par le demandeur s'il voulait la lecture littérale.
+- [x] L'effacement explicite reste possible et ne touche pas le verdict posé à côté
+- [x] Après scellement, une note écrite va bien dans la couche postérieure, comme aujourd'hui
+- [x] La note d'un coup ne suit pas le joueur sur le coup suivant
+- [x] L'assertion 7 reste verte
 
 ### Feature Path (FP)
 
@@ -53,3 +61,16 @@ Verify: UI d'abord — ce que l'écran montre au retour sur le coup.
 ## Blocked by
 
 - `.scratch/reading-route-density/issues/02-what-the-player-clicks-stops-moving.md` — la confirmation d'enregistrement est précisément le genre de bloc que la garde doit surveiller
+
+## Ce qui reste ouvert à la livraison
+
+**Un rechargement de page, ou la fermeture de l'onglet, le curseur encore dans le champ, perd la
+note en silence.** Mesuré par la FP du 2026-08-28 : rien n'est écrit, la boîte est vide au retour.
+C'est le **seul** chemin de sortie qui ne valide pas — la FP a essayé le flou, `Previous`, `Next`,
+un clic dans la liste des coups, et la navigation hors de l'écran, qui valident tous.
+
+Il n'est **pas** corrigé ici, et pour une raison de périmètre plutôt que de coût : le fermer demande
+`sendBeacon`, qui ne sait faire que du POST, donc une route serveur — et le PRD écrit noir sur blanc
+qu'US-22 est **entièrement front, aucun changement serveur**. La formulation à l'écran est honnête
+sur ce qu'elle promet (« Enregistrée **en quittant le champ** »). Porté à la PR d'intégration comme
+manque nommé, au demandeur d'en décider.

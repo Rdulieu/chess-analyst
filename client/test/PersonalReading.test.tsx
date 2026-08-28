@@ -391,6 +391,54 @@ describe("the reading route", () => {
     );
   });
 
+  it("keeps an edit whose new text happens to equal what the NEXT Move stores", async () => {
+    // The sharpest case, and the FP's rather than mine (2026-08-28). A cleanup
+    // reading the ply stepped TO would compare the edit against *that* Move's
+    // stored text, judge it unchanged, and drop it in silence — the loss this
+    // slice exists to close, hidden behind a coincidence of wording.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "différente", keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "commun", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.clear(box);
+    await user.type(box, "commun");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "commun",
+      ),
+    );
+  });
+
+  it("writes nothing at all when the Player steps away from a Note they did not touch", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "inchangée", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+  });
+
   it("files a Note under the Move it was written about, not the Move stepped to", async () => {
     const calls = stubReading();
     const user = userEvent.setup();
