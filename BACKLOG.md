@@ -226,10 +226,11 @@
   >
   > ### Grillée le 2026-08-27 — la mesure, puis neuf décisions
   >
-  > ADR : [`0021-what-the-player-acts-on-never-moves`](docs/adr/0021-what-the-player-acts-on-never-moves.md)
-  > et [`0022-the-declared-verdict-wears-the-severity-glyph`](docs/adr/0022-the-declared-verdict-wears-the-severity-glyph.md).
-  > `CONTEXT.md` **inchangé** : tout ce qui a été tranché est de la mise en page, et le glossaire ne
-  > porte que le domaine.
+  > ADR : [`0021-what-the-player-acts-on-never-moves`](docs/adr/0021-what-the-player-acts-on-never-moves.md).
+  > `CONTEXT.md` gagne **les glyphes des cinq verdicts déclarés**, sous `Declared severity` : le
+  > glossaire portait déjà `?!` `?` `??` pour les sévérités mesurées, donc la forme écrite du
+  > vocabulaire y est chez elle (décision du demandeur — une ADR y aurait fait doublon). Rien d'autre
+  > n'y entre : tout le reste est de la mise en page.
   >
   > #### La mesure, faite au grill plutôt que promise à une tranche
   >
@@ -281,11 +282,27 @@
   >   le focus n'est pas dans un contrôle, `k` bascule le moment clé, tout est inerte pendant qu'on
   >   tape une note. Un groupe de radios garde ses flèches natives quand il a le focus — les leur
   >   retirer casserait une convention que rien dans la suite ne surveille.
-  > - **D8 — La liste des coups porte les cinq glyphes de verdict** (ADR-0022) : `?!` `?` `??`
-  >   partagés avec le moteur, plus `!` pour `Bon` et `✓` pour `Correct`. Renverse une décision
-  >   d'US-16a écrite dans `MoveMarks.tsx`, parce que la confusion qu'elle craignait n'a **aucun
-  >   écran** où se produire. **La liste devient du même geste la vue d'ensemble** que la story
-  >   cherchait — sans ajouter de bloc au panneau qu'elle allège.
+  > - **D8 — La liste des coups porte les cinq glyphes de verdict** : `?!` `?` `??` partagés avec le
+  >   moteur, plus `!` pour `Bon` et `✓` pour `Correct`. Consigné dans `CONTEXT.md` sous
+  >   `Declared severity`, où vivent déjà les glyphes mesurés.
+  >
+  >   > **Ceci renverse une décision d'US-16a**, écrite dans `MoveMarks.tsx` et à supprimer avec son
+  >   > commentaire : « *deliberately not the engine's severity glyph vocabulary — borrowing its
+  >   > marks would suggest a measured verdict where there is only a declared one* ». La raison du
+  >   > renversement : la confusion qu'elle craignait n'a **aucun écran** où se produire. La route de
+  >   > lecture rend `Board` sans aucune prop moteur, et la page Analyse ne rend pas les marques du
+  >   > joueur — vérifié, les deux vocabulaires ne coexistent nulle part. Contre ça, le gain est
+  >   > concret : `⚖` disait *un verdict existe ici* et il fallait ouvrir le coup pour savoir lequel.
+  >   >
+  >   > Le jour où un écran montrera les deux couches ensemble — pente naturelle d'US-16b, qui existe
+  >   > pour tenir trois lectures côte à côte **sans jamais les fondre** — des glyphes identiques ne
+  >   > suffiront plus. La règle est dans `CONTEXT.md` ; la FP qui construira cet écran la doit.
+  >   > Le piège bon marché est la teinte, et la leçon est celle d'US-16a elle-même : deux crayons
+  >   > que les noms accessibles distinguaient parfaitement et l'œil pas du tout à 16 px.
+  >
+  >   **La liste devient du même geste la vue d'ensemble** que la story cherchait — sans ajouter de
+  >   bloc au panneau qu'elle allège. Les notes n'y montrent toujours que `✎` : il faut ouvrir le
+  >   coup pour les lire, et c'est assez « dans un premier temps ».
   > - **D9 — Ordre des tranches : le regard d'abord, puis la stabilité.** Une tranche ne peut pas
   >   fusionner avec une assertion rouge, donc la garde voyage avec son correctif.
   >
