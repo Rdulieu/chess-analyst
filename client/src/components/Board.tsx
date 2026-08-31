@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { arrowStep, isCommandKeystroke } from "./keyboard";
 import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
@@ -42,6 +43,7 @@ export function Board({
   recap = null,
   orientation = "white",
   controls,
+  keyboardStepping = false,
   moveMarks,
 }: {
   pgn: string;
@@ -79,6 +81,17 @@ export function Board({
    * caller's. Absent everywhere else, so the Analyse page's list is untouched.
    */
   moveMarks?: (ply: number) => ReactNode;
+  /**
+   * Whether `←` and `→` step the Moves while this Board is on screen.
+   *
+   * Opt-in, and the reason is not caution: a shortcut is only offered where it is
+   * **announced**, and the announcement lives in the caller's own panel. A
+   * shortcut discovered by accident does not exist, and one that works on a
+   * screen that never mentions it is worse than none — the Player learns a rule
+   * that then fails silently elsewhere. The reading route announces them
+   * (`ShortcutsNotice`); the Analyse page does not, so it does not get them.
+   */
+  keyboardStepping?: boolean;
   /**
    * The `Board orientation` — which side sits at the bottom (CONTEXT.md).
    * Defaults to White so a caller with no side in mind gets the neutral
@@ -121,6 +134,35 @@ export function Board({
     setIndex(next);
     setPreview({ focus: null, hover: null });
   };
+
+  /*
+   * `←` and `→` step the Moves, when the caller announces them (US-22).
+   *
+   * Here rather than in the caller because stepping is this component's own
+   * state: each keyboard command is handled where the state it changes lives,
+   * instead of being routed back up through a callback. The guards — a chord is
+   * the browser's, a focused radio group keeps its native arrows, and nothing is
+   * a command while the Player is typing — are the shared ones in
+   * `./keyboard.ts`, so the reading route's table and this cannot drift on the
+   * question that matters most.
+   *
+   * The bounds are the stepper's own: the ends of the Game are the ends.
+   */
+  useEffect(() => {
+    if (!keyboardStepping) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isCommandKeystroke(event)) return;
+      const delta = arrowStep(event);
+      if (delta === null) return;
+      // Only once it is known to be ours: an arrow we then ignore is an arrow the
+      // Player expected to scroll the page.
+      event.preventDefault();
+      setIndex((current) => Math.min(Math.max(current + delta, 0), plies.length));
+      setPreview({ focus: null, hover: null });
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [keyboardStepping, plies.length]);
 
   /** Reports one channel's preview without disturbing the other's. */
   const previewVia = (fen: string | null, via: "focus" | "hover") =>
@@ -237,17 +279,14 @@ export function Board({
             board, which is where the PRD's arrangement puts the readout. They used
             to stack above the row, and the stack was what left the diagram no
             height to be visible in full.
+
+            **They come FIRST in this pane, and that is ADR-0021.** They used to
+            come after the caller's controls, which meant every block that appears
+            and disappears with the ply pushed the very buttons the Player was
+            clicking: 45 of 45 measured ply transitions displaced them, by 24 to
+            114 px. Nothing above them varies now — the readout below is one line
+            in every state — so a ply transition cannot move them at all.
           */}
-          {controls?.(index)}
-          {/*
-            The way to the record, from beside the board. The panel itself is
-            BELOW the row — that is deliberate, its height varies and nothing
-            above the diagram may move — so without this the Player would have to
-            already know it exists. Scrolling to reach it is acceptable; not
-            knowing it is there is not. Only in Detailed, because that is the
-            only level at which there is anything to reach.
-          */}
-          {detailed && <a href="#move-record-heading">Aller au relevé du coup</a>}
           <div data-part="stepper">
             <button type="button" onClick={() => goTo(index - 1)} disabled={atStart}>
               Previous
@@ -263,11 +302,24 @@ export function Board({
             which reports something the Player cannot otherwise observe, over minutes
             (US-8). It keeps its accessible name and its text: still queryable, still
             readable, just no longer interrupting.
+
+            Directly under the stepper because it names the Move the stepper just
+            reached — and it is one line in every state, so it displaces nothing.
           */}
           <p aria-label="current move">
             {currentMove}
             {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
           </p>
+          {controls?.(index)}
+          {/*
+            The way to the record, from beside the board. The panel itself is
+            BELOW the row — that is deliberate, its height varies and nothing
+            above the diagram may move — so without this the Player would have to
+            already know it exists. Scrolling to reach it is acceptable; not
+            knowing it is there is not. Only in Detailed, because that is the
+            only level at which there is anything to reach.
+          */}
+          {detailed && <a href="#move-record-heading">Aller au relevé du coup</a>}
           {annotations && (
             <>
               {/* Landscape, and deliberately so: squeezed into a narrow column the

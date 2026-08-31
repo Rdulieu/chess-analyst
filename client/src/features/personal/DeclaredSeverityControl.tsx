@@ -54,15 +54,7 @@ export function DeclaredSeverityControl({
 
   return (
     <fieldset data-part="declared-severity">
-      <legend>{posterior ? "Mon verdict, après le scellement" : "Mon verdict"}</legend>
-      {!playersOwnMove && (
-        // Said here and not only in the glossary: the Player is about to judge a
-        // Move that is not theirs, and would otherwise reasonably assume the
-        // confrontation will mark them on it.
-        <p data-part="uncounted-notice">
-          Coup de l'adversaire : votre verdict est conservé, mais il ne sera pas noté.
-        </p>
-      )}
+      <legend>{legendFor({ posterior, playersOwnMove })}</legend>
       {DECLARED_SEVERITIES.map((severity) => (
         <label key={severity} title={DECLARED_SEVERITY_MEANING[severity]}>
           <input
@@ -83,4 +75,33 @@ export function DeclaredSeverityControl({
       </button>
     </fieldset>
   );
+}
+
+/**
+ * Which of the **three** legends this control wears. Three, never combined — the
+ * combination is the one that would wrap to a second line below 900 px, and it is
+ * the one state that cannot occur: after the seal nothing is counted at all
+ * (`personal/confrontation.ts` filters `posterior` marks out), so an opponent
+ * clause there would say nothing.
+ *
+ * The opponent warning lives HERE rather than in a paragraph above the radios,
+ * and that is ADR-0021 rather than a matter of taste. As a paragraph it appeared
+ * and vanished **every other Move** — 33 of the 45 measured displacements of the
+ * step controls, which sit below it in the same pane. In the legend it is read
+ * *before* the verdict can be posed and moves nothing: measured, the three render
+ * on one line at 1400, 900 and 380 px, so the fieldset's height never changes.
+ *
+ * Said less often, **never less clearly**: this is the wording, not an icon and
+ * not a tooltip.
+ */
+export function legendFor({
+  posterior,
+  playersOwnMove,
+}: {
+  posterior: boolean;
+  playersOwnMove: boolean;
+}): string {
+  if (posterior) return "Mon verdict, après le scellement";
+  if (!playersOwnMove) return "Mon verdict — coups adverses non notés";
+  return "Mon verdict";
 }

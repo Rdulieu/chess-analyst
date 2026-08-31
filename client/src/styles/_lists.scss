@@ -22,6 +22,14 @@
 ul[aria-label="profils"] {
   display: grid;
   grid-template-columns: 1fr auto auto auto auto;
+  // Sized to its own content, the way a `table` in auto layout sizes itself.
+  // Without it the list is a block-level grid: it takes the scroller's width
+  // while its non-shrinking tracks push its content past it, so the box reads as
+  // overflowing even though the container scrolls correctly and the Player sees
+  // nothing wrong. Measured on the FP of US-22 slice 01 at 380 px — 643 px of
+  // content in a 299 px box, on both themes — and a reading that is permanently
+  // not clean is a reading somebody re-explains at every future pass.
+  min-inline-size: max-content;
 }
 
 ul[aria-label="profils"] li {

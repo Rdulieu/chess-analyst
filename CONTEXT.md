@@ -460,8 +460,17 @@ _Avoid_: Important move, Critical position, Turning point (rejected in grilling)
 **Declared severity**:
 The `Player`'s own verdict on a `Move`, by hand, inside their `Personal analysis` — on the same
 scale as the measured severities plus two values the engine has no band for:
-`Blunder` / `Mistake` / `Inaccuracy` / **`Sound`** ("I looked, and I find nothing to fault") /
-**`Good`** ("better than it looks").
+`Blunder` (`??`) / `Mistake` (`?`) / `Inaccuracy` (`?!`) / **`Sound`** (`✓`, "I looked, and I find
+nothing to fault") / **`Good`** (`!`, "better than it looks").
+
+The three shared values are **written the same way as the measured ones** — the shared vocabulary
+is deliberate all the way down to the glyph, for the same reason the labels are shared: setting a
+declared verdict beside a measured one is only meaningful on identical marks. The two the engine
+has no band for extend the notation rather than borrow it: `!` is chess notation's own sign for a
+good Move, and `✓` is deliberately from another family because `Sound` is not a judgement of
+quality but a statement of examination. A view that shows **both** authors at once tells them
+apart by something other than colour — a column, a heading — never by the glyph alone, which is
+by construction identical.
 
 - **`Sound` is what makes the confrontation possible at all.** Without it, "I said nothing here" and
   "I say this Move is fine" would be the same absence, and a comparison could only ever expose the

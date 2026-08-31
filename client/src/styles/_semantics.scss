@@ -57,7 +57,14 @@
 ol[aria-label="moves"] {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-1);
+  // The column gap is DOUBLE the gap inside a row, and that asymmetry is the
+  // whole point: a mark has to belong to the Move it judges. With both gaps
+  // equal, the glyph sat exactly halfway between `e3` and `Be6` and the eye had
+  // no reason to attach it to either (measured 2026-08-28, 4 px on each side).
+  // Under `⚖` that only mislabelled "there is a verdict here"; since US-22 the
+  // mark says WHICH verdict, so a misattributed `??` mislabels the verdict
+  // itself. Chess notation glues the mark to its Move, and so does this.
+  gap: var(--space-1) var(--space-2);
   align-items: baseline;
 
   li {

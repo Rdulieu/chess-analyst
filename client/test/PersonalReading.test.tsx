@@ -175,10 +175,14 @@ describe("the reading route", () => {
 
     await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.queryByText(/ne sera pas (noté|comptabilisé)/i)).toBeNull();
+    // The warning is the fieldset's own accessible NAME since US-22 — it warns
+    // before the verdict can be posed instead of appearing above the radios and
+    // pushing everything below it (ADR-0021). Said less often, never less
+    // clearly: the wording is still there and still in words.
+    expect(screen.queryByRole("group", { name: /non notés/i })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Next" })); // 1... e5, the opponent's
-    expect(screen.getByText(/ne sera pas (noté|comptabilisé)/i)).not.toBeNull();
+    expect(screen.getByRole("group", { name: /coups adverses non notés/i })).not.toBeNull();
 
     await user.click(
       within(screen.getByRole("group", { name: /mon verdict/i })).getByRole("radio", {
@@ -225,7 +229,10 @@ describe("the reading route", () => {
 
     const note = screen.getByRole("textbox", { name: /ma note/i });
     await user.type(note, "je joue ça par habitude");
-    await user.click(screen.getByRole("button", { name: /enregistrer la note/i }));
+    // Leaving the field is what commits it since US-22 — writing a Note costs no
+    // more clicks than posing a verdict, and the screen says it was kept.
+    await user.tab();
+    expect(screen.getByText("Note enregistrée.")).not.toBeNull();
 
     await waitFor(() =>
       expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
@@ -235,6 +242,219 @@ describe("the reading route", () => {
         "je joue ça par habitude",
       ),
     );
+  });
+
+  it("keeps a Note the Player typed and then stepped away from, with no click at all", async () => {
+    // The loss this slice closes. The draft was local state reset to the stored
+    // value the moment the ply changed, so typing a Note and clicking `Next`
+    // threw it away **in silence** — on the one part of the screen where the
+    // Player thinks. Nothing warned, nothing held it.
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "je joue ça par habitude");
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+
+    // And it is there on the way back.
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je joue ça par habitude",
+      ),
+    );
+  });
+
+  it("says what the Note's state is, and says it from an element that never comes or goes", async () => {
+    // A confirmation that appears and disappears would rebuild, three slices
+    // later, the very defect slice 02 closed — and under the Player's own hands,
+    // since the erase button sits directly below it (ADR-0021). So the element is
+    // always there and only its words change.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const stateLine = () => document.querySelector('[data-part="note-state"]');
+    const count = () => document.querySelectorAll('[data-part="note-state"]').length;
+
+    expect(stateLine()?.textContent).toBe("Aucune note sur ce coup.");
+    expect(count()).toBe(1);
+
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "une idée");
+    expect(stateLine()?.textContent).toBe("Enregistrée en quittant le champ.");
+    expect(count()).toBe(1);
+
+    await user.tab();
+    await waitFor(() => expect(stateLine()?.textContent).toBe("Note enregistrée."));
+    expect(count()).toBe(1);
+  });
+
+  it("does not erase a Note because the box was emptied and left — erasing is its own act", async () => {
+    // The mirror of the loss this slice closes. A select-all-and-delete followed
+    // by a click elsewhere is not a decision to unsay something; the button is.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "à revoir", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.clear(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "à revoir",
+      ),
+    );
+  });
+
+  it("puts the stored Note back when the box is emptied and left, rather than looking erased", async () => {
+    // Measured on the FP of 2026-08-28: after emptying and blurring, the box was
+    // empty, the line said "Note enregistrée." and the erase button was live —
+    // three things that cannot all be true at once, in precisely the moment a
+    // Player is most afraid of having lost something. The Note is safe; the
+    // screen has to say so.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "à revoir", keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.clear(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.tab();
+
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+      "à revoir",
+    );
+    expect(document.querySelector('[data-part="note-state"]')?.textContent).toBe("Note enregistrée.");
+  });
+
+  it("says what the field is about at the starting Position, where it is about the Game", async () => {
+    // The label already knew; the state line was still saying "ce coup" under a
+    // field labelled "Ma note sur la partie".
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    expect(document.querySelector('[data-part="note-state"]')?.textContent).toBe(
+      "Aucune note sur la partie.",
+    );
+  });
+
+  it("commits an EDIT of a stored Note with the values of the Move being left", async () => {
+    // The sharpest form of the addressing bug: React renders the new ply before
+    // it runs the old ply's cleanup, so anything the cleanup reads from a ref
+    // assigned during render already belongs to the Move stepped TO. Here ply 1
+    // holds a Note and ply 2 holds none, so a stale read would take the new
+    // Move's `null` for the old Move's stored value.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "première idée", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.clear(box);
+    await user.type(box, "je change d'avis");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/2"))).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "je change d'avis",
+      ),
+    );
+  });
+
+  it("keeps an edit whose new text happens to equal what the NEXT Move stores", async () => {
+    // The sharpest case, and the FP's rather than mine (2026-08-28). A cleanup
+    // reading the ply stepped TO would compare the edit against *that* Move's
+    // stored text, judge it unchanged, and drop it in silence — the loss this
+    // slice exists to close, hidden behind a coincidence of wording.
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [
+        { ply: 1, declaredSeverity: null, note: "différente", keyMoment: false, posterior: false },
+        { ply: 2, declaredSeverity: null, note: "commun", keyMoment: false, posterior: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.clear(box);
+    await user.type(box, "commun");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() =>
+      expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe(
+        "commun",
+      ),
+    );
+  });
+
+  it("writes nothing at all when the Player steps away from a Note they did not touch", async () => {
+    const calls = stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: null, note: "inchangée", keyMoment: false, posterior: false }],
+    });
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("textbox", { name: /ma note/i }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+  });
+
+  it("files a Note under the Move it was written about, not the Move stepped to", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // ply 1
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "sur e4");
+    await user.click(screen.getByRole("button", { name: "Next" })); // ply 2
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/1"))).toBe(true),
+    );
+    expect(calls.some((c) => c.startsWith("PUT /api/personal/1/marks/2"))).toBe(false);
+    // And the box is the new Move's, empty — a Note never follows the Player.
+    expect((screen.getByRole("textbox", { name: /ma note/i }) as HTMLTextAreaElement).value).toBe("");
   });
 
   it("says outright that a Note is never graded — that is the point of it", async () => {
@@ -638,6 +858,88 @@ describe("seeing where I stand in a reading", () => {
     expect(within(items[4]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
   });
 
+  it("says WHICH verdict each Move carries, not merely that one exists", async () => {
+    // `⚖` said "a verdict was posed here" and nothing more: the Player had to
+    // open every marked Move to find out which. The five values take their own
+    // marks — the three shared with the engine written exactly as the engine
+    // writes them, because it is the same scale and the Player has no second
+    // vocabulary to learn (CONTEXT.md → Declared severity).
+    stubReading({
+      ...EMPTY,
+      marks: (["blunder", "mistake", "inaccuracy", "good", "sound"] as const).map((s, i) => ({
+        ply: i + 1,
+        declaredSeverity: s,
+        note: null,
+        keyMoment: false,
+        posterior: false,
+      })),
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const items = moveItems();
+    expect(within(items[0]).getByLabelText(/verdict/i).textContent).toBe("??");
+    expect(within(items[1]).getByLabelText(/verdict/i).textContent).toBe("?");
+    expect(within(items[2]).getByLabelText(/verdict/i).textContent).toBe("?!");
+    // The two the engine has no band for EXTEND the notation rather than borrow
+    // it: `!` is chess notation's own sign for a good Move, and `✓` comes from
+    // another family on purpose — `Correct` is not a judgement of quality but a
+    // statement of examination.
+    expect(within(items[3]).getByLabelText(/verdict/i).textContent).toBe("!");
+    expect(within(items[4]).getByLabelText(/verdict/i).textContent).toBe("✓");
+  });
+
+  it("names the verdict it draws, so the mark is never the only carrier", async () => {
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    expect(within(moveItems()[0]).getByLabelText(/verdict/i).getAttribute("aria-label")).toBe(
+      "verdict : Correct",
+    );
+  });
+
+  it("marks a Move judged Correct, and leaves a Move never examined bare", async () => {
+    // The glossary forbids folding these two together, word for word: silence is
+    // not a value. Without a mark of its own, "I looked and I find nothing to
+    // fault" would be indistinguishable from "I never came here".
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const items = moveItems();
+    expect(within(items[0]).getByLabelText(/verdict/i)).not.toBeNull();
+    expect(within(items[1]).queryByLabelText(/verdict|note|moment clé/i)).toBeNull();
+  });
+
+  it("lets a verdict, a Note and a Key moment sit on one Move without merging", async () => {
+    // Three statements, three marks, three names. The FP of US-16a proved that
+    // "nothing by tint alone" can be kept to the letter and missed in practice:
+    // two pencils the accessible names told apart perfectly and the eye did not.
+    stubReading({
+      ...EMPTY,
+      marks: [{ ply: 1, declaredSeverity: "good", note: "pourquoi", keyMoment: true, posterior: false }],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const row = moveItems()[0];
+    const drawn = [
+      within(row).getByLabelText(/verdict/i),
+      within(row).getByLabelText(/note/i),
+      within(row).getByLabelText(/moment clé/i),
+    ].map((el) => el.textContent);
+    expect(drawn).toEqual(["!", "✎", "◆"]);
+    // Three different marks, not three names over one drawing.
+    expect(new Set(drawn).size).toBe(3);
+  });
+
   it("states how far the reading has got — how many Moves annotated, out of how many", async () => {
     stubReading({
       ...EMPTY,
@@ -717,5 +1019,344 @@ describe("seeing where I stand in a reading", () => {
 
     // An empty panel announcing an absence is noise: silence stays silent here too.
     expect(screen.queryByRole("group", { name: /note sur la partie/i })).toBeNull();
+  });
+});
+
+describe("what the Player clicks never moves (ADR-0021)", () => {
+  /*
+   * Measured 2026-08-27 on a 46-ply reading: **45 ply transitions out of 45**
+   * displaced the step controls, by 24 to 114 px, 194 px of swing at 1400 and
+   * 312 below 900. The panel is rendered in the same pane as the stepper, so what
+   * moved was not decoration — it was the `Previous` / `Next` buttons under the
+   * finger already reaching for them.
+   *
+   * The pixels belong to the theme pass (jsdom computes no geometry). What belongs
+   * here is the ORDER, which is what ADR-0021 actually decides — and an order is
+   * checked at every commit, hours before a portal run.
+   */
+  const legendOf = () => screen.getByRole("group", { name: /mon verdict/i }).querySelector("legend");
+
+  /** Where each part sits in the rendered document, in reading order. */
+  const orderOf = (...parts: string[]) =>
+    parts.map((part) => {
+      const found = [...document.querySelectorAll("[data-part]")].findIndex(
+        (el) => el.getAttribute("data-part") === part,
+      );
+      if (found === -1) throw new Error(`no [data-part="${part}"] on screen`);
+      return found;
+    });
+
+  const ascending = (values: number[]) => values.every((v, i) => i === 0 || v > values[i - 1]);
+
+  it("puts the step controls above everything that varies with the ply", async () => {
+    // The stepper used to be rendered BELOW the whole panel in the same pane, so
+    // every block that came and went with the ply pushed the very buttons the
+    // Player was clicking. The rule is about order, not about height: reserving a
+    // fixed height would have cost 194 to 312 px of empty column exactly where the
+    // column is scarcest, and the sealed readout has no knowable maximum anyway.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(
+      ascending(orderOf("stepper", "declared-severity", "key-moment", "note", "tally")),
+    ).toBe(true);
+  });
+
+
+  it("changes nothing above the stepper when the Player enters or leaves the starting Position", async () => {
+    // Ply 0 has no Move to judge, so the verdict fieldset and the pivot control
+    // are absent there — entering and leaving it is the transition where the most
+    // blocks appear at once. Nothing above the stepper may differ between the two.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const above = () => {
+      const parts = [...document.querySelectorAll("[data-part]")];
+      const stepper = parts.findIndex((el) => el.getAttribute("data-part") === "stepper");
+      return parts.slice(0, stepper).map((el) => el.getAttribute("data-part"));
+    };
+
+    const atStart = above();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(above()).toEqual(atStart);
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(above()).toEqual(atStart);
+  });
+
+  it("keeps the order in the richest state there is — a sealed reading, on a marked Move", async () => {
+    // After the seal the panel gains the sealed readout, the sealed mark and the
+    // posterior notice, and the sealed mark's height depends on what was written
+    // that day. That is the state the defect was worst in, and it is the state the
+    // order has to hold in. Nothing is folded away to buy height: the sealed layer
+    // stays readable exactly as it was.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [
+        {
+          ply: 1,
+          declaredSeverity: "mistake",
+          note: "je pensais tenir le centre",
+          keyMoment: true,
+          posterior: false,
+        },
+      ],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(
+      ascending(
+        orderOf(
+          "stepper",
+          "declared-severity",
+          "key-moment",
+          "note",
+          "sealed",
+          "sealed-mark",
+          "posterior-notice",
+          "tally",
+        ),
+      ),
+    ).toBe(true);
+    // Unabridged: what was written when the reading was sealed is still there to read.
+    expect(screen.getByText(/je pensais tenir le centre/)).not.toBeNull();
+  });
+
+  it("files a Note written after the seal in the posterior layer, as the mouse always did", async () => {
+    // The write path did not change — only what triggers it. A Note committed by
+    // leaving the field must land in the same layer a Note committed by a button
+    // landed in, or slice 04 would have quietly moved data across the seal.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.type(screen.getByRole("textbox", { name: /ma note/i }), "vu après coup");
+    await user.tab();
+
+    // Written, and read back as the posterior layer: the sealed verdict is still
+    // there beside it, untouched.
+    await waitFor(() => expect(screen.getByText("Note enregistrée.")).not.toBeNull());
+    expect(document.querySelector('[data-part="sealed-mark"]')?.textContent).toContain("Erreur");
+  });
+
+  it("says nothing about opponents after the seal, because after the seal nothing is counted", async () => {
+    // The one combination that WOULD wrap to a second line below 900 px is
+    // "after the seal" + "opponents not scored" — and it is the one state that
+    // cannot occur: `personal/confrontation.ts` filters posterior marks out
+    // wholesale, so the opponent clause there would say nothing about a Move
+    // nothing scores anyway. That is what keeps the fieldset one line tall.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // the Player's own
+    expect(legendOf()?.textContent).toBe("Mon verdict, après le scellement");
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // the opponent's
+    expect(legendOf()?.textContent).toBe("Mon verdict, après le scellement");
+  });
+
+  it("names the opponent's Move in the legend — where it is read BEFORE the verdict can be posed", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    // 1. e4 — White's, and the Player is White.
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(legendOf()?.textContent).toBe("Mon verdict");
+
+    // 1… e5 — the opponent's. The warning alternates every single Move, which is
+    // why it was 33 of the 45 displacements: as a paragraph above the radios it
+    // appeared and vanished under the Player's own stepping.
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(legendOf()?.textContent).toBe("Mon verdict — coups adverses non notés");
+  });
+});
+
+describe("posing a verdict from the keyboard (US-22)", () => {
+  const verdicts = () => screen.getByRole("group", { name: /mon verdict/i });
+  const checked = () =>
+    within(verdicts())
+      .getAllByRole("radio")
+      .filter((r) => (r as HTMLInputElement).checked)
+      .map((r) => (r as HTMLInputElement).value);
+
+  it("poses the five verdicts on 1 to 5, in the order the screen shows them", async () => {
+    // Criterion 40 of US-16a wanted "few clicks, Move after Move". It was held for
+    // the verdict alone, and with a mouse — the app had no keyboard shortcut at
+    // all, and this is its first. The order is the glossary's, worst to best, so
+    // there is nothing arbitrary to memorise: what the screen shows top to bottom
+    // is what `1` to `5` pose.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.keyboard("1");
+    await waitFor(() => expect(checked()).toEqual(["blunder"]));
+
+    await user.keyboard("5");
+    await waitFor(() => expect(checked()).toEqual(["good"]));
+  });
+
+  it("does not move the focus, which is what lets the loop run at all", async () => {
+    // Posing a verdict from the keyboard is a COMMAND, not a click. If it moved
+    // the focus into the radio group, the arrows would then walk the five values
+    // instead of changing Move — and "verdict, next Move, verdict" would stop
+    // after the first verdict.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const before = document.activeElement;
+    await user.keyboard("2");
+    await waitFor(() => expect(checked()).toEqual(["mistake"]));
+    expect(document.activeElement).toBe(before);
+  });
+
+  it("runs the loop: verdict, next Move, verdict, without a single click", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(screen.getByLabelText("current move").textContent).toContain("e4"));
+    await user.keyboard("3");
+    await waitFor(() => expect(checked()).toEqual(["inaccuracy"]));
+
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(screen.getByLabelText("current move").textContent).toContain("e5"));
+    await user.keyboard("1");
+    await waitFor(() => expect(checked()).toEqual(["blunder"]));
+
+    await user.keyboard("{ArrowLeft}");
+    await waitFor(() => expect(checked()).toEqual(["inaccuracy"]));
+  });
+
+  it("toggles the Key moment on k", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const pivot = () => screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement;
+    await user.keyboard("k");
+    await waitFor(() => expect(pivot().checked).toBe(true));
+    await user.keyboard("k");
+    await waitFor(() => expect(pivot().checked).toBe(false));
+  });
+
+  it("is inert while a Note is being typed — the keys write text and nothing else", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const box = screen.getByRole("textbox", { name: /ma note/i });
+    await user.click(box);
+    await user.keyboard("1 coup sur 5, k{ArrowLeft}");
+
+    expect((box as HTMLTextAreaElement).value).toContain("1 coup sur 5, k");
+    expect(checked()).toEqual([]);
+    expect((screen.getByRole("checkbox", { name: /moment clé/i }) as HTMLInputElement).checked).toBe(
+      false,
+    );
+    // And the arrow moved the caret, not the Move.
+    expect(screen.getByLabelText("current move").textContent).toContain("e4");
+  });
+
+  it("leaves a focused radio group its arrows — the app takes no arrow it is offered", async () => {
+    // The convention assistive technology takes for granted: inside a radio
+    // group, the arrows walk the group. The app's job is to keep its hands off,
+    // and that is what is asserted here — the *walking* is the browser's, and
+    // jsdom's user-event cannot simulate it (it throws inside `walkRadio`), so a
+    // raw keydown is used and the assertion is that the Move did not change.
+    const user = userEvent.setup();
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const radio = within(verdicts()).getAllByRole("radio")[0];
+    await user.click(radio);
+    expect(checked()).toEqual(["blunder"]);
+
+    const event = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true });
+    radio.dispatchEvent(event);
+
+    // Not ours: not swallowed, and the Move stayed where it was.
+    expect(event.defaultPrevented).toBe(false);
+    expect(screen.getByLabelText("current move").textContent).toContain("e4");
+  });
+
+  it("poses no verdict at the starting Position, where there is no Move to judge", async () => {
+    const calls = stubReading();
+    const user = userEvent.setup();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.keyboard("1");
+    await user.keyboard("k");
+    expect(calls.filter((c) => c.startsWith("PUT "))).toEqual([]);
+  });
+
+  it("says on the screen that the shortcuts exist, because one discovered by accident does not", async () => {
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    const notice = document.querySelector('[data-part="shortcuts"]');
+    expect(notice?.textContent).toContain("1");
+    expect(notice?.textContent).toContain("5");
+    expect(notice?.textContent).toMatch(/moment clé/i);
+    // The same sentence in every state, so it can never move anything.
+    expect(document.querySelectorAll('[data-part="shortcuts"]')).toHaveLength(1);
+  });
+
+  it("writes into the posterior layer after the seal, exactly as the mouse does", async () => {
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-20T10:00:00.000Z",
+      engineSeenBeforeSeal: false,
+      marks: [{ ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }],
+    });
+    render(<PersonalReading game={OPERA_GAME} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.keyboard("5");
+    await waitFor(() => expect(checked()).toEqual(["good"]));
+    // The sealed layer is beside it, untouched.
+    expect(document.querySelector('[data-part="sealed-mark"]')?.textContent).toContain("Erreur");
   });
 });

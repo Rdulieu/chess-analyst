@@ -88,27 +88,40 @@ export function restoreSnapshot({ from, to }) {
   }
 
   /*
-   * `PRAGMA wal_checkpoint(TRUNCATE)` can be **refused in silence**: under a writer
-   * holding a transaction it returns `1|0|0` — the leading 1 meaning busy — with exit
-   * status 0. Measured 2026-08-27. Discarding that output is how a caller comes to
-   * believe the WAL was merged when it was not, so it is reported instead.
+   * **The source is never written to**, and that is a promise rather than a
+   * precaution: every Feature Path copies the requester's live database, whose
+   * `Evaluation`s only engine time can rebuild (ADR-0015).
+   *
+   * Until 2026-08-31 this ran `PRAGMA wal_checkpoint(TRUNCATE)` against the source
+   * first. It never damaged anything, and it bought nothing: the backup API reads
+   * **through** an unmerged WAL on its own — measured against a source holding
+   * 4152 bytes of frames with its writer still connected, copy complete. What is
+   * kept is the diagnostic the checkpoint used to provide: how much the source's
+   * WAL was holding, observed rather than merged, because a source with pending
+   * frames is a source something may still be writing to.
+   *
+   * `-readonly` on the connection is the guarantee, not the comment.
+   *
+   * **It does leave sidecars.** Opening a WAL database read-only still makes SQLite
+   * materialise a `-shm` and an empty `-wal` beside it (measured 2026-08-31: 32 KB
+   * and 0 bytes next to the requester's base). The pages of the `.db` are untouched
+   * — mtime, size and row counts all unchanged — and an **empty** `-wal` is exactly
+   * the residue this function already tolerates on a destination, as opposed to the
+   * non-empty one it refuses. `immutable=1` would avoid even that, and is not used
+   * on purpose: it tells SQLite the file cannot change, which is a lie about a
+   * database an app may be holding, and reading garbage is worse than leaving two
+   * regenerable files behind.
    */
-  let checkpoint;
-  try {
-    const [busy, log, merged] = sqlite3([from, "PRAGMA wal_checkpoint(TRUNCATE);"]).split("|");
-    checkpoint = { busy: busy === "1", framesInLog: Number(log), framesMerged: Number(merged) };
-  } catch (e) {
-    throw new Error(`cannot checkpoint ${from}: ${String(e.stderr || e.message).trim()}`, { cause: e });
-  }
+  const walBytes = existsSync(`${from}-wal`) ? statSync(`${from}-wal`).size : 0;
 
   for (const stale of [to, `${to}-wal`, `${to}-shm`]) rmSync(stale, { force: true });
   try {
-    sqlite3([from, `.backup '${to}'`]);
+    sqlite3(["-readonly", from, `.backup '${to}'`]);
   } catch (e) {
     throw new Error(`.backup of ${from} failed: ${String(e.stderr || e.message).trim()}`, { cause: e });
   }
 
-  return { file: to, tables: readBack(to), checkpoint };
+  return { file: to, tables: readBack(to), source: { walBytes } };
 }
 
 /* ------------------------------------------------------------------- the ports */

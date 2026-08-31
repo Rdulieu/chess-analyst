@@ -260,7 +260,8 @@ section[aria-label="partie"] {
   gap: var(--space-2);
 }
 
-// The `Review mode`'s three levels, at the top of the pane beside the board. A
+// The `Review mode`'s three levels, in the pane beside the board — under the step
+// controls since US-22, which lead the pane and never move (ADR-0021). A
 // narrower gap than a form's fieldset: this one sits in a 14rem column, and the
 // three levels should read as one control rather than wrap one per line.
 [data-part="review-mode"] {
@@ -275,15 +276,6 @@ section[aria-label="partie"] {
 [data-part="declared-severity"] {
   gap: var(--space-1) var(--space-2);
   padding: var(--space-1) var(--space-2) var(--space-2);
-}
-
-// "This Move is the opponent's, your verdict is kept but not scored." A muted
-// note and not a warning: it states a rule, it does not refuse anything. In
-// WORDS, so the meaning never rests on the colour (ADR-0013).
-[data-part="uncounted-notice"] {
-  color: var(--ink-muted);
-  font-size: var(--text-s);
-  margin-block: 0 var(--space-1);
 }
 
 // The Player's `Note` on the Move being read (US-16a). A textarea in a 14rem
@@ -320,16 +312,45 @@ section[aria-label="partie"] {
   }
 }
 
+// The keyboard, said on the screen (US-22). Muted like the other notices — it
+// states what is available, it warns about nothing — and the keys drawn as keys,
+// because a `kbd` that looks like prose is a shortcut nobody notices. No new
+// token: the border, the radius and the small size are the ones this pane
+// already uses.
+[data-part="shortcuts"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  margin-block: 0;
+
+  // The key's outline is the INK it is written in, not the sheet's hairline.
+  // Measured 2026-08-31: `--border` puts the chip at 1.39:1 on white and 1.57:1
+  // in the dark — no WCAG failure, since the key names are text and the outline
+  // carries no meaning, but a chip nobody sees is not a chip, and the whole point
+  // of drawing keys as keys is that a `kbd` reading as prose is a shortcut nobody
+  // notices. `currentColor` makes the outline exactly as visible as the letters
+  // inside it, in both themes, with no token to keep in step.
+  kbd {
+    font-family: var(--mono);
+    border: 1px solid currentColor;
+    border-radius: var(--radius);
+    padding-inline: var(--space-1);
+  }
+}
+
 // "Notes are never graded" — the sentence that makes the Player willing to
 // write. Muted, because it states a rule rather than warning about anything.
-[data-part="never-graded"] {
+// Beside it, since US-22, whether the Note is written down: the same treatment,
+// because it states a fact about the reading and warns about nothing either.
+[data-part="never-graded"],
+[data-part="note-state"] {
   color: var(--ink-muted);
   font-size: var(--text-s);
   margin-block: 0;
 }
 
-// Save and erase, side by side rather than stacked: two lines here are two lines
-// the diagram does not get.
+// Erasing, on its own line. It was two buttons side by side until US-22, when
+// the Note stopped needing a click to be kept — the field commits itself on
+// being left, and unsaying a Note is the only act left that has to be asked for.
 [data-part="note-actions"] {
   display: flex;
   flex-wrap: wrap;

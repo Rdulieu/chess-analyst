@@ -91,6 +91,40 @@ describe("restoring a snapshot", () => {
     expect(sqlite(to, "SELECT count(*) FROM games;")).toBe("3");
   });
 
+  it("does not write to the source — it is the one file ADR-0015 exists to protect", async () => {
+    /*
+     * Every Feature Path copies the requester's live database, which holds
+     * `Evaluation`s only engine time can rebuild. Until 2026-08-31 the restore ran
+     * `PRAGMA wal_checkpoint(TRUNCATE)` against the SOURCE before backing it up —
+     * harmless in practice on every run so far, and still a write path onto the one
+     * file the project promises never to touch. It buys nothing: the backup API reads
+     * through an unmerged WAL on its own, which this fixture proves next door.
+     */
+    const from = await walHotDatabase("untouched.db");
+    const before = {
+      db: statSync(from).mtimeMs,
+      wal: statSync(`${from}-wal`).size,
+      shm: existsSync(`${from}-shm`) ? statSync(`${from}-shm`).mtimeMs : null,
+    };
+
+    const restored = restoreSnapshot({ from, to: join(work, "from-untouched.db") });
+    expect(restored.tables.games).toBe(3); // the copy is complete all the same
+
+    expect(statSync(from).mtimeMs).toBe(before.db);
+    expect(statSync(`${from}-wal`).size).toBe(before.wal);
+    if (before.shm !== null) expect(statSync(`${from}-shm`).mtimeMs).toBe(before.shm);
+  });
+
+  it("reports what the source's WAL held, instead of merging it away", async () => {
+    // The figure kept its diagnostic value: a source with pending frames is a source
+    // something may still be writing to, and the caller is told rather than tidied up.
+    const from = await walHotDatabase("reported.db");
+    const restored = restoreSnapshot({ from, to: join(work, "from-reported.db") });
+
+    expect(restored.source.walBytes).toBe(statSync(`${from}-wal`).size);
+    expect(restored.source.walBytes).toBeGreaterThan(0);
+  });
+
   it("throws on a corrupt copy instead of letting the app start on it", () => {
     const to = join(work, "corrupt.db");
     const from = join(work, "not-a-database.db");

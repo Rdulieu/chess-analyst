@@ -207,6 +207,16 @@ overwrites nothing that would have been useful.
 Three signals lie, and each one cost a wrong conclusion on the same run (2026-08-21):
 
 - **`idle` does not mean finished.** It means the agent ended a turn. Ask for the report.
+- **"running · started 2d ago" is the SPAWN time, not elapsed work.** A subagent is frozen with its
+  parent session and resumes with it. Measured 2026-08-31: an agent listed as running for two days
+  had worked **eleven minutes**, then nothing for 61 h 44 — the exact span the session was suspended
+  — then resumed the minute the session did. Diagnosing a hang from that number is how a healthy pass
+  gets killed and paid for twice. Read the timestamps in its transcript and look for the largest gap;
+  a gap that starts at the suspension and ends at the resume is not a hang.
+  **The corollary bites the other way**: what the agent *launched* does not freeze. Its app and its
+  browser stayed up for 2 h 14 over two days holding three ports, because no teardown was ever
+  reached. If a session may not resume, those are orphans for the next run — check `ss -lptn` before
+  assigning ports.
 - **No listeners on its ports does NOT mean the agent died.** It means the agent **cleaned up**,
   which is exactly what it was told to do. Reading a clean teardown as a crash is what turned a
   green suite into a "four agents died" report.
@@ -284,7 +294,32 @@ a helper is recognised as *this* returning, not as a new mystery.
   server, which *is* a watcher — but it hot-reloads rather than resurrecting anything, and building
   the client instead would change what is being tested (a production bundle rather than the app the
   whole suite drives). Known constraint, not a defect to rediscover.
-- **Never `pkill` by pattern**: it kills every sibling's server mid-run.
+- **An in-page drill-down has no navigation to wait on.** `waitForScreen` guards a route change; a
+  control that only swaps a list in place does not change route, so reading the list straight away
+  reads the *old* one — or an empty one mid-fetch. Measured 2026-08-31: the explorer's depth cap was
+  reported three times at the wrong depth (31, then 35, then 38 plies) before a wait on
+  `pendingRequests() === 0` plus the expected breadcrumb depth found the real one, 40. Wait for the
+  network yourself.
+- **`launchBrowser` keeps the Node process alive** — an open socket and a piped stderr — so a boot
+  script that launches the app and the browser never returns, and a foreground call dies at the
+  two-minute timeout taking the browser with it. To drive in phases across several shell calls, end
+  the boot script with an explicit `process.exit(0)` and re-attach to the CDP port afterwards.
+- **On a shared worktree, "is this pid mine?" has a weaker answer than it looks.** `namesMe` proves
+  ownership by the process's directory — and when three scenarios run from the **same** worktree that
+  matches any of them (measured 2026-08-31). Nothing was at risk on that run, because `stopApp` only
+  inspects the holders of *your own* ports; but the proof would say "mine" about a sibling's server
+  if one ever held one of yours. The port assignment is what keeps this safe, which is why shifting
+  ports on a collision — and **saying which** — matters more than it appears.
+- **`blur()` on an element that was never focused fires nothing**, and the resulting reading looks
+  exactly like a defect: on 2026-08-31 an emptied-Note probe showed an empty box beside "Note
+  enregistrée.", which is precisely the contradiction the code exists to prevent. Same shape as the
+  380 px click-into-the-void — **assert the focus landed before believing the measurement.**
+- **Never `pkill` by pattern**: it kills every sibling's server mid-run. And read that as being
+  about **matching by pattern**, not about the `pkill` binary: `pgrep -f <pattern> | kill` is the
+  same trap wearing a different hat. Measured 2026-08-31 — an agent ran `pgrep -f "node bridge.mjs"`
+  and matched the `bash -c` process whose *command line contained that string*, killing the shell it
+  was running in before its own teardown could run and leaving the app up on two ports. A substring
+  of somebody else's command line is not evidence.
 - **Never kill what you cannot prove is yours, and the proof is the tree — not the port.**
   `/proc/<pid>/environ` has lied in **both** directions: uninformative on a vite and a Chrome pid
   (2026-08-23), and answering "not mine" about a process that was (2026-08-24). `cwd` and
@@ -340,6 +375,28 @@ settle any of it.
 
 Answer these, and write the answers down:
 
+> **Audit of 2026-08-31 (US-22, the full HP suite: path 0, then three scenarios two at a time).**
+> Delivery worked **4 of 4**, unprompted, each report arriving **twice** — once by the subagent's own
+> `SendMessage` and once as the completion notification. No relance, no transcript recovery: §5.2
+> stays unexercised, now across four consecutive suites. The **private-browser default held again in
+> the parallel case** — zero page thefts, zero port-guard trips, across four agents of which two ran
+> concurrently. §5.7's cap of **2** on this 8-thread machine was respected and **the machine did not
+> freeze**, which is the first full suite since the rule was written.
+>
+> Driver-produced false findings: **five**, every one caught by re-measuring, none reaching a report
+> as a defect. HP-01 lost a whole journey to a poll regex that also matched the profile counter — it
+> closed the browser 15 ms after clicking and burned a real chess.com import; HP-02 read the
+> explorer's depth cap **three times** at the wrong depth because an in-page drill-down has no
+> navigation to wait on; HP-03's `blur()` on a never-focused textarea fired nothing and produced a
+> reading that looked exactly like the defect the code exists to prevent. The score is now
+> overwhelming: this suite's drivers have produced far more would-be defects than the app has
+> produced real ones, and the rule of re-measuring is what stands between them and a report.
+>
+> Two isolation claims were **corrected rather than noted**, both in §5.4: `namesMe` proves ownership
+> by directory, which on a shared worktree matches every sibling; and `pgrep -f`/`/proc` scans match
+> the very shell running them. Two library holes were closed in the same run — `restoreSnapshot` was
+> writing to the requester's protected database, and a wedged CDP socket took the teardown with it.
+>
 > **Audit of 2026-08-24 (US-16a, five consecutive single-subagent FP runs).** Delivery worked **5 of
 > 5**, unprompted, every report arriving **twice** — once by the subagent's own `SendMessage` and once
 > as the completion notification, identical content. No relance was needed and no transcript recovery
@@ -498,8 +555,9 @@ the only part that produces findings.
 |---|---|---|
 | Restore, launch, stop the app | `host/app-lifecycle.mjs` | `restoreSnapshot`, `readBack`, `launchApp`, `stopApp`, `holdersOf`, `namesMe`, `describeProcess` |
 | A private Chrome, and one CDP session kept alive | `host/cdp.mjs` | `launchBrowser`, `attach`, `open`, `setViewport`, `emulateTheme`, `session.evaluate`, `session.stop` |
-| The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md` in both themes, eighteen raw readings |
+| The theme pass, one call per screen | `host/theme-pass.mjs` | `runThemePass` — the nine screens of `theme-pass.md`, in both themes and at both **widths**, thirty-six raw readings |
 | Navigate, and read a field back | `host/navigate.mjs` + `page/app-driver.js` | `followNav`, `reachScreen`, `selectProfile`, `setField`, `waitForScreen`, `guarded` |
+| Assertion 7 — what the Player acts on never moves | `host/stability.mjs` | `walkPlyStability` — steps the plies and hands back the **displacements** of the stepper and the verdict fieldset, in viewport pixels. It measures; the scenario passes the sentence (zero) |
 | What a pass cost, after the fact | `host/run-ledger.mjs` | per scenario the wall, five buckets and the **worst wait**; the suite's lived and worked walls. `--every` costs every subagent of a session rather than the pass inside it |
 
 ```js
@@ -514,8 +572,7 @@ const app = await launchApp({
 });                                                          // throws if a port is taken, naming it
 
 const session = await launchBrowser({ cdpPort: 9299 });      // your own browser, your own port
-await setViewport(session, { width: 1280, height: 900 });
-const readings = await runThemePass({
+const readings = await runThemePass({                        // it sets the viewport itself, per width
   session,
   baseUrl: app.baseUrl,
   port: "5211",                                              // guards every injected script
@@ -529,8 +586,12 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
 
 - **No `puppeteer-core` to install.** Node 22 ships a global `WebSocket`, so the library speaks CDP
   directly. Previous runs each installed a driver into a scratch directory of their own.
-- **The inventory of screens is read from `theme-pass.md`**, never copied. That document stays the
-  one place the screens are edited.
+- **The inventory of screens is read from `theme-pass.md`**, never copied — and since US-22 the
+  **widths** are read from it too. That document stays the one place either is edited.
+- **The pass owns the viewport.** It walks each width in turn and sets it itself, so do not pin one
+  before calling it — `setViewport` is for a scenario measuring one screen at one size. Each injected
+  script asserts the width it measures, exactly as it asserts the theme, and for the same reason: an
+  override that did not take would report a green narrow screen that never rendered.
 - **It does not choose which Game or which Profile the pass opens — you do.** Left to itself it takes
   the first row, and on 2026-08-27 that was an *unanalysed* Game for two scenarios running, so the
   pass audited `Analyse` with no evaluation curve, no advantage bar and no severity glyph. Green, on
@@ -543,6 +604,46 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
       openGameRow(s, { port, index: rows.findIndex((r) => r.text.includes("analysée")), waitOptions }),
   } });
   ```
+- **Assertion 7 is one call, and it counts steps rather than clicking in a loop.** `walkPlyStability`
+  sends **one** `step('Next')` per evaluation: a loop of clicks inside a single `evaluate` re-clicks a
+  handler the framework has already replaced, which on 2026-08-24 advanced one ply while reporting
+  eight. A target absent at a ply (the verdict fieldset does not exist at the starting Position) is
+  reported **absent**, never folded into a zero — otherwise ply 0 reads as the most stable transition
+  there is.
+- **The source of a restore is never written to.** `restoreSnapshot` opens it `-readonly` and lets
+  `.backup` read through an unmerged WAL on its own (measured against 4152 bytes of frames with the
+  writer still connected). It used to checkpoint the source first, which was a write path onto the
+  one file ADR-0015 exists to protect, on every Feature Path that copies the requester's base. What
+  the checkpoint reported is kept as `source.walBytes`, observed rather than merged.
+- **Every CDP call is bounded, and so is the close.** A wedged socket is not a slow page: on
+  2026-08-31 one died with Chrome and the app both alive and answering HTTP, every later
+  `Runtime.evaluate` hung for ever, and the teardown hung with them — so the run was SIGKILLed with
+  its ports still held. `send` now rejects on a deadline and `close` gives up rather than waiting for
+  an event that is not coming. If you see "the socket is wedged, not slow", the app is probably fine
+  and the browser is not.
+- **`launchBrowser` returns the session itself**, carrying `.stop` — not a `{ session }` wrapper.
+  Destructuring it as one throws *before* whatever `try` was meant to guard the teardown, and leaves
+  a Chrome holding the CDP port (2026-08-28; recovered by proving the pid's own `--user-data-dir` in
+  `/proc/<pid>/cmdline`).
+- **`currentMove()` is a caption, not a movement detector.** Two consecutive plies can carry the
+  same SAN, so a walk loop that breaks when the caption "did not change" stops after one transition
+  and reports a two-reading walk as a fourteen-transition one (measured 2026-08-31). `walkPlyStability`
+  counts steps and does not have this bug; anything hand-rolled should key on something exact, such as
+  the verdict group's `declared-severity-<ply>` name.
+- **At 380 px, everything below the board is off the screen** — the reading route's Note panel sits
+  at y≈1115 in a 900 px viewport. A real mouse click at those coordinates lands in the void, types
+  nothing, and hands back three *identical* measurements that read as "nothing changed: green" over a
+  step that never happened (measured 2026-08-28). Scroll the target into view, and **assert the focus
+  actually landed** before typing.
+- **`runThemePass` leaves the browser on the last screen of the inventory** (`/profiles/:id`). A
+  follow-up script that assumes it is still where it was reads a missing panel and reports a defect.
+  Navigate explicitly after the pass.
+- **A screenshot can be a measurement that measured nothing.** `Page.captureScreenshot`'s `clip` is
+  in **page** coordinates and needs `captureBeyondViewport: true` for anything below the fold —
+  without it the PNG comes back the right size and entirely blank (2026-08-28). Worth knowing here
+  because judging a glyph at its real size is the one check no assertion can replace: the FP of
+  US-16a passed "nothing by tint alone" to the letter while shipping two pencils the eye could not
+  tell apart.
 - **A field is read back before anything is submitted.** `setField` puts the value in through the
   native setter, reads it out again, and **throws** if it did not take. The import form's month
   fields keep their default when a driver assigns `value` — measured 2026-08-19, where a run nearly
@@ -552,7 +653,7 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   `href` records `Analyse` as unreachable.
 - **It throws rather than hand back a thinner green.** The port guard and the in-script theme
   assertion are both live: falsify the emulation and the call fails with the theme it actually
-  measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**.
+  measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**. Since US-22 the pass is **thirty-six** audits — the second width costs **+23,6 s of driving** (20,8 → 44,4 s) and eighteen more readings to read.
 - **"The screen has rendered" is two conditions, not one** — and getting that wrong is the defect
   this slice's own Feature Path caught. Text stability alone is satisfied *instantly* by a loading
   placeholder: "Chargement du bilan…" holds perfectly steady, so `/confrontation` was audited at

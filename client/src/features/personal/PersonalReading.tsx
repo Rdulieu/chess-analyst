@@ -8,18 +8,13 @@ import {
   GameNotThisProfiles,
   SealRefused,
 } from "../../api";
-import { DeclaredSeverityControl } from "./DeclaredSeverityControl";
-import { NoteEditor } from "./NoteEditor";
-import { KeyMomentControl } from "./KeyMomentControl";
-import { SealAction } from "./SealAction";
-import { SealedMarkReadout, SealedReadout } from "./SealedReadout";
+import { ReadingControls } from "./ReadingControls";
+import { markAt } from "./marks";
 import { engineWasSeen } from "./engineSeen";
 import { MoveMarks } from "./MoveMarks";
-import { ReadingTally } from "./ReadingTally";
-import { WholeGameNote } from "./WholeGameNote";
 import { parseGame } from "../../chess/history";
 import { playersOwnPly } from "./plies";
-import type { DeclaredSeverity, Game, PersonalAnalysis, PersonalMark } from "../../types";
+import type { DeclaredSeverity, Game, PersonalAnalysis } from "../../types";
 
 /**
  * What one write says about a ply. Only the fields the caller **names** travel,
@@ -146,8 +141,6 @@ export function PersonalReading({
     return <p role="alert">La lecture de cette partie n'a pas pu être chargée.</p>;
   if (!reading) return <p>Chargement de ma lecture…</p>;
 
-  const { sealedAt } = reading;
-
   return (
     <div>
       {onwards}
@@ -165,81 +158,27 @@ export function PersonalReading({
         // What IS shown in the list is the Player's own marks: a reading has to be
         // locatable without stepping through every Move to find where one wrote.
         moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
+        // The arrows step the Moves here, because here the panel announces them
+        // (`ShortcutsNotice`). A shortcut nothing on screen mentions does not
+        // exist, and one that works where it is never mentioned is worse.
+        keyboardStepping
         controls={(ply) => (
-          <div data-part="reading-controls">
-            {sealedAt !== null && (
-              <>
-                <SealedReadout
-                  sealedAt={sealedAt}
-                  engineSeenBeforeSeal={reading.engineSeenBeforeSeal}
-                />
-                {/* What was written on THIS Move when the reading was sealed,
-                    beside — never replaced by — what has been written since. */}
-                <SealedMarkReadout mark={markAt(reading, ply, false)} ply={ply} />
-                {/* Writing stays open after the seal: seeing the engine and
-                    understanding why is the most fertile moment of the exercise,
-                    so forbidding it would be absurd — and counting it would be
-                    dishonest. Hence the words, on every control below. */}
-                <p data-part="posterior-notice">
-                  Ce que vous écrivez maintenant est conservé comme une couche
-                  <strong> postérieure</strong> au scellement, et reste hors de la confrontation.
-                </p>
-              </>
-            )}
-            <DeclaredSeverityControl
-              ply={ply}
-              posed={markAt(reading, ply, sealedAt !== null)?.declaredSeverity ?? null}
-              playersOwnMove={playersOwnPly(ply, game.playerColor)}
-              posterior={sealedAt !== null}
-              onPose={(severity) => void write(ply, { declaredSeverity: severity })}
-              // `null` reaches the server as `null`: an omitted field would leave
-              // the verdict exactly where it was.
-              onWithdraw={() => void write(ply, { declaredSeverity: null })}
-            />
-            <KeyMomentControl
-              ply={ply}
-              posed={markAt(reading, ply, sealedAt !== null)?.keyMoment ?? false}
-              posterior={sealedAt !== null}
-              onToggle={(posed) => void write(ply, { keyMoment: posed })}
-            />
-            {/* The Note about the whole Game, legible from inside the Game — it
-                was written at the starting Position, but it is not about it. */}
-            <WholeGameNote marks={reading.marks} ply={ply} />
-            <ReadingTally marks={reading.marks} moves={moves} />
-            {sealedAt === null ? (
-              <SealAction empty={reading.marks.length === 0} sealing={sealing} onSeal={seal} />
-            ) : null}
-            {sealRefusal && <p role="alert">{sealRefusal}</p>}
-            <NoteEditor
-              ply={ply}
-              note={markAt(reading, ply, sealedAt !== null)?.note ?? null}
-              posterior={sealedAt !== null}
-              onSave={(note) => void write(ply, { note })}
-              // `null` is the erasure, and it has to reach the server as `null`:
-              // an omitted field would leave the old text exactly where it was.
-              onErase={() => void write(ply, { note: null })}
-            />
-          </div>
-        )}
+          <ReadingControls
+            ply={ply}
+            reading={reading}
+            playersOwnMove={playersOwnPly(ply, game.playerColor)}
+            sealing={sealing}
+            sealRefusal={sealRefusal}
+            moves={moves}
+            onWrite={write}
+            onSeal={seal}
+          />
+                )}
       />
     </div>
   );
 }
 
-/**
- * What the Player has said about one ply **in one layer**. The layer is explicit
- * at every call: before the seal there is only the initial one, after it the
- * controls act on the posterior one while the initial stays readable beside them.
- * A `markAt` that guessed would be the bug that quietly overwrites a sealed
- * reading.
- */
-function markAt(
-  reading: PersonalAnalysis,
-  ply: number,
-  posterior: boolean,
-): PersonalMark | undefined {
-  return reading.marks.find((m) => m.ply === ply && m.posterior === posterior);
-}
 
 /**
  * The reading with one ply's mark replaced — the optimistic echo of a write.

@@ -196,3 +196,35 @@ describe("the Profile list, and which Profile is current", () => {
     expect(current.get("border-inline-start")).toBe("1px solid var(--accent)");
   });
 });
+
+describe("the Profile list on a narrow screen", () => {
+  const list = declarationsFor(css, 'ul[aria-label="profils"]');
+
+  it("sizes itself to its own content, the way a table does inside a scroller", () => {
+    // Measured on the FP of US-22 slice 01, at 380 px: the page had stopped
+    // scrolling (365 into 380) and the container scrolled correctly, but the `ul`
+    // itself still read as an overflowing box — 643 px of content in a 299 px box —
+    // because a block-level grid takes its container's width where a `table` in
+    // auto layout expands to its own min-content. Nothing was visible to the
+    // Player, and that is exactly the problem: a permanent non-clean reading on
+    // the screen this slice exists to fix is one a human re-explains at every
+    // future pass, until it becomes an entry in an ignore-file.
+    expect(list.get("min-inline-size")).toBe("max-content");
+  });
+});
+
+describe("a mark in the move list belongs to its own Move", () => {
+  const list = declarationsFor(css, 'ol[aria-label="moves"]');
+  const item = declarationsFor(css, 'ol[aria-label="moves"] li');
+
+  it("sits closer to the Move it judges than to the next one", () => {
+    // Measured on the FP of 2026-08-28: 4 px before the mark and 4 px after it,
+    // uniformly — the glyph sat exactly halfway between `e3` and `Be6`, giving the
+    // eye no reason to attach `??` to either. Under `⚖` that only mislabelled
+    // "there is a verdict here"; now that the mark says WHICH verdict, a
+    // misattributed `??` mislabels the verdict itself. Chess notation glues the
+    // mark to the Move it judges, and so does this.
+    expect(item.get("gap")).toBe("var(--space-1)");
+    expect(list.get("gap")).toBe("var(--space-1) var(--space-2)");
+  });
+});

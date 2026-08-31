@@ -3,7 +3,8 @@
 Since US-13 the app has a stylesheet and a dark theme that follows the operating-system
 preference. A style is only observable on a **rendered** screen, so it is validated where the app
 actually runs: each of the three Happy Paths ends with **this** step, walking the navigation across
-**all nine screens**, first in the light theme and then with the dark preference emulated.
+**all nine screens**, first in the light theme and then with the dark preference emulated, and at
+**two widths** — the comfortable one and a narrow one.
 
 It is written once, here, and referenced by each scenario's final step rather than copied three
 times — three copies of an assertion list drift, and the whole point of the pass is that the three
@@ -31,8 +32,9 @@ as much as for the rest: they are audited **as the scenario left them**, counter
 Profile page whose history is still empty is a rendered screen like any other. What must never
 happen is a scenario creating a Profile, importing or analysing *for the sake of the theme pass*.
 
-The extra cost is rendering, not journey: on a warm app it is eighteen audits — nine screens in two
-themes. Measured 2026-08-27 over three runs: **~15.6 seconds** for the eighteen, against the several
+The extra cost is rendering, not journey: on a warm app it is thirty-six audits — nine screens, in
+two themes, at **two widths** (see below). Measured 2026-08-27 over three runs: **~15.6 seconds**
+for the eighteen of the single-width era, and **~44 s** for the thirty-six — against the several
 minutes the same walk cost when each agent re-derived it.
 
 ## The nine screens
@@ -84,7 +86,43 @@ present on Analyse too, and absent from Profils and Profil — which is also the
 wherever it appears: its label is words, never a tint (assertion 4), and its link must hold contrast
 in both themes like any other.
 
-## What is asserted, on every screen, in both themes
+## The two widths
+
+The pass audited **one** width, 1280 px, for its whole life — and that is the width at which the
+app is at its most comfortable. Two real defects lived below it while the pass reported green: the
+reading route's panel moved the stepper under every click, worse the narrower the window (194 px of
+amplitude at 1400, **312 px** at 900 and at 380), and the profiles list scrolled the whole page
+sideways (page 676 px against a 380 px viewport, in both themes). Neither was hidden; nothing was
+looking.
+
+So the pass looks at **two** widths, and the narrow one is not a courtesy:
+
+| width | why this one |
+| --- | --- |
+| `1280 px` | the comfortable desk — the width the app was designed against, and where a regression of ink or contrast shows first |
+| `380 px` | the narrow window — where the board row folds, the side panel reaches its own minimum and every reserved space is contested. **The only width that has ever seen these two defects.** |
+
+**One narrow width is enough, and it is measured**: at 900 and at 380 px the side panel is the same
+width (332 / 333 px) and the reading panel has the same amplitude — the row has folded in both
+cases. A third width would cost another nine screens per theme and see nothing the second does not.
+
+The price is measured too, on the run of 2026-08-27: **+23,6 s of driving** (20,8 → 44,4 s, ×2,14)
+for eighteen more readings — sixteen clean then, **all eighteen clean now**: the two that were not
+were `/profiles` at 380 px in each theme, and they were fixed rather than tolerated (the list is
+sized to its own content, the way a `table` is). Re-measured on the run that adopted the width
+(2026-08-28): **16,3 → 35,3 s, ×2,17** for thirty-six readings, every one of them clean. The number
+that will matter the day this becomes expensive is not the seconds — it is the **readings a human
+has to read**.
+
+**Below 380 px the page does scroll sideways again** — measured at 280 px on 2026-08-28: 282 px of
+document against a 280 px viewport, two pixels, seven boxes flagged, in both themes. That is outside
+the two declared widths and contradicts nothing above; it is written down so that a third width, if
+one is ever proposed, starts from what is known rather than from a surprise.
+
+> **This is not a mobile target.** It is one narrow window on the same desktop browser: no touch
+> gesture, no orientation, no device. What is asserted at 380 px is what is asserted at 1280.
+
+## What is asserted, on every screen, in both themes, at both widths
 
 1. **Every colour resolves.** No computed colour is empty or still a literal `var(--…)`, and every
    theme-invariant token is declared.
@@ -92,7 +130,9 @@ in both themes like any other.
    measured against the background **actually painted** behind the text, composited through
    transparency.
 3. **No horizontal overflow**: the page does not scroll sideways, and no box is wider than its own
-   container unless it is a declared horizontal scroller.
+   container unless it is a declared horizontal scroller. This is the assertion the second width
+   exists for: it was **true at 1280 px and false at 380** on `/profiles` for months, and a pass that
+   only ever looked at the comfortable width could not have said so.
 4. **Non-chromatic cues are present wherever a tint carries meaning** — the weak-opening ⚠, the
    danger card's ⚠, the severity glyphs `?!` `?` `??`, the failed month's word ("échec" when nothing arrived, "incomplet" when
    some Games did and the month stopped short), the
@@ -105,6 +145,32 @@ in both themes like any other.
    `--square-<severity>` tints. White's share must not darken at night, because it denotes a player
    and not a background.
 6. **No console error** across the walk.
+7. **What the Player acts on does not move from one ply to the next** (ADR-0021). On the reading
+   route, walk the plies of a reading and require **zero pixels** of displacement of the step
+   controls (`[data-part="stepper"]`) and of the verdict fieldset
+   (`[data-part="declared-severity"]`) — their viewport position, read before and after each
+   transition, must be identical. Zero, not "roughly stable": a pixel of drift over forty plies is
+   a target that moves under the finger.
+
+   Walk enough plies to cross the transitions that matter, and say which were crossed: **the
+   Player's Move to the opponent's** (the alternation that caused 33 of the 45 measured
+   displacements), and **the starting Position to the first Move and back** (where the verdict
+   fieldset and the pivot control appear and disappear). On a **sealed** reading, cross a ply
+   carrying a sealed mark and one carrying none — that is the richest state, and the sealed
+   readout's height depends on its own content.
+
+   **It is not asserted on the nine screens, and it has one caller.** The reading route is not in
+   the inventory — it is Game-scoped and only HP-03 reaches it — so this is the one assertion of
+   this document that belongs to a single scenario. It is written here because this is where the
+   assertions are edited; it is **played at HP-03's step 16**, and if that step ever disappears the
+   assertion has stopped running whatever this list says.
+
+   This assertion exists because the principle was **stated and guarded by nobody**. US-14 already
+   held that hiding annotations must not move the Position being read; it was held above the
+   diagram, by document order, and never applied from one ply to the next — and eighteen months
+   later every single transition moved something. The *order* it rests on is checked in a component
+   test at every commit; this is where its consequence in pixels is checked, and it is the only
+   place that consequence exists.
 
 **A cue rule with no subject on the screen proves nothing.** The audit drops rules that find nothing,
 so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's

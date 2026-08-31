@@ -190,8 +190,12 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     const move = declarationsFor(css, 'ol[aria-label="moves"] li button');
     expect(move.get("padding")).toBe("0 var(--space-1)");
     expect(move.get("font-size")).toBe("var(--text-s)");
+    // The ROW gap is what compactness turns on — forty half-moves stacked — and
+    // it is unchanged. The COLUMN gap doubled in US-22, so a mark belongs to the
+    // Move it judges instead of sitting halfway to the next one; see
+    // listsAndTables for why that asymmetry is deliberate.
     expect(declarationsFor(css, 'ol[aria-label="moves"]').get("gap")).toBe(
-      "var(--space-1) var(--space-1)",
+      "var(--space-1) var(--space-2)",
     );
     for (const value of move.values()) noAbsoluteLength(value);
   });
@@ -320,5 +324,21 @@ describe("the form controls the browser draws itself", () => {
   it("draws a checked box in the app's accent rather than the browser's blue", () => {
     const box = declarationsFor(css, 'input[type="checkbox"]');
     expect(box.get("accent-color")).toBe("var(--accent)");
+  });
+});
+
+describe("the keyboard, announced on the reading route", () => {
+  it("draws the keys as keys, in the ink they are written in", () => {
+    // `--border` measured 1.39:1 on white and 1.57:1 in the dark — no WCAG
+    // failure (the key names are text, the outline carries no meaning) but an
+    // outline nobody sees is not a chip, and a `kbd` that reads as prose is a
+    // shortcut nobody notices. `currentColor` ties it to the ink, so it holds in
+    // both themes with no second token to keep in step.
+    const key = declarationsFor(css, '[data-part="shortcuts"] kbd');
+    expect(key.get("border")).toBe("1px solid currentColor");
+    expect(key.get("font-family")).toBe("var(--mono)");
+    // The 1px outline is a hairline, not a layout length — the rule this file
+    // holds is about measurements, and a hairline is not one.
+    noAbsoluteLength(key.get("padding-inline"));
   });
 });
