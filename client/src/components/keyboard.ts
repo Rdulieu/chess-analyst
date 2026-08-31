@@ -22,16 +22,9 @@ export function isCommandKeystroke(event: {
   ctrlKey?: boolean;
   metaKey?: boolean;
   altKey?: boolean;
-  repeat?: boolean;
   target?: EventTarget | null;
 }): boolean {
   if (event.ctrlKey || event.metaKey || event.altKey) return false;
-  // A held key is one intention, not thirty. Measured 2026-08-31: leaning on `1`
-  // for nine repeats sent **nine identical writes**, and a finger resting on `k`
-  // toggles the pivot on and off at the operating system's repeat rate. The
-  // writes are idempotent, so nothing was corrupted — but a command is something
-  // the Player asked for once.
-  if (event.repeat) return false;
   return !isTyping(event.target);
 }
 
@@ -44,10 +37,11 @@ export function isCommandKeystroke(event: {
  */
 export function arrowStep(event: { key: string; target?: EventTarget | null }): -1 | 1 | null {
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return null;
-  /* Deliberately no `repeat` guard here, and it is `isCommandKeystroke` that
-     carries one: holding an arrow to skim the Game is a real way to read, it
-     writes nothing, and taking it away would cost the Player something the
-     buttons cannot give them. */
+  /* **No `repeat` guard here, and none in `isCommandKeystroke` either.** Holding
+     an arrow to skim the Game is a real way to read: it writes nothing, and the
+     buttons cannot do it. The guard belongs to the commands that WRITE, and it
+     lives with them (`features/personal/shortcuts.ts`) — putting it in this
+     shared predicate cost exactly that, for the few minutes it was there. */
   if (inRadioGroup(event.target)) return null;
   return event.key === "ArrowRight" ? 1 : -1;
 }

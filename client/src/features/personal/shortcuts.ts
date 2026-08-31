@@ -18,6 +18,8 @@ export interface Keystroke {
   ctrlKey?: boolean;
   metaKey?: boolean;
   altKey?: boolean;
+  /** Set by the browser on auto-repeat: a held key, not a second press. */
+  repeat?: boolean;
   target?: EventTarget | null;
 }
 
@@ -46,10 +48,26 @@ export interface Keystroke {
 export function commandFor(event: Keystroke): ReadingCommand | null {
   if (!isCommandKeystroke(event)) return null;
 
-  const digit = DECLARED_SEVERITIES.findIndex((_, i) => event.key === String(i + 1));
-  if (digit !== -1) return { kind: "verdict", severity: DECLARED_SEVERITIES[digit] };
+  /*
+   * **A held key is one intention, for the commands that write.** Measured
+   * 2026-08-31: leaning on `1` for nine repeats sent nine identical writes, and a
+   * finger resting on `k` toggled the pivot on and off at the operating system's
+   * repeat rate. The writes are idempotent, so nothing was corrupted — and it is
+   * still not what the Player asked for.
+   *
+   * The arrows are exempt, and that asymmetry is the point: holding an arrow to
+   * skim the Game writes nothing and is a real way to read, so the guard sits
+   * here rather than in the shared predicate, where it would have taken the
+   * skim away too.
+   */
+  const writes = !event.repeat;
 
-  if (event.key === "k" || event.key === "K") return { kind: "keyMoment" };
+  const digit = DECLARED_SEVERITIES.findIndex((_, i) => event.key === String(i + 1));
+  if (digit !== -1) {
+    return writes ? { kind: "verdict", severity: DECLARED_SEVERITIES[digit] } : null;
+  }
+
+  if (event.key === "k" || event.key === "K") return writes ? { kind: "keyMoment" } : null;
 
   const delta = arrowStep(event);
   return delta === null ? null : { kind: "step", delta };

@@ -101,6 +101,16 @@ export function restoreSnapshot({ from, to }) {
    * frames is a source something may still be writing to.
    *
    * `-readonly` on the connection is the guarantee, not the comment.
+   *
+   * **It does leave sidecars.** Opening a WAL database read-only still makes SQLite
+   * materialise a `-shm` and an empty `-wal` beside it (measured 2026-08-31: 32 KB
+   * and 0 bytes next to the requester's base). The pages of the `.db` are untouched
+   * — mtime, size and row counts all unchanged — and an **empty** `-wal` is exactly
+   * the residue this function already tolerates on a destination, as opposed to the
+   * non-empty one it refuses. `immutable=1` would avoid even that, and is not used
+   * on purpose: it tells SQLite the file cannot change, which is a lie about a
+   * database an app may be holding, and reading garbage is worse than leaving two
+   * regenerable files behind.
    */
   const walBytes = existsSync(`${from}-wal`) ? statSync(`${from}-wal`).size : 0;
 

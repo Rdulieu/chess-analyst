@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { commandFor } from "../src/features/personal/shortcuts";
+import { arrowStep } from "../src/components/keyboard";
 import { DECLARED_SEVERITIES } from "../src/types";
 
 /**
@@ -35,10 +36,36 @@ describe("which keystrokes the reading route claims", () => {
     expect(commandFor({ key: "K" })).toEqual({ kind: "keyMoment" });
   });
 
+  it("takes a held key as ONE intention, because that is what it is", () => {
+    // Measured 2026-08-31: leaning on `1` for nine repeats sent nine identical
+    // writes, and a finger resting on `k` toggled the pivot on and off at the
+    // operating system's repeat rate. Idempotent, so nothing was corrupted — and
+    // still not what the Player asked for.
+    expect(commandFor({ key: "1", repeat: true })).toBeNull();
+    expect(commandFor({ key: "k", repeat: true })).toBeNull();
+    // Ten deliberate presses are still ten commands: the guard reads the flag the
+    // browser sets on auto-repeat, not a rate of its own.
+    expect(commandFor({ key: "1", repeat: false })).toEqual({ kind: "verdict", severity: "blunder" });
+  });
+
   it("leaves chords alone — they belong to the browser and the system", () => {
     expect(commandFor({ key: "1", ctrlKey: true })).toBeNull();
     expect(commandFor({ key: "ArrowRight", metaKey: true })).toBeNull();
     expect(commandFor({ key: "k", altKey: true })).toBeNull();
+  });
+});
+
+describe("holding an arrow, which is a way of reading", () => {
+  it("keeps stepping on repeat — it writes nothing, and the buttons cannot do it", () => {
+    // The one command a held key should keep giving. Skimming a Game with the
+    // arrow down is real reading; the repeat guard on the writing commands must
+    // not cost it.
+    expect(arrowStep({ key: "ArrowRight" })).toBe(1);
+    // Through the reading route's own table too, which is what `Board` and the
+    // panel both go through: the repeat guard must reach the writing commands and
+    // stop there. Written the wrong way round first, and this is what caught it.
+    expect(commandFor({ key: "ArrowRight", repeat: true })).toEqual({ kind: "step", delta: 1 });
+    expect(commandFor({ key: "ArrowLeft", repeat: true })).toEqual({ kind: "step", delta: -1 });
   });
 });
 
