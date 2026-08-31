@@ -115,9 +115,16 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 
     > The rules asserted here, the nine screens, the audit tooling and the known-open findings are
     > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-01 and HP-02.
-    > This scenario is the **only** one whose state holds analysed Games, so it is where `/danger`,
-    > the `Evaluation curve` and the advantage bar are audited populated, and the only one that
-    > audits the reading route and the `Confrontation` at all.
+    > This scenario audits the `Evaluation curve` and the advantage bar **populated** (open Game B in
+    > `Détaillé`), and it is the only one that audits the reading route and the `Confrontation` at
+    > all. It is **not** where `/danger` is audited populated, and the claim that it was is
+    > **withdrawn** (2026-08-31): HP-01 analyses two Games as well, and it picks *the two shortest
+    > Games sharing a first Move* — so a Position recurs by construction and its card is there. This
+    > scenario picks two **long lost Games**, one as White and one as Black, and on those nothing
+    > recurred: `/danger` rendered « Vos parties analysées ne repassent pas encore par une même
+    > position. » and was audited in that state. That is not fixable here — the pass triggers no
+    > further analysis, by its own rule — and it does not need fixing: the empty state is a rendered
+    > screen too, and the populated one belongs to HP-01.
 
 16. **Assertion 7 — what the Player acts on never moves** (ADR-0021). Back on **Game B**'s reading
     route, walk its plies at **both widths** and require **zero pixels** of displacement of the step
