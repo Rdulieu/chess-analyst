@@ -4,7 +4,21 @@ import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/node_modules/**", "**/*.db", "**/*.db-*"] },
+  {
+    // `.claude/worktrees/` holds a full checkout per story in flight, each with
+    // its own tsconfig.json. Left in scope, typescript-eslint finds several
+    // candidate roots and refuses to parse ANYTHING — every file in the repo
+    // comes back as a parsing error, and the linter dies without ever saying a
+    // word about the code. They are other branches' checkouts: they are linted
+    // where they live, never from here.
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/*.db",
+      "**/*.db-*",
+      ".claude/**",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
