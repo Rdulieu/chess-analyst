@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-22-reading-route-density` le 2026-08-31 (FP verte ; cinq findings de la FP corrigés dans la tranche, dont une régression que le correctif lui-même avait introduite)
 
 ## Parent
 
@@ -38,16 +38,16 @@ hauteur constante, sous les contrôles (ADR-0021).
 
 ## Acceptance criteria
 
-- [ ] `1`…`5` posent les cinq verdicts, dans l'ordre affiché
-- [ ] `←` `→` changent de coup
-- [ ] `k` bascule le `Key moment`
-- [ ] Poser un verdict au clavier **ne déplace pas le focus**, de sorte que la boucle s'enchaîne
-- [ ] Toutes les touches sont **inertes** pendant la saisie d'une note
-- [ ] Un groupe de radios qui a le focus garde ses flèches **natives**
-- [ ] Les raccourcis sont annoncés à l'écran, à hauteur constante
-- [ ] Aucun raccourci ne pose un verdict à la position de départ, où il n'y en a pas
-- [ ] Après scellement, les raccourcis écrivent dans la couche postérieure, comme la souris
-- [ ] L'assertion 7 reste verte
+- [x] `1`…`5` posent les cinq verdicts, dans l'ordre affiché
+- [x] `←` `→` changent de coup
+- [x] `k` bascule le `Key moment`
+- [x] Poser un verdict au clavier **ne déplace pas le focus**, de sorte que la boucle s'enchaîne
+- [x] Toutes les touches sont **inertes** pendant la saisie d'une note
+- [x] Un groupe de radios qui a le focus garde ses flèches **natives**
+- [x] Les raccourcis sont annoncés à l'écran, à hauteur constante
+- [x] Aucun raccourci ne pose un verdict à la position de départ, où il n'y en a pas
+- [x] Après scellement, les raccourcis écrivent dans la couche postérieure, comme la souris
+- [x] L'assertion 7 reste verte
 
 ### Feature Path (FP)
 
@@ -62,3 +62,29 @@ Verify: UI d'abord — ce qui se passe à l'écran quand on tape, et où le focu
 ## Blocked by
 
 - `.scratch/reading-route-density/issues/02-what-the-player-clicks-stops-moving.md` — l'annonce des raccourcis est un bloc de plus dans le panneau, et la garde doit exister avant
+
+## Trois questions laissées au demandeur
+
+Aucune n'est un défaut ; toutes les trois sont des arbitrages que la dernière tranche d'une story
+n'a pas à trancher seule.
+
+1. **À 380 px la notice des raccourcis est sous la ligne de flottaison** — `top` 980 px pour une
+   fenêtre de 900. Le critère « annoncés à l'écran, à hauteur constante » est tenu, et à 1280 px la
+   notice est bien visible. Mais sur la largeur étroite le joueur doit faire défiler tout
+   l'échiquier et tout le panneau pour apprendre que les raccourcis existent — c'est-à-dire
+   exactement l'échec « découvert par hasard » contre lequel la notice est écrite. La remonter
+   au-dessus des contrôles est possible (elle est à hauteur constante, donc elle ne déplacerait
+   rien), au prix de la lettre d'ADR-0021 : les contrôles d'abord, la prose ensuite.
+
+2. **La notice est rendue au ply 0**, où deux de ses trois commandes sont inertes — les raccourcis
+   de verdict et de moment clé ne sont délibérément pas installés à la position de départ. Rien à
+   l'écran ne la contredit (les contrôles correspondants sont absents eux aussi), et faire varier la
+   phrase casserait sa hauteur constante, qui est ce que la tranche 02 a payé cher. Elle est donc,
+   à ce seul ply, vraie au tiers.
+
+3. **Les flèches ne fonctionnent pas sur la page `Analyse`**, parce que cette page ne les annonce
+   pas. Le jugement de la FP, cité : « c'est le bon arbitrage et c'est la moitié faible du design —
+   un joueur qui vient d'apprendre `→` sur la route de lecture ouvre l'`Analyse` du même jeu, à un
+   clic, même échiquier, même stepper, appuie sur `→`, et rien ne se passe. L'absence de notice
+   n'est pas un message. Le correctif bon marché est de les annoncer aussi sur `Analyse`, pas de les
+   retirer. »

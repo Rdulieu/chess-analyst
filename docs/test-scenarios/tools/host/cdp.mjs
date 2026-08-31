@@ -243,10 +243,30 @@ export async function attach(wsUrl, crash = { seen: null }) {
     for (const fn of listeners.get(msg.method) || []) fn(msg.params);
   });
 
-  const send = (method, params = {}) =>
+  /*
+   * Every call is bounded. A websocket that wedges is not a slow page, and until
+   * 2026-08-31 the two were indistinguishable: on one run the socket died with
+   * Chrome and the app both alive and answering HTTP, every later `Runtime.evaluate`
+   * hung **forever**, and the teardown hung with them — `stop()` awaits `close()`,
+   * which awaits a `close` event that was never coming. The run had to be SIGKILLed,
+   * which is exactly how a port is left orphaned for the next one.
+   *
+   * A deadline turns that into an error a caller can report and a teardown can
+   * survive. It is generous on purpose: it is there to catch a dead socket, never to
+   * hurry a page.
+   */
+  const send = (method, params = {}, { timeoutMs = 60000 } = {}) =>
     new Promise((resolve, reject) => {
       const id = nextId++;
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error(`CDP ${method} never answered within ${timeoutMs} ms: the socket is wedged, not slow`));
+      }, timeoutMs);
+      const settle = (fn) => (value) => {
+        clearTimeout(timer);
+        fn(value);
+      };
+      pending.set(id, { resolve: settle(resolve), reject: settle(reject) });
       ws.send(JSON.stringify({ id, method, params }));
     });
 
@@ -271,10 +291,23 @@ export async function attach(wsUrl, crash = { seen: null }) {
       }, timeoutMs);
     });
 
-  const close = () =>
+  /*
+   * Closing must not be able to hang. The `close` event does not fire on a socket
+   * that has already wedged, and a teardown nobody can await is a teardown that
+   * leaves an app and a browser behind — the failure this whole module is built
+   * against. So the wait is bounded and giving up is a normal outcome: the caller
+   * kills the browser next either way.
+   */
+  const close = ({ timeoutMs = 5000 } = {}) =>
     new Promise((resolve) => {
-      ws.addEventListener("close", resolve, { once: true });
-      ws.close();
+      const done = () => resolve();
+      ws.addEventListener("close", done, { once: true });
+      setTimeout(done, timeoutMs).unref?.();
+      try {
+        ws.close();
+      } catch {
+        done();
+      }
     });
 
   await send("Page.enable");

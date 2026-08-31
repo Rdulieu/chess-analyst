@@ -69,7 +69,7 @@ ADR-0020 is written against; the real check of each helper is a **Feature Path**
   figures is the requester's wait**.
 
 - **`host/app-lifecycle.mjs`** — restore a snapshot, launch the app on ports and a database of
-  your own, stop what you started. `restoreSnapshot` checkpoints the WAL, uses `.backup` rather
+  your own, stop what you started. `restoreSnapshot` opens the source **read-only** and uses `.backup` rather
   than `cp`, and **reads the copy back** before handing it over — the read-back is what protects,
   because the `cp` failure of 2026-08-24 turned out not to be universal. `launchApp` refuses the
   project's defaults, throws naming a port that is taken, and starts **no file watcher**.
