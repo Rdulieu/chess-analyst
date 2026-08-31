@@ -154,8 +154,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    > construction** — one guaranteed entry, whatever the account or the range. It is also the
    > **cheapest** rule available: the two shortest such Games cost **~29 Positions**, less than the
    > single shortest Game the step used to analyse (~40). Measured at **~14 s** on the 2026-08-14
-   > run — the estimate here read ~3.5 min, some 15x pessimistic, from before the native engine
-   > backend. Verified on this suite's
+   > run and at **32.9 s** on 2026-08-31 — the estimate here read ~3.5 min, some 15x pessimistic,
+   > from before the native engine backend. Two figures rather than one on purpose: engine time
+   > tracks the machine and its load, and a single number invites the next run to read a slower
+   > pass as a regression. Verified on this suite's
    > reference dataset — re-verified on the reworked range (82 Games, 2026-08-19): of the **5**
    > first-Move groups holding at least two Games (e4 28, d4 34, b3 13, Nc3 3, e3 2), **none** fails
    > to share a Position; the cheapest pair is a 6-ply and a 21-ply Game, both answering 1.e4, and
@@ -288,12 +290,14 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 - **Watch the progress readout from before the click** — for the Import *and* for the analysis pass.
   On the 2026-08-17 run the real two-month import completed in **under two seconds**, so a driver
   that starts polling *after* submitting sees the summary and never the readout — and step 3 asserts
-  the readout. Install the observer first. The **analysis pass is now just as fast**: 29 Positions on
-  the native engine backend finished before an observer installed at click time recorded a single
-  intermediate value on the 2026-08-19 run — only the final `29` was captured, so the "count
-  advances, it does not sit at zero" half of step 10 went **unobserved rather than green**. Install
-  that observer before the click too, and if a run still only sees the final figure, record it as
-  *not exercised* rather than as a pass.
+  the readout. Install the observer first. The **analysis pass can be just as fast**: on the
+  2026-08-19 run 29 Positions finished before an observer installed at click time recorded a single
+  intermediate value — only the final `29` was captured, so the "count advances, it does not sit at
+  zero" half of step 10 went **unobserved rather than green**. On 2026-08-31 the same 29 Positions
+  took **32.9 s** and the intermediate counts (`0/29` … `26/29`) were plainly observable. Engine
+  time varies with the machine and its load by more than a factor of two, so install that observer
+  before the click, and if a run still only sees the final figure, record it as *not exercised*
+  rather than as a pass.
   There is no analysis status endpoint to poll (`/api/import/status` exists, its analysis counterpart
   does not): watch the DOM readout, which is what is under test anyway.
 - The Import is one fetch **per month**, run sequentially — expect the progress readout to sit on
@@ -302,8 +306,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   both months are in the past, so they should stay put. If they drift, **re-check the account and
   update the table** rather than loosening the checks — the point of anchoring on immutable months
   is to keep this scenario assertable on real data.
-- The range covers 2 months, so the Import is 2 sequential fetches. **Do not expect to see `1/2`**:
-  measured 2026-08-27 at frame resolution, the whole two-month import takes ~590 ms while the client
-  polls `/api/import/status` about every 500 ms, so exactly one poll lands and the readout goes
-  `0/2 → 2/2`. The Check is unchanged — determinate, counted in months, reaches N/N, then goes away —
-  only this expectation was stale. (It dated from before US-17 removed the per-month requests.)
+- The range covers 2 months, so the Import is 2 sequential fetches. **Expect `1/2` sometimes, and
+  do not require it.** Measured 2026-08-27 at frame resolution the whole import took ~590 ms, so
+  exactly one poll landed and the readout went `0/2 → 2/2`; measured 2026-08-31 it took **5.8 s**
+  and the readout sat visibly on `1/2`. Ten times the duration, on the same two immutable months —
+  the network is what varies, not the app. So the Check stands as written (determinate, counted in
+  months, reaches N/N, then goes away) and **neither seeing nor missing `1/2` is a finding**. Do not
+  turn either measurement into an expectation the next run has to meet.
