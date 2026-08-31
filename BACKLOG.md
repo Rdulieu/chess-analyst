@@ -81,6 +81,8 @@
 
 ## Doing
 
+## In review
+
 - **US-22**: Rendre la route de lecture agréable à tenir sur trente coups — pour qu'annoter une
   partie entière soit un exercice et non une corvée.
   > **Passée en Doing le 2026-08-27**, US-18 étant livrée. Branche d'intégration
@@ -597,8 +599,15 @@
   >
   > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
   > rien d'autre, ne prenne aucune décision que le dépôt contredit.
+  > **Les cinq tranches sont livrées et la suite HP est verte** (2026-08-31). PR `integration →
+  > develop` ouverte, en attente de votre décision — l'agent ne merge jamais vers `develop`.
+  >
+  > Quatre points restent **ouverts et vous appartiennent**, aucun n'étant bloquant :
+  > un rechargement le curseur encore dans le champ perd la `Note` (le fermer demande une route
+  > serveur, qu'US-22 s'interdit) ; la notice des raccourcis passe sous la ligne de flottaison à
+  > 380 px ; elle est vraie au tiers à la position de départ ; et les flèches ne fonctionnent pas
+  > sur `Analyse`, faute d'y être annoncées. Détail dans les issues 04 et 05.
 
-## In review
 
 ## Done
 
