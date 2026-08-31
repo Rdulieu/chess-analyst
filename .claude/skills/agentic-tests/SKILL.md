@@ -284,6 +284,16 @@ a helper is recognised as *this* returning, not as a new mystery.
   server, which *is* a watcher — but it hot-reloads rather than resurrecting anything, and building
   the client instead would change what is being tested (a production bundle rather than the app the
   whole suite drives). Known constraint, not a defect to rediscover.
+- **On a shared worktree, "is this pid mine?" has a weaker answer than it looks.** `namesMe` proves
+  ownership by the process's directory — and when three scenarios run from the **same** worktree that
+  matches any of them (measured 2026-08-31). Nothing was at risk on that run, because `stopApp` only
+  inspects the holders of *your own* ports; but the proof would say "mine" about a sibling's server
+  if one ever held one of yours. The port assignment is what keeps this safe, which is why shifting
+  ports on a collision — and **saying which** — matters more than it appears.
+- **`blur()` on an element that was never focused fires nothing**, and the resulting reading looks
+  exactly like a defect: on 2026-08-31 an emptied-Note probe showed an empty box beside "Note
+  enregistrée.", which is precisely the contradiction the code exists to prevent. Same shape as the
+  380 px click-into-the-void — **assert the focus landed before believing the measurement.**
 - **Never `pkill` by pattern**: it kills every sibling's server mid-run. And read that as being
   about **matching by pattern**, not about the `pkill` binary: `pgrep -f <pattern> | kill` is the
   same trap wearing a different hat. Measured 2026-08-31 — an agent ran `pgrep -f "node bridge.mjs"`
