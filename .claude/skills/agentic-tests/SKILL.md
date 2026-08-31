@@ -207,6 +207,16 @@ overwrites nothing that would have been useful.
 Three signals lie, and each one cost a wrong conclusion on the same run (2026-08-21):
 
 - **`idle` does not mean finished.** It means the agent ended a turn. Ask for the report.
+- **"running · started 2d ago" is the SPAWN time, not elapsed work.** A subagent is frozen with its
+  parent session and resumes with it. Measured 2026-08-31: an agent listed as running for two days
+  had worked **eleven minutes**, then nothing for 61 h 44 — the exact span the session was suspended
+  — then resumed the minute the session did. Diagnosing a hang from that number is how a healthy pass
+  gets killed and paid for twice. Read the timestamps in its transcript and look for the largest gap;
+  a gap that starts at the suspension and ends at the resume is not a hang.
+  **The corollary bites the other way**: what the agent *launched* does not freeze. Its app and its
+  browser stayed up for 2 h 14 over two days holding three ports, because no teardown was ever
+  reached. If a session may not resume, those are orphans for the next run — check `ss -lptn` before
+  assigning ports.
 - **No listeners on its ports does NOT mean the agent died.** It means the agent **cleaned up**,
   which is exactly what it was told to do. Reading a clean teardown as a crash is what turned a
   green suite into a "four agents died" report.
@@ -284,6 +294,16 @@ a helper is recognised as *this* returning, not as a new mystery.
   server, which *is* a watcher — but it hot-reloads rather than resurrecting anything, and building
   the client instead would change what is being tested (a production bundle rather than the app the
   whole suite drives). Known constraint, not a defect to rediscover.
+- **An in-page drill-down has no navigation to wait on.** `waitForScreen` guards a route change; a
+  control that only swaps a list in place does not change route, so reading the list straight away
+  reads the *old* one — or an empty one mid-fetch. Measured 2026-08-31: the explorer's depth cap was
+  reported three times at the wrong depth (31, then 35, then 38 plies) before a wait on
+  `pendingRequests() === 0` plus the expected breadcrumb depth found the real one, 40. Wait for the
+  network yourself.
+- **`launchBrowser` keeps the Node process alive** — an open socket and a piped stderr — so a boot
+  script that launches the app and the browser never returns, and a foreground call dies at the
+  two-minute timeout taking the browser with it. To drive in phases across several shell calls, end
+  the boot script with an explicit `process.exit(0)` and re-attach to the CDP port afterwards.
 - **On a shared worktree, "is this pid mine?" has a weaker answer than it looks.** `namesMe` proves
   ownership by the process's directory — and when three scenarios run from the **same** worktree that
   matches any of them (measured 2026-08-31). Nothing was at risk on that run, because `stopApp` only
@@ -355,6 +375,28 @@ settle any of it.
 
 Answer these, and write the answers down:
 
+> **Audit of 2026-08-31 (US-22, the full HP suite: path 0, then three scenarios two at a time).**
+> Delivery worked **4 of 4**, unprompted, each report arriving **twice** — once by the subagent's own
+> `SendMessage` and once as the completion notification. No relance, no transcript recovery: §5.2
+> stays unexercised, now across four consecutive suites. The **private-browser default held again in
+> the parallel case** — zero page thefts, zero port-guard trips, across four agents of which two ran
+> concurrently. §5.7's cap of **2** on this 8-thread machine was respected and **the machine did not
+> freeze**, which is the first full suite since the rule was written.
+>
+> Driver-produced false findings: **five**, every one caught by re-measuring, none reaching a report
+> as a defect. HP-01 lost a whole journey to a poll regex that also matched the profile counter — it
+> closed the browser 15 ms after clicking and burned a real chess.com import; HP-02 read the
+> explorer's depth cap **three times** at the wrong depth because an in-page drill-down has no
+> navigation to wait on; HP-03's `blur()` on a never-focused textarea fired nothing and produced a
+> reading that looked exactly like the defect the code exists to prevent. The score is now
+> overwhelming: this suite's drivers have produced far more would-be defects than the app has
+> produced real ones, and the rule of re-measuring is what stands between them and a report.
+>
+> Two isolation claims were **corrected rather than noted**, both in §5.4: `namesMe` proves ownership
+> by directory, which on a shared worktree matches every sibling; and `pgrep -f`/`/proc` scans match
+> the very shell running them. Two library holes were closed in the same run — `restoreSnapshot` was
+> writing to the requester's protected database, and a wedged CDP socket took the teardown with it.
+>
 > **Audit of 2026-08-24 (US-16a, five consecutive single-subagent FP runs).** Delivery worked **5 of
 > 5**, unprompted, every report arriving **twice** — once by the subagent's own `SendMessage` and once
 > as the completion notification, identical content. No relance was needed and no transcript recovery
