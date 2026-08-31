@@ -284,7 +284,12 @@ a helper is recognised as *this* returning, not as a new mystery.
   server, which *is* a watcher — but it hot-reloads rather than resurrecting anything, and building
   the client instead would change what is being tested (a production bundle rather than the app the
   whole suite drives). Known constraint, not a defect to rediscover.
-- **Never `pkill` by pattern**: it kills every sibling's server mid-run.
+- **Never `pkill` by pattern**: it kills every sibling's server mid-run. And read that as being
+  about **matching by pattern**, not about the `pkill` binary: `pgrep -f <pattern> | kill` is the
+  same trap wearing a different hat. Measured 2026-08-31 — an agent ran `pgrep -f "node bridge.mjs"`
+  and matched the `bash -c` process whose *command line contained that string*, killing the shell it
+  was running in before its own teardown could run and leaving the app up on two ports. A substring
+  of somebody else's command line is not evidence.
 - **Never kill what you cannot prove is yours, and the proof is the tree — not the port.**
   `/proc/<pid>/environ` has lied in **both** directions: uninformative on a vite and a Chrome pid
   (2026-08-23), and answering "not mine" about a process that was (2026-08-24). `cwd` and
