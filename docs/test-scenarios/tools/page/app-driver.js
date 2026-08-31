@@ -97,7 +97,13 @@ var agenticDriver = {
     return true;
   },
 
-  /** The Move currently being read, as the screen itself names it. */
+  /**
+   * The Move currently being read, as the screen itself names it.
+   *
+   * **A caption, never a movement detector.** Two consecutive plies can carry the
+   * same SAN, so a loop that steps until the caption changes stops after one
+   * transition and reads as "the arrow did nothing" (measured 2026-08-31).
+   */
   currentMove() {
     const readout = document.querySelector('[aria-label="current move"]');
     return readout ? readout.textContent.trim() : null;

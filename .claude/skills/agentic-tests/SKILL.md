@@ -553,10 +553,26 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   eight. A target absent at a ply (the verdict fieldset does not exist at the starting Position) is
   reported **absent**, never folded into a zero — otherwise ply 0 reads as the most stable transition
   there is.
+- **The source of a restore is never written to.** `restoreSnapshot` opens it `-readonly` and lets
+  `.backup` read through an unmerged WAL on its own (measured against 4152 bytes of frames with the
+  writer still connected). It used to checkpoint the source first, which was a write path onto the
+  one file ADR-0015 exists to protect, on every Feature Path that copies the requester's base. What
+  the checkpoint reported is kept as `source.walBytes`, observed rather than merged.
+- **Every CDP call is bounded, and so is the close.** A wedged socket is not a slow page: on
+  2026-08-31 one died with Chrome and the app both alive and answering HTTP, every later
+  `Runtime.evaluate` hung for ever, and the teardown hung with them — so the run was SIGKILLed with
+  its ports still held. `send` now rejects on a deadline and `close` gives up rather than waiting for
+  an event that is not coming. If you see "the socket is wedged, not slow", the app is probably fine
+  and the browser is not.
 - **`launchBrowser` returns the session itself**, carrying `.stop` — not a `{ session }` wrapper.
   Destructuring it as one throws *before* whatever `try` was meant to guard the teardown, and leaves
   a Chrome holding the CDP port (2026-08-28; recovered by proving the pid's own `--user-data-dir` in
   `/proc/<pid>/cmdline`).
+- **`currentMove()` is a caption, not a movement detector.** Two consecutive plies can carry the
+  same SAN, so a walk loop that breaks when the caption "did not change" stops after one transition
+  and reports a two-reading walk as a fourteen-transition one (measured 2026-08-31). `walkPlyStability`
+  counts steps and does not have this bug; anything hand-rolled should key on something exact, such as
+  the verdict group's `declared-severity-<ply>` name.
 - **At 380 px, everything below the board is off the screen** — the reading route's Note panel sits
   at y≈1115 in a 900 px viewport. A real mouse click at those coordinates lands in the void, types
   nothing, and hands back three *identical* measurements that read as "nothing changed: green" over a

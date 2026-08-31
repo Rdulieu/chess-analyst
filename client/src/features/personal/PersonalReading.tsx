@@ -9,11 +9,12 @@ import {
   SealRefused,
 } from "../../api";
 import { ReadingControls } from "./ReadingControls";
+import { markAt } from "./marks";
 import { engineWasSeen } from "./engineSeen";
 import { MoveMarks } from "./MoveMarks";
 import { parseGame } from "../../chess/history";
 import { playersOwnPly } from "./plies";
-import type { DeclaredSeverity, Game, PersonalAnalysis, PersonalMark } from "../../types";
+import type { DeclaredSeverity, Game, PersonalAnalysis } from "../../types";
 
 /**
  * What one write says about a ply. Only the fields the caller **names** travel,
@@ -178,20 +179,6 @@ export function PersonalReading({
   );
 }
 
-/**
- * What the Player has said about one ply **in one layer**. The layer is explicit
- * at every call: before the seal there is only the initial one, after it the
- * controls act on the posterior one while the initial stays readable beside them.
- * A `markAt` that guessed would be the bug that quietly overwrites a sealed
- * reading.
- */
-function markAt(
-  reading: PersonalAnalysis,
-  ply: number,
-  posterior: boolean,
-): PersonalMark | undefined {
-  return reading.marks.find((m) => m.ply === ply && m.posterior === posterior);
-}
 
 /**
  * The reading with one ply's mark replaced — the optimistic echo of a write.

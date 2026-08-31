@@ -6,11 +6,12 @@ import { NoteEditor } from "./NoteEditor";
 import { SealAction } from "./SealAction";
 import { SealedMarkReadout, SealedReadout } from "./SealedReadout";
 import { ShortcutsNotice } from "./ShortcutsNotice";
+import { markAt } from "./marks";
 import { ReadingTally } from "./ReadingTally";
 import { WholeGameNote } from "./WholeGameNote";
 import { useReadingShortcuts, type ReadingCommand } from "./shortcuts";
 import type { MarkPatch } from "./PersonalReading";
-import type { PersonalAnalysis, PersonalMark } from "../../types";
+import type { PersonalAnalysis } from "../../types";
 
 /**
  * The reading route's side panel, for one ply.
@@ -145,17 +146,3 @@ export function ReadingControls({
   );
 }
 
-/**
- * What the Player has said about one ply **in one layer**. The layer is explicit
- * at every call: before the seal there is only the initial one, after it the
- * controls act on the posterior one while the initial stays readable beside them.
- * A `markAt` that guessed would be the bug that quietly overwrites a sealed
- * reading.
- */
-function markAt(
-  reading: PersonalAnalysis,
-  ply: number,
-  posterior: boolean,
-): PersonalMark | undefined {
-  return reading.marks.find((m) => m.ply === ply && m.posterior === posterior);
-}
