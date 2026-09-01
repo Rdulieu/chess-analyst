@@ -229,3 +229,33 @@ describe("how the page half opens a Game", () => {
     expect(source).not.toMatch(/row is a `button`, not a link/);
   });
 });
+
+describe("how the page half reads a marked board square", () => {
+  /*
+   * `react-chessboard` 5.10 applies `squareStyles` to a **div inside** the
+   * `[data-square]` element, not to the element itself. A driver reading the style
+   * of `[data-square]` concludes "no square is marked" while the tint is right
+   * there — the false red produced, and then lifted by re-reading the DOM, on the
+   * FP of US-23-06 (2026-09-01).
+   *
+   * Encoded here for the same reason as "the door of a Game row is the opponent's
+   * name": a fact about this app that costs a run every time it is rediscovered.
+   */
+  const source = readFileSync(join(HERE, "..", "page", "app-driver.js"), "utf8");
+
+  it("reads the inner div, because that is where the library puts the style", () => {
+    const at = source.indexOf("  squareTints(");
+    expect(at, "no squareTints() in the page half").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n  },", at));
+    // It descends into the square rather than reading the square itself.
+    expect(body).toMatch(/data-square/);
+    expect(body).toMatch(/querySelector\(\s*["']:scope\s*>\s*div["']\s*\)|children\[0\]|firstElementChild/);
+  });
+
+  it("hands back the raw values and judges none of them", () => {
+    const at = source.indexOf("  squareTints(");
+    const body = source.slice(at, source.indexOf("\n  },", at));
+    // ADR-0020: it drives, it never judges. No token name, no expected colour.
+    expect(body).not.toMatch(/--square-(blunder|mistake|inaccuracy|sound|good)/);
+  });
+});

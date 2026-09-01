@@ -60,3 +60,43 @@ describe("the severity vocabulary", () => {
     }
   });
 });
+
+describe("the square tint of a DECLARED verdict (US-23, ADR-0022)", () => {
+  it("gives every one of the five values a tint, from the constant square family", async () => {
+    const { DECLARED_SEVERITY_SQUARE_TINT } = await import(
+      "../src/features/personal/declaredSeverity"
+    );
+    const { DECLARED_SEVERITIES } = await import("../src/types");
+
+    for (const value of DECLARED_SEVERITIES) {
+      // A token name, not a colour: this is read from TypeScript, past the point
+      // where an SCSS variable exists (ADR-0013).
+      expect(DECLARED_SEVERITY_SQUARE_TINT[value]).toMatch(/^var\(--square-[a-z]+\)$/);
+    }
+  });
+
+  it("takes the three shared severities from the ENGINE's own table, not re-typed", async () => {
+    // The shared vocabulary goes all the way down (CONTEXT.md), and a second
+    // literal token name in that file is how a shared vocabulary stops being
+    // shared — the same argument the glyph table already makes.
+    const { DECLARED_SEVERITY_SQUARE_TINT } = await import(
+      "../src/features/personal/declaredSeverity"
+    );
+    const { SEVERITY_SQUARE_TINT } = await import("../src/chess/severity");
+
+    expect(DECLARED_SEVERITY_SQUARE_TINT.blunder).toBe(SEVERITY_SQUARE_TINT.blunder);
+    expect(DECLARED_SEVERITY_SQUARE_TINT.mistake).toBe(SEVERITY_SQUARE_TINT.mistake);
+    expect(DECLARED_SEVERITY_SQUARE_TINT.inaccuracy).toBe(SEVERITY_SQUARE_TINT.inaccuracy);
+  });
+
+  it("paints the two the engine has no band for with tints of their own", async () => {
+    const { DECLARED_SEVERITY_SQUARE_TINT } = await import(
+      "../src/features/personal/declaredSeverity"
+    );
+
+    expect(DECLARED_SEVERITY_SQUARE_TINT.sound).toBe("var(--square-sound)");
+    expect(DECLARED_SEVERITY_SQUARE_TINT.good).toBe("var(--square-good)");
+    // And they are two, not one: examined and favourable are different verdicts.
+    expect(DECLARED_SEVERITY_SQUARE_TINT.sound).not.toBe(DECLARED_SEVERITY_SQUARE_TINT.good);
+  });
+});

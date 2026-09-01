@@ -300,6 +300,11 @@ a helper is recognised as *this* returning, not as a new mystery.
   reported three times at the wrong depth (31, then 35, then 38 plies) before a wait on
   `pendingRequests() === 0` plus the expected breadcrumb depth found the real one, 40. Wait for the
   network yourself.
+- **A board square's tint is on a div INSIDE `[data-square]`**, where
+  `react-chessboard` puts `squareStyles` — so a driver reading the square element itself
+  reports an unmarked board while the tint is right there. Measured 2026-09-01 on the FP of
+  US-23-06: a false red, lifted only by re-reading the DOM. `squareTints()` in the page half
+  now reads the right node; use it rather than writing the lookup again.
 - **After `open()`, `location.port` can still be empty on the first evaluate** — and the port
   guard then fires against a blank document ("port guard: this is , not 5232"), which looks exactly
   like the theft it exists to catch. Measured 2026-09-01: `Page.loadEventFired` had evidently been

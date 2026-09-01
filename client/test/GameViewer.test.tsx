@@ -460,3 +460,42 @@ describe("GameViewer — Analyse steps from the keyboard (US-23, D6)", () => {
     expect(screen.getByLabelText("current move").textContent).toBe("e4");
   });
 });
+
+describe("GameViewer — one board, one author (US-23, ADR-0022)", () => {
+  const squareOf = (container: HTMLElement, square: string) =>
+    container
+      .querySelector<HTMLElement>(`[data-square="${square}"] > div`)
+      ?.style.backgroundColor ?? "";
+
+  it("keeps the ENGINE's tint on the square, and none of the Player's marks", async () => {
+    // The counterpart of the reading route's guarantee. A square has neither a
+    // column nor a title, only a colour, so it cannot hold two authors — and this
+    // screen's author is the engine.
+    const user = userEvent.setup();
+    localStorage.setItem("chess-analyst.review-mode", "annotated");
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("button", { name: "Next" }));
+
+    // Whatever tint is on the square, it is one of the engine's own tokens.
+    const tint = squareOf(container, "e4");
+    if (tint) expect(tint).toMatch(/^var\(--square-(inaccuracy|mistake|blunder)\)$/);
+    // And nothing of the Player's reading is drawn on this diagram.
+    expect(container.querySelector('[data-part="move-marks"]')).toBeNull();
+    for (const own of ["sound", "good"]) {
+      expect(container.querySelectorAll(`[style*='--square-${own}']`)).toHaveLength(0);
+    }
+  });
+
+  it("paints no square at Unaided — there is nothing of the engine to show", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("chess-analyst.review-mode", "unaided");
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("button", { name: "Next" }));
+
+    for (const severity of ["inaccuracy", "mistake", "blunder"]) {
+      expect(container.querySelectorAll(`[style*='--square-${severity}']`)).toHaveLength(0);
+    }
+  });
+});

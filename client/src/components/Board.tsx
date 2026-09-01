@@ -12,7 +12,7 @@ import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
-import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
+import { SEVERITY_GLYPH } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { plyNumber, startingPoint } from "../features/confrontation/moveName";
@@ -46,6 +46,7 @@ export function Board({
   controls,
   keyboardStepping = false,
   moveMarks,
+  squareTint,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
@@ -82,6 +83,19 @@ export function Board({
    * caller's. Absent everywhere else, so the Analyse page's list is untouched.
    */
   moveMarks?: (ply: number) => ReactNode;
+  /**
+   * The tint for one ply's destination square, or nothing — **the caller's
+   * verdict, not this component's** (US-23, ADR-0022).
+   *
+   * `Analyse` supplies the engine's measured severity, the reading route the
+   * Player's declared one, and a caller with nothing to say supplies nothing: a
+   * board with no author paints no square rather than falling back on one.
+   *
+   * The tint is never the only cue — the glyph stays in the move list (ADR-0013),
+   * which is `moveMarks`' business on the reading route and the list's own on
+   * `Analyse`.
+   */
+  squareTint?: (ply: number) => string | undefined;
   /**
    * Whether `←` and `→` step the Moves while this Board is on screen.
    *
@@ -210,19 +224,24 @@ export function Board({
   const bands = useMemo(() => (annotations ? phaseBands(annotations) : []), [annotations]);
 
   const currentAnnotation = annotations?.[index];
-  const squareStyles =
-    index > 0 && currentAnnotation?.severity
-      ? // The CONSTANT variant, not the chrome's: `react-chessboard` paints the
-        // piece on top of this square and the piece keeps its ink in both themes
-        // (ADR-0013 — the theme-varying tint measured 1.49:1 in dark). This prop
-        // is also the reason the tokens are custom properties: a third-party API
-        // taking a style object cannot be reached by a class.
-        {
-          [plies[index - 1].to]: {
-            backgroundColor: SEVERITY_SQUARE_TINT[currentAnnotation.severity],
-          },
-        }
-      : undefined;
+  /*
+   * The destination square of the current Move, tinted by whatever the CALLER
+   * says about that ply (ADR-0022). The device is this component's; the source is
+   * not — a square has neither a column nor a title, only a colour, so it cannot
+   * hold two authors, and it is the screen that decides which one it shows.
+   *
+   * Always the CONSTANT token family, whoever supplies it: `react-chessboard`
+   * paints the piece on top of this square and the piece keeps its ink in both
+   * themes (ADR-0013 — a theme-varying tint measured 1.49:1 in dark). This prop
+   * is also why the tokens are custom properties: a third-party API taking a
+   * style object cannot be reached by a class.
+   *
+   * Nothing at ply 0: the starting Position is nobody's Move.
+   */
+  const tint = index > 0 ? squareTint?.(index) : undefined;
+  const squareStyles = tint
+    ? { [plies[index - 1].to]: { backgroundColor: tint } }
+    : undefined;
 
   /**
    * The board's arrows for the record: the Move that should have been played,
