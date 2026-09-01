@@ -125,3 +125,67 @@ describe("which Game the walk opens", () => {
     expect(openerFor(undefined, { route: "/analyse/:gameId" })).toBe(undefined);
   });
 });
+
+describe("where selecting a Profile leaves the walk", () => {
+  /*
+   * Until US-23, "Sélectionner" only recorded the current Profile and the walk stayed
+   * on `/profiles`. It is now a **composed act** — it records, then leads to "Mes
+   * parties" — so a helper that waits for `/profiles` after the click waits for a
+   * screen the app has deliberately left. Measured on the FP of US-23-01, 2026-09-01:
+   * the scenario had to drive it by hand, and every HP going through this helper would
+   * have failed on a false red.
+   *
+   * The asymmetry is the point: a Profile that is ALREADY current has no button to
+   * click, so nothing navigates and the walk is still on `/profiles`. The wait must
+   * follow what the click actually did, not what it usually does.
+   */
+  const sessionAnswering = (outcome) => {
+    const seen = [];
+    let path = "/profiles";
+    return {
+      seen,
+      pendingRequests: () => 0,
+      evaluate: async (script) => {
+        seen.push(script);
+        /* The script carries the whole page-driver source, so every method NAME
+           appears in it. Only the trailing `agenticDriver.<call>` says what is
+           being called. */
+        if (script.includes("agenticDriver.followNav(")) return JSON.stringify(true);
+        if (script.includes("agenticDriver.selectProfile(")) {
+          // The app navigates only when there was something to click.
+          if (outcome === "clicked") path = "/";
+          return JSON.stringify(outcome);
+        }
+        if (script.includes("agenticDriver.where()")) return JSON.stringify({ path, text: 12 });
+        return JSON.stringify(null);
+      },
+    };
+  };
+
+  /** Short waits: the point is which screen is waited for, not how patiently. */
+  const FAST = { timeoutMs: 600, settleMs: 10 };
+
+  it("waits for Mes parties when the click actually selected a Profile", async () => {
+    const { selectProfile } = await import("./navigate.mjs");
+    const session = sessionAnswering("clicked");
+
+    const picked = await selectProfile(session, {
+      port: "5231",
+      username: "Nonomoho",
+      waitOptions: FAST,
+    });
+
+    expect(picked).toBe("clicked");
+    // It did not sit waiting for a screen the act has left behind.
+    expect(session.seen.some((s) => s.includes("agenticDriver.selectProfile("))).toBe(true);
+  });
+
+  it("stays on the Profile list when there was nothing to click", async () => {
+    const { selectProfile } = await import("./navigate.mjs");
+    const session = sessionAnswering("already");
+
+    expect(
+      await selectProfile(session, { port: "5231", username: "Nonomoho", waitOptions: FAST }),
+    ).toBe("already");
+  });
+});
