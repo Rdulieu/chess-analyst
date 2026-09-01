@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01. Check local vert (build, 411 + 843 + 105 tests, lint 0). **FP non jouée séparément** : couverte par la suite HP lancée pour la PR — F1 par HP-01, F2 et F3 par HP-03.
 
 ## Parent
 
@@ -60,19 +60,19 @@ numéro.
 
 ## Acceptance criteria
 
-- [ ] Sur « Mes parties », la porte d'import et « Analyser la sélection » sont sur **une seule rangée**,
+- [x] Sur « Mes parties », la porte d'import et « Analyser la sélection » sont sur **une seule rangée**,
       et passent à la ligne plutôt que de déborder sur un écran étroit.
-- [ ] L'état désactivé de « Analyser la sélection » est inchangé, et la porte d'import garde son
+- [x] L'état désactivé de « Analyser la sélection » est inchangé, et la porte d'import garde son
       marqueur d'action et son nom accessible.
-- [ ] Après le sceau, le contrôle de verdict porte, sous ses rangées, le verdict **scellé** de ce coup.
-- [ ] Cette ligne est rendue **dans tous les états**, y compris quand rien n'avait été écrit avant le
+- [x] Après le sceau, le contrôle de verdict porte, sous ses rangées, le verdict **scellé** de ce coup.
+- [x] Cette ligne est rendue **dans tous les états**, y compris quand rien n'avait été écrit avant le
       sceau, et la hauteur du fieldset ne varie donc pas d'un ply à l'autre.
-- [ ] Avant le sceau, cette ligne n'existe pas : il n'y a pas de couche scellée à rappeler.
-- [ ] `SealedMarkReadout` reste où il est et garde la note et le moment clé.
-- [ ] Le relevé du coup courant affiche `N.` ou `N…` devant le SAN, sur les deux écrans.
-- [ ] Le relevé reste **une seule ligne dans tous les états**, et la position de départ ne porte pas de
+- [x] Avant le sceau, cette ligne n'existe pas : il n'y a pas de couche scellée à rappeler.
+- [x] `SealedMarkReadout` reste où il est et garde la note et le moment clé.
+- [x] Le relevé du coup courant affiche `N.` ou `N…` devant le SAN, sur les deux écrans.
+- [x] Le relevé reste **une seule ligne dans tous les états**, et la position de départ ne porte pas de
       numéro.
-- [ ] L'assertion de déplacement nul reste verte : parcourir les plys ne déplace ni les contrôles de pas
+- [x] L'assertion de déplacement nul reste verte : parcourir les plys ne déplace ni les contrôles de pas
       ni le contrôle de verdict.
 
 ### Feature Path (FP)
