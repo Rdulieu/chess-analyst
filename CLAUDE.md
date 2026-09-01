@@ -28,7 +28,7 @@ scenarios, **UI-first**. Two levels:
   `docs/test-scenarios/`. Run + reported at the **integration→develop** MR (human decision).
 - **Feature Path (FP)**: **executable** acceptance criteria of a sub-issue (in the issue
   body, **throwaway**). Sub-issue→integration **auto-merge** gate: green FP + no blocking
-  finding, on top of build + tests.
+  finding, on top of build + tests + **lint**.
 
 Runner: `/agentic-tests`. Format & inventory: the `agentic-tests` skill's `SCENARIO-FORMAT.md`.
 
@@ -38,8 +38,8 @@ For a `ready-for-agent` issue: branch per Git flow, then implement with `/tdd`
 (red → green → refactor) on the lower pyramid tiers. **After a `/tdd` implementation, propose
 to the user to spawn a subagent that runs `/agentic-tests`** on the issue's Feature Path — the
 subagent drives the running app (UI-first) and reports findings, so validation is an actual
-step, not just a suggestion. Iterate `/tdd` ↔ `/agentic-tests` until build + tests + FP are
-green with no blocking finding, then merge per Git flow.
+step, not just a suggestion. Iterate `/tdd` ↔ `/agentic-tests` until build + tests + lint + FP
+are green with no blocking finding, then merge per Git flow.
 
 This subagent step is the **baseline** — it leverages Claude Code subagents. In **HP** mode the
 runner goes further and is itself an orchestrator: the prerequisite first and alone, then **one
