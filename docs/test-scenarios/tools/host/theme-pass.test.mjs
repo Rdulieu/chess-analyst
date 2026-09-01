@@ -197,3 +197,28 @@ describe("the order the pass walks in", () => {
     expect(plan.slice(0, 4).map((s) => s.width)).toEqual([1280, 1280, 380, 380]);
   });
 });
+
+describe("the panel height the pass reports (US-23, D8)", () => {
+  /*
+   * The verdict control grew, deliberately: what the Player acts on grows, what
+   * explains shrinks. But "does the board suffer for it" is a **judgement**, not a
+   * measurement, and a threshold the agent invented would be arbitrary — so the
+   * pass carries a READING and the requester arbitrates.
+   *
+   * A reading, never an assertion. The assertion that matters already exists and
+   * is untouched: walking the plies must displace the step controls and the
+   * verdict fieldset by zero pixels, which is exactly the case this control puts
+   * under tension.
+   */
+  it("measures the reading panel and hands the figure back rather than judging it", async () => {
+    const { panelHeightScript } = await import("./theme-pass.mjs");
+    const script = panelHeightScript({ port: "5237" });
+
+    // It is a measurement of the panel that holds the verdict.
+    expect(script).toContain("declared-severity");
+    // Guarded like everything injected, for the same reason as the rest.
+    expect(script).toContain("5237");
+    // And it judges nothing: no threshold, no pass, no fail.
+    expect(script).not.toMatch(/\b(pass|fail|tooTall|threshold|maxHeight)\b/i);
+  });
+});

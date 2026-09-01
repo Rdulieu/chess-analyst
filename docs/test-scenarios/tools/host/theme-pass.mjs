@@ -26,7 +26,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { emulateTheme, open, setViewport } from "./cdp.mjs";
-import { ANY_SCREEN, matcherFor, reachScreen, selectProfile, waitForScreen } from "./navigate.mjs";
+import { ANY_SCREEN, guarded, matcherFor, reachScreen, selectProfile, waitForScreen } from "./navigate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const THEME_PASS_DOC = join(HERE, "..", "..", "theme-pass.md");
@@ -263,9 +263,39 @@ export async function runThemePass({
       continue;
     }
     const report = JSON.parse(await session.evaluate(auditScript({ port, theme, width, source })));
-    readings.push({ theme, width, screen: screen.name, route: screen.route, report });
+    /* The reading panel's height, at this width, when this screen has one. A
+       READING and not an assertion (US-23, D8): the verdict control grew on
+       purpose, and whether the board suffers for it is the requester's judgement,
+       not a threshold an agent invented. The assertion that matters is elsewhere
+       and untouched — walking the plies must displace nothing. */
+    const panel = JSON.parse(await session.evaluate(panelHeightScript({ port })));
+    readings.push({ theme, width, screen: screen.name, route: screen.route, report, panel });
   }
   return readings;
+}
+
+/**
+ * How tall the reading panel is, and the verdict control inside it — measured, and
+ * judged by nobody here (ADR-0020: the library drives, it never judges).
+ *
+ * `null` on a screen that has no such panel, which is most of them: an absent
+ * panel is not a height of zero, and reporting it as one would put a figure in the
+ * ledger that means the opposite of what it says.
+ */
+export function panelHeightScript({ port }) {
+  return guarded(
+    port,
+    `const verdict = document.querySelector('[data-part="declared-severity"]');
+  if (!verdict) return JSON.stringify(null);
+  const box = verdict.getBoundingClientRect();
+  const pane = verdict.closest('[data-part="controls"], section, div');
+  return JSON.stringify({
+    verdict: Math.round(box.height * 100) / 100,
+    rows: verdict.querySelectorAll("label").length,
+    pane: pane ? Math.round(pane.getBoundingClientRect().height * 100) / 100 : null,
+    viewport: window.innerHeight,
+  });`,
+  );
 }
 
 /** Re-exported so a caller reaching one screen does not need two imports. */

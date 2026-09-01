@@ -269,13 +269,131 @@ section[aria-label="partie"] {
   padding: var(--space-1) var(--space-2) var(--space-2);
 }
 
-// The Player's own verdict on the Move being read (US-16a), in the same 14rem
-// column as the `Review mode`'s control above — so the five values read as one
-// control rather than five stacked lines. No new token: the spacing and the
-// border are the ones every fieldset in this pane already uses.
+// The Player's own verdict on the Move being read — a **segmented control** since
+// US-23 (D8): five full-width rows, each carrying its glyph, its word and what it
+// claims.
+//
+// It was a wrapping flex of `radio + word` in a 14rem column, so the five values
+// reflowed into two or three rows of tiny targets — the discomfort was layout, not
+// vocabulary. Rows in a column cannot reflow, so the control's height stops
+// depending on the width.
+//
+// It DOES grow the column US-22 spent a story lightening, and that is deliberate
+// rather than contradictory: what the Player acts on grows, what explains shrinks.
+// Whether the board suffers for it is a judgement and not a measurement, which is
+// why the theme pass reports this panel's height rather than asserting a threshold
+// somebody invented.
 [data-part="declared-severity"] {
-  gap: var(--space-1) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--space-1) var(--space-2) var(--space-2);
+
+  // One row per value. The input stays under the appearance and the label is the
+  // target, so the group keeps its semantics — and the whole row is the hit area
+  // rather than a word beside a 13px circle.
+  label {
+    display: grid;
+    // The glyph in a track of its own so the five words start on one edge: a
+    // ragged left down five rows is what makes a list of choices hard to scan.
+    grid-template-columns: 1.5em 1fr;
+    align-items: baseline;
+    column-gap: var(--space-1);
+    padding: var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+
+    // The radio sits in the glyph's track, above it — the two never both show:
+    // the input is the semantics, the glyph is the appearance.
+    input {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    [data-part="glyph"] {
+      grid-column: 1;
+      grid-row: 2;
+      font-family: var(--mono);
+      text-align: center;
+    }
+
+    [data-part="word"] {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    // What the value claims, under its word and in the same track: it is a
+    // sentence about that row, so it is indented with it rather than starting
+    // back at the row's edge.
+    [data-part="claim"] {
+      grid-column: 2;
+      grid-row: 2;
+      font-size: var(--text-s);
+      color: var(--ink-muted);
+    }
+  }
+
+  // The chosen row, reinforced by its verdict's own tint — the tokens of the
+  // previous slice, the same family the board's square uses, so the control and
+  // the diagram agree on what a verdict looks like. The glyph and the word carry
+  // the meaning: the tint is never the only cue (ADR-0013). The border is
+  // declared on every row above and only recoloured here, so choosing a value
+  // moves no row — the same device as the move list's current chip.
+  label:has(input:checked) {
+    border-color: var(--ink);
+
+    [data-part="glyph"] {
+      // A square token, not a chrome one: these five must stay legible against a
+      // ground that does not move with the theme, exactly as on the board.
+      color: var(--ink);
+    }
+  }
+
+  // The five written out rather than interpolated in a `@each` loop, on purpose:
+  // the token-consistency audit reads THIS source, not the compiled sheet, so a
+  // token name built by interpolation is one it cannot verify — and it flagged
+  // exactly that when the loop was here. A token nobody can check is the thing
+  // the audit exists to prevent. (It reads comments too, so this one names no
+  // token either.)
+  //
+  // The ground is a constant-family token, so it takes the constant ink with it,
+  // for the same reason the board's coordinate labels do.
+  label[data-severity="blunder"]:has(input:checked) {
+    background: var(--square-blunder);
+    color: var(--square-notation);
+  }
+
+  label[data-severity="mistake"]:has(input:checked) {
+    background: var(--square-mistake);
+    color: var(--square-notation);
+  }
+
+  label[data-severity="inaccuracy"]:has(input:checked) {
+    background: var(--square-inaccuracy);
+    color: var(--square-notation);
+  }
+
+  label[data-severity="sound"]:has(input:checked) {
+    background: var(--square-sound);
+    color: var(--square-notation);
+  }
+
+  label[data-severity="good"]:has(input:checked) {
+    background: var(--square-good);
+    color: var(--square-notation);
+  }
+
+  // The claim and the glyph inherit that ink rather than keeping the muted one,
+  // which was chosen against the pane's ground and not against a verdict's tint.
+  label:has(input:checked) :is([data-part="claim"], [data-part="glyph"]) {
+    color: inherit;
+  }
+
+  // The withdrawal is not a sixth value, so it does not read as a row.
+  button {
+    justify-self: start;
+  }
 }
 
 // The Player's `Note` on the Move being read (US-16a). A textarea in a 14rem

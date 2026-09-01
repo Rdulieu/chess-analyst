@@ -162,3 +162,52 @@ describe("a row of actions", () => {
     expect(actions.get("flex-wrap")).toBe("wrap");
   });
 });
+
+/**
+ * The verdict control, as a segmented one (US-23, D8).
+ *
+ * Read off the compiled sheet, which is the only tier below the agentic one where
+ * a layout rule is observable at all — jsdom never loads the stylesheet. No colour
+ * is pinned: the two new tints were judged on the pilot, and what matters here is
+ * that the row cannot reflow and cannot change size when chosen.
+ */
+describe("the verdict control", () => {
+  it("stacks its five values in a column, so they cannot reflow into tiny targets", () => {
+    const fieldset = declarationsFor(css, '[data-part="declared-severity"]');
+    expect(fieldset.get("display")).toBe("flex");
+    expect(fieldset.get("flex-direction")).toBe("column");
+    // Nothing wraps: a column of rows has no reflow to depend on the width.
+    expect(fieldset.get("flex-wrap")).toBeUndefined();
+  });
+
+  it("gives every row a border, so choosing one changes no row's size", () => {
+    // The same device as the move list's current chip: declared everywhere,
+    // recoloured on the chosen one. A border added only when checked would add
+    // two pixels only there, and the four other rows would move.
+    const row = declarationsFor(css, '[data-part="declared-severity"] label');
+    expect(row.get("border")).toMatch(/1px solid/);
+    expect(row.get("display")).toBe("grid");
+
+    const chosen = declarationsFor(css, '[data-part="declared-severity"] label:has(input:checked)');
+    expect(chosen.get("border-color")).toBeDefined();
+    expect(chosen.has("border-width")).toBe(false);
+    for (const property of [...chosen.keys()]) {
+      expect(property.startsWith("padding"), `${property} would resize the row`).toBe(false);
+      expect(property.startsWith("font-size"), `${property} would resize the row`).toBe(false);
+    }
+  });
+
+  it("reinforces the chosen row with the verdict's own square token, ink included", () => {
+    // The constant family, the same one the board's square uses, so the control
+    // and the diagram agree on what a verdict looks like — and a constant ground
+    // takes the constant ink with it.
+    for (const severity of ["blunder", "mistake", "inaccuracy", "sound", "good"]) {
+      const rule = declarationsFor(
+        css,
+        `[data-part="declared-severity"] label[data-severity=${severity}]:has(input:checked)`,
+      );
+      expect(rule.get("background"), severity).toBe(`var(--square-${severity})`);
+      expect(rule.get("color"), severity).toBe("var(--square-notation)");
+    }
+  });
+});
