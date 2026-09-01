@@ -1,9 +1,9 @@
 import { Router } from "express";
 import type { Db } from "../db";
-import { listGames, getGame } from "../repository";
+import { listGames } from "../repository";
 import { getGameAnnotations } from "../annotations/repository";
 import { readingState, readingStates } from "../personal/repository";
-import { scopedProfile } from "./scope";
+import { scopedProfile, scopedGame } from "./scope";
 
 /**
  * Read routes for retained Games (mounted at /api/games). The list is **about
@@ -28,24 +28,21 @@ export function createGamesRouter(db: Db): Router {
     );
   });
 
+  // Scoped like every other read (ADR-0014). It was not, and that was the one
+  // hole in the partition: a Game fetched by id came back to whoever asked.
   router.get("/:id", (req, res) => {
-    const id = Number(req.params.id);
-    const game = Number.isInteger(id) ? getGame(db, id) : undefined;
-    if (!game) {
-      res.status(404).json({ error: "Game not found" });
-      return;
-    }
+    const game = scopedGame(db, req, res);
+    if (!game) return;
     res.json({ ...game, reading: readingState(db, game.id) });
   });
 
+  // Scoped too, and this is the one that mattered most: it serves what the
+  // engine found, which is exactly what `/personal` guards two checks deep.
   router.get("/:id/annotations", (req, res) => {
-    const id = Number(req.params.id);
-    const annotations = Number.isInteger(id) ? getGameAnnotations(db, id) : undefined;
-    if (!annotations) {
-      res.status(404).json({ error: "Game not found" });
-      return;
-    }
-    res.json(annotations);
+    const game = scopedGame(db, req, res);
+    if (!game) return;
+    // The Game is vouched for, so the annotations cannot be absent.
+    res.json(getGameAnnotations(db, game.id));
   });
 
   return router;

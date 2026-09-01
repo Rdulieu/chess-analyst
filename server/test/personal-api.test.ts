@@ -342,11 +342,11 @@ describe("a Game says whether it carries a reading", () => {
   it("says it on a single Game's detail too, so the Analyse page needs no second request", async () => {
     const { app, profileId, game } = appWithGame();
 
-    expect((await request(app).get(`/api/games/${game.id}`)).body.reading).toBe("none");
+    expect((await request(app).get(`/api/games/${game.id}?profileId=${profileId}`)).body.reading).toBe("none");
     await request(app)
       .put(`/api/personal/${game.id}/marks/3?profileId=${profileId}`)
       .send({ keyMoment: true });
-    expect((await request(app).get(`/api/games/${game.id}`)).body.reading).toBe("open");
+    expect((await request(app).get(`/api/games/${game.id}?profileId=${profileId}`)).body.reading).toBe("open");
   });
 
   it("counts a reading whose only marks are posterior as still a reading", async () => {
@@ -362,7 +362,7 @@ describe("a Game says whether it carries a reading", () => {
       .put(`/api/personal/${game.id}/marks/9?profileId=${profileId}`)
       .send({ note: "vu après coup" });
 
-    expect((await request(app).get(`/api/games/${game.id}`)).body.reading).toBe("sealed");
+    expect((await request(app).get(`/api/games/${game.id}?profileId=${profileId}`)).body.reading).toBe("sealed");
   });
 });
 

@@ -74,17 +74,33 @@ describe("games API", () => {
     const list = await gamesOf(app);
     const id = list.body[0].id as number;
 
-    const res = await request(app).get(`/api/games/${id}`);
+    const res = await request(app).get(`/api/games/${id}?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id, opponent: "Duke Karl / Count Isouard" });
     expect(res.body.pgn).toContain("O-O-O");
   });
 
+  it("GET /api/games/:id refuses a Game that is not the named Profile's", async () => {
+    // The partition (ADR-0014) held on every list and on every `/personal` read,
+    // but not here: a Game was reachable by id alone, so one Player's Game came
+    // back under another's name with nothing in the answer saying so.
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db);
+    const stranger = seedProfile(db, "Metalyst", "lichess");
+    const id = db.insert(games).values(morphyGame(mine)).returning().get().id;
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get(`/api/games/${id}?profileId=${stranger}`);
+
+    // 404 and not 403: from that Profile, the Game genuinely is not there.
+    expect(res.status).toBe(404);
+  });
+
   it("GET /api/games/:id returns 404 for an unknown id", async () => {
     const app = appWithGame();
 
-    const res = await request(app).get("/api/games/9999");
+    const res = await request(app).get(`/api/games/9999?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(404);
   });
@@ -100,10 +116,34 @@ describe("games API", () => {
     expect(res.body).toEqual([]);
   });
 
+  it("GET /api/games/:id/annotations refuses a Game that is not the named Profile's", async () => {
+    // The route that serves what the engine found — precisely what `/personal`
+    // guards two checks deep. It guarded nothing.
+    const { db } = openDb(":memory:");
+    const mine = seedProfile(db);
+    const stranger = seedProfile(db, "Metalyst", "lichess");
+    const id = db.insert(games).values(morphyGame(mine)).returning().get().id;
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get(`/api/games/${id}/annotations?profileId=${stranger}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /api/games/:id refuses to answer when no Profile is named", async () => {
+    // Not a 404: the caller named no one, so this is not a Game that is missing
+    // — it is a question that is not asked of anybody (ADR-0014).
+    const app = appWithGame();
+
+    const res = await request(app).get("/api/games/1");
+
+    expect(res.status).toBe(400);
+  });
+
   it("GET /api/games/:id/annotations returns 404 for an unknown id", async () => {
     const app = appWithGame();
 
-    const res = await request(app).get("/api/games/9999/annotations");
+    const res = await request(app).get(`/api/games/9999/annotations?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(404);
   });
@@ -113,7 +153,7 @@ describe("games API", () => {
     const list = await gamesOf(app);
     const id = list.body[0].id as number;
 
-    const res = await request(app).get(`/api/games/${id}/annotations`);
+    const res = await request(app).get(`/api/games/${id}/annotations?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ analyzed: false, plies: [], regime: null, recap: null });
@@ -150,7 +190,7 @@ describe("games API", () => {
       .run();
     const app = createApp(db, fakeRegistry({}));
 
-    const res = await request(app).get(`/api/games/${game.id}/annotations`);
+    const res = await request(app).get(`/api/games/${game.id}/annotations?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(200);
     expect(res.body.analyzed).toBe(true);
@@ -306,12 +346,12 @@ describe("analysis API", () => {
 
     await startPass(app, [myGame.id], mine);
     expect(await waitDone(app, mine)).toMatchObject({ done: 3, outcome: "completed" });
-    const stored = (await request(app).get(`/api/games/${myGame.id}/annotations`)).body;
+    const stored = (await request(app).get(`/api/games/${myGame.id}/annotations?profileId=${SOLE_PROFILE}`)).body;
 
     // Incremental, as ADR-0011 has it: no pass is opened at all, and the Game's
     // Evaluations are exactly the ones the first pass produced.
     expect((await startPass(app, [myGame.id], mine)).body).toMatchObject({ started: false });
-    expect((await request(app).get(`/api/games/${myGame.id}/annotations`)).body).toEqual(stored);
+    expect((await request(app).get(`/api/games/${myGame.id}/annotations?profileId=${SOLE_PROFILE}`)).body).toEqual(stored);
   });
 
   it("acknowledging one Profile's summary leaves the other Profile's own summary standing", async () => {

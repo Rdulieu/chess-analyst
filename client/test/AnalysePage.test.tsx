@@ -2,21 +2,30 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
 import { AnalysePage } from "../src/pages/AnalysePage";
 import { OPERA_GAME } from "./fixtures";
 
 const json = (body: unknown, status = 200) =>
   ({ ok: status < 300, status, json: async () => body }) as Response;
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
 
 function renderAt(gameId: number) {
+  // The page is Profile-scoped (ADR-0014): it needs a selected Profile to be
+  // about anybody at all.
+  localStorage.setItem("chess-analyst.current-profile", "1");
   return render(
-    <MemoryRouter initialEntries={[`/analyse/${gameId}`]}>
+    <CurrentProfileProvider>
+      <MemoryRouter initialEntries={[`/analyse/${gameId}`]}>
       <Routes>
         <Route path="/analyse/:gameId" element={<AnalysePage />} />
       </Routes>
-    </MemoryRouter>,
+      </MemoryRouter>
+    </CurrentProfileProvider>,
   );
 }
 
@@ -25,7 +34,9 @@ describe("AnalysePage — the screen announces itself", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed: false });
+        if (url.startsWith("/api/profiles/1"))
+          return json({ id: 1, platform: "chesscom", username: "DudulSmash", games: 1 });
+        if (url.startsWith("/api/games/1") && !url.includes("/annotations")) return json({ ...OPERA_GAME, analyzed: false });
         throw new Error(`unexpected fetch: ${url}`);
       }),
     );
@@ -44,7 +55,9 @@ describe("AnalysePage", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string, opts?: RequestInit) => {
-        if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed });
+        if (url.startsWith("/api/profiles/1"))
+          return json({ id: 1, platform: "chesscom", username: "DudulSmash", games: 1 });
+        if (url.startsWith("/api/games/1") && !url.includes("/annotations")) return json({ ...OPERA_GAME, analyzed });
         if (url.startsWith("/api/analyze?") && opts?.method === "POST") {
           return json({ running: true, total: 1, done: 0 }, 202);
         }
@@ -52,7 +65,7 @@ describe("AnalysePage", () => {
           analyzed = true; // the pass finishes on the first poll
           return json({ running: false, total: 1, done: 1 });
         }
-        if (url === "/api/games/1/annotations") {
+        if (url.startsWith("/api/games/1/annotations")) {
           return json({
             analyzed: true,
             plies: [
@@ -83,7 +96,9 @@ describe("AnalysePage — the way into the Confrontation", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url === "/api/games/1") return json({ ...OPERA_GAME, analyzed: true, reading });
+        if (url.startsWith("/api/profiles/1"))
+          return json({ id: 1, platform: "chesscom", username: "DudulSmash", games: 1 });
+        if (url.startsWith("/api/games/1") && !url.includes("/annotations")) return json({ ...OPERA_GAME, analyzed: true, reading });
         throw new Error(`unexpected fetch: ${url}`);
       }),
     );

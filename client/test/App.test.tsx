@@ -66,7 +66,8 @@ describe("App — routing & navigation", () => {
         const u = url.toString();
         if (u.startsWith("/api/games") && !u.includes("/api/games/")) return jsonResponse([OPERA_GAME]);
         // Analyzed here so the deep-link test below exercises the board, not US-7's not-yet-analyzed path.
-        if (u === `/api/games/${OPERA_GAME.id}`) return jsonResponse({ ...OPERA_GAME, analyzed: true });
+        // Scoped now (ADR-0014): the id alone is no longer the whole URL.
+        if (u.startsWith(`/api/games/${OPERA_GAME.id}?`)) return jsonResponse({ ...OPERA_GAME, analyzed: true });
         if (u.startsWith("/api/move-habits")) return jsonResponse({ candidates: [] });
         if (u.startsWith("/api/stats")) return jsonResponse(STATS_SUMMARY);
         if (u.startsWith("/api/openings")) return jsonResponse({ openings: [] });

@@ -171,9 +171,11 @@ describe("GameViewer", () => {
 
     // The annotations endpoint specifically — the page does ask for the last
     // pass on mount, so that an unacknowledged summary reappears (US-8 02).
-    expect(fetchMock.mock.calls.map(([url]) => url as string)).not.toContain(
-      `/api/games/${OPERA_GAME.id}/annotations`,
-    );
+    expect(
+      fetchMock.mock.calls
+        .map(([url]) => url as string)
+        .some((url) => url.startsWith(`/api/games/${OPERA_GAME.id}/annotations`)),
+    ).toBe(false);
     // Nothing to reveal on an unanalysed Game, so the control offers nothing.
     expect(screen.queryByRole("radiogroup", { name: /niveau de revue/i })).toBeNull();
   });
@@ -236,7 +238,7 @@ describe("GameViewer", () => {
           analyzed = true;
           return { ok: true, status: 200, json: async () => ({ running: false, total: 2, done: 2, games: 1 }) } as Response;
         }
-        if (url.endsWith("/annotations")) {
+        if (url.includes("/annotations")) {
           return { ok: true, status: 200, json: async () => ({ analyzed: true, plies: ANNOTATED }) } as Response;
         }
         throw new Error(`unexpected fetch: ${url}`);

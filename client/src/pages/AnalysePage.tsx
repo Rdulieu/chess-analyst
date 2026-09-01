@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchGame } from "../api";
+import { fetchGame, GameNotThisProfiles } from "../api";
 import { GameViewer } from "../features/games/GameViewer";
+import { ScopedPage } from "../features/profiles/ScopedPage";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { READING_STATE_LABEL } from "../types";
-import type { Game, ReadingState } from "../types";
+import type { Game, Profile, ReadingState } from "../types";
 
 /**
  * Analyse (`/analyse/:gameId`): reviews one Game on the interactive board. The
@@ -12,20 +13,49 @@ import type { Game, ReadingState } from "../types";
  * it loads its own Game rather than relying on the list screen's state.
  */
 export function AnalysePage() {
+  return <ScopedPage>{(profile) => <AnalysisOfOneGame profile={profile} />}</ScopedPage>;
+}
+
+/**
+ * Scoped like the reading route beside it (ADR-0014). It was not, and a Game
+ * reached by id alone was drawn to whoever was selected — one Player's Game
+ * under another's name, with nothing on screen saying so. `ReadingPage` had to
+ * work around that: it withheld the link back here, precisely because this
+ * screen would have shown the Game it had just refused. It no longer has to.
+ */
+function AnalysisOfOneGame({ profile }: { profile: Profile }) {
   const { gameId } = useParams();
   const [game, setGame] = useState<Game | null>(null);
+  // Told apart on purpose: a Game that is not this Profile's is a **fact** the
+  // Player is owed in words, while a load that failed is a malfunction. Folding
+  // both into `game === null` would leave the screen on "Loading game…" for
+  // ever — a refusal wearing the face of a hang.
+  const [refused, setRefused] = useState<"foreign" | "failed" | null>(null);
 
   const refresh = useCallback(async () => {
     if (!gameId) return;
-    await fetchGame(Number(gameId))
-      .then(setGame)
-      .catch(() => setGame(null));
-  }, [gameId]);
+    await fetchGame(Number(gameId), profile.id)
+      .then((result) => {
+        setGame(result);
+        setRefused(null);
+      })
+      .catch((cause: Error) => {
+        setGame(null);
+        setRefused(cause instanceof GameNotThisProfiles ? "foreign" : "failed");
+      });
+  }, [gameId, profile.id]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  if (refused === "foreign")
+    return (
+      <p role="status">
+        Cette partie n'appartient pas au profil courant : il n'y a pas d'analyse à en montrer ici.
+      </p>
+    );
+  if (refused === "failed") return <p role="alert">Cette partie n'a pas pu être chargée.</p>;
   if (!game) return <p>Loading game…</p>;
 
   const reading: ReadingState = game.reading ?? "none";
