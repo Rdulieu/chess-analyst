@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01 (FP verte 4/4 : 76 puces numérotées sans écart, 14,4:1 en achromatopsie, 0,00 px de déplacement sur dix pas mesuré sur les 76 puces ; aucun finding bloquant)
 
 ## Parent
 
@@ -48,19 +48,19 @@ les deux écrans en héritent **par construction**, il n'y a pas de seconde list
 
 ## Acceptance criteria
 
-- [ ] Chaque demi-coup blanc porte `N.` et chaque demi-coup noir `N…`, le numéro étant celui du coup
+- [x] Chaque demi-coup blanc porte `N.` et chaque demi-coup noir `N…`, le numéro étant celui du coup
       entier auquel il appartient.
-- [ ] Le numéro est **dans** le contrôle du coup : le nom accessible contient le numéro et le SAN.
-- [ ] Une partie commençant par un coup noir (position de départ autre) reste correctement numérotée.
-- [ ] Le coup affiché se distingue visuellement par un renversement encre/fond, et **jamais** par la
+- [x] Le numéro est **dans** le contrôle du coup : le nom accessible contient le numéro et le SAN.
+- [x] Une partie commençant par un coup noir (position de départ autre) reste correctement numérotée.
+- [x] Le coup affiché se distingue visuellement par un renversement encre/fond, et **jamais** par la
       couleur seule.
-- [ ] La bordure est déclarée sur toutes les puces et transparente hors du coup courant : la boîte d'une
+- [x] La bordure est déclarée sur toutes les puces et transparente hors du coup courant : la boîte d'une
       puce est identique qu'elle soit courante ou non.
-- [ ] Aucune règle n'introduit de graisse ni de caractère supplémentaire sur la puce courante.
-- [ ] Les marques existantes de la liste — glyphe de sévérité, marques du joueur, mention « ne compte
+- [x] Aucune règle n'introduit de graisse ni de caractère supplémentaire sur la puce courante.
+- [x] Les marques existantes de la liste — glyphe de sévérité, marques du joueur, mention « ne compte
       pas », `Evaluation`, frontière de `Phase` — sont inchangées et restent attachées à leur coup.
-- [ ] Aucun défilement automatique n'est ajouté.
-- [ ] Les deux écrans qui rendent un échiquier héritent des deux changements sans code propre.
+- [x] Aucun défilement automatique n'est ajouté.
+- [x] Les deux écrans qui rendent un échiquier héritent des deux changements sans code propre.
 
 ### Feature Path (FP)
 
