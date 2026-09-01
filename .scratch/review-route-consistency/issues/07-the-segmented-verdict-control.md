@@ -1,4 +1,30 @@
-Status: `ready-for-agent` — **HITL** : la hauteur relevée revient au demandeur pour arbitrage.
+Status: `ready-for-human` — **HITL**. Implémentée sur `feature/US-23-07-the-segmented-verdict-control`,
+check local vert : build, 411 tests serveur + 833 tests client, 105 tests d'outillage, lint à 0, FP verte
+6/6 dans les deux thèmes. **Non mergée** : la hauteur relevée revient au demandeur.
+
+> **Relevé (chiffres, pas jugement)** — viewport 900 px, `rows` = 5 partout, identique dans les deux
+> thèmes et indépendant du verdict choisi. La forme a été arbitrée par le demandeur le 2026-09-01 :
+> une ligne par rangée plutôt que deux.
+>
+> | thème / largeur | avant `da8c0ce` | empilé `ebad5ba` | **livré** | Δ vs avant |
+> | --- | --- | --- | --- | --- |
+> | light 1280 | 66,5 px (1 rangée visuelle) | 416,5 px | **256,5 px** | **+190,0** |
+> | light 380 | 122,5 px (2 rangées) | 435,5 px | **275,5 px** | **+153,0** |
+> | dark 1280 | 66,5 px | 416,5 px | **256,5 px** | **+190,0** |
+> | dark 380 | 122,5 px | 435,5 px | **275,5 px** | **+153,0** |
+>
+> Panneau : 466 / 633 → 816 / 946 → **656 / 786**. À 380 px le panneau livré **tient** dans le viewport
+> de 900, ce que la forme empilée ne faisait pas.
+> Le delta est plus petit à 380 px parce que l'ancien contrôle y payait déjà son reflux — deux rangées
+> visuelles, étiquettes de **24 px**, les cibles minuscules du grill — et sa phrase n'était qu'un `title`
+> de survol, donc invisible au clavier et au tactile.
+>
+> **Contraste** — rangée choisie : 6,32 · 8,97 · 12,54 · 10,57 · 9,35. Rangée non choisie : phrase à
+> 6,27:1 (clair) et 7,49:1 (sombre) sur les cinq. Anneau de focus : 7,08:1 et 8,95:1.
+>
+> **Deux findings bloquants trouvés par la FP et corrigés dans la tranche** : le radio natif peint
+> par-dessus le glyphe (`✓` lu « Ø »), et la rangée qui héritait de la règle globale `[data-severity]`,
+> donc teintée sans être choisie et phrase à 2,75:1.
 
 ## Parent
 
@@ -60,22 +86,22 @@ contrôles de pas et du fieldset de verdict — c'est exactement le cas que ce c
 
 ## Acceptance criteria
 
-- [ ] Les cinq valeurs sont cinq rangées pleine largeur, dans l'ordre affiché aujourd'hui (pire →
+- [x] Les cinq valeurs sont cinq rangées pleine largeur, dans l'ordre affiché aujourd'hui (pire →
       meilleur), chacune portant glyphe, mot et phrase.
-- [ ] Le glyphe est **celui de la table partagée**, identique à celui de la liste des coups ; aucun glyphe
+- [x] Le glyphe est **celui de la table partagée**, identique à celui de la liste des coups ; aucun glyphe
       n'est retapé en littéral.
-- [ ] Les phrases sont visibles sans survol, pour les cinq valeurs, **en permanence**.
-- [ ] Le contrôle reste un groupe à choix exclusif : flèches natives quand il a le focus, annonce du rang
+- [x] Les phrases sont visibles sans survol, pour les cinq valeurs, **en permanence**.
+- [x] Le contrôle reste un groupe à choix exclusif : flèches natives quand il a le focus, annonce du rang
       sur le total, et rien n'est présélectionné quand le joueur n'a rien dit — **silence n'est pas une
       valeur**.
-- [ ] Les raccourcis `1`–`5` posent toujours le verdict **dans l'ordre affiché** et **sans déplacer le
+- [x] Les raccourcis `1`–`5` posent toujours le verdict **dans l'ordre affiché** et **sans déplacer le
       focus**, et l'ordre affiché reste dérivé de la même source que les touches.
-- [ ] Retirer son verdict reste possible et distinct de « ne rien avoir dit ».
-- [ ] La légende continue de dire la couche postérieure et le coup de l'adversaire, sur une seule ligne
+- [x] Retirer son verdict reste possible et distinct de « ne rien avoir dit ».
+- [x] La légende continue de dire la couche postérieure et le coup de l'adversaire, sur une seule ligne
       aux largeurs auditées.
-- [ ] La hauteur du contrôle ne dépend plus du reflux : choisir une valeur ne déplace aucune rangée.
-- [ ] La teinte n'est jamais l'unique indice, et l'audit des tokens reste vert.
-- [ ] La passe de thème **relève et rapporte** la hauteur du panneau aux largeurs auditées ; son assertion
+- [x] La hauteur du contrôle ne dépend plus du reflux : choisir une valeur ne déplace aucune rangée.
+- [x] La teinte n'est jamais l'unique indice, et l'audit des tokens reste vert.
+- [x] La passe de thème **relève et rapporte** la hauteur du panneau aux largeurs auditées ; son assertion
       de déplacement nul reste verte.
 
 ### Feature Path (FP)

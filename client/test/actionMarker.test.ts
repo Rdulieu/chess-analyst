@@ -162,3 +162,108 @@ describe("a row of actions", () => {
     expect(actions.get("flex-wrap")).toBe("wrap");
   });
 });
+
+/**
+ * The verdict control, as a segmented one (US-23, D8).
+ *
+ * Read off the compiled sheet, which is the only tier below the agentic one where
+ * a layout rule is observable at all — jsdom never loads the stylesheet. No colour
+ * is pinned: the two new tints were judged on the pilot, and what matters here is
+ * that the row cannot reflow and cannot change size when chosen.
+ */
+describe("the verdict control", () => {
+  it("stacks its five values in a column, so they cannot reflow into tiny targets", () => {
+    const fieldset = declarationsFor(css, '[data-part="declared-severity"]');
+    expect(fieldset.get("display")).toBe("flex");
+    expect(fieldset.get("flex-direction")).toBe("column");
+    // Nothing wraps: a column of rows has no reflow to depend on the width.
+    expect(fieldset.get("flex-wrap")).toBeUndefined();
+  });
+
+  it("gives every row a border, so choosing one changes no row's size", () => {
+    // The same device as the move list's current chip: declared everywhere,
+    // recoloured on the chosen one. A border added only when checked would add
+    // two pixels only there, and the four other rows would move.
+    const row = declarationsFor(css, '[data-part="declared-severity"] label');
+    expect(row.get("border")).toMatch(/1px solid/);
+    expect(row.get("display")).toBe("grid");
+    // ONE line per row: glyph, word, claim in three tracks of a single row. The
+    // stacked version cost 66 px a row against ~36, and the requester arbitrated
+    // the measurement in favour of the compact one (2026-09-01) — the claims stay
+    // permanently visible either way, which is what could not be traded.
+    expect(row.get("grid-template-columns")).toBe("1.5em auto 1fr");
+    for (const part of ["glyph", "word", "claim"]) {
+      const cell = declarationsFor(
+        css,
+        `[data-part="declared-severity"] label [data-part="${part}"]`,
+      );
+      expect(cell.get("grid-row"), `${part} must share the row's single line`).toBe("1");
+    }
+
+    const chosen = declarationsFor(css, '[data-part="declared-severity"] label:has(input:checked)');
+    expect(chosen.get("border-color")).toBeDefined();
+    expect(chosen.has("border-width")).toBe(false);
+    for (const property of [...chosen.keys()]) {
+      expect(property.startsWith("padding"), `${property} would resize the row`).toBe(false);
+      expect(property.startsWith("font-size"), `${property} would resize the row`).toBe(false);
+    }
+  });
+
+  it("reinforces the chosen row with the verdict's own square token, ink included", () => {
+    // The constant family, the same one the board's square uses, so the control
+    // and the diagram agree on what a verdict looks like — and a constant ground
+    // takes the constant ink with it.
+    for (const severity of ["blunder", "mistake", "inaccuracy", "sound", "good"]) {
+      const rule = declarationsFor(
+        css,
+        `[data-part="declared-severity"] label[data-verdict=${severity}]:has(input:checked)`,
+      );
+      expect(rule.get("background"), severity).toBe(`var(--square-${severity})`);
+      expect(rule.get("color"), severity).toBe("var(--square-notation)");
+    }
+  });
+});
+
+describe("the radio under the row's appearance", () => {
+  /*
+   * The comment in the sheet always claimed "the input is the semantics, the glyph
+   * is the appearance" — and for one commit it was false: both sat in the same
+   * grid cell and the native circle was painted over the mark, so `✓` read as "Ø"
+   * and `!` as "(!)" (measured by the FP at 84042fa, against the previous shape
+   * where they stacked). The glyph is the non-chromatic cue ADR-0013 requires, so
+   * an illegible glyph is not a cosmetic problem.
+   *
+   * The input stays in the accessibility tree — it IS the group — so it is
+   * unpainted rather than removed, and the focus ring moves to the row.
+   */
+  it("drops the native box, so the glyph is what is drawn in that cell", () => {
+    const input = declarationsFor(css, '[data-part="declared-severity"] label input');
+    expect(input.get("appearance")).toBe("none");
+    // Not display:none and not visibility:hidden: either would take the radio out
+    // of the group and cost the arrows, the rank announcement and the focus.
+    expect(input.get("display")).not.toBe("none");
+    expect(input.get("visibility")).toBeUndefined();
+  });
+
+  it("draws the focus ring on the row, since the box that used to carry it is gone", () => {
+    const focused = declarationsFor(
+      css,
+      '[data-part="declared-severity"] label:has(input:focus-visible)',
+    );
+    expect(focused.get("outline")).toMatch(/var\(--accent\)/);
+    // Offset like every other focus ring in the app, so the keyboard journey reads
+    // the same everywhere.
+    expect(focused.get("outline-offset")).toBeDefined();
+  });
+
+  it("draws exactly ONE ring — the input does not also take the app's general one", () => {
+    // Unpainted, the input still matched `input:focus-visible` in `_controls`, so
+    // the focus drew two concentric rectangles: one around the glyph's cell and
+    // one around the row (seen on the FP's 3× crops).
+    const input = declarationsFor(
+      css,
+      '[data-part="declared-severity"] label input:focus-visible',
+    );
+    expect(input.get("outline")).toBe("none");
+  });
+});

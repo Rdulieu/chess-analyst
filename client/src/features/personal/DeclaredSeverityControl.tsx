@@ -1,5 +1,9 @@
 import { DECLARED_SEVERITIES, type DeclaredSeverity } from "../../types";
-import { DECLARED_SEVERITY_LABEL, DECLARED_SEVERITY_MEANING } from "./declaredSeverity";
+import {
+  DECLARED_SEVERITY_GLYPH,
+  DECLARED_SEVERITY_LABEL,
+  DECLARED_SEVERITY_MEANING,
+} from "./declaredSeverity";
 
 /**
  * The Player's verdict on the Move being read (`Declared severity`, CONTEXT.md):
@@ -13,6 +17,13 @@ import { DECLARED_SEVERITY_LABEL, DECLARED_SEVERITY_MEANING } from "./declaredSe
  * It sits beside the board, on the Move currently being read, so annotating
  * thirty Moves is *verdict, Next, verdict, Next* — no intermediate navigation,
  * which is the difference between an exercise and a chore.
+ *
+ * **Five full-width rows since US-23 (D8)**, each carrying the glyph, the word and
+ * what the value claims. The form inputs stay **under** the appearance and the
+ * label is the target, so the group semantics survive: native arrows when focused,
+ * the "3 of 5" announcement, and the keyboard module's own exemption. Real buttons
+ * with a state — what the request said literally — would have cost all three, and
+ * the arrows would have gone back to changing the Move mid-verdict.
  */
 export function DeclaredSeverityControl({
   ply,
@@ -56,7 +67,25 @@ export function DeclaredSeverityControl({
     <fieldset data-part="declared-severity">
       <legend>{legendFor({ posterior, playersOwnMove })}</legend>
       {DECLARED_SEVERITIES.map((severity) => (
-        <label key={severity} title={DECLARED_SEVERITY_MEANING[severity]}>
+        /*
+         * One full-width ROW per value, carrying the glyph, the word and what the
+         * value claims (US-23, D8). It was a wrapping flex of `radio + word`, so
+         * inside a 14rem column the five values reflowed into two or three rows of
+         * tiny targets — the discomfort was layout, not vocabulary.
+         *
+         * `data-verdict`, and deliberately **not** `data-severity`: the sheet tints
+         * ANY `[data-severity]` with the chrome's severity pair, a rule that exists
+         * for the move list's glyph. Wearing that attribute here tinted the three
+         * fault rows **while unchosen** — saying "this verdict is posed" about five
+         * rows at once — and dropped the claim to 2.75:1 on `Bévue`. The tint of a
+         * chosen row is this control's own business, and it comes from the SQUARE
+         * family (the board's), not the chrome's.
+         *
+         * The glyph and the word carry the meaning, so the tint is never the only
+         * cue (ADR-0013), and the value is named on the element rather than
+         * reaching the accessible name — which is a label, not a hook.
+         */
+        <label key={severity} data-verdict={severity}>
           <input
             type="radio"
             // Per ply: moving to another Move must not carry the previous one's
@@ -66,8 +95,24 @@ export function DeclaredSeverityControl({
             checked={posed === severity}
             disabled={disabled}
             onChange={() => onPose(severity)}
-          />{" "}
-          {DECLARED_SEVERITY_LABEL[severity]}
+          />
+          {/* The mark of the SHARED table, so the control and the move list say
+              the verdict with the same glyph and re-reading needs no
+              translation. Never retyped as a literal here. */}
+          <span data-part="glyph" aria-hidden="true">
+            {DECLARED_SEVERITY_GLYPH[severity]}
+          </span>
+          <span data-part="word">{DECLARED_SEVERITY_LABEL[severity]}</span>
+          {/* What the value CLAIMS, visible without hovering — and visible for all
+              five at once. It was a `title`: invisible to the keyboard, invisible
+              to touch, and it carries the most loaded phrase in the model
+              ("j'ai regardé, je ne trouve rien à reprocher").
+
+              Revealing it only on the chosen value would move the other four rows
+              under the Player's finger, which is precisely what ADR-0021 forbids —
+              and showing all five is what makes this control's height constant
+              where the reflow made it depend on the width. */}
+          <span data-part="claim">{DECLARED_SEVERITY_MEANING[severity]}</span>
         </label>
       ))}
       <button type="button" disabled={disabled || posed === null} onClick={onWithdraw}>
