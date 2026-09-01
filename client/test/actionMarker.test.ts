@@ -138,3 +138,27 @@ describe("the chip of the Move being looked at", () => {
     expect(chip.get("border-width")).toBeUndefined();
   });
 });
+
+/**
+ * A row of actions keeps its actions apart.
+ *
+ * Found by the FP of US-23-05: the two links of the reading route's slot measured
+ * a **0 px** gap — touching tap targets, and one line a screen reader reads as
+ * "Confronter ma lecture au moteurRetour à l'analyse de cette partie". The cause
+ * was not that slot: NO rule declared a gap for `[data-part="actions"]` anywhere,
+ * and JSX strips the whitespace between two elements on separate lines. So every
+ * such row in the app — the seal's own confirmation, the re-analysis card, the
+ * Profiles header — had the same 0 px, and a `{" "}` in one place would have
+ * fixed one of them.
+ */
+describe("a row of actions", () => {
+  const actions = declarationsFor(css, '[data-part="actions"]');
+
+  it("declares the space between its actions, rather than leaning on markup", () => {
+    expect(actions.get("display")).toBe("flex");
+    expect(actions.get("gap")).toBeDefined();
+    // Wrapping, because two named actions do not always fit a narrow screen and
+    // the alternative is a row that scrolls or clips.
+    expect(actions.get("flex-wrap")).toBe("wrap");
+  });
+});

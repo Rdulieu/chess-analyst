@@ -108,3 +108,64 @@ describe("the way back to the analysis reads as an act (US-23, D2)", () => {
     expect(back.getAttribute("href")).toBe("/analyse/1");
   });
 });
+
+describe("the door to the Confrontation, where the seal makes it possible (US-23, D7)", () => {
+  /** The reading route over a sealed reading of the current Profile's Game. */
+  function renderSealed(sealedAt: string | null) {
+    localStorage.setItem("chess-analyst.current-profile", "1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.startsWith("/api/games/1")) return json({ ...OPERA_GAME, profileId: 1 });
+        if (url.startsWith("/api/profiles/1"))
+          return json({ id: 1, platform: "chesscom", username: "Someone", games: 0 });
+        if (url.startsWith("/api/personal/1"))
+          return json({ gameId: 1, sealedAt, engineSeenBeforeSeal: sealedAt === null ? null : false, marks: [] });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    render(
+      <CurrentProfileProvider>
+        <MemoryRouter initialEntries={["/analyse/1/lecture"]}>
+          <Routes>
+            <Route path="/analyse/:gameId/lecture" element={<ReadingPage />} />
+          </Routes>
+        </MemoryRouter>
+      </CurrentProfileProvider>,
+    );
+  }
+
+  it("offers it once the reading is sealed, as the primary action, for THIS Game", async () => {
+    renderSealed("2026-08-25T10:00:00.000Z");
+
+    const door = await screen.findByRole("link", { name: /confronter ma lecture/i });
+    expect(door.getAttribute("href")).toBe("/analyse/1/confrontation");
+    // Primary: it is what sealing was for.
+    expect(door.getAttribute("data-action")).toBe("primary");
+  });
+
+  it("does not offer it while the reading is unsealed — nothing is fixed to confront", async () => {
+    renderSealed(null);
+
+    // The way back to the analysis is there; the confrontation is not.
+    await screen.findByRole("link", { name: /retour à l'analyse/i });
+    expect(screen.queryByRole("link", { name: /confronter ma lecture/i })).toBeNull();
+  });
+
+  it("keeps the way back to the analysis beside it, both sealed and not", async () => {
+    renderSealed("2026-08-25T10:00:00.000Z");
+
+    await screen.findByRole("link", { name: /confronter ma lecture/i });
+    expect(screen.getByRole("link", { name: /retour à l'analyse/i })).toBeTruthy();
+  });
+
+  it("offers neither on a Game that is not the current Profile's", async () => {
+    // A screen that has just refused a Game must not, in the same breath, point
+    // at it — which is the whole reason both live in a slot.
+    renderReading({ current: 2, owner: 1 });
+
+    await screen.findByText(/n'appartient pas au profil courant/i);
+    expect(screen.queryByRole("link", { name: /confronter ma lecture/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /retour à l'analyse/i })).toBeNull();
+  });
+});

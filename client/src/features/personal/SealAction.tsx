@@ -8,6 +8,10 @@ import { useState } from "react";
  * **dates** the reading. The confirmation names both, because a Player who sealed
  * by reflex would find their reading frozen without having chosen it.
  *
+ * It also **says what sealing leads to**, before it is done: the `Confrontation`
+ * comes after the seal, and a Player who does not know that has no reason to seal
+ * (US-23, D7).
+ *
  * The idiom is the app's existing one for an act that cannot be undone — an
  * in-page `role="alertdialog"` card naming what it commits, with **Cancel as the
  * primary action** — the same shape as re-analysing a Game or deleting a
@@ -49,6 +53,14 @@ export function SealAction({
           Rien à confronter pour l'instant : posez au moins un verdict, une note ou un moment clé.
         </p>
       )}
+      {/* What sealing LEADS TO, said before it is done (US-23, D7). Before the
+          seal nothing is fixed to confront, and that stays true — so this is a
+          sentence and never a greyed-out control: the same idiom as the refusal
+          above, for the same reason. What was missing was not confronting an
+          unfinished reading, it was knowing the confrontation exists and when. */}
+      <p data-part="seal-leads-to">
+        Après le scellement, vous pourrez confronter votre lecture à l'analyse du moteur.
+      </p>
 
       {confirming && (
         <div role="alertdialog" aria-label="confirmer : sceller ma lecture" className="card">

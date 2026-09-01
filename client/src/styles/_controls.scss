@@ -157,3 +157,21 @@ p[data-part="waiting"] {
   background: var(--tint-wait);
   color: var(--tint-wait-ink);
 }
+
+// A row of actions keeps its actions **apart**, and says so here rather than in
+// the markup of each caller.
+//
+// Nothing declared a gap for this part, and JSX strips the whitespace between two
+// elements written on separate lines — so every row of two actions in the app had
+// its targets touching, measured at 0 px on the reading route's slot by the FP of
+// US-23-05. Two tap targets with no space between them are one mis-tap apart, and
+// a screen reader reading the line ran the two labels together.
+//
+// It wraps, because two NAMED actions do not always fit a narrow screen and the
+// alternatives are a row that scrolls or one that clips.
+[data-part="actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}

@@ -58,7 +58,18 @@ export function PersonalReading({
    * leave**. A screen that has just told the Player this Game is not theirs must
    * not, in the same breath, offer them a way into it.
    */
-  onwards?: ReactNode;
+  /**
+   * What this screen offers **beyond itself** — the way back to the engine's
+   * analysis, and (US-23, D7) the way into the `Confrontation` once the reading
+   * is sealed.
+   *
+   * A slot, so a screen that has just refused a Game offers no door to it. It is
+   * given the **seal's state**, because that is what decides whether the
+   * `Confrontation` can be offered at all: without the seal nothing is fixed to
+   * confront. Being a function is also what makes the door appear the moment the
+   * reading is sealed, with no reload.
+   */
+  onwards?: (sealed: boolean) => ReactNode;
 }) {
   const [reading, setReading] = useState<PersonalAnalysis | null>(null);
   /**
@@ -143,7 +154,7 @@ export function PersonalReading({
 
   return (
     <div>
-      {onwards}
+      {onwards?.(reading.sealedAt !== null)}
       <GameHeader game={game} />
       <Board
         pgn={game.pgn}
@@ -158,9 +169,10 @@ export function PersonalReading({
         // What IS shown in the list is the Player's own marks: a reading has to be
         // locatable without stepping through every Move to find where one wrote.
         moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
-        // The arrows step the Moves here, because here the panel announces them
-        // (`ShortcutsNotice`). A shortcut nothing on screen mentions does not
-        // exist, and one that works where it is never mentioned is worse.
+        // The arrows step the Moves — and asking for them is what makes the board
+        // announce them, so the two cannot come apart (US-23, D6). This panel
+        // announces the commands of its OWN (`ShortcutsNotice`): the verdict and
+        // the Key moment.
         keyboardStepping
         controls={(ply) => (
           <ReadingControls
