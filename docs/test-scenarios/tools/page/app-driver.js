@@ -17,6 +17,9 @@
  *   worth encoding is no longer the element type but WHERE the door is: only the
  *   opponent cell carries one, the rest of the row is facts to compare. A driver
  *   clicking the row itself, or hunting for a button in it, finds nothing.
+ * - **A board square's style sits on a div INSIDE `[data-square]`**, because that is
+ *   where `react-chessboard` puts `squareStyles`. Reading the square itself reports
+ *   an unmarked board (2026-09-01).
  * - **Month fields are framework-controlled**, so assigning `value` does nothing at
  *   all: it takes the native value setter plus an event — and then a read-back, since
  *   the same run that discovered this nearly imported the wrong months (2026-08-19).
@@ -72,6 +75,28 @@ var agenticDriver = {
   /** Open the first Game from the list. */
   openFirstGame() {
     return this.openGameRow(0);
+  },
+
+  /**
+   * Every board square that carries a background of its own, as `{ square: value }`.
+   *
+   * **The style is on a div INSIDE the `[data-square]` element**, not on the
+   * element: `react-chessboard` 5.10 puts `squareStyles` there. A driver reading
+   * the square itself concludes "nothing is marked" while the tint is right there
+   * — measured on the FP of US-23-06 (2026-09-01), where it produced a false red
+   * that was only lifted by re-reading the DOM.
+   *
+   * Raw values, judged by nobody here (ADR-0020): what a tint MEANS, and whose
+   * verdict it is, is the scenario's reading.
+   */
+  squareTints() {
+    const marked = {};
+    for (const cell of document.querySelectorAll("[data-square]")) {
+      const painted = cell.querySelector(":scope > div");
+      const value = painted && painted.style.backgroundColor;
+      if (value) marked[cell.getAttribute("data-square")] = value;
+    }
+    return marked;
   },
 
   /** Open the first Profile from the list of Profiles. */
