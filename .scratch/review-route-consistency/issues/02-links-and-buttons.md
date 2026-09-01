@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01 (FP verte 5/5 aux vrais Ctrl+clics ; un finding bloquant de la FP corrigé dans la tranche : la moitié page de la bibliothèque cherchait encore un `<button>` dans la ligne, donc plus aucun écran `/analyse/...` n'était atteignable)
 
 ## Parent
 
@@ -39,16 +39,16 @@ vraie anomalie la norme.
 
 ## Acceptance criteria
 
-- [ ] Les cinq actes listés portent le marqueur d'action et **restent des ancres**.
-- [ ] Le nom de l'adversaire, dans la liste des parties, est une ancre vers l'analyse de la partie — plus
+- [x] Les cinq actes listés portent le marqueur d'action et **restent des ancres**.
+- [x] Le nom de l'adversaire, dans la liste des parties, est une ancre vers l'analyse de la partie — plus
       aucune navigation par programme depuis un contrôle.
-- [ ] Ce lien-là est **nu** : il ne porte pas le marqueur d'action, et la ligne du tableau ne gagne pas de
+- [x] Ce lien-là est **nu** : il ne porte pas le marqueur d'action, et la ligne du tableau ne gagne pas de
       contrôle en hauteur.
-- [ ] Le reste de la ligne (date, résultat, cadence, états) n'est pas cliquable, et la case à cocher de
+- [x] Le reste de la ligne (date, résultat, cadence, états) n'est pas cliquable, et la case à cocher de
       sélection fonctionne sans déclencher la navigation.
-- [ ] Les liens en pleine phrase et le bandeau de profil sont inchangés.
-- [ ] Aucun libellé ne change : cette tranche ne touche qu'apparence et type d'élément.
-- [ ] La feuille de style compilée montre que le marqueur d'action donne l'apparence d'un contrôle, et le
+- [x] Les liens en pleine phrase et le bandeau de profil sont inchangés.
+- [x] Aucun libellé ne change : cette tranche ne touche qu'apparence et type d'élément.
+- [x] La feuille de style compilée montre que le marqueur d'action donne l'apparence d'un contrôle, et le
       test n'épingle aucune couleur.
 
 ### Feature Path (FP)

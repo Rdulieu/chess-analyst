@@ -83,7 +83,9 @@ function ReadingOfOneGame({ profile }: { profile: Profile }) {
           // and then point at it.
           onwards={
             <p>
-              <Link to={`/analyse/${game.id}`}>Retour à l'analyse de cette partie</Link>
+              <Link to={`/analyse/${game.id}`} data-action="">
+                Retour à l'analyse de cette partie
+              </Link>
             </p>
           }
         />

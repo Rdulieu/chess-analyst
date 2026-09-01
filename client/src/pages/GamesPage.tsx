@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { fetchGames } from "../api";
 import { useAnalysisPass } from "../features/analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
@@ -25,7 +25,6 @@ import { platformLabel, type Profile } from "../types";
 export function GamesPage({ profile }: { profile: Profile }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(profile.id);
-  const navigate = useNavigate();
 
   const load = useCallback(() => fetchGames(profile.id), [profile.id]);
   const games = useLoaded(load, [profile.id]);
@@ -98,7 +97,6 @@ export function GamesPage({ profile }: { profile: Profile }) {
 
           <GameList
             games={games.data}
-            onSelect={(g) => navigate(`/analyse/${g.id}`)}
             selectedIds={selected}
             onToggleSelect={toggleSelect}
           />

@@ -123,3 +123,50 @@ describe("AnalysePage — the way into the Confrontation", () => {
     expect(screen.queryByRole("link", { name: /face au moteur|confronter/i })).toBeNull();
   });
 });
+
+describe("AnalysePage — the two acts read as acts (US-23, D2)", () => {
+  function withReading(reading: "none" | "open" | "sealed") {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.startsWith("/api/profiles/1"))
+          return json({ id: 1, platform: "chesscom", username: "DudulSmash", games: 1 });
+        if (url.startsWith("/api/games/1") && !url.includes("/annotations"))
+          return json({ ...OPERA_GAME, analyzed: true, reading });
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    return renderAt(1);
+  }
+
+  /*
+   * The rule was already in the stylesheet and applied to ONE element of the whole
+   * app: a link carrying `data-action` is an act the Player takes and must read as
+   * one — while staying an anchor, so middle-click, "open in a new tab" and the
+   * status bar keep working. These tests pin the marker and the element type; the
+   * appearance is the sheet's business and no colour is pinned here.
+   */
+  it("marks the way into the personal reading, and keeps it an anchor", async () => {
+    withReading("none");
+
+    const entry = await screen.findByRole("link", { name: /écrire ma lecture/i });
+    expect(entry.hasAttribute("data-action")).toBe(true);
+    expect(entry.tagName).toBe("A");
+    expect(entry.getAttribute("href")).toBe("/analyse/1/lecture");
+  });
+
+  it("marks it whichever of the three invitations it is showing", async () => {
+    // Three states, three names, one act: the marker cannot depend on the wording.
+    withReading("open");
+    const resume = await screen.findByRole("link", { name: /reprendre ma lecture/i });
+    expect(resume.hasAttribute("data-action")).toBe(true);
+  });
+
+  it("marks the way into the Confrontation, and keeps it an anchor", async () => {
+    withReading("sealed");
+
+    const entry = await screen.findByRole("link", { name: /confronter/i });
+    expect(entry.hasAttribute("data-action")).toBe(true);
+    expect(entry.tagName).toBe("A");
+  });
+});
