@@ -330,6 +330,14 @@ section[aria-label="partie"] {
       margin: 0;
       inline-size: 100%;
       block-size: 100%;
+
+      // The ROW carries the focus ring now, so the input must not draw the app's
+      // general one as well: unpainted, it still matched `input:focus-visible` and
+      // the result was two concentric rectangles, one around the glyph's 24px cell
+      // and one around the row (seen on the FP's 3× crops). One ring per focus.
+      &:focus-visible {
+        outline: none;
+      }
     }
 
     [data-part="glyph"] {

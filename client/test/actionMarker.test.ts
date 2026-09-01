@@ -255,4 +255,15 @@ describe("the radio under the row's appearance", () => {
     // the same everywhere.
     expect(focused.get("outline-offset")).toBeDefined();
   });
+
+  it("draws exactly ONE ring — the input does not also take the app's general one", () => {
+    // Unpainted, the input still matched `input:focus-visible` in `_controls`, so
+    // the focus drew two concentric rectangles: one around the glyph's cell and
+    // one around the row (seen on the FP's 3× crops).
+    const input = declarationsFor(
+      css,
+      '[data-part="declared-severity"] label input:focus-visible',
+    );
+    expect(input.get("outline")).toBe("none");
+  });
 });
