@@ -78,89 +78,6 @@
   > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
   > et c'est voulu.
 
-- **US-23**: Tenir la même route de revue partout — pour qu'un profil, la page `Analyse` et la lecture
-  personnelle se conduisent de la même façon, avec le même clavier, la même liste des coups et les
-  mêmes verdicts lisibles.
-  > **Demandée le 2026-09-01**, à partir des notes de la première session de test du demandeur sur ses
-  > propres parties : `docs/feedback/2026-08-25-us16-confrontation.md` (notes du 25/08 + annotations de
-  > l'agent). **Non grillée** — le découpage ci-dessous est celui du demandeur, pas un PRD.
-  >
-  > **Une seule story pour quatre écrans, parce que le défaut est un seul** : la route de revue a été
-  > construite écran par écran (US-7 puis US-15a pour `Analyse`, US-16a pour la lecture personnelle),
-  > et chaque écran a gagné ses propres gestes. Le demandeur, qui les traverse dans la même session,
-  > paie l'écart : ce qui marche sur la lecture personnelle ne marche pas sur `Analyse`, et un profil
-  > ne mène pas là où on croit cliquer. Ce n'est pas quatre corrections d'ergonomie, c'est **une
-  > exigence de cohérence**.
-  >
-  > ### Le périmètre, dans les mots du demandeur
-  >
-  > **1. Évolution de la page profil** — *« Quand je clique sur le nom d'un profil j'aimerais
-  > sélectionner ce profil et accéder à sa liste de parties. »* Le nom d'un profil est aujourd'hui du
-  > texte : sélectionner et naviguer sont deux gestes distincts. À rapprocher du chantier de sémantique
-  > ci-dessous — ici c'est bien **un lien** qui est attendu, puisque le geste navigue.
-  >
-  > **2. Écran `Analyse`** — reprendre la **navigation clavier de la lecture personnelle** (avancer /
-  > reculer aux flèches) et **revoir le style des boutons**. Le second point porte un constat plus
-  > large que le style : *« certains boutons devraient être des boutons alors que ce sont des liens »*,
-  > et une passe agentique a relevé **l'inverse ailleurs** (la ligne de partie est un `button` alors
-  > qu'elle navigue). L'incohérence est donc **des deux côtés** et se traite d'un bloc : un lien
-  > navigue, un bouton agit.
-  >
-  > **3. Liste des coups — dans `Analyse` et dans la lecture.** Deux manques nommés : *« il manque un
-  > indicateur permettant de voir quel coup est actuellement visualisé »* et *« il manque le numéro de
-  > chaque coup »*. Le premier est à **vérifier avant d'ouvrir un sujet** : la liste porte déjà une
-  > mention du ply courant — si elle existe mais ne se voit pas, c'est une correction de rendu, pas une
-  > fonctionnalité. Le second est un ajout franc.
-  >
-  > **4. Analyse perso (lecture).** Trois notes :
-  > - *« Il manque un bouton pour confronter les analyses. »* La porte vers la `Confrontation`
-  >   n'apparaît **qu'une fois la lecture scellée**, délibérément — avant le sceau il n'y a rien de
-  >   figé à confronter. C'était une **question laissée au demandeur** (PR #77,
-  >   `.scratch/confrontation/issues/01-a-confrontation-exists.md`) : le retour la tranche de fait, le
-  >   premier utilisateur réel a lu l'absence comme un manque et non comme une étape.
-  > - *« Le radio button pour sélectionner l'évaluation perso n'est pas ergonomique. Je voudrais des
-  >   boutons un peu plus gros avec le logo du type d'erreur et des couleurs. »* Attention au garde-fou
-  >   du projet : **aucun indice ne peut être uniquement chromatique** — la couleur s'ajoute au glyphe,
-  >   elle ne le remplace pas. Et un groupe de radios porte des gestes clavier natifs qu'on ne retire
-  >   pas sans les remplacer (cf. D7 d'US-22).
-  > - *« Les évaluations du joueur doivent se retrouver dans l'historique des coups et le board sous
-  >   forme d'annotations. »* Le socle **existe** : la liste des coups porte `⚖` verdict posé, `✎` note
-  >   écrite, `◆` moment clé. Ce qui manque est la **valeur** du verdict et sa présence **sur
-  >   l'échiquier**. Enrichissement, pas création.
-  >
-  > ### Socle : US-22 est livrée, et en couvre déjà une partie
-  >
-  > US-22 est **mergée dans `develop`** (PR #89, 2026-08-31, `dfc1ebe`) : elle a tranché et livré sur
-  > la **lecture personnelle** ce que cette story veut voir partout. À ne pas reconstruire, et à
-  > prendre comme référence de forme :
-  > - **D7** — les raccourcis clavier de la lecture personnelle (flèches pour changer de coup tant que
-  >   le focus n'est pas dans un contrôle, `1`–`5` pour le verdict, `k` pour le moment clé, tout inerte
-  >   pendant la saisie d'une note). Le point 2 ci-dessus est donc un **portage** vers `Analyse`, pas
-  >   une conception.
-  > - **D8** — la liste des coups porte les **cinq glyphes de verdict** (`?!` `?` `??` `!` `✓`), ce qui
-  >   couvre déjà la « valeur du verdict » du point 4 **dans la liste** ; reste l'échiquier.
-  > - **D5** — `/profiles` est déjà dans le périmètre d'US-22 pour son débordement latéral sous 700 px.
-  >   L'évolution fonctionnelle de la page reste ici.
-  >
-  > **Le blocage est levé : la story est ouvrable.** Mais le grill doit commencer par **relever ce qui
-  > reste sur l'app telle que mergée**, et non partir des notes du 25/08 telles quelles — elles ont
-  > été écrites avant US-22 et une part de ce qu'elles décrivent n'existe plus.
-  >
-  > ### Ce que cette story ne prend pas, et pourquoi
-  >
-  > - **« Mes parties » (filtre / tri / recherche, libellé « 30/85 positions évaluées », dates)** — le
-  >   demandeur ne l'a pas mis dans le périmètre. Le libellé du compteur reste un vrai défaut (*il ne
-  >   dit pas ce qu'il compte ni qui l'a lancé*) ; le chiffre « 30/85 », lui, avait pour cause une passe
-  >   lancée par l'agent sur l'instance de test. Les **dates sont véridiques** (en-tête `[Date]` du PGN,
-  >   jamais recalculée) — ce qui manque est l'**heure**, deux parties du même jour étant
-  >   indiscernables, et cela relève du tri.
-  > - **Le compte rendu d'analyse et la `Confrontation` coup par coup** — six notes du 25/08 (1, 2, 5,
-  >   6, 7, 9) disent la même chose sous six angles : la `Confrontation` est **agrégée** et le demandeur
-  >   la veut **coup par coup, sur l'échiquier**. C'est **un sujet à part entière**, à ouvrir comme tel,
-  >   et non un morceau de celui-ci. Deux de ces notes **contestent une décision documentée** (le coût
-  >   de poser `Sound` sur chaque coup, et la lisibilité exigée par ADR-0017 des positions exclues) :
-  >   raison de plus pour ne pas les traiter en passant.
-
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
   > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte, et
@@ -411,6 +328,95 @@
 
 
 ## Doing
+
+- **US-23**: Tenir la même route de revue partout — pour qu'un profil, la page `Analyse` et la lecture
+  personnelle se conduisent de la même façon, avec le même clavier, la même liste des coups et les
+  mêmes verdicts lisibles.
+  > **Grillée le 2026-09-01** — neuf décisions et le relevé du code qui les fonde :
+  > [`.scratch/review-route-consistency/GRILL-NOTES.md`](.scratch/review-route-consistency/GRILL-NOTES.md).
+  > **ADR-0022 « Un échiquier, un auteur »** en sort ; `CONTEXT.md` rend `Evaluation` et `Annotation`
+  > au moteur sous `Declared severity`. Branche `integration/US-23-review-route-consistency`.
+  > Le PRD reste à produire (`/to-prd`), puis les sous-issues (`/to-issues`).
+  >
+  > **Demandée le 2026-09-01**, à partir des notes de la première session de test du demandeur sur ses
+  > propres parties : `docs/feedback/2026-08-25-us16-confrontation.md` (notes du 25/08 + annotations de
+  > l'agent). **Non grillée** — le découpage ci-dessous est celui du demandeur, pas un PRD.
+  >
+  > **Une seule story pour quatre écrans, parce que le défaut est un seul** : la route de revue a été
+  > construite écran par écran (US-7 puis US-15a pour `Analyse`, US-16a pour la lecture personnelle),
+  > et chaque écran a gagné ses propres gestes. Le demandeur, qui les traverse dans la même session,
+  > paie l'écart : ce qui marche sur la lecture personnelle ne marche pas sur `Analyse`, et un profil
+  > ne mène pas là où on croit cliquer. Ce n'est pas quatre corrections d'ergonomie, c'est **une
+  > exigence de cohérence**.
+  >
+  > ### Le périmètre, dans les mots du demandeur
+  >
+  > **1. Évolution de la page profil** — *« Quand je clique sur le nom d'un profil j'aimerais
+  > sélectionner ce profil et accéder à sa liste de parties. »* Le nom d'un profil est aujourd'hui du
+  > texte : sélectionner et naviguer sont deux gestes distincts. À rapprocher du chantier de sémantique
+  > ci-dessous — ici c'est bien **un lien** qui est attendu, puisque le geste navigue.
+  >
+  > **2. Écran `Analyse`** — reprendre la **navigation clavier de la lecture personnelle** (avancer /
+  > reculer aux flèches) et **revoir le style des boutons**. Le second point porte un constat plus
+  > large que le style : *« certains boutons devraient être des boutons alors que ce sont des liens »*,
+  > et une passe agentique a relevé **l'inverse ailleurs** (la ligne de partie est un `button` alors
+  > qu'elle navigue). L'incohérence est donc **des deux côtés** et se traite d'un bloc : un lien
+  > navigue, un bouton agit.
+  >
+  > **3. Liste des coups — dans `Analyse` et dans la lecture.** Deux manques nommés : *« il manque un
+  > indicateur permettant de voir quel coup est actuellement visualisé »* et *« il manque le numéro de
+  > chaque coup »*. Le premier est à **vérifier avant d'ouvrir un sujet** : la liste porte déjà une
+  > mention du ply courant — si elle existe mais ne se voit pas, c'est une correction de rendu, pas une
+  > fonctionnalité. Le second est un ajout franc.
+  >
+  > **4. Analyse perso (lecture).** Trois notes :
+  > - *« Il manque un bouton pour confronter les analyses. »* La porte vers la `Confrontation`
+  >   n'apparaît **qu'une fois la lecture scellée**, délibérément — avant le sceau il n'y a rien de
+  >   figé à confronter. C'était une **question laissée au demandeur** (PR #77,
+  >   `.scratch/confrontation/issues/01-a-confrontation-exists.md`) : le retour la tranche de fait, le
+  >   premier utilisateur réel a lu l'absence comme un manque et non comme une étape.
+  > - *« Le radio button pour sélectionner l'évaluation perso n'est pas ergonomique. Je voudrais des
+  >   boutons un peu plus gros avec le logo du type d'erreur et des couleurs. »* Attention au garde-fou
+  >   du projet : **aucun indice ne peut être uniquement chromatique** — la couleur s'ajoute au glyphe,
+  >   elle ne le remplace pas. Et un groupe de radios porte des gestes clavier natifs qu'on ne retire
+  >   pas sans les remplacer (cf. D7 d'US-22).
+  > - *« Les évaluations du joueur doivent se retrouver dans l'historique des coups et le board sous
+  >   forme d'annotations. »* Le socle **existe** : la liste des coups porte `⚖` verdict posé, `✎` note
+  >   écrite, `◆` moment clé. Ce qui manque est la **valeur** du verdict et sa présence **sur
+  >   l'échiquier**. Enrichissement, pas création.
+  >
+  > ### Socle : US-22 est livrée, et en couvre déjà une partie
+  >
+  > US-22 est **mergée dans `develop`** (PR #89, 2026-08-31, `dfc1ebe`) : elle a tranché et livré sur
+  > la **lecture personnelle** ce que cette story veut voir partout. À ne pas reconstruire, et à
+  > prendre comme référence de forme :
+  > - **D7** — les raccourcis clavier de la lecture personnelle (flèches pour changer de coup tant que
+  >   le focus n'est pas dans un contrôle, `1`–`5` pour le verdict, `k` pour le moment clé, tout inerte
+  >   pendant la saisie d'une note). Le point 2 ci-dessus est donc un **portage** vers `Analyse`, pas
+  >   une conception.
+  > - **D8** — la liste des coups porte les **cinq glyphes de verdict** (`?!` `?` `??` `!` `✓`), ce qui
+  >   couvre déjà la « valeur du verdict » du point 4 **dans la liste** ; reste l'échiquier.
+  > - **D5** — `/profiles` est déjà dans le périmètre d'US-22 pour son débordement latéral sous 700 px.
+  >   L'évolution fonctionnelle de la page reste ici.
+  >
+  > **Le blocage est levé : la story est ouvrable.** Mais le grill doit commencer par **relever ce qui
+  > reste sur l'app telle que mergée**, et non partir des notes du 25/08 telles quelles — elles ont
+  > été écrites avant US-22 et une part de ce qu'elles décrivent n'existe plus.
+  >
+  > ### Ce que cette story ne prend pas, et pourquoi
+  >
+  > - **« Mes parties » (filtre / tri / recherche, libellé « 30/85 positions évaluées », dates)** — le
+  >   demandeur ne l'a pas mis dans le périmètre. Le libellé du compteur reste un vrai défaut (*il ne
+  >   dit pas ce qu'il compte ni qui l'a lancé*) ; le chiffre « 30/85 », lui, avait pour cause une passe
+  >   lancée par l'agent sur l'instance de test. Les **dates sont véridiques** (en-tête `[Date]` du PGN,
+  >   jamais recalculée) — ce qui manque est l'**heure**, deux parties du même jour étant
+  >   indiscernables, et cela relève du tri.
+  > - **Le compte rendu d'analyse et la `Confrontation` coup par coup** — six notes du 25/08 (1, 2, 5,
+  >   6, 7, 9) disent la même chose sous six angles : la `Confrontation` est **agrégée** et le demandeur
+  >   la veut **coup par coup, sur l'échiquier**. C'est **un sujet à part entière**, à ouvrir comme tel,
+  >   et non un morceau de celui-ci. Deux de ces notes **contestent une décision documentée** (le coût
+  >   de poser `Sound` sur chaque coup, et la lisibilité exigée par ADR-0017 des positions exclues) :
+  >   raison de plus pour ne pas les traiter en passant.
 
 ## In review
 
