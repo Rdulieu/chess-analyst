@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { ProfilesPage } from "../src/pages/ProfilesPage";
 import type { Profile } from "../src/types";
@@ -20,12 +20,33 @@ const METALYST: Profile = { ...DUDUL, id: 3, platform: "lichess", username: "Met
 const json = (body: unknown, status = 200) =>
   ({ ok: status < 300, status, json: async () => body }) as Response;
 
+/** Reads the address the app is on, so a navigation is observable in a test. */
+function Address() {
+  const { pathname, hash } = useLocation();
+  return <p data-testid="address">{pathname + hash}</p>;
+}
+
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <ProfilesPage />
+    <MemoryRouter initialEntries={["/profiles"]}>
+      <Address />
+      <Routes>
+        <Route path="/profiles" element={<ProfilesPage />} />
+        <Route path="/" element={<p>Mes parties</p>} />
+      </Routes>
     </MemoryRouter>,
   );
+
+/** Where the app currently is. */
+const addressNow = () => screen.getByTestId("address").textContent;
+
+/**
+ * A Profile chosen in an earlier session. Selecting now LEAVES this screen for
+ * "Mes parties" (US-23, D1), so what the list shows about the current Profile is
+ * read on arrival, not after a click.
+ */
+const withCurrent = (id: number) =>
+  localStorage.setItem("chess-analyst.current-profile", String(id));
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.unstubAllGlobals());
@@ -128,11 +149,9 @@ describe("ProfilesPage — the current Profile", () => {
       .find((li) => li.textContent?.includes(name))!;
 
   it("marks the chosen Profile as the current one, in words and not by colour", async () => {
-    const user = userEvent.setup();
+    withCurrent(HIKARU.id);
     renderPage();
     await screen.findByRole("list", { name: /profils/i });
-
-    await user.click(within(rowFor("Hikaru")).getByRole("button", { name: /sélectionner/i }));
 
     // Said in words on the row — the cue survives a Player who sees no colour.
     expect(within(rowFor("Hikaru")).getByText(/profil actuel/i)).toBeTruthy();
@@ -143,11 +162,9 @@ describe("ProfilesPage — the current Profile", () => {
   });
 
   it("offers one Import button that leads straight to the current Profile's import", async () => {
-    const user = userEvent.setup();
+    withCurrent(HIKARU.id);
     renderPage();
     await screen.findByRole("list", { name: /profils/i });
-
-    await user.click(within(rowFor("Hikaru")).getByRole("button", { name: /sélectionner/i }));
 
     // ONE button, not one per row: the Import acts on the current Profile, and
     // the Player reached this screen to say which that is.
@@ -316,10 +333,10 @@ describe("ProfilesPage — deleting a Profile", () => {
 
   it("removes it once confirmed, and leaves nothing selected when it was the current one", async () => {
     stubWithDeletion();
+    withCurrent(HIKARU.id);
     const user = userEvent.setup();
     renderPage();
     await screen.findByRole("list", { name: /profils/i });
-    await user.click(within(rowFor("Hikaru")).getByRole("button", { name: /sélectionner/i }));
 
     await user.click(within(rowFor("Hikaru")).getByRole("button", { name: /supprimer/i }));
     await user.click(
@@ -330,6 +347,9 @@ describe("ProfilesPage — deleting a Profile", () => {
     expect(screen.queryByText("Hikaru")).toBeNull();
     // Nothing is current: the app never points at something that no longer exists.
     expect(screen.queryByText(/profil actuel/i)).toBeNull();
+    // And the header doors go with it — they could only act on nobody (US-23).
+    expect(screen.queryByRole("link", { name: /voir mes parties/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /importer/i })).toBeNull();
   });
 });
 
@@ -348,5 +368,78 @@ describe("ProfilesPage — on a narrow screen", () => {
 
     const list = await screen.findByRole("list", { name: /profils/i });
     expect(list.closest('[data-scroll="x"]')).not.toBeNull();
+  });
+});
+
+describe("ProfilesPage — the loop back to Mes parties (US-23)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(async () => json([DUDUL, HIKARU])));
+  });
+
+  const rowFor = (name: string) =>
+    within(screen.getByRole("list", { name: /profils/i }))
+      .getAllByRole("listitem")
+      .find((li) => li.textContent?.includes(name))!;
+
+  it("selects the Profile AND leads to Mes parties — one act, both halves named", async () => {
+    // A mutation followed by a navigation is an act, so it is a button — and it
+    // says where it goes rather than leaving the Player on the list wondering
+    // whether anything happened (D1).
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("list", { name: /profils/i });
+
+    const select = within(rowFor("Hikaru")).getByRole("button", {
+      name: /sélectionner.*mes parties/i,
+    });
+    await user.click(select);
+
+    expect(addressNow()).toBe("/");
+    // And the choice outlived the click, so a reload still points at it.
+    expect(localStorage.getItem("chess-analyst.current-profile")).toBe("2");
+  });
+
+  it("carries a way to Mes parties in its header, beside the Import", async () => {
+    // The current Profile has NO "Sélectionner" on its row (it says "Profil
+    // actuel"), so the header is its door — the two halves complete each other
+    // without doubling.
+    withCurrent(HIKARU.id);
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("list", { name: /profils/i });
+
+    const door = screen.getByRole("link", { name: /voir mes parties/i });
+    // Named for the Profile it is about, label first (WCAG 2.5.3), like the Import.
+    expect(door.getAttribute("aria-label")).toMatch(/^Voir mes parties — Hikaru/);
+    // It reads as an action (D2), and the Import keeps the single primary mark.
+    expect(door.hasAttribute("data-action")).toBe(true);
+    expect(door.getAttribute("data-action")).not.toBe("primary");
+    await user.click(door);
+
+    expect(addressNow()).toBe("/");
+  });
+
+  it("keeps the Profile's name a plain link to its page — it navigates, so it is a link", async () => {
+    // D1: making the name a button that navigates would reintroduce, inside the
+    // very story that exists to remove it, the link/button confusion.
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("list", { name: /profils/i });
+
+    const name = within(rowFor("Hikaru")).getByRole("link", { name: /^Hikaru$/ });
+    expect(name.getAttribute("href")).toBe("/profiles/2");
+    // No action marker: it is a navigation, and reads as one.
+    expect(name.hasAttribute("data-action")).toBe(false);
+    // And following it does not silently change which Profile is current.
+    await user.click(name);
+    expect(localStorage.getItem("chess-analyst.current-profile")).toBeNull();
+  });
+
+  it("offers neither header door while no Profile is current", async () => {
+    renderPage();
+    await screen.findByRole("list", { name: /profils/i });
+
+    expect(screen.queryByRole("link", { name: /voir mes parties/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /importer/i })).toBeNull();
   });
 });

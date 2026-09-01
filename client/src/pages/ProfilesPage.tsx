@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createProfile, deleteProfile, fetchProfiles } from "../api";
 import { platformLabel, type Platform, type Profile } from "../types";
 
@@ -24,6 +24,7 @@ export function ProfilesPage() {
   const [currentId, setCurrentId] = useState<number | null>(loadCurrentProfileId);
 
   const [doomed, setDoomed] = useState<Profile | null>(null);
+  const navigate = useNavigate();
 
   // The current Profile itself, not just its id: the Import button names it, and
   // a selection pointing at a Profile the list no longer holds is no selection.
@@ -32,6 +33,17 @@ export function ProfilesPage() {
   function select(id: number) {
     saveCurrentProfileId(id);
     setCurrentId(id);
+  }
+
+  /**
+   * Choosing a Profile is a **composed act** (US-23, D1): it records the current
+   * Profile, *then* leads to its Games. A mutation followed by a navigation is
+   * an act, so it stays a button — and the label names both halves, rather than
+   * leaving the Player on this list wondering whether anything happened.
+   */
+  function selectAndReview(id: number) {
+    select(id);
+    navigate("/");
   }
 
   async function confirmDeletion(profile: Profile) {
@@ -93,6 +105,19 @@ export function ProfilesPage() {
           than merely to render it somewhere below. */}
       {current === null ? null : (
         <p data-part="actions">
+          {/* The current Profile's row says "Profil actuel" and carries no
+              "Sélectionner", so ITS door to its Games is here (US-23, D1). The
+              two halves complete each other without doubling. */}
+          <Link
+            to="/"
+            // An action, but not THE primary one: the Import keeps that mark, so
+            // the screen still points at the step a Player with an empty history
+            // needs next.
+            data-action=""
+            aria-label={`Voir mes parties — ${current.username} (${platformLabel(current.platform)})`}
+          >
+            Voir mes parties
+          </Link>
           <Link
             to={`/profiles/${current.id}#import`}
             data-action="primary"
@@ -144,8 +169,8 @@ export function ProfilesPage() {
                     {isCurrent ? (
                       <span aria-label="profil actuel">Profil actuel</span>
                     ) : (
-                      <button type="button" onClick={() => select(profile.id)}>
-                        Sélectionner
+                      <button type="button" onClick={() => selectAndReview(profile.id)}>
+                        Sélectionner et voir mes parties
                       </button>
                     )}
                   </span>
