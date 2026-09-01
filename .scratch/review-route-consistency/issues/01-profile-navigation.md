@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01 (FP verte 4/4 ; un finding de la FP corrigé dans la tranche : le helper `selectProfile` de la bibliothèque encodait l'ancien comportement)
 
 ## Parent
 
@@ -39,20 +39,20 @@ seule route portant un id, délibérément ») et dédoublerait « Mes parties �
 
 ## Acceptance criteria
 
-- [ ] « Sélectionner » enregistre le profil comme courant **et** mène à « Mes parties » ; le libellé dit
+- [x] « Sélectionner » enregistre le profil comme courant **et** mène à « Mes parties » ; le libellé dit
       les deux moitiés du geste.
-- [ ] Le nom du profil reste un lien vers la page du profil, sans marqueur d'action.
-- [ ] L'en-tête de la liste des profils porte « Voir mes parties » à côté de « Importer mes parties », et
+- [x] Le nom du profil reste un lien vers la page du profil, sans marqueur d'action.
+- [x] L'en-tête de la liste des profils porte « Voir mes parties » à côté de « Importer mes parties », et
       n'apparaît, comme elle, que lorsqu'un profil est courant.
-- [ ] Le nom accessible des deux boutons d'en-tête **contient** leur libellé visible et nomme le profil
+- [x] Le nom accessible des deux boutons d'en-tête **contient** leur libellé visible et nomme le profil
       (WCAG 2.5.3), comme le fait déjà celui de l'import.
-- [ ] « Mes parties » porte une porte vers l'import du profil courant, qui atteint le formulaire et lui
+- [x] « Mes parties » porte une porte vers l'import du profil courant, qui atteint le formulaire et lui
       donne le focus.
-- [ ] Cette porte est offerte **aussi** quand le profil a déjà des parties — la phrase de l'état vide
+- [x] Cette porte est offerte **aussi** quand le profil a déjà des parties — la phrase de l'état vide
       reste ce qu'elle est et n'est pas dédoublée.
-- [ ] Supprimer le profil courant continue de ne laisser **rien** de sélectionné, et les portes d'en-tête
+- [x] Supprimer le profil courant continue de ne laisser **rien** de sélectionné, et les portes d'en-tête
       disparaissent avec lui.
-- [ ] Aucune route nouvelle ; la liste des parties reste rendue pour le profil courant.
+- [x] Aucune route nouvelle ; la liste des parties reste rendue pour le profil courant.
 
 ### Feature Path (FP)
 
