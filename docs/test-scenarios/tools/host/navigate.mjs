@@ -244,7 +244,9 @@ export async function openGameRow(session, { port, index, waitOptions }) {
  * Reach one screen of the inventory from wherever the walk currently stands.
  *
  * The two screens the navigation cannot reach are opened from their lists — and the
- * Game row is a `button`, which is the single most re-discovered fact about this app.
+ * Game row opens through the opponent's name — an anchor since US-23 (2026-09-01),
+ * a `button` navigating by program before it, and the single most re-discovered
+ * fact about this app either way.
  * Which row, though, is the caller's call: pass `openers` when the assertions depend
  * on it.
  */

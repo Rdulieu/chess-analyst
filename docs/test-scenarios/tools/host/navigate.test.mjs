@@ -189,3 +189,43 @@ describe("where selecting a Profile leaves the walk", () => {
     ).toBe("already");
   });
 });
+
+describe("how the page half opens a Game", () => {
+  /*
+   * The Game row was a `button` that navigated by program, and the page half
+   * encoded that — twice in code and twice in prose. US-23 (D2) made it an
+   * anchor, and nothing here failed: the page half has no unit seam by design
+   * (driving a fake DOM would test a different mechanism than the one that
+   * ships), so `openGameRow` silently returned false and `reachScreen` could no
+   * longer open ANY `/analyse/...` screen. Found by the FP of US-23-02,
+   * 2026-09-01 — every HP scenario would have gone red for a reason that is not
+   * the app.
+   *
+   * What is testable without a DOM is what the source LOOKS FOR. That is a
+   * coarse seam, and it is the one that would have caught this.
+   */
+  const source = readFileSync(join(HERE, "..", "page", "app-driver.js"), "utf8");
+
+  /** The body of one method of the page driver, by name. */
+  const methodBody = (name) => {
+    const at = source.indexOf(`  ${name}(`);
+    expect(at, `no method named ${name}`).toBeGreaterThan(-1);
+    return source.slice(at, source.indexOf("\n  },", at));
+  };
+
+  it("looks for the row's anchor, not for a button that is no longer there", () => {
+    for (const name of ["gameRows", "openGameRow"]) {
+      const body = methodBody(name);
+      expect(body, `${name} still hunts for a button in the row`).not.toMatch(
+        /querySelector\(\s*["']button["']\s*\)/,
+      );
+      expect(body, `${name} does not look for the Analyse link`).toMatch(/\/analyse\//);
+    }
+  });
+
+  it("does not still teach that a Game row is a button", () => {
+    // A stale instruction is worse than none: it is obeyed. The prose at the top
+    // of the file taught the opposite of what ships.
+    expect(source).not.toMatch(/row is a `button`, not a link/);
+  });
+});

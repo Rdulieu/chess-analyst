@@ -12,8 +12,11 @@
  * Two facts about this app are encoded here rather than rediscovered every run,
  * because rediscovering them has produced false findings:
  *
- * - **A Game row is a `button`, not a link.** A driver hunting for an `href` matching
- *   `/analyse/` finds nothing and records the screen as unreachable (2026-08-19).
+ * - **A Game row opens through the opponent's name, and it is an anchor.** It was a
+ *   `button` that navigated by program until US-23 (2026-09-01, D2) — so the fact
+ *   worth encoding is no longer the element type but WHERE the door is: only the
+ *   opponent cell carries one, the rest of the row is facts to compare. A driver
+ *   clicking the row itself, or hunting for a button in it, finds nothing.
  * - **Month fields are framework-controlled**, so assigning `value` does nothing at
  *   all: it takes the native value setter plus an event — and then a read-back, since
  *   the same run that discovered this nearly imported the wrong months (2026-08-19).
@@ -53,16 +56,16 @@ var agenticDriver = {
     return [...document.querySelectorAll("table tbody tr")].map((tr, index) => ({
       index,
       text: tr.innerText.replace(/\s+/g, " ").trim(),
-      openable: Boolean(tr.querySelector("button")),
+      openable: Boolean(tr.querySelector('a[href*="/analyse/"]')),
     }));
   },
 
-  /** Open a Game from the list. The row is a `button`, not a link. */
+  /** Open a Game from the list, through the one door its row has: the opponent. */
   openGameRow(index = 0) {
     const rows = [...document.querySelectorAll("table tbody tr")];
-    const button = rows[index] && rows[index].querySelector("button");
-    if (!button) return false;
-    button.click();
+    const door = rows[index] && rows[index].querySelector('a[href*="/analyse/"]');
+    if (!door) return false;
+    door.click();
     return true;
   },
 

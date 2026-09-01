@@ -649,8 +649,11 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   fields keep their default when a driver assigns `value` — measured 2026-08-19, where a run nearly
   imported the wrong months for a reason that had nothing to do with the app.
 - **Navigation happens in the page, not at the driver.** Driver-level navigation is the operation
-  that lands on the wrong page. And the Game row is a `button`, not a link: a driver hunting for an
-  `href` records `Analyse` as unreachable.
+  that lands on the wrong page. And the Game row opens **through the opponent's name** — a
+  `button` navigating by program until US-23 (2026-09-01, which made it an anchor), so what is worth
+  knowing is not the element type but that the door is in that one cell: a driver clicking the row,
+  or hunting for a button in it, records `Analyse` as unreachable. The fact that this line had to be
+  rewritten rather than merely re-read is the point of §5.6.
 - **It throws rather than hand back a thinner green.** The port guard and the in-script theme
   assertion are both live: falsify the emulation and the call fails with the theme it actually
   measured. Measured 2026-08-27, over three runs: eighteen audits over nine screens in **15.6 seconds**, and a whole scenario shape — restore, launch, the pass, teardown with the ports proved free — in **20.3 seconds**. Since US-22 the pass is **thirty-six** audits — the second width costs **+23,6 s of driving** (20,8 → 44,4 s) and eighteen more readings to read.
