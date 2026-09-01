@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchGame } from "../api";
+import { fetchGame, GameNotThisProfiles } from "../api";
 import { PersonalReading } from "../features/personal/PersonalReading";
 import { ScopedPage } from "../features/profiles/ScopedPage";
 import { ErrorBoundary } from "../components/ErrorBoundary";
@@ -32,18 +32,36 @@ export function ReadingPage() {
 function ReadingOfOneGame({ profile }: { profile: Profile }) {
   const { gameId } = useParams();
   const [game, setGame] = useState<Game | null>(null);
+  // The refusal now arrives HERE, on the Game itself, and no longer only from
+  // `PersonalReading` further down: the Game route is scoped too (ADR-0014), so
+  // a Game that is not this Profile's never reaches the reading at all. The
+  // words are the same, and they are said one step earlier.
+  const [refused, setRefused] = useState<"foreign" | "failed" | null>(null);
 
   useEffect(() => {
     if (!gameId) return;
     let live = true;
-    fetchGame(Number(gameId))
+    setRefused(null);
+    fetchGame(Number(gameId), profile.id)
       .then((result) => live && setGame(result))
-      .catch(() => live && setGame(null));
+      .catch((cause: Error) => {
+        if (!live) return;
+        setGame(null);
+        setRefused(cause instanceof GameNotThisProfiles ? "foreign" : "failed");
+      });
     return () => {
       live = false;
     };
-  }, [gameId]);
+  }, [gameId, profile.id]);
 
+  if (refused === "foreign")
+    return (
+      <p role="status">
+        Cette partie n'appartient pas au profil courant : elle n'a pas de lecture ici.
+      </p>
+    );
+  if (refused === "failed")
+    return <p role="alert">La lecture de cette partie n'a pas pu être chargée.</p>;
   if (!game) return <p>Loading game…</p>;
 
   return (

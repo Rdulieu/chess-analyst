@@ -19,7 +19,7 @@ import {
 } from "../personal/confrontation";
 import { getGameAnnotations } from "../annotations/repository";
 import { gameNotations } from "../chess/positions";
-import { scopedProfile } from "./scope";
+import { scopedProfile, scopedGame } from "./scope";
 
 /**
  * The `Personal analysis` routes (mounted at /api/personal) — the Player's own
@@ -38,27 +38,10 @@ import { scopedProfile } from "./scope";
 export function createPersonalRouter(db: Db): Router {
   const router = Router();
 
-  /** The Game this request is about, once the Profile has vouched for it. */
-  /** The Game row itself, when a route needs more of it than its id. */
+  /** A Game row, for the one route that folds many and holds none in hand. */
   const gameRow = (gameId: number) =>
     db.select().from(games).where(eq(games.id, gameId)).get();
 
-  const scopedGame = (
-    req: Parameters<Parameters<Router["get"]>[1]>[0],
-    res: Parameters<Parameters<Router["get"]>[1]>[1],
-  ): { gameId: number } | undefined => {
-    const profile = scopedProfile(db, req, res);
-    if (!profile) return undefined;
-    const gameId = Number(req.params.gameId);
-    const game = Number.isInteger(gameId)
-      ? db.select().from(games).where(eq(games.id, gameId)).get()
-      : undefined;
-    if (!game || game.profileId !== profile.id) {
-      res.status(404).json({ error: `Partie introuvable pour ce profil : ${req.params.gameId}` });
-      return undefined;
-    }
-    return { gameId };
-  };
 
   /**
    * The `Confrontation` **summary** across the Player's whole history (US-16b) —
@@ -104,10 +87,10 @@ export function createPersonalRouter(db: Db): Router {
    * and the Player has two different things to go and do — seal, or analyse.
    */
   router.get("/:gameId/confrontation", (req, res) => {
-    const scoped = scopedGame(req, res);
-    if (!scoped) return;
-    const annotations = getGameAnnotations(db, scoped.gameId);
-    const analysis = getPersonalAnalysis(db, scoped.gameId);
+    const game = scopedGame(db, req, res);
+    if (!game) return;
+    const annotations = getGameAnnotations(db, game.id);
+    const analysis = getPersonalAnalysis(db, game.id);
     // `scopedGame` already vouched for the Game, so neither can be absent here.
     if (!annotations || !analysis) {
       res.status(404).json({ error: "Partie introuvable." });
@@ -116,13 +99,9 @@ export function createPersonalRouter(db: Db): Router {
 
     // The notations name the Moves a distance talks about. Read from this one
     // Game's PGN, not the corpus: US-10b's lesson was that replaying PGNs on a
-    // whole-history read costs 3111 ms, and this is a single Game.
-    const game = gameRow(scoped.gameId);
-    const confrontation = confrontGame(
-      analysis,
-      annotations,
-      game ? gameNotations(game.pgn) : [],
-    );
+    // whole-history read costs 3111 ms, and this is a single Game. The row is
+    // the one `scopedGame` already vouched for — not a second read of it.
+    const confrontation = confrontGame(analysis, annotations, gameNotations(game.pgn));
     if (confrontation instanceof ConfrontationRefusal) {
       res
         .status(409)
@@ -133,14 +112,14 @@ export function createPersonalRouter(db: Db): Router {
   });
 
   router.get("/:gameId", (req, res) => {
-    const scoped = scopedGame(req, res);
-    if (!scoped) return;
-    res.json(getPersonalAnalysis(db, scoped.gameId));
+    const game = scopedGame(db, req, res);
+    if (!game) return;
+    res.json(getPersonalAnalysis(db, game.id));
   });
 
   router.put("/:gameId/marks/:ply", (req, res) => {
-    const scoped = scopedGame(req, res);
-    if (!scoped) return;
+    const game = scopedGame(db, req, res);
+    if (!game) return;
     const ply = Number(req.params.ply);
     if (!Number.isInteger(ply) || ply < 0) {
       res.status(400).json({ error: `Coup invalide : ${req.params.ply}` });
@@ -173,7 +152,7 @@ export function createPersonalRouter(db: Db): Router {
     if ("declaredSeverity" in body) patch.declaredSeverity = declaredSeverity as MarkPatch["declaredSeverity"];
     if ("note" in body) patch.note = note as MarkPatch["note"];
     if ("keyMoment" in body) patch.keyMoment = keyMoment as boolean;
-    res.json(writeMark(db, scoped.gameId, ply, patch));
+    res.json(writeMark(db, game.id, ply, patch));
   });
 
   /**
@@ -186,8 +165,8 @@ export function createPersonalRouter(db: Db): Router {
    * no-ops: both are things the Player has to be told, and told the reason for.
    */
   router.post("/:gameId/seal", (req, res) => {
-    const scoped = scopedGame(req, res);
-    if (!scoped) return;
+    const game = scopedGame(db, req, res);
+    if (!game) return;
     const { engineSeen } = (req.body ?? {}) as Record<string, unknown>;
     // Not optional, and with no safe default: quietly recording "not seen" would
     // let a caller launder an informed reading into a blind one, which is exactly
@@ -197,7 +176,7 @@ export function createPersonalRouter(db: Db): Router {
       return;
     }
 
-    const sealed = sealAnalysis(db, scoped.gameId, { engineSeen });
+    const sealed = sealAnalysis(db, game.id, { engineSeen });
     if (sealed instanceof SealRefusal) {
       res.status(409).json({ reason: sealed.reason, error: SEAL_REFUSAL[sealed.reason] });
       return;

@@ -1,3 +1,4 @@
+import { GameNotThisProfiles } from "./personal";
 import type { Game, GameAnnotations } from "../types";
 
 /**
@@ -12,9 +13,18 @@ export async function fetchGames(profileId: number): Promise<Game[]> {
   return (await res.json()) as Game[];
 }
 
-/** Fetches a single Game's full detail by id (GET /api/games/:id). */
-export async function fetchGame(id: number): Promise<Game> {
-  const res = await fetch(`/api/games/${id}`);
+/**
+ * Fetches a single Game's full detail by id (GET /api/games/:id), **as one
+ * `Profile`** (ADR-0014). The Profile is named in the request like it is on the
+ * list: a Game fetched by id alone used to come back to whoever asked, which
+ * made the partition a property of the lists rather than of the data.
+ *
+ * `GameNotThisProfiles` when the Game is not that Profile's — the same refusal
+ * the reading route already raises, so a caller tells "not yours" from "broken".
+ */
+export async function fetchGame(id: number, profileId: number): Promise<Game> {
+  const res = await fetch(`/api/games/${id}?profileId=${profileId}`);
+  if (res.status === 404) throw new GameNotThisProfiles(`Game ${id} is not profile ${profileId}'s`);
   if (!res.ok) throw new Error(`Failed to load game ${id} (${res.status})`);
   return (await res.json()) as Game;
 }
@@ -24,8 +34,12 @@ export async function fetchGame(id: number): Promise<Game> {
  * and severity for every half-move, already derived server-side
  * (GET /api/games/:id/annotations). `plies` is empty when `analyzed` is false.
  */
-export async function fetchGameAnnotations(id: number): Promise<GameAnnotations> {
-  const res = await fetch(`/api/games/${id}/annotations`);
+export async function fetchGameAnnotations(
+  id: number,
+  profileId: number,
+): Promise<GameAnnotations> {
+  const res = await fetch(`/api/games/${id}/annotations?profileId=${profileId}`);
+  if (res.status === 404) throw new GameNotThisProfiles(`Game ${id} is not profile ${profileId}'s`);
   if (!res.ok) throw new Error(`Failed to load annotations for game ${id} (${res.status})`);
   return (await res.json()) as GameAnnotations;
 }

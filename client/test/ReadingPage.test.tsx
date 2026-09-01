@@ -25,7 +25,14 @@ function renderReading({ current, owner }: { current: number; owner: number }) {
     "fetch",
     vi.fn(async (url: string) => {
       asked.push(url);
-      if (url === "/api/games/1") return json({ ...OPERA_GAME, profileId: owner });
+      if (url.startsWith("/api/games/1")) {
+        // The Game route is scoped now too, so the fake answers it the way the
+        // real server does: only to the Profile the Game belongs to.
+        const named = Number(new URL(url, "http://x").searchParams.get("profileId"));
+        return named === owner
+          ? json({ ...OPERA_GAME, profileId: owner })
+          : json({ error: "Partie introuvable pour ce profil : 1" }, 404);
+      }
       if (url.startsWith(`/api/profiles/${current}`))
         return json({ id: current, platform: "chesscom", username: "Someone", games: 0 });
       if (url.startsWith("/api/personal/1")) {

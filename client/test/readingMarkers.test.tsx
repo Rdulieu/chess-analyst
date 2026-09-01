@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { GameList } from "../src/features/games/GameList";
 import { AnalysePage } from "../src/pages/AnalysePage";
 import { Routes, Route } from "react-router-dom";
+import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
 import { OPERA_GAME } from "./fixtures";
 
 const json = (body: unknown, status = 200) =>
@@ -45,17 +46,24 @@ describe("the Analyse page says where the reading stands", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url === "/api/games/1")
+        if (url.startsWith("/api/profiles/1"))
+          return json({ id: 1, platform: "chesscom", username: "DudulSmash", games: 1 });
+        if (url.startsWith("/api/games/1") && !url.includes("/annotations"))
           return json({ ...OPERA_GAME, id: 1, analyzed: false, reading });
         throw new Error(`unexpected fetch: ${url}`);
       }),
     );
+    // The page is Profile-scoped (ADR-0014): it needs a selected Profile to be
+    // about anybody at all.
+    localStorage.setItem("chess-analyst.current-profile", "1");
     return render(
-      <MemoryRouter initialEntries={["/analyse/1"]}>
-        <Routes>
-          <Route path="/analyse/:gameId" element={<AnalysePage />} />
-        </Routes>
-      </MemoryRouter>,
+      <CurrentProfileProvider>
+        <MemoryRouter initialEntries={["/analyse/1"]}>
+          <Routes>
+            <Route path="/analyse/:gameId" element={<AnalysePage />} />
+          </Routes>
+        </MemoryRouter>
+      </CurrentProfileProvider>,
     );
   }
 

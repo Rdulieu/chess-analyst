@@ -60,7 +60,7 @@ export function GameViewer({
 
   useEffect(() => {
     if (!game.analyzed) return;
-    fetchGameAnnotations(game.id)
+    fetchGameAnnotations(game.id, game.profileId)
       .then((result) => {
         setAnnotations(result.plies);
         setRecap(result.recap);
@@ -69,7 +69,9 @@ export function GameViewer({
         setAnnotations(null);
         setRecap(null);
       });
-  }, [game.id, game.analyzed]);
+    // `game.profileId` belongs here: the annotations route is Profile-scoped now
+    // (ADR-0014), so the Profile is part of what the request asks for.
+  }, [game.id, game.analyzed, game.profileId]);
 
   const chooseMode = (next: typeof mode) => {
     setMode(next);

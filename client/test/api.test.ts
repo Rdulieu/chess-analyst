@@ -109,9 +109,11 @@ describe("fetchGame", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const game = await fetchGame(OPERA_GAME.id);
+    const game = await fetchGame(OPERA_GAME.id, 7);
 
-    expect(fetchMock).toHaveBeenCalledWith(`/api/games/${OPERA_GAME.id}`);
+    // The Profile travels with the request: the server refuses to answer a
+    // question that names nobody, and rightly (ADR-0014).
+    expect(fetchMock).toHaveBeenCalledWith(`/api/games/${OPERA_GAME.id}?profileId=7`);
     expect(game).toEqual(OPERA_GAME);
   });
 
@@ -121,7 +123,7 @@ describe("fetchGame", () => {
       vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }) as Response),
     );
 
-    await expect(fetchGame(999)).rejects.toThrow(/999/);
+    await expect(fetchGame(999, 7)).rejects.toThrow(/999/);
   });
 });
 
@@ -131,9 +133,9 @@ describe("fetchGameAnnotations", () => {
     const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => body }) as Response);
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchGameAnnotations(42);
+    const result = await fetchGameAnnotations(42, 7);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/games/42/annotations");
+    expect(fetchMock).toHaveBeenCalledWith("/api/games/42/annotations?profileId=7");
     expect(result).toEqual(body);
   });
 
@@ -143,7 +145,7 @@ describe("fetchGameAnnotations", () => {
       vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }) as Response),
     );
 
-    await expect(fetchGameAnnotations(999)).rejects.toThrow(/999/);
+    await expect(fetchGameAnnotations(999, 7)).rejects.toThrow(/999/);
   });
 });
 
