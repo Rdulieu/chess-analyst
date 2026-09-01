@@ -161,13 +161,13 @@
   >   de poser `Sound` sur chaque coup, et la lisibilité exigée par ADR-0017 des positions exclues) :
   >   raison de plus pour ne pas les traiter en passant.
 
-
-## Doing
-
-## In review
-
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
+  > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte, et
+  > l'entrée dit elle-même qu'elle n'est pas grillée. **À vérifier par le demandeur** : il n'est pas
+  > sûr de son état ni de ce qu'US-15a a réellement laissé approximatif. Ce relevé est le premier
+  > geste de la story, avant tout grill.
+  >
   > **Pas encore grillée.** Demandée par le demandeur le 2026-08-23 après la livraison d'US-15a :
   > la feature « paraît pas mal pour un premier jet », mais elle mérite une passe d'analyse plus
   > poussée **avant** d'être étendue à l'analyse globale.
@@ -327,6 +327,9 @@
 
 - **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
   ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
+  > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte.
+  > **Elle doit être grillée** avant toute implémentation.
+  >
   > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
   > réel du dépôt. **Relevé complet, avec les commandes de vérification :**
   > [`docs/factory-coherence-audit-2026-08-24.md`](docs/factory-coherence-audit-2026-08-24.md) —
@@ -406,6 +409,10 @@
   > 380 px ; elle est vraie au tiers à la position de départ ; et les flèches ne fonctionnent pas
   > sur `Analyse`, faute d'y être annoncées. Détail dans les issues 04 et 05.
 
+
+## Doing
+
+## In review
 
 ## Done
 
