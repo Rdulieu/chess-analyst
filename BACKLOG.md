@@ -329,6 +329,8 @@
 
 ## Doing
 
+## In review
+
 - **US-23**: Tenir la même route de revue partout — pour qu'un profil, la page `Analyse` et la lecture
   personnelle se conduisent de la même façon, avec le même clavier, la même liste des coups et les
   mêmes verdicts lisibles.
@@ -426,8 +428,13 @@
   >   et non un morceau de celui-ci. Deux de ces notes **contestent une décision documentée** (le coût
   >   de poser `Sound` sur chaque coup, et la lisibilité exigée par ADR-0017 des positions exclues) :
   >   raison de plus pour ne pas les traiter en passant.
-
-## In review
+  > **En revue depuis le 2026-09-02** — PR [#93](https://github.com/Rdulieu/chess-analyst/pull/93)
+  > vers `develop`, **huit tranches** livrées et la suite HP jouée dessus : path 0 + les trois
+  > scénarios **verts**, aucun finding bloquant, assertion de déplacement nul à **zéro pixel** aux deux
+  > largeurs, passes de thème 36 + 36 + 44 audits toutes propres. La Feature Path a trouvé **quatre
+  > bloquants** que les tiers inférieurs ne pouvaient pas voir, tous corrigés dans leur tranche.
+  > La hauteur du contrôle de verdict a été **arbitrée par le demandeur** (une ligne par rangée) ; le
+  > relevé avant/après figure dans la PR. **L'agent n'a pas mergé.**
 
 ## Done
 
