@@ -1,25 +1,30 @@
-Status: `ready-for-human` — **HITL**. Implémentée sur `feature/US-23-07-the-segmented-verdict-control` (`ebad5ba`), check local vert : build, 411 tests serveur + 828 tests client, 105 tests d'outillage, lint à 0, FP verte 6/6 dans les deux thèmes. **Non mergée** : la hauteur relevée revient au demandeur pour arbitrage.
+Status: `ready-for-human` — **HITL**. Implémentée sur `feature/US-23-07-the-segmented-verdict-control`,
+check local vert : build, 411 tests serveur + 833 tests client, 105 tests d'outillage, lint à 0, FP verte
+6/6 dans les deux thèmes. **Non mergée** : la hauteur relevée revient au demandeur.
 
-> **Relevé (chiffres, pas jugement)** — viewport 900 px, `rows` = 5 partout, identique dans les deux thèmes et indépendant du verdict choisi :
-> fieldset verdict **416,5 px** à 1280 et **435,5 px** à 380 ; panneau **816 / 946 px** (lecture non scellée), **836,5 / 957,5 px** (scellée).
-> L'écart 1280→380 est de +19 px, entièrement dû au retour à la ligne de la phrase de `Correct`.
-> Contraste de l'encre choisie sur sa teinte : 6,32 · 8,97 · 12,54 · 10,57 · 9,35 — tous au-dessus de 4,5:1, dans les deux thèmes.
+> **Relevé (chiffres, pas jugement)** — viewport 900 px, `rows` = 5 partout, identique dans les deux
+> thèmes et indépendant du verdict choisi. La forme a été arbitrée par le demandeur le 2026-09-01 :
+> une ligne par rangée plutôt que deux.
 >
-> **Avant / après**, mesuré à `da8c0ce` puis `ebad5ba`, même lecture, mêmes largeurs, dans les deux thèmes :
+> | thème / largeur | avant `da8c0ce` | empilé `ebad5ba` | **livré** | Δ vs avant |
+> | --- | --- | --- | --- | --- |
+> | light 1280 | 66,5 px (1 rangée visuelle) | 416,5 px | **256,5 px** | **+190,0** |
+> | light 380 | 122,5 px (2 rangées) | 435,5 px | **275,5 px** | **+153,0** |
+> | dark 1280 | 66,5 px | 416,5 px | **256,5 px** | **+190,0** |
+> | dark 380 | 122,5 px | 435,5 px | **275,5 px** | **+153,0** |
 >
-> | thème / largeur | fieldset avant | rangées visuelles avant | fieldset après | Δ | pane avant → après |
-> | --- | --- | --- | --- | --- | --- |
-> | light 1280 | 66,5 px | 1 | 416,5 px | **+350,0** | 466 → 816 |
-> | light 380 | 122,5 px | 2 | 435,5 px | **+313,0** | 633 → 946 |
-> | dark 1280 | 66,5 px | 1 | 416,5 px | **+350,0** | 466 → 816 |
-> | dark 380 | 122,5 px | 2 | 435,5 px | **+313,0** | 633 → 946 |
->
-> Le pane croît exactement du même nombre de pixels que le fieldset : rien d'autre n'a changé de taille.
+> Panneau : 466 / 633 → 816 / 946 → **656 / 786**. À 380 px le panneau livré **tient** dans le viewport
+> de 900, ce que la forme empilée ne faisait pas.
 > Le delta est plus petit à 380 px parce que l'ancien contrôle y payait déjà son reflux — deux rangées
 > visuelles, étiquettes de **24 px**, les cibles minuscules du grill — et sa phrase n'était qu'un `title`
-> de survol (`claimsVisible: false`), donc invisible au clavier et au tactile.
-> À 380 px le pane « après » (946 px) dépasse le viewport de 900 px. La page ne déborde pas
-> horizontalement et rien ne bouge sous le doigt.
+> de survol, donc invisible au clavier et au tactile.
+>
+> **Contraste** — rangée choisie : 6,32 · 8,97 · 12,54 · 10,57 · 9,35. Rangée non choisie : phrase à
+> 6,27:1 (clair) et 7,49:1 (sombre) sur les cinq. Anneau de focus : 7,08:1 et 8,95:1.
+>
+> **Deux findings bloquants trouvés par la FP et corrigés dans la tranche** : le radio natif peint
+> par-dessus le glyphe (`✓` lu « Ø »), et la rangée qui héritait de la règle globale `[data-severity]`,
+> donc teintée sans être choisie et phrase à 2,75:1.
 
 ## Parent
 
