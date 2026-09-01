@@ -324,7 +324,7 @@ names the right one.
   silently stayed on the current month while the checkboxes took. Use the native value setter and
   dispatch `input` (and `change`), then **read the values back before submitting**. Every scenario
   that drives this form is exposed to it.
-- **A range over 12 months raises a `confirm()`, and an unhandled one hangs the driver.** The import
+- **A range over 24 months raises a `confirm()`, and an unhandled one hangs the driver.** The import
   form asks *"Cette plage couvre 71 mois. Continuer ?"* (`client/src/features/import/ImportForm.tsx`).
   The dialog is deliberate — it is the app warning about a long range — but a CDP driver with no
   `page.on('dialog')` handler never gets its injected click back, and the failure looks exactly like a
