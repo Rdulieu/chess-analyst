@@ -336,7 +336,16 @@
   > [`.scratch/review-route-consistency/GRILL-NOTES.md`](.scratch/review-route-consistency/GRILL-NOTES.md).
   > **ADR-0022 « Un échiquier, un auteur »** en sort ; `CONTEXT.md` rend `Evaluation` et `Annotation`
   > au moteur sous `Declared severity`. Branche `integration/US-23-review-route-consistency`.
-  > Le PRD reste à produire (`/to-prd`), puis les sous-issues (`/to-issues`).
+  > **PRD** : [`.scratch/review-route-consistency/PRD.md`](.scratch/review-route-consistency/PRD.md).
+  > **Huit sous-issues** sous `.scratch/review-route-consistency/issues/`, dans l'ordre de dépendance :
+  > `01` navigation des profils (D1+D3) · `02` la passe lien/bouton (D2) · `03` numéro et coup courant
+  > dans la liste (D4+D5) · `04` les flèches sur `Analyse` (D6, après `03`) · `05` la porte vers la
+  > `Confrontation` (D7) · `06` le verdict sur l'échiquier + les deux tokens manquants (D9/ADR-0022) ·
+  > `07` le contrôle de verdict segmenté (D8, **HITL**, après `06`) · `08` suite HP + PR (**HITL**).
+  >
+  > Deux tranches HITL, et aucune tranche `AFK` n'attend un humain : les tokens de couleur ont été
+  > déplacés dans `06` pour que `07` — dont le relevé de hauteur demande un **arbitrage du demandeur** —
+  > ne bloque personne derrière elle.
   >
   > **Demandée le 2026-09-01**, à partir des notes de la première session de test du demandeur sur ses
   > propres parties : `docs/feedback/2026-08-25-us16-confrontation.md` (notes du 25/08 + annotations de
