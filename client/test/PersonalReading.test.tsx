@@ -1392,3 +1392,73 @@ describe("PersonalReading — who announces which command (US-23, D6)", () => {
     expect(screen.getByText(/pour le verdict/i)).toBeTruthy();
   });
 });
+
+describe("PersonalReading — the door to the Confrontation (US-23, D7)", () => {
+  /*
+   * Before the seal there is nothing fixed to confront, and that stays true. What
+   * was missing was not the ability to confront an unfinished reading but knowing
+   * that the confrontation exists and when — so a SENTENCE, never a greyed-out
+   * button: the project's own idiom, already written beside the refusal of an
+   * empty reading ("disabled on its own says only that something is wrong, never
+   * what").
+   */
+  it("says the confrontation comes after the seal, beside the act of sealing", async () => {
+    stubReading({ ...EMPTY, marks: [{ ply: 4, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }] });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    const seal = await screen.findByRole("button", { name: /sceller ma lecture/i });
+    const notice = screen.getByText(/après le scellement/i);
+    expect(notice.textContent).toMatch(/confront/i);
+    // Beside the act it is about, not somewhere else on the screen.
+    expect(seal.closest('[data-part="seal"]')!.contains(notice)).toBe(true);
+  });
+
+  it("offers NO way into the Confrontation while the reading is unsealed", async () => {
+    stubReading({ ...EMPTY, marks: [{ ply: 4, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }] });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    await screen.findByRole("button", { name: /sceller ma lecture/i });
+    // A sentence, not a control: nothing to follow, and nothing greyed out either.
+    expect(screen.queryByRole("link", { name: /confronter/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /confronter/i })).toBeNull();
+  });
+
+  it("does not promise it on a Game that is not the current Profile's", async () => {
+    // A screen that has just refused a Game must not, in the same breath, offer a
+    // door to it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        ({ ok: false, status: 404, json: async () => ({ error: "Partie introuvable pour ce profil : 1" }) }) as Response,
+      ),
+    );
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={9} />);
+
+    await screen.findByText(/n'appartient pas au profil courant/i);
+    expect(screen.queryByText(/après le scellement/i)).toBeNull();
+    expect(screen.queryByRole("link", { name: /confronter/i })).toBeNull();
+  });
+
+  it("hands the caller the seal's state, so the door appears without a reload", async () => {
+    // The entry goes through the SAME channel as the way back to Analyse — a slot
+    // the screen does not fill when the Game is not the current Profile's. What
+    // the slot needs to know is whether the reading is sealed, so it is asked.
+    const user = userEvent.setup();
+    stubReading({ ...EMPTY, marks: [{ ply: 4, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }] });
+    render(
+      <PersonalReading
+        game={{ ...OPERA_GAME, analyzed: true }}
+        profileId={1}
+        onwards={(sealed) => <p>{sealed ? "scellée" : "pas encore"}</p>}
+      />,
+    );
+
+    expect(await screen.findByText("pas encore")).toBeTruthy();
+
+    await user.click(await screen.findByRole("button", { name: /sceller ma lecture/i }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: /^sceller$/i }));
+
+    // No manual reload: the slot is re-rendered with the new state.
+    expect(await screen.findByText("scellée")).toBeTruthy();
+  });
+});

@@ -81,13 +81,27 @@ function ReadingOfOneGame({ profile }: { profile: Profile }) {
           // not Profile-scoped, so the link would work — which is precisely what
           // would make offering it there misleading: the app would refuse a Game
           // and then point at it.
-          onwards={
-            <p>
+          onwards={(sealed) => (
+            <p data-part="actions">
+              {/* The `Confrontation`, offered exactly where the seal makes it
+                  possible (US-23, D7). The Player seals — the act whose
+                  confirmation says "this is exactly what will be confronted" —
+                  and until now the screen left them there. Primary, because it
+                  is what sealing was for.
+
+                  Only once sealed: `CONTEXT.md` has the Confrontation holding
+                  three readings side by side, one of them fixed, and without the
+                  seal the reading moves while it is being compared. */}
+              {sealed && (
+                <Link to={`/analyse/${game.id}/confrontation`} data-action="primary">
+                  Confronter ma lecture au moteur
+                </Link>
+              )}
               <Link to={`/analyse/${game.id}`} data-action="">
                 Retour à l'analyse de cette partie
               </Link>
             </p>
-          }
+          )}
         />
       </ErrorBoundary>
     </section>
