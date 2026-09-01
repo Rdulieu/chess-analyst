@@ -300,6 +300,13 @@ a helper is recognised as *this* returning, not as a new mystery.
   reported three times at the wrong depth (31, then 35, then 38 plies) before a wait on
   `pendingRequests() === 0` plus the expected breadcrumb depth found the real one, 40. Wait for the
   network yourself.
+- **After `open()`, `location.port` can still be empty on the first evaluate** — and the port
+  guard then fires against a blank document ("port guard: this is , not 5232"), which looks exactly
+  like the theft it exists to catch. Measured 2026-09-01: `Page.loadEventFired` had evidently been
+  consumed for `about:blank`. Poll `location.port` until it reads your own before the first guarded
+  call. Related, same run: **launch the app in the background**. A foreground `node` boot killed at
+  the shell's 100 s timeout takes the *detached* app children with it, leaving free ports and a
+  chrome-error page — a run that dies there proves nothing rather than failing.
 - **`launchBrowser` keeps the Node process alive** — an open socket and a piped stderr — so a boot
   script that launches the app and the browser never returns, and a foreground call dies at the
   two-minute timeout taking the browser with it. To drive in phases across several shell calls, end
