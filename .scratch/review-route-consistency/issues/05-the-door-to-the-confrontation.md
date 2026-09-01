@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01 (FP verte 4/4 ; un finding de la FP corrigé dans la tranche : aucune règle ne déclarait d'écart pour `[data-part="actions"]`, donc TOUTES les rangées d'actions de l'app étaient jointives à 0 px)
 
 ## Parent
 
@@ -43,16 +43,16 @@ partie ne doit pas, dans la même phrase, offrir une porte vers elle.
 
 ## Acceptance criteria
 
-- [ ] Sur une lecture **non scellée**, une phrase près de l'action de sceller annonce que la
+- [x] Sur une lecture **non scellée**, une phrase près de l'action de sceller annonce que la
       confrontation vient après le scellement.
-- [ ] Sur une lecture non scellée, **aucune** porte vers la `Confrontation` n'est offerte.
-- [ ] Le scellement fait apparaître l'entrée dans la `Confrontation` **sur cet écran**, en action
+- [x] Sur une lecture non scellée, **aucune** porte vers la `Confrontation` n'est offerte.
+- [x] Le scellement fait apparaître l'entrée dans la `Confrontation` **sur cet écran**, en action
       primaire, sans rechargement manuel.
-- [ ] L'entrée mène à la `Confrontation` de **cette** partie.
-- [ ] Sur une partie qui n'appartient pas au profil courant, ni la phrase ni la porte n'apparaissent.
-- [ ] La porte existante sur `Analyse` est inchangée, et les deux ne se contredisent jamais sur l'état de
+- [x] L'entrée mène à la `Confrontation` de **cette** partie.
+- [x] Sur une partie qui n'appartient pas au profil courant, ni la phrase ni la porte n'apparaissent.
+- [x] La porte existante sur `Analyse` est inchangée, et les deux ne se contredisent jamais sur l'état de
       la lecture.
-- [ ] Le refus d'une lecture vide et le texte de la confirmation de scellement sont inchangés.
+- [x] Le refus d'une lecture vide et le texte de la confirmation de scellement sont inchangés.
 
 ### Feature Path (FP)
 
