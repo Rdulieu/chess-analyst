@@ -103,7 +103,7 @@ describe("App — routing & navigation", () => {
 
     // The landing page shows the game list — and only it: the import form is
     // an operation on a Profile and lives on that Profile's own page (US-11).
-    expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: /Duke Karl/i })).toBeTruthy();
     expect(screen.queryByRole("form", { name: /import/i })).toBeNull();
   });
 
@@ -111,7 +111,7 @@ describe("App — routing & navigation", () => {
     const user = userEvent.setup();
     const { container } = renderApp(["/"]);
 
-    await user.click(await screen.findByRole("button", { name: /Duke Karl/i }));
+    await user.click(await screen.findByRole("link", { name: /Duke Karl/i }));
 
     // The board (which lives only on the Analyse page) renders the starting position.
     await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
@@ -192,13 +192,13 @@ describe("App — routing & navigation", () => {
   it("moves between pages through the menu, back to Mes parties", async () => {
     const user = userEvent.setup();
     renderApp(["/"]);
-    await screen.findByRole("button", { name: /Duke Karl/i });
+    await screen.findByRole("link", { name: /Duke Karl/i });
 
     await user.click(screen.getByRole("link", { name: /stats/i }));
     expect(await screen.findByText(/par cadence/i)).toBeTruthy();
 
     await user.click(screen.getByRole("link", { name: /mes parties/i }));
-    expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: /Duke Karl/i })).toBeTruthy();
   });
 });
 

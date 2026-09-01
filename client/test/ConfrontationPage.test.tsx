@@ -122,3 +122,29 @@ describe("Confrontation page", () => {
     expect(sealHref).not.toBe(analyseHref);
   });
 });
+
+describe("Confrontation page — the acts read as acts (US-23, D2)", () => {
+  it("marks the way back to the analysis, and keeps it an anchor", async () => {
+    stub({ status: 200, body: CONFRONTATION });
+    renderPage();
+
+    const back = await screen.findByRole("link", { name: /retour à l'analyse/i });
+    expect(back.hasAttribute("data-action")).toBe(true);
+    expect(back.tagName).toBe("A");
+    expect(back.getAttribute("href")).toBe("/analyse/1");
+  });
+
+  it("marks the way back to seal an unsealed reading — the road out of the refusal", async () => {
+    // The refusal names the missing act; the road out of it IS an act, so it reads
+    // as one rather than as a sentence.
+    stub({
+      status: 409,
+      body: { reason: "not-sealed", message: "Cette lecture n'est pas scellée." },
+    });
+    renderPage();
+
+    const resume = await screen.findByRole("link", { name: /reprendre ma lecture pour la sceller/i });
+    expect(resume.hasAttribute("data-action")).toBe(true);
+    expect(resume.tagName).toBe("A");
+  });
+});

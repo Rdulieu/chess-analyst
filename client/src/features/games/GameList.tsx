@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { CADENCE_LABEL, READING_STATE_LABEL, RESULT_LABEL } from "../../types";
 import type { Game } from "../../types";
 
@@ -5,20 +6,24 @@ import type { Game } from "../../types";
  * The retained Games, as a **table**: one row per Game, one fact per cell, so
  * the Player sweeps a column (every date, every cadence) instead of reading
  * eighty rows one by one. Each row carries a selection checkbox (to pick Games
- * for the analysis pass) and opens the Game's Analyse page; an "analysée" badge
- * marks a Game once it has been analyzed (US-4).
+ * for the analysis pass) and **links** to the Game's Analyse page; an "analysée"
+ * badge marks a Game once it has been analyzed (US-4).
+ *
+ * The opponent's name is an **anchor** (US-23, D2), and it is the only element of
+ * the app whose *type* this story had to change: it navigated by program from a
+ * `<button>`, so middle-click, "open in a new tab" and the status bar all did
+ * nothing. It stays **bare** — no action marker: it navigates, and styling it as
+ * a control would put a slab in every one of fifty-four rows.
  *
  * Most recent first — but that order is the server's (`listGames`), not this
  * component's: the list arrives ordered and is rendered as it comes.
  */
 export function GameList({
   games,
-  onSelect,
   selectedIds,
   onToggleSelect,
 }: {
   games: Game[];
-  onSelect: (game: Game) => void;
   selectedIds: Set<number>;
   onToggleSelect: (id: number) => void;
 }) {
@@ -64,9 +69,7 @@ export function GameList({
               </td>
               <td>{g.date}</td>
               <td>
-                <button type="button" onClick={() => onSelect(g)}>
-                  {g.opponent}
-                </button>
+                <Link to={`/analyse/${g.id}`}>{g.opponent}</Link>
               </td>
               <td>{RESULT_LABEL[g.result]}</td>
               <td>{CADENCE_LABEL[g.timeControlCategory]}</td>

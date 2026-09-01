@@ -97,3 +97,14 @@ describe("the reading route belongs to the current Profile", () => {
     await screen.findByText("Choisir un profil");
   });
 });
+
+describe("the way back to the analysis reads as an act (US-23, D2)", () => {
+  it("carries the action marker while staying an anchor", async () => {
+    renderReading({ current: 1, owner: 1 });
+
+    const back = await screen.findByRole("link", { name: /retour à l'analyse/i });
+    expect(back.hasAttribute("data-action")).toBe(true);
+    expect(back.tagName).toBe("A");
+    expect(back.getAttribute("href")).toBe("/analyse/1");
+  });
+});

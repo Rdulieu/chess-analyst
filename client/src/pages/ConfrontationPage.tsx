@@ -81,7 +81,9 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
               elle dit où regarder, pas qui se trompe.
             </p>
             <p>
-              <Link to={`/analyse/${id}`}>Retour à l'analyse de cette partie</Link>
+              <Link to={`/analyse/${id}`} data-action="">
+                Retour à l'analyse de cette partie
+              </Link>
             </p>
           </>
         )}
@@ -102,7 +104,9 @@ function Refusal({ refusal, gameId }: { refusal: ConfrontationRefused; gameId: n
       <p>{refusal.message}</p>
       {refusal.reason === "not-sealed" ? (
         <p>
-          <Link to={`/analyse/${gameId}/lecture`}>Reprendre ma lecture pour la sceller</Link>
+          <Link to={`/analyse/${gameId}/lecture`} data-action="">
+            Reprendre ma lecture pour la sceller
+          </Link>
         </p>
       ) : (
         <p>
