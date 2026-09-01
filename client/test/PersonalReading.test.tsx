@@ -1334,12 +1334,17 @@ describe("posing a verdict from the keyboard (US-22)", () => {
     render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
     await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
 
-    const notice = document.querySelector('[data-part="shortcuts"]');
-    expect(notice?.textContent).toContain("1");
-    expect(notice?.textContent).toContain("5");
-    expect(notice?.textContent).toMatch(/moment clé/i);
-    // The same sentence in every state, so it can never move anything.
-    expect(document.querySelectorAll('[data-part="shortcuts"]')).toHaveLength(1);
+    // TWO notices since US-23 (D6), each announcing what it owns: the arrows come
+    // from the board component, the verdict and the Key moment from this screen.
+    // What matters is unchanged — every command on this screen is announced on it,
+    // and each sentence is the same in every state, so neither can move anything.
+    const notices = [...document.querySelectorAll('[data-part="shortcuts"]')];
+    expect(notices).toHaveLength(2);
+    const own = notices.find((n) => /verdict/i.test(n.textContent ?? ""))!;
+    expect(own.textContent).toContain("1");
+    expect(own.textContent).toContain("5");
+    expect(own.textContent).toMatch(/moment clé/i);
+    expect(notices.some((n) => /changer de coup/i.test(n.textContent ?? ""))).toBe(true);
   });
 
   it("writes into the posterior layer after the seal, exactly as the mouse does", async () => {
@@ -1358,5 +1363,32 @@ describe("posing a verdict from the keyboard (US-22)", () => {
     await waitFor(() => expect(checked()).toEqual(["good"]));
     // The sealed layer is beside it, untouched.
     expect(document.querySelector('[data-part="sealed-mark"]')?.textContent).toContain("Erreur");
+  });
+});
+
+describe("PersonalReading — who announces which command (US-23, D6)", () => {
+  /*
+   * The reading route announces the commands it owns — the verdict and the Key
+   * moment — and no longer the arrows, which belong to the board component and
+   * are announced by it. The Player still sees all three; they now come from two
+   * places, each saying what it actually has.
+   */
+  it("announces the verdict and the Key moment, and leaves the arrows to the board", async () => {
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    const own = await screen.findByText(/pour le verdict/i);
+    expect(own.textContent).toMatch(/moment clé/i);
+    // Not this notice's business any more.
+    expect(own.textContent).not.toMatch(/changer de coup/i);
+  });
+
+  it("still shows the Player all three commands on that screen", async () => {
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    // Two notices, one screen: the arrows from the board, the rest from here.
+    expect(await screen.findByText(/pour changer de coup/i)).toBeTruthy();
+    expect(screen.getByText(/pour le verdict/i)).toBeTruthy();
   });
 });

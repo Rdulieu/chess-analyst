@@ -1061,3 +1061,64 @@ describe("Board — the list's existing marks are untouched (US-23)", () => {
     expect(first.querySelector('[data-part="uncounted"]')).not.toBeNull();
   });
 });
+
+describe("Board — the arrows are announced by whoever has them (US-23, D6)", () => {
+  /*
+   * "A shortcut nothing on screen mentions does not exist, and one that works on
+   * a screen that never mentions it is worse than none." That rule was a comment,
+   * and a comment cannot stop the next caller passing the prop. So the Board
+   * announces the arrows ITSELF: working and announced become the same act, and a
+   * third caller inherits both without knowing anything.
+   */
+  it("says the arrows step the Moves, when they do", () => {
+    render(<Board pgn={OPERA_PGN} keyboardStepping />);
+
+    const notice = screen.getByText(/pour changer de coup/i);
+    expect(notice.textContent).toMatch(/←/);
+    expect(notice.textContent).toMatch(/→/);
+  });
+
+  it("says nothing about them when they do not step", () => {
+    render(<Board pgn={OPERA_PGN} />);
+
+    expect(screen.queryByText(/pour changer de coup/i)).toBeNull();
+  });
+
+  it("announces only what it owns — no verdict, no key moment", () => {
+    // The reading route's notice promised three commands; two of them do nothing
+    // here, and a notice promising three where one works is worse than none.
+    render(<Board pgn={OPERA_PGN} keyboardStepping />);
+
+    const notice = screen.getByText(/pour changer de coup/i);
+    expect(notice.textContent).not.toMatch(/verdict/i);
+    expect(notice.textContent).not.toMatch(/moment clé/i);
+  });
+
+  it("puts the announcement BELOW the step controls, never above (ADR-0021)", () => {
+    const { container } = render(<Board pgn={OPERA_PGN} keyboardStepping />);
+
+    const stepper = container.querySelector('[data-part="stepper"]')!;
+    const notice = screen.getByText(/pour changer de coup/i);
+    // Document order: the stepper comes first, so nothing that appears with the
+    // ply can push the buttons the Player is clicking.
+    expect(stepper.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("steps a half-Move per arrow, and stops at the ends of the Game", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" keyboardStepping />);
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByLabelText("current move").textContent).toBe("e5");
+    // At the end it stays put rather than wrapping or throwing.
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByLabelText("current move").textContent).toBe("e5");
+
+    await user.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+  });
+});

@@ -85,12 +85,16 @@ export function Board({
   /**
    * Whether `←` and `→` step the Moves while this Board is on screen.
    *
-   * Opt-in, and the reason is not caution: a shortcut is only offered where it is
-   * **announced**, and the announcement lives in the caller's own panel. A
+   * Opt-in, and **self-announcing**: turning them on makes this component say so,
+   * below the stepper, so working and announced can no longer come apart. A
    * shortcut discovered by accident does not exist, and one that works on a
    * screen that never mentions it is worse than none — the Player learns a rule
-   * that then fails silently elsewhere. The reading route announces them
-   * (`ShortcutsNotice`); the Analyse page does not, so it does not get them.
+   * that then fails silently elsewhere. That used to be a rule in a comment, which
+   * could not stop a caller passing the prop and announcing nothing (US-23, D6).
+   *
+   * The announcement covers only the arrows, which are all this component owns.
+   * A caller with commands of its own announces those itself — the reading route
+   * does, for the verdict and the Key moment (`ShortcutsNotice`).
    */
   keyboardStepping?: boolean;
   /**
@@ -315,6 +319,27 @@ export function Board({
             {currentMove}
             {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
           </p>
+          {/*
+            The arrows, said on the screen — by the component that HAS them
+            (US-23, D6). "A shortcut nothing on screen mentions does not exist,
+            and one that works on a screen that never mentions it is worse than
+            none": that rule was a comment, and a comment cannot stop the next
+            caller passing the prop. Announcing here makes working and announced
+            the same act — they cannot come apart, and a third caller inherits
+            both without knowing anything.
+
+            It announces ONLY what it owns. The reading route's notice promised
+            three commands, two of which do nothing here, and a notice promising
+            three where one works is worse than none.
+
+            Below the stepper and one line in every state, like the readout above
+            it and for the same reason (ADR-0021).
+          */}
+          {keyboardStepping && (
+            <p data-part="shortcuts">
+              Au clavier : <kbd>←</kbd> <kbd>→</kbd> pour changer de coup.
+            </p>
+          )}
           {controls?.(index)}
           {/*
             The way to the record, from beside the board. The panel itself is
