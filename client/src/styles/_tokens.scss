@@ -52,6 +52,23 @@
   --square-inaccuracy: #f2e08a;
   --square-mistake: #edb463;
   --square-blunder: #e8837a;
+  // The Player's own favourable verdicts (US-23, ADR-0022). The palette had never
+  // had to paint one: the engine only ever reports faults, so the three above are
+  // all warm and all mean "something went wrong".
+  //
+  // `Correct` is deliberately NOT a bright green. It is not a compliment — it is
+  // "j'ai regardé, je ne trouve rien à reprocher" — so it is a cool neutral: the
+  // verdict reads as *examined*, not as *rewarded*. `Bon` is the frank one, and
+  // the only green on the board.
+  //
+  // Measured against the whole family, in RGB distance, so no two verdicts and no
+  // base square can be confused: the closest pair is `--square-sound` against the
+  // light square at 42.6, differing in hue as well as in lightness. Against the
+  // coordinate ink (#241d13) they read 10.57:1 and 9.35:1, and against a black
+  // piece 8.49:1 and 7.51:1 — both above the weakest existing member of this
+  // family (the dark square, 4.66 and 3.74).
+  --square-sound: #c3d0d6;
+  --square-good: #9ccf96;
   // The board's coordinate labels. One constant ink for BOTH squares rather than
   // react-chessboard's alternation (each label in the other square's colour),
   // which measured 2.29:1 — text, on a board, below any threshold. Against the

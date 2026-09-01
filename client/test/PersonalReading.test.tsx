@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PersonalReading } from "../src/features/personal/PersonalReading";
 import { OPERA_GAME } from "./fixtures";
-import type { PersonalAnalysis } from "../src/types";
+import type { PersonalAnalysis, PersonalMark } from "../src/types";
 
 const EMPTY: PersonalAnalysis = {
   gameId: 1,
@@ -1460,5 +1460,90 @@ describe("PersonalReading — the door to the Confrontation (US-23, D7)", () => 
 
     // No manual reload: the slot is re-rendered with the new state.
     expect(await screen.findByText("scellée")).toBeTruthy();
+  });
+});
+
+describe("PersonalReading — the Player's verdict on their own board (US-23, ADR-0022)", () => {
+  const squareOf = (container: HTMLElement, square: string) =>
+    container
+      .querySelector<HTMLElement>(`[data-square="${square}"] > div`)
+      ?.style.backgroundColor ?? "";
+
+  const mark = (over: Partial<PersonalMark>): PersonalMark => ({
+    ply: 1,
+    declaredSeverity: null,
+    note: null,
+    keyMoment: false,
+    posterior: false,
+    ...over,
+  });
+
+  /** The reading route over a Game whose first Move is 1.e4 (so e4 is ply 1's square). */
+  const readingWith = async (marks: PersonalMark[]) => {
+    stubReading({ ...EMPTY, marks });
+    const view = render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    return view;
+  };
+
+  it("marks the destination square for EACH of the five verdicts, and tells them apart", async () => {
+    const seen = new Set<string>();
+    for (const value of ["blunder", "mistake", "inaccuracy", "sound", "good"] as const) {
+      const { container, unmount } = await readingWith([mark({ ply: 1, declaredSeverity: value })]);
+      const tint = squareOf(container, "e4");
+      expect(tint, `square tint for ${value}`).toBeTruthy();
+      seen.add(tint);
+      unmount();
+      vi.unstubAllGlobals();
+    }
+    // Five values, five distinct tints — a verdict the Player cannot tell from
+    // another is not a verdict shown.
+    expect(seen.size).toBe(5);
+  });
+
+  it("does not paint `Correct` like a reward, and paints `Bon` with its own tint", async () => {
+    const { container, unmount } = await readingWith([mark({ ply: 1, declaredSeverity: "sound" })]);
+    // `Sound` is "I looked, and I find nothing to fault" — not a compliment.
+    expect(squareOf(container, "e4")).toBe("var(--square-sound)");
+    unmount();
+    vi.unstubAllGlobals();
+
+    const good = await readingWith([mark({ ply: 1, declaredSeverity: "good" })]);
+    expect(squareOf(good.container, "e4")).toBe("var(--square-good)");
+  });
+
+  it("leaves the square unmarked when nothing is said about that Move", async () => {
+    const { container } = await readingWith([mark({ ply: 4, declaredSeverity: "blunder" })]);
+
+    // A mark on another ply is not a mark on this one.
+    expect(squareOf(container, "e4")).toBe("");
+  });
+
+  it("marks a POSTERIOR verdict exactly as a sealed one", async () => {
+    // No distinction on the square: the panel already names the layer in words,
+    // and putting that difference on a tint would be the colour-only cue
+    // ADR-0013 forbids.
+    const { container, unmount } = await readingWith([
+      mark({ ply: 1, declaredSeverity: "good", posterior: false }),
+    ]);
+    const sealed = squareOf(container, "e4");
+    unmount();
+    vi.unstubAllGlobals();
+
+    const after = await readingWith([mark({ ply: 1, declaredSeverity: "good", posterior: true })]);
+    expect(squareOf(after.container, "e4")).toBe(sealed);
+  });
+
+  it("shows NOTHING of the engine on this board, whatever the remembered Review mode", async () => {
+    // The guarantee this screen exists to make: no engine prop reaches the
+    // diagram, so no measured severity can tint a square here.
+    localStorage.setItem("chess-analyst.review-mode", "detailed");
+    const { container } = await readingWith([mark({ ply: 1, declaredSeverity: "sound" })]);
+
+    // The Player's own tint is there...
+    expect(squareOf(container, "e4")).toBe("var(--square-sound)");
+    // ...and no evaluation, no curve, no engine glyph came with it.
+    expect(screen.queryByLabelText("evaluation")).toBeNull();
   });
 });

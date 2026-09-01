@@ -32,6 +32,11 @@ const CONSTANT_FAMILY = [
   "--square-inaccuracy",
   "--square-mistake",
   "--square-blunder",
+  // The Player's own favourable verdicts, which the palette never had to paint
+  // before (US-23, ADR-0022). Same family and same reason as the three above: a
+  // piece is painted on top of them and keeps its ink in both themes.
+  "--square-sound",
+  "--square-good",
   // The board's coordinate ink, and the curve's two marks: both are read ON a
   // drawing whose colours do not move with the theme, which is what puts them
   // in this family rather than among the theme roles (US-13, ADR-0013).

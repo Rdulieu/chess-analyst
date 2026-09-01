@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fenStringToPositionObject } from "react-chessboard";
 import { Board } from "../src/components/Board";
+import { SEVERITY_SQUARE_TINT } from "../src/chess/severity";
 import { MoveMarks } from "../src/features/personal/MoveMarks";
 import { startingPosition } from "../src/chess/history";
 import { OPERA_PGN } from "./fixtures";
@@ -166,7 +167,18 @@ describe("Board", () => {
       { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    // The engine's table, supplied the way `Analyse` supplies it since ADR-0022:
+    // the board draws the square, the screen says whose verdict it is.
+    const { container } = render(
+      <Board
+        pgn="1. e4 e5"
+        annotations={annotations}
+        squareTint={(ply) => {
+          const severity = annotations[ply]?.severity;
+          return severity ? SEVERITY_SQUARE_TINT[severity] : undefined;
+        }}
+      />,
+    );
     const next = screen.getByRole("button", { name: /next/i });
 
     await user.click(next); // Position after e4 (blunder)
@@ -189,7 +201,16 @@ describe("Board", () => {
       { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4" annotations={annotations} />);
+    const { container } = render(
+      <Board
+        pgn="1. e4"
+        annotations={annotations}
+        squareTint={(ply) => {
+          const severity = annotations[ply]?.severity;
+          return severity ? SEVERITY_SQUARE_TINT[severity] : undefined;
+        }}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
@@ -1120,5 +1141,47 @@ describe("Board — the arrows are announced by whoever has them (US-23, D6)", (
     expect(screen.getByLabelText("current move").textContent).toBe("Start");
     await user.keyboard("{ArrowLeft}");
     expect(screen.getByLabelText("current move").textContent).toBe("Start");
+  });
+});
+
+describe("Board — one board, one author (US-23, ADR-0022)", () => {
+  const squareTint = (container: HTMLElement, square: string) =>
+    container
+      .querySelector<HTMLElement>(`[data-square="${square}"] > div`)
+      ?.style.backgroundColor ?? "";
+
+  it("marks the current Move's destination square with the tint its CALLER supplies", async () => {
+    // The device belongs to the board; the source does not. A square has neither
+    // a column nor a title, only a colour, so it cannot hold two authors — and it
+    // is the screen that says which one it is showing.
+    const user = userEvent.setup();
+    const { container } = render(
+      <Board pgn="1. e4 e5" squareTint={(ply) => (ply === 1 ? "var(--square-sound)" : undefined)} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(squareTint(container, "e4")).toBe("var(--square-sound)");
+
+    // Ply 2 has no verdict, so its square carries nothing.
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(squareTint(container, "e5")).toBe("");
+  });
+
+  it("marks nothing at the starting Position — it is nobody's Move", () => {
+    const { container } = render(<Board pgn="1. e4" squareTint={() => "var(--square-blunder)"} />);
+
+    expect(container.querySelectorAll("[style*='--square-blunder']")).toHaveLength(0);
+  });
+
+  it("paints no square at all when its caller supplies no source", () => {
+    // The reading route before this slice, and any future caller with nothing to
+    // say: silence rather than a default author.
+    const { container } = render(<Board pgn="1. e4 e5" />);
+
+    // The base squares are painted from this family too, so the assertion names
+    // the verdicts rather than the prefix.
+    for (const verdict of ["blunder", "mistake", "inaccuracy", "sound", "good"]) {
+      expect(container.querySelectorAll(`[style*='--square-${verdict}']`)).toHaveLength(0);
+    }
   });
 });

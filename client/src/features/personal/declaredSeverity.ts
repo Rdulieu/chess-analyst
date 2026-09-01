@@ -1,4 +1,4 @@
-import { SEVERITY_GLYPH } from "../../chess/severity";
+import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../../chess/severity";
 import type { DeclaredSeverity } from "../../types";
 
 /**
@@ -59,4 +59,35 @@ export const DECLARED_SEVERITY_GLYPH: Record<DeclaredSeverity, string> = {
   inaccuracy: SEVERITY_GLYPH.inaccuracy,
   good: "!",
   sound: "✓",
+};
+
+/**
+ * How each `Declared severity` is laid **on a board square** — the reading
+ * route's diagram marking the destination square of the current Move (ADR-0022).
+ *
+ * **The device is shared; the source is not.** `Analyse` paints the engine's
+ * measured severity, this route paints the Player's declared one, and it is the
+ * screen that decides which table applies — never the square. An `Analyse`
+ * diagram carrying the Player's marks, or a reading diagram carrying the
+ * engine's, would be the one thing this ADR refuses: a square has neither a
+ * column nor a title, only a colour, so it cannot hold two authors at once.
+ *
+ * The three shared severities are **taken from the engine's own table**, exactly
+ * as the glyphs are, and for the same reason: the shared vocabulary is deliberate
+ * all the way down, and a second literal token name here is how it stops being
+ * shared. The two the engine has no band for bring their own tokens — the palette
+ * had never had to paint a favourable verdict, since the engine only reports
+ * faults.
+ *
+ * The tint is **never the only cue**: the glyph stays in the move list (ADR-0013).
+ * And no distinction is made between a sealed verdict and a posterior one — the
+ * panel already names the layer in words, and putting that difference on a tint
+ * would be precisely the colour-only cue ADR-0013 forbids.
+ */
+export const DECLARED_SEVERITY_SQUARE_TINT: Record<DeclaredSeverity, string> = {
+  blunder: SEVERITY_SQUARE_TINT.blunder,
+  mistake: SEVERITY_SQUARE_TINT.mistake,
+  inaccuracy: SEVERITY_SQUARE_TINT.inaccuracy,
+  sound: "var(--square-sound)",
+  good: "var(--square-good)",
 };

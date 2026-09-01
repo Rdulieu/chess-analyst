@@ -10,6 +10,8 @@ import {
 } from "../../api";
 import { ReadingControls } from "./ReadingControls";
 import { markAt } from "./marks";
+import { markKinds } from "./progress";
+import { DECLARED_SEVERITY_SQUARE_TINT } from "./declaredSeverity";
 import { engineWasSeen } from "./engineSeen";
 import { MoveMarks } from "./MoveMarks";
 import { parseGame } from "../../chess/history";
@@ -169,6 +171,24 @@ export function PersonalReading({
         // What IS shown in the list is the Player's own marks: a reading has to be
         // locatable without stepping through every Move to find where one wrote.
         moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
+        // The PLAYER's verdict on the square, because this is the Player's screen
+        // (US-23, ADR-0022) — the same device as `Analyse`, filled with the other
+        // author. Nothing distinguishes a sealed verdict from a posterior one
+        // here: the panel already names the layer in words, and putting that on a
+        // tint would be exactly the colour-only cue ADR-0013 forbids. And a
+        // verdict on the opponent's Move marks its square like any other — the
+        // model draws no line by side; the screen is what says it will not be
+        // counted.
+        //
+        // The verdict is resolved by `markKinds`, the same function the move list
+        // uses — never a second rule. The square and the glyph three centimetres
+        // from it must never say different things about the same ply, and the
+        // layer question ("when both layers speak, the sealed one is drawn") is
+        // already answered there, with its reasons.
+        squareTint={(ply) => {
+          const { verdict } = markKinds(reading.marks, ply);
+          return verdict ? DECLARED_SEVERITY_SQUARE_TINT[verdict] : undefined;
+        }}
         // The arrows step the Moves — and asking for them is what makes the board
         // announce them, so the two cannot come apart (US-23, D6). This panel
         // announces the commands of its OWN (`ShortcutsNotice`): the verdict and
