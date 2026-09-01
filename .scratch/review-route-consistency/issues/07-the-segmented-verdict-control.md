@@ -1,4 +1,9 @@
-Status: `ready-for-agent` — **HITL** : la hauteur relevée revient au demandeur pour arbitrage.
+Status: `ready-for-human` — **HITL**. Implémentée sur `feature/US-23-07-the-segmented-verdict-control` (`ebad5ba`), check local vert : build, 411 tests serveur + 828 tests client, 105 tests d'outillage, lint à 0, FP verte 6/6 dans les deux thèmes. **Non mergée** : la hauteur relevée revient au demandeur pour arbitrage.
+
+> **Relevé (chiffres, pas jugement)** — viewport 900 px, `rows` = 5 partout, identique dans les deux thèmes et indépendant du verdict choisi :
+> fieldset verdict **416,5 px** à 1280 et **435,5 px** à 380 ; panneau **816 / 946 px** (lecture non scellée), **836,5 / 957,5 px** (scellée).
+> L'écart 1280→380 est de +19 px, entièrement dû au retour à la ligne de la phrase de `Correct`.
+> Contraste de l'encre choisie sur sa teinte : 6,32 · 8,97 · 12,54 · 10,57 · 9,35 — tous au-dessus de 4,5:1, dans les deux thèmes.
 
 ## Parent
 
@@ -60,22 +65,22 @@ contrôles de pas et du fieldset de verdict — c'est exactement le cas que ce c
 
 ## Acceptance criteria
 
-- [ ] Les cinq valeurs sont cinq rangées pleine largeur, dans l'ordre affiché aujourd'hui (pire →
+- [x] Les cinq valeurs sont cinq rangées pleine largeur, dans l'ordre affiché aujourd'hui (pire →
       meilleur), chacune portant glyphe, mot et phrase.
-- [ ] Le glyphe est **celui de la table partagée**, identique à celui de la liste des coups ; aucun glyphe
+- [x] Le glyphe est **celui de la table partagée**, identique à celui de la liste des coups ; aucun glyphe
       n'est retapé en littéral.
-- [ ] Les phrases sont visibles sans survol, pour les cinq valeurs, **en permanence**.
-- [ ] Le contrôle reste un groupe à choix exclusif : flèches natives quand il a le focus, annonce du rang
+- [x] Les phrases sont visibles sans survol, pour les cinq valeurs, **en permanence**.
+- [x] Le contrôle reste un groupe à choix exclusif : flèches natives quand il a le focus, annonce du rang
       sur le total, et rien n'est présélectionné quand le joueur n'a rien dit — **silence n'est pas une
       valeur**.
-- [ ] Les raccourcis `1`–`5` posent toujours le verdict **dans l'ordre affiché** et **sans déplacer le
+- [x] Les raccourcis `1`–`5` posent toujours le verdict **dans l'ordre affiché** et **sans déplacer le
       focus**, et l'ordre affiché reste dérivé de la même source que les touches.
-- [ ] Retirer son verdict reste possible et distinct de « ne rien avoir dit ».
-- [ ] La légende continue de dire la couche postérieure et le coup de l'adversaire, sur une seule ligne
+- [x] Retirer son verdict reste possible et distinct de « ne rien avoir dit ».
+- [x] La légende continue de dire la couche postérieure et le coup de l'adversaire, sur une seule ligne
       aux largeurs auditées.
-- [ ] La hauteur du contrôle ne dépend plus du reflux : choisir une valeur ne déplace aucune rangée.
-- [ ] La teinte n'est jamais l'unique indice, et l'audit des tokens reste vert.
-- [ ] La passe de thème **relève et rapporte** la hauteur du panneau aux largeurs auditées ; son assertion
+- [x] La hauteur du contrôle ne dépend plus du reflux : choisir une valeur ne déplace aucune rangée.
+- [x] La teinte n'est jamais l'unique indice, et l'audit des tokens reste vert.
+- [x] La passe de thème **relève et rapporte** la hauteur du panneau aux largeurs auditées ; son assertion
       de déplacement nul reste verte.
 
 ### Feature Path (FP)
