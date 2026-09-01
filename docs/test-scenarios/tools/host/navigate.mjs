@@ -187,7 +187,19 @@ export async function selectProfile(session, { port, username, waitOptions }) {
       { cause },
     );
   }
-  await waitForScreen(session, port, matcherFor("/profiles"), waitOptions);
+  /* Where the act LEAVES the walk depends on what the act did. Since US-23 (D1)
+     "Sélectionner" is a composed act: it records the current Profile, then leads to
+     "Mes parties" — so waiting for `/profiles` after a real click waits for a screen
+     the app has deliberately left, and every scenario going through this helper would
+     fail on a false red (found by the FP of US-23-01, 2026-09-01). A Profile that is
+     already current has no button to click: nothing navigated, and the walk is still
+     on the list. */
+  await waitForScreen(
+    session,
+    port,
+    matcherFor(picked === "clicked" ? "/" : "/profiles"),
+    waitOptions,
+  );
   return picked;
 }
 
@@ -213,7 +225,9 @@ export function openerFor(openers, screen) {
  *
  * **Be on the list first.** It reads the table of the screen it is called on, so on
  * any other screen it returns `[]` — and an empty array reads exactly like a Player
- * with no Games. `selectProfile` leaves the walk on `/profiles`, which is where this
+ * with no Games. Since US-23 `selectProfile` leaves the walk on "Mes parties" when it
+ * really clicked, and on `/profiles` when the Profile was already current — which is
+ * where this
  * bites: measured 2026-08-28, where it cost a phase that concluded "no Game in the
  * list" about a list of seven hundred.
  */
