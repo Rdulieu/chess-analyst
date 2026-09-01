@@ -289,14 +289,24 @@ section[aria-label="partie"] {
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2) var(--space-2);
 
-  // One row per value. The input stays under the appearance and the label is the
-  // target, so the group keeps its semantics — and the whole row is the hit area
-  // rather than a word beside a 13px circle.
+  // One row per value, on **one line**: glyph, word, then what the value claims.
+  //
+  // The claim was stacked under the word at first, which read well and cost 66 px
+  // a row — 416 px of column against the 66 px the wrapping control used at
+  // desktop width. On one line the row is ~36 px and the five claims stay
+  // permanently visible, which is the part that could not be traded away: showing
+  // them on selection would move the other four rows under the Player's finger.
+  // The requester arbitrated the measurement and chose this shape (2026-09-01).
+  //
+  // The input stays under the appearance and the label is the target, so the group
+  // keeps its semantics — and the whole row is the hit area rather than a word
+  // beside a 13px circle.
   label {
     display: grid;
     // The glyph in a track of its own so the five words start on one edge: a
     // ragged left down five rows is what makes a list of choices hard to scan.
-    grid-template-columns: 1.5em 1fr;
+    // The word takes the width it needs and the claim takes the rest.
+    grid-template-columns: 1.5em auto 1fr;
     align-items: baseline;
     column-gap: var(--space-1);
     padding: var(--space-1);
@@ -313,7 +323,7 @@ section[aria-label="partie"] {
 
     [data-part="glyph"] {
       grid-column: 1;
-      grid-row: 2;
+      grid-row: 1;
       font-family: var(--mono);
       text-align: center;
     }
@@ -323,12 +333,13 @@ section[aria-label="partie"] {
       grid-row: 1;
     }
 
-    // What the value claims, under its word and in the same track: it is a
-    // sentence about that row, so it is indented with it rather than starting
-    // back at the row's edge.
+    // What the value claims, beside its word: smaller and muted, because the word
+    // is what the Player picks and the sentence is what tells them which to pick.
+    // At a narrow width the long ones wrap inside their own track — the row grows,
+    // and it grows the same whether it is chosen or not.
     [data-part="claim"] {
-      grid-column: 2;
-      grid-row: 2;
+      grid-column: 3;
+      grid-row: 1;
       font-size: var(--text-s);
       color: var(--ink-muted);
     }

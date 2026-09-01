@@ -187,6 +187,18 @@ describe("the verdict control", () => {
     const row = declarationsFor(css, '[data-part="declared-severity"] label');
     expect(row.get("border")).toMatch(/1px solid/);
     expect(row.get("display")).toBe("grid");
+    // ONE line per row: glyph, word, claim in three tracks of a single row. The
+    // stacked version cost 66 px a row against ~36, and the requester arbitrated
+    // the measurement in favour of the compact one (2026-09-01) — the claims stay
+    // permanently visible either way, which is what could not be traded.
+    expect(row.get("grid-template-columns")).toBe("1.5em auto 1fr");
+    for (const part of ["glyph", "word", "claim"]) {
+      const cell = declarationsFor(
+        css,
+        `[data-part="declared-severity"] label [data-part="${part}"]`,
+      );
+      expect(cell.get("grid-row"), `${part} must share the row's single line`).toBe("1");
+    }
 
     const chosen = declarationsFor(css, '[data-part="declared-severity"] label:has(input:checked)');
     expect(chosen.get("border-color")).toBeDefined();
