@@ -1,5 +1,5 @@
-Status: `ready-for-human` — **HITL**. Implémentée sur `feature/US-23-07-the-segmented-verdict-control`,
-check local vert : build, 411 tests serveur + 833 tests client, 105 tests d'outillage, lint à 0, FP verte
+Status: `done` — **HITL**, mergée le 2026-09-01 **sur décision du demandeur** après arbitrage de la
+hauteur (forme retenue : une ligne par rangée). Check local vert : build, 411 tests serveur + 833 tests client, 105 tests d'outillage, lint à 0, FP verte
 6/6 dans les deux thèmes. **Non mergée** : la hauteur relevée revient au demandeur.
 
 > **Relevé (chiffres, pas jugement)** — viewport 900 px, `rows` = 5 partout, identique dans les deux
