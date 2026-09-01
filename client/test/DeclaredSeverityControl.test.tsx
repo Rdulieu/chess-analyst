@@ -150,3 +150,42 @@ describe("what the row must NOT inherit", () => {
     expect(rows().map((r) => r.getAttribute("data-verdict"))).toEqual([...DECLARED_SEVERITIES]);
   });
 });
+
+describe("what was sealed, recalled where the Player looks for it (US-23, F2)", () => {
+  /*
+   * The requester could not find their sealed verdicts in the section titled
+   * "Mon verdict, après le scellement". It was not a data fault — the API serves
+   * both layers and `SealedMarkReadout` shows them — but a placement one: that
+   * recall sits four blocks lower, past the note editor, the seal action and the
+   * keyboard notice. The code claimed "beside — never replaced by — what has been
+   * written since"; the layout did not deliver it.
+   *
+   * So the COMPARISON line joins the control. One line, and **always rendered**
+   * after the seal: a conditional block would make the fieldset's height vary from
+   * one ply to the next, which is exactly what assertion 7 measures at zero pixels.
+   */
+  it("recalls the sealed verdict under the rows, once the reading is sealed", () => {
+    control({ posterior: true, sealed: "mistake", posed: "good" });
+
+    const recall = screen.getByText(/au scellement/i);
+    expect(recall.textContent).toContain(DECLARED_SEVERITY_LABEL.mistake);
+    // The posterior choice is still the control's own selection: one does not
+    // replace the other.
+    expect(screen.getAllByRole("radio").filter((r) => (r as HTMLInputElement).checked)).toHaveLength(1);
+    expect(recall.textContent).not.toContain(DECLARED_SEVERITY_LABEL.good);
+  });
+
+  it("says so plainly when nothing was written on this Move before the seal", () => {
+    // Always rendered: the line that would otherwise appear and vanish per ply is
+    // the line that would move the rows under the Player's finger.
+    control({ posterior: true, sealed: null, posed: null });
+
+    expect(screen.getByText(/au scellement/i).textContent).toMatch(/rien/i);
+  });
+
+  it("recalls nothing before the seal — there is no sealed layer to recall", () => {
+    control({ posed: "mistake" });
+
+    expect(screen.queryByText(/au scellement/i)).toBeNull();
+  });
+});

@@ -15,7 +15,7 @@ import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
-import { plyNumber, startingPoint } from "../features/confrontation/moveName";
+import { moveName, plyNumber, startingPoint } from "../features/confrontation/moveName";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { GameRecap, MoveAnnotation } from "../types";
 
@@ -143,7 +143,17 @@ export function Board({
   // affordance, and a Player reading the line by keyboard must not lose the
   // preview because the mouse drifted off the button that still holds focus.
   const position = preview.focus ?? preview.hover ?? navigated;
-  const currentMove = index === 0 ? "Start" : plies[index - 1].san;
+  /*
+   * How the Move just reached is named in the readout: the number, then the
+   * notation — `23.Bxh5`, not `Bxh5` (US-23, F3). The list was numbered by the
+   * slice that added `plyNumber` and this readout was left showing the SAN alone,
+   * so "le coup 23" was findable in one place and not the other. Same rule, and
+   * `moveName` is where it lives.
+   *
+   * The starting Position keeps its own word: it is nobody's Move, so it carries
+   * no number.
+   */
+  const currentMove = index === 0 ? "Start" : moveName(index, plies[index - 1].san, start);
   const atStart = index === 0;
   const atEnd = index === plies.length;
 

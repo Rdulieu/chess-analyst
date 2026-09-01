@@ -1547,3 +1547,54 @@ describe("PersonalReading — the Player's verdict on their own board (US-23, AD
     expect(screen.queryByLabelText("evaluation")).toBeNull();
   });
 });
+
+describe("PersonalReading — the sealed verdict is readable in the sealed section (US-23, F2)", () => {
+  it("recalls it beside the posterior choice, on the Move that carries both", async () => {
+    // The requester's own case: a Move verdicted `Erreur` before the seal and
+    // amended to `Bon` after it. Both must be legible, and the amendment must not
+    // read as having replaced the sealed one.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-25T14:43:45.735Z",
+      engineSeenBeforeSeal: false,
+      marks: [
+        { ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false },
+        { ply: 1, declaredSeverity: "good", note: null, keyMoment: false, posterior: true },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // The section is named after the seal, and it now says what was sealed.
+    const group = screen.getByRole("group", { name: /après le scellement/i });
+    expect(within(group).getByText(/au scellement/i).textContent).toMatch(/erreur/i);
+    // And the posterior choice is what the control has selected.
+    expect(
+      within(group).getAllByRole("radio").filter((r) => (r as HTMLInputElement).checked),
+    ).toHaveLength(1);
+  });
+
+  it("keeps the full recall where it is, with the note and the Key moment", async () => {
+    // `SealedMarkReadout` is the block whose height genuinely varies, and it is
+    // low in the panel by a measured decision (ADR-0021). Only the comparison
+    // line moved up.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-25T14:43:45.735Z",
+      engineSeenBeforeSeal: false,
+      marks: [
+        { ply: 1, declaredSeverity: "mistake", note: "ce que j'avais écrit", keyMoment: true, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const full = screen.getByRole("group", { name: /ma lecture scellée de ce coup/i });
+    expect(within(full).getByText(/ce que j'avais écrit/)).toBeTruthy();
+    expect(within(full).getByText(/moment clé/i)).toBeTruthy();
+  });
+});

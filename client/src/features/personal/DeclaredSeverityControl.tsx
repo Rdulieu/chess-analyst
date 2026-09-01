@@ -31,6 +31,7 @@ export function DeclaredSeverityControl({
   playersOwnMove,
   disabled = false,
   posterior = false,
+  sealed = null,
   onPose,
   onWithdraw,
 }: {
@@ -52,6 +53,18 @@ export function DeclaredSeverityControl({
    * they were still amending their sealed reading.
    */
   posterior?: boolean;
+  /**
+   * The verdict this Move carried **when the reading was sealed**, recalled under
+   * the rows — `null` when nothing was written on it before the seal.
+   *
+   * Only meaningful with `posterior`, and read there: before the seal there is no
+   * sealed layer to recall. The requester could not find their sealed verdicts in
+   * the section named after the seal (US-23, F2) — not for want of data, but
+   * because the full recall (`SealedMarkReadout`) sits four blocks lower. That
+   * block stays where a measurement put it (ADR-0021: it is the one whose height
+   * genuinely varies); what joins the control is the **comparison**.
+   */
+  sealed?: DeclaredSeverity | null;
   onPose: (severity: DeclaredSeverity) => void;
   /**
    * Returns the Move to **silence**. Five exclusive radios can change a verdict
@@ -115,6 +128,21 @@ export function DeclaredSeverityControl({
           <span data-part="claim">{DECLARED_SEVERITY_MEANING[severity]}</span>
         </label>
       ))}
+      {/* What was sealed, beside what is being written now — and **always** on
+          screen once sealed, including when nothing was written on this Move
+          before the seal. Always, because a line that appeared and vanished per
+          ply would make this fieldset's height vary, which is precisely what the
+          suite measures at zero pixels (ADR-0021). One line, so it cannot. */}
+      {posterior && (
+        <p data-part="sealed-verdict">
+          Au scellement :{" "}
+          {sealed === null ? (
+            <em>rien sur ce coup</em>
+          ) : (
+            <strong>{DECLARED_SEVERITY_LABEL[sealed]}</strong>
+          )}
+        </p>
+      )}
       <button type="button" disabled={disabled || posed === null} onClick={onWithdraw}>
         Retirer mon verdict
       </button>
