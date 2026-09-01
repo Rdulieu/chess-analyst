@@ -197,7 +197,17 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
     expect(declarationsFor(css, 'ol[aria-label="moves"]').get("gap")).toBe(
       "var(--space-1) var(--space-2)",
     );
-    for (const value of move.values()) noAbsoluteLength(value);
+    // The hairline is the carve-out this file states at the top: a 1px border is
+    // not a layout length. The chip declares one, transparent, so the current
+    // Move can recolour it without adding two pixels to its box (US-23, D5) —
+    // which is precisely a rule about NOT reflowing, not a fixed layout.
+    for (const [property, value] of move) {
+      if (property === "border") {
+        expect(value).toMatch(/^1px solid/);
+        continue;
+      }
+      noAbsoluteLength(value);
+    }
   });
 
   it("keeps the curve landscape: its time axis stays wider than it is tall", () => {

@@ -90,3 +90,51 @@ describe("what does not move", () => {
     expect(banner).not.toContain("data-action");
   });
 });
+
+/**
+ * The Move being looked at (US-23, D5).
+ *
+ * `aria-current="true"` was posted on the right chip from the day the list
+ * existed, and NO rule of the sheet read it: the Player on a screen reader knew
+ * where they were, the one looking did not.
+ *
+ * The project's pattern for the current screen — weight and a border, never
+ * colour alone — does not transpose. The navigation carries eight tabs on one
+ * line; this list carries eighty chips in a wrapping flex. Weight widens the
+ * glyphs, an added border adds two pixels to the box, and either way everything
+ * after it shifts and the rows recompose on every arrow — the very defect
+ * ADR-0021 has just closed.
+ */
+describe("the chip of the Move being looked at", () => {
+  const chip = declarationsOfRule(css, 'ol[aria-label=moves] li button[aria-current=true]');
+
+  it("inverts ink and ground, which is a negative rather than a tint", () => {
+    // Perceptible with no colour perception at all, so ADR-0013's rule about a
+    // chromatic-only cue is not in play: nothing here is a hue.
+    expect(chip.get("background")).toBeDefined();
+    expect(chip.get("color")).toBeDefined();
+    expect(chip.get("background")).not.toBe(chip.get("color"));
+  });
+
+  it("changes no weight and adds no character", () => {
+    // Both would reflow the rows, which is exactly what must not happen.
+    expect(chip.has("font-weight")).toBe(false);
+    expect(chip.has("font-size")).toBe(false);
+    expect(chip.has("content")).toBe(false);
+    expect(chip.has("padding")).toBe(false);
+    for (const property of [...chip.keys()]) {
+      expect(property.startsWith("padding"), `${property} would resize the box`).toBe(false);
+      expect(property.startsWith("margin"), `${property} would move the box`).toBe(false);
+    }
+  });
+
+  it("borrows the border every chip already declares, so no box changes size", () => {
+    // The border is declared on ALL chips and left transparent off the current
+    // one: adding it only here would add two pixels only here.
+    const every = declarationsOfRule(css, 'ol[aria-label=moves] li button');
+    expect(every.get("border")).toMatch(/1px solid/);
+    expect(every.get("border")).toMatch(/transparent/);
+    // And the current chip only recolours it — it does not add width.
+    expect(chip.get("border-width")).toBeUndefined();
+  });
+});

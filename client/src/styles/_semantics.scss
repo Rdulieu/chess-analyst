@@ -80,6 +80,26 @@ ol[aria-label="moves"] {
   li button {
     padding: 0 var(--space-1);
     font-size: var(--text-s);
+    // Declared on EVERY chip and left transparent off the current one. Adding a
+    // border only to the current chip would add two pixels only there, and in a
+    // wrapping flex of eighty chips that reflows every row after it on each
+    // arrow — the defect ADR-0021 has just closed.
+    border: 1px solid transparent;
+  }
+
+  // The Move being looked at. `aria-current="true"` was posted on the right chip
+  // from the day the list existed and no rule read it: the Player on a screen
+  // reader knew where they were, the one looking did not (US-23, D5).
+  //
+  // It INVERTS — ink and ground swapped — rather than taking weight or an added
+  // border, both of which change the size of the box. A negative, not a tint: it
+  // stays perceptible with no colour perception at all, so it is not a
+  // chromatic-only cue in ADR-0013's sense. The accessible name does not change,
+  // and no character is added.
+  li button[aria-current="true"] {
+    background: var(--ink);
+    color: var(--ground);
+    border-color: var(--ink);
   }
 
   [aria-label="evaluation"] {

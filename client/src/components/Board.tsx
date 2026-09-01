@@ -15,6 +15,7 @@ import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
+import { plyNumber, startingPoint } from "../features/confrontation/moveName";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { GameRecap, MoveAnnotation } from "../types";
 
@@ -102,6 +103,10 @@ export function Board({
   orientation?: "white" | "black";
 }) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
+  // Where the numbering counts from. Almost every Game starts the usual way, but
+  // one set up from a Position has Black to move at ply 1 and its own Move
+  // number, so numbering from 1. would name every Move of it wrongly.
+  const start = useMemo(() => startingPoint(startFen), [startFen]);
   const [index, setIndex] = useState(0);
   /**
    * A Position shown **temporarily**, while the Player points at (or focuses) a
@@ -374,11 +379,18 @@ export function Board({
                   </li>
                 ),
                 <li key={i}>
+                  {/* The number is INSIDE the control (US-23, D4), so it is part
+                      of the accessible name: a Player on a screen reader hears
+                      which Move they are reaching, and one who dictates can say
+                      what they read. `12.` on White's half and `12…` on Black's —
+                      the whole Move's number on both would print `12. Nf3` then
+                      `12. Nc6`, and the second is false. */}
                   <button
                     type="button"
                     aria-current={index === i + 1 ? "true" : undefined}
                     onClick={() => goTo(i + 1)}
                   >
+                    {plyNumber(i + 1, start)}
                     {ply.san}
                   </button>
                   {moveMarks?.(i + 1)}
