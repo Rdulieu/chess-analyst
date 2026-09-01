@@ -117,6 +117,10 @@ export function GameViewer({
       <Board
         pgn={game.pgn}
         orientation={game.playerColor}
+        // The arrows step the Moves here too (US-23, D6). Passing this is also
+        // what makes the board SAY so — the two cannot come apart — so `Analyse`
+        // no longer has a navigation the reading route has and it lacks.
+        keyboardStepping
         annotations={mode === "unaided" ? undefined : (annotations ?? undefined)}
         detailed={mode === "detailed"}
         recap={recap}
