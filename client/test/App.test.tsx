@@ -4,6 +4,21 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { App } from "../src/App";
 import { OPERA_GAME } from "./fixtures";
+/**
+ * The current-Move readout names this Move — number then notation since US-23
+ * (F3), so a test that means "the readout is on this Move" says that rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function expectCurrentMove(san: string) {
+  if (san === "Start") {
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    return;
+  }
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(screen.getByLabelText("current move").textContent).toMatch(
+    new RegExp(`^\\d+[.\u2026]${escaped}$`),
+  );
+}
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, json: async () => body } as Response;
@@ -118,7 +133,7 @@ describe("App — routing & navigation", () => {
 
     // Previous/Next work exactly as before: Next advances one Move.
     await user.click(screen.getByRole("button", { name: /next/i }));
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
   });
 
   it("reaches a Profile's own page from the Profils list, and imports from there", async () => {
@@ -186,7 +201,7 @@ describe("App — routing & navigation", () => {
 
     // No list visit first: the page loads its own Game from the route param.
     await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
   });
 
   it("moves between pages through the menu, back to Mes parties", async () => {
@@ -355,6 +370,7 @@ describe("App — import UI", () => {
   });
 
   it("surfaces an import error without crashing", async () => {
+
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string | URL): Promise<Response> => {

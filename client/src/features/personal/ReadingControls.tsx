@@ -87,6 +87,10 @@ export function ReadingControls({
             posed={mark?.declaredSeverity ?? null}
             playersOwnMove={playersOwnMove}
             posterior={posterior}
+            // What this Move carried at the seal, recalled under the rows (US-23,
+            // F2). The sealed layer is read explicitly — `markAt` never guesses —
+            // and it is the same call the full recall below makes.
+            sealed={markAt(reading, ply, false)?.declaredSeverity ?? null}
             onPose={(severity) => onWrite(ply, { declaredSeverity: severity })}
             // `null` reaches the server as `null`: an omitted field would leave
             // the verdict exactly where it was.

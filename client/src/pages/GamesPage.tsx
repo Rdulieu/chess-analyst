@@ -77,6 +77,11 @@ export function GamesPage({ profile }: { profile: Profile }) {
               it. Importing is an operation ON a Profile (ADR-0014) and its form
               does not move: it is the DOOR that navigates, and the `#import`
               fragment asks for the form rather than merely for the page. */}
+          {/* ONE row for the two actions (US-23, F1). They were stacked siblings,
+              spending two rows on two short labels; the row's own rule — spacing,
+              and wrapping rather than overflowing — has existed since US-23-05,
+              and what was missing was that both actions be in it. Same shape as
+              the header of `/profiles`, where the two doors already share one. */}
           <p data-part="actions">
             <Link
               to={`/profiles/${profile.id}#import`}
@@ -87,11 +92,10 @@ export function GamesPage({ profile }: { profile: Profile }) {
             >
               Importer mes parties
             </Link>
+            <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
+              Analyser la sélection
+            </button>
           </p>
-
-          <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
-            Analyser la sélection
-          </button>
 
           <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
 

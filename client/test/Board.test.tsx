@@ -8,6 +8,22 @@ import { MoveMarks } from "../src/features/personal/MoveMarks";
 import { startingPosition } from "../src/chess/history";
 import { OPERA_PGN } from "./fixtures";
 import type { MoveAnnotation } from "../src/types";
+/**
+ * The current-Move readout names this Move — number then notation since US-23
+ * (F3), so a test that means "the readout is on this Move" says that rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function expectCurrentMove(san: string) {
+  if (san === "Start") {
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    return;
+  }
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(screen.getByLabelText("current move").textContent).toMatch(
+    new RegExp(`^\\d+[.\u2026]${escaped}$`),
+  );
+}
+
 
 /**
  * The list control for one Move, found by its notation.
@@ -53,7 +69,7 @@ describe("Board", () => {
     // After 1. e4 the pawn has moved from e2 to e4.
     expect(pieceAt(container, "e2")).toBeNull();
     expect(pieceAt(container, "e4")).toBe("wP");
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
   });
 
   it("reverts exactly one Move on Previous (not back to the start)", async () => {
@@ -65,7 +81,7 @@ describe("Board", () => {
     await user.click(next); // 1... e5
     await user.click(screen.getByRole("button", { name: /previous/i })); // back to 1. e4
 
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
     expect(pieceAt(container, "e4")).toBe("wP");
     expect(pieceAt(container, "e5")).toBeNull(); // black has not replied yet
   });
@@ -85,7 +101,7 @@ describe("Board", () => {
 
     expect(next.disabled).toBe(true);
     expect(prev.disabled).toBe(false);
-    expect(screen.getByLabelText("current move").textContent).toMatch(/^Rd8/);
+    expect(screen.getByLabelText("current move").textContent).toMatch(/^\d+[.\u2026]Rd8/);
   });
 
   it("jumps directly to the Position after a selected Move, without stepping through", async () => {
@@ -95,7 +111,7 @@ describe("Board", () => {
     // From the start, jump straight to White's 12th Move (queenside castling).
     await user.click(moveControl("O-O-O"));
 
-    expect(screen.getByLabelText("current move").textContent).toBe("O-O-O");
+    expectCurrentMove("O-O-O");
     expect(pieceAt(container, "c1")).toBe("wK");
     expect(pieceAt(container, "d1")).toBe("wR");
     expect(pieceAt(container, "e1")).toBeNull();
@@ -108,7 +124,7 @@ describe("Board", () => {
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(screen.getByLabelText("current move").textContent).toBe("Rd8");
+    expectCurrentMove("Rd8");
     expect(pieceAt(container, "d8")).toBe("bR");
   });
 
@@ -250,7 +266,7 @@ describe("Board", () => {
 
     await user.click(moveControl("axb8=Q"));
 
-    expect(screen.getByLabelText("current move").textContent).toBe("axb8=Q");
+    expectCurrentMove("axb8=Q");
     expect(pieceAt(container, "b8")).toBe("wQ");
   });
 });
@@ -1130,17 +1146,17 @@ describe("Board — the arrows are announced by whoever has them (US-23, D6)", (
     render(<Board pgn="1. e4 e5" keyboardStepping />);
 
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByLabelText("current move").textContent).toBe("e5");
+    expectCurrentMove("e5");
     // At the end it stays put rather than wrapping or throwing.
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByLabelText("current move").textContent).toBe("e5");
+    expectCurrentMove("e5");
 
     await user.keyboard("{ArrowLeft}{ArrowLeft}");
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
     await user.keyboard("{ArrowLeft}");
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
   });
 });
 
@@ -1183,5 +1199,39 @@ describe("Board — one board, one author (US-23, ADR-0022)", () => {
     for (const verdict of ["blunder", "mistake", "inaccuracy", "sound", "good"]) {
       expect(container.querySelectorAll(`[style*='--square-${verdict}']`)).toHaveLength(0);
     }
+  });
+});
+
+describe("Board — the current-Move readout carries its number (US-23, F3)", () => {
+  it("names the Move as the list does: the number, then the notation", () => {
+    // Slice 03 numbered the list and left this readout showing the SAN alone, so
+    // "le coup 23" was findable in one place and not in the other — the same need
+    // and the same rule (D4). It lives in this component, so both screens inherit.
+    render(<Board pgn={OPERA_PGN} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("current move").textContent).toBe("1.e4");
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("current move").textContent).toBe("1\u2026e5");
+  });
+
+  it("leaves the starting Position unnumbered — it is nobody's Move", () => {
+    render(<Board pgn={OPERA_PGN} />);
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+  });
+
+  it("stays ONE line in every state, evaluation included", () => {
+    // ADR-0021: this readout sits above the caller's controls and below the
+    // stepper, and it displaces nothing because it never wraps to a second line.
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
+    ];
+    render(<Board pgn="1. e4" annotations={annotations} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    const readout = screen.getByLabelText("current move");
+    // Number, notation, and the evaluation the readout already carried.
+    expect(readout.textContent).toMatch(/^1\.e4 \(/);
   });
 });

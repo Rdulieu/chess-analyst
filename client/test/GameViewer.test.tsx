@@ -4,6 +4,22 @@ import userEvent from "@testing-library/user-event";
 import { GameViewer } from "../src/features/games/GameViewer";
 import { OPERA_GAME } from "./fixtures";
 import type { MoveAnnotation } from "../src/types";
+/**
+ * The current-Move readout names this Move — number then notation since US-23
+ * (F3), so a test that means "the readout is on this Move" says that rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function expectCurrentMove(san: string) {
+  if (san === "Start") {
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    return;
+  }
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(screen.getByLabelText("current move").textContent).toMatch(
+    new RegExp(`^\\d+[.\u2026]${escaped}$`),
+  );
+}
+
 
 function stubAnnotations(plies: MoveAnnotation[]) {
   vi.stubGlobal(
@@ -160,7 +176,7 @@ describe("GameViewer", () => {
       el.hasAttribute("aria-label"),
     );
     expect(ours).toHaveLength(0); // no pass running here, and the move readout is no longer live
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
   });
 
   it("does not fetch annotations, and offers no level control, for a not-yet-analyzed Game", () => {
@@ -193,7 +209,7 @@ describe("GameViewer", () => {
   it("keeps the board free of annotations until the Game has been analyzed", () => {
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
     expect(screen.queryByLabelText("evaluation")).toBeNull();
   });
 
@@ -430,7 +446,7 @@ describe("GameViewer — Analyse steps from the keyboard (US-23, D6)", () => {
 
     // And they work: the board follows the arrow.
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
   });
 
   it("leaves the arrows to a focused radio group — the Review mode keeps its own", async () => {
@@ -453,11 +469,11 @@ describe("GameViewer — Analyse steps from the keyboard (US-23, D6)", () => {
     fireEvent.keyDown(annotated, { key: "ArrowRight" });
 
     // The Move did not change: the keystroke was the group's, not the board's.
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
 
     // And off the group, the same key is the board's again.
     fireEvent.keyDown(document.body, { key: "ArrowRight" });
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
   });
 });
 
