@@ -314,11 +314,22 @@ section[aria-label="partie"] {
     border-radius: var(--radius);
     cursor: pointer;
 
-    // The radio sits in the glyph's track, above it — the two never both show:
-    // the input is the semantics, the glyph is the appearance.
+    // The input IS the semantics — it is what makes this a group, and what gives
+    // the arrows, the rank announcement and the focus — so it stays in the tree
+    // and is merely **unpainted**. `display: none` or `visibility: hidden` would
+    // take it out and cost all three.
+    //
+    // Unpainted matters: for one commit the input and the glyph shared this cell
+    // and the native circle was drawn over the mark, so `✓` read as "Ø" and `!` as
+    // "(!)". The glyph is the non-chromatic cue ADR-0013 requires, so an
+    // illegible glyph is not a cosmetic problem.
     input {
       grid-column: 1;
       grid-row: 1;
+      appearance: none;
+      margin: 0;
+      inline-size: 100%;
+      block-size: 100%;
     }
 
     [data-part="glyph"] {
@@ -370,27 +381,27 @@ section[aria-label="partie"] {
   //
   // The ground is a constant-family token, so it takes the constant ink with it,
   // for the same reason the board's coordinate labels do.
-  label[data-severity="blunder"]:has(input:checked) {
+  label[data-verdict="blunder"]:has(input:checked) {
     background: var(--square-blunder);
     color: var(--square-notation);
   }
 
-  label[data-severity="mistake"]:has(input:checked) {
+  label[data-verdict="mistake"]:has(input:checked) {
     background: var(--square-mistake);
     color: var(--square-notation);
   }
 
-  label[data-severity="inaccuracy"]:has(input:checked) {
+  label[data-verdict="inaccuracy"]:has(input:checked) {
     background: var(--square-inaccuracy);
     color: var(--square-notation);
   }
 
-  label[data-severity="sound"]:has(input:checked) {
+  label[data-verdict="sound"]:has(input:checked) {
     background: var(--square-sound);
     color: var(--square-notation);
   }
 
-  label[data-severity="good"]:has(input:checked) {
+  label[data-verdict="good"]:has(input:checked) {
     background: var(--square-good);
     color: var(--square-notation);
   }
@@ -399,6 +410,15 @@ section[aria-label="partie"] {
   // which was chosen against the pane's ground and not against a verdict's tint.
   label:has(input:checked) :is([data-part="claim"], [data-part="glyph"]) {
     color: inherit;
+  }
+
+  // The focus ring moves to the ROW, because the box that used to carry it is no
+  // longer painted. Same colour and same offset as every other focus indicator in
+  // the app, so the keyboard journey reads the same everywhere — and
+  // `:focus-visible`, so a mouse click draws nothing.
+  label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   // The withdrawal is not a sixth value, so it does not read as a row.

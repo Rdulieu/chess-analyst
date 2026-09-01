@@ -73,13 +73,19 @@ export function DeclaredSeverityControl({
          * inside a 14rem column the five values reflowed into two or three rows of
          * tiny targets — the discomfort was layout, not vocabulary.
          *
-         * `data-severity` lets the sheet reinforce the row with the verdict's own
-         * tint (the tokens of the previous slice). The glyph and the word carry the
-         * meaning, so the tint is never the only cue (ADR-0013), and it is named on
-         * the element rather than reaching the accessible name — which is a label,
-         * not a hook.
+         * `data-verdict`, and deliberately **not** `data-severity`: the sheet tints
+         * ANY `[data-severity]` with the chrome's severity pair, a rule that exists
+         * for the move list's glyph. Wearing that attribute here tinted the three
+         * fault rows **while unchosen** — saying "this verdict is posed" about five
+         * rows at once — and dropped the claim to 2.75:1 on `Bévue`. The tint of a
+         * chosen row is this control's own business, and it comes from the SQUARE
+         * family (the board's), not the chrome's.
+         *
+         * The glyph and the word carry the meaning, so the tint is never the only
+         * cue (ADR-0013), and the value is named on the element rather than
+         * reaching the accessible name — which is a label, not a hook.
          */
-        <label key={severity} data-severity={severity}>
+        <label key={severity} data-verdict={severity}>
           <input
             type="radio"
             // Per ply: moving to another Move must not carry the previous one's

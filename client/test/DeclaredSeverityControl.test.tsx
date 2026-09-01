@@ -124,3 +124,29 @@ describe("what the control still is", () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe("what the row must NOT inherit", () => {
+  it("does not carry `data-severity`, which is the move-list chip's own hook", () => {
+    /*
+     * `_semantics.scss` tints ANY `[data-severity]` with the chrome's severity
+     * pair — it exists for the move list's glyph. Putting that attribute on these
+     * labels tinted the three fault rows **while unchosen**, which said "this
+     * verdict is posed" about five rows at once, and dropped the claim's contrast
+     * to 2.75:1 on `Bévue` (measured by the FP, both in this shape and in the
+     * stacked one). The tint of a chosen row is this control's own business, and
+     * it is drawn from the SQUARE family, not the chrome's.
+     */
+    control({ posed: "blunder" });
+
+    for (const row of rows()) {
+      expect(row.hasAttribute("data-severity")).toBe(false);
+      // It still names its value, for the sheet to reinforce the chosen one.
+      expect(row.getAttribute("data-verdict")).toBeTruthy();
+    }
+  });
+
+  it("names every value on its own row, in the displayed order", () => {
+    control();
+    expect(rows().map((r) => r.getAttribute("data-verdict"))).toEqual([...DECLARED_SEVERITIES]);
+  });
+});

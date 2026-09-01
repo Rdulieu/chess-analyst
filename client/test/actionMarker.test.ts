@@ -216,10 +216,43 @@ describe("the verdict control", () => {
     for (const severity of ["blunder", "mistake", "inaccuracy", "sound", "good"]) {
       const rule = declarationsFor(
         css,
-        `[data-part="declared-severity"] label[data-severity=${severity}]:has(input:checked)`,
+        `[data-part="declared-severity"] label[data-verdict=${severity}]:has(input:checked)`,
       );
       expect(rule.get("background"), severity).toBe(`var(--square-${severity})`);
       expect(rule.get("color"), severity).toBe("var(--square-notation)");
     }
+  });
+});
+
+describe("the radio under the row's appearance", () => {
+  /*
+   * The comment in the sheet always claimed "the input is the semantics, the glyph
+   * is the appearance" — and for one commit it was false: both sat in the same
+   * grid cell and the native circle was painted over the mark, so `✓` read as "Ø"
+   * and `!` as "(!)" (measured by the FP at 84042fa, against the previous shape
+   * where they stacked). The glyph is the non-chromatic cue ADR-0013 requires, so
+   * an illegible glyph is not a cosmetic problem.
+   *
+   * The input stays in the accessibility tree — it IS the group — so it is
+   * unpainted rather than removed, and the focus ring moves to the row.
+   */
+  it("drops the native box, so the glyph is what is drawn in that cell", () => {
+    const input = declarationsFor(css, '[data-part="declared-severity"] label input');
+    expect(input.get("appearance")).toBe("none");
+    // Not display:none and not visibility:hidden: either would take the radio out
+    // of the group and cost the arrows, the rank announcement and the focus.
+    expect(input.get("display")).not.toBe("none");
+    expect(input.get("visibility")).toBeUndefined();
+  });
+
+  it("draws the focus ring on the row, since the box that used to carry it is gone", () => {
+    const focused = declarationsFor(
+      css,
+      '[data-part="declared-severity"] label:has(input:focus-visible)',
+    );
+    expect(focused.get("outline")).toMatch(/var\(--accent\)/);
+    // Offset like every other focus ring in the app, so the keyboard journey reads
+    // the same everywhere.
+    expect(focused.get("outline-offset")).toBeDefined();
   });
 });
