@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01 (FP verte 5/5 aux vraies frappes CDP : carte des 64 cases distincte à chaque pas, 13 plys pour 13 événements en auto-répétition, notices à hauteur constante ; aucun finding bloquant)
 
 ## Parent
 
@@ -43,18 +43,18 @@ un comportement.
 
 ## Acceptance criteria
 
-- [ ] Sur `Analyse`, les flèches gauche/droite reculent et avancent d'un demi-coup, aux bornes de la
+- [x] Sur `Analyse`, les flèches gauche/droite reculent et avancent d'un demi-coup, aux bornes de la
       partie.
-- [ ] `Analyse` annonce les flèches, et **n'annonce aucune** commande de verdict ou de moment clé.
-- [ ] L'annonce des flèches est portée par le composant d'échiquier, de sorte qu'activer le pas au clavier
+- [x] `Analyse` annonce les flèches, et **n'annonce aucune** commande de verdict ou de moment clé.
+- [x] L'annonce des flèches est portée par le composant d'échiquier, de sorte qu'activer le pas au clavier
       sans l'annoncer soit impossible.
-- [ ] La notice de la route de lecture ne mentionne plus les flèches et mentionne toujours le verdict et
+- [x] La notice de la route de lecture ne mentionne plus les flèches et mentionne toujours le verdict et
       le moment clé ; l'écran de lecture annonce donc toujours les trois.
-- [ ] Les annonces sont sous les contrôles de pas et de hauteur constante d'un ply à l'autre.
-- [ ] Les gardes partagés sont inchangés : un raccourci-clavier du navigateur reste au navigateur, rien
+- [x] Les annonces sont sous les contrôles de pas et de hauteur constante d'un ply à l'autre.
+- [x] Les gardes partagés sont inchangés : un raccourci-clavier du navigateur reste au navigateur, rien
       n'est une commande pendant la saisie d'un texte, un groupe de radios focalisé garde ses flèches.
-- [ ] Maintenir une flèche continue de parcourir la partie (aucune garde de répétition sur la navigation).
-- [ ] La table des commandes de la route de lecture est inchangée.
+- [x] Maintenir une flèche continue de parcourir la partie (aucune garde de répétition sur la navigation).
+- [x] La table des commandes de la route de lecture est inchangée.
 
 ### Feature Path (FP)
 
