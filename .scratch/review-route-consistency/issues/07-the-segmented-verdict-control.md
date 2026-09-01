@@ -4,6 +4,22 @@ Status: `ready-for-human` — **HITL**. Implémentée sur `feature/US-23-07-the-
 > fieldset verdict **416,5 px** à 1280 et **435,5 px** à 380 ; panneau **816 / 946 px** (lecture non scellée), **836,5 / 957,5 px** (scellée).
 > L'écart 1280→380 est de +19 px, entièrement dû au retour à la ligne de la phrase de `Correct`.
 > Contraste de l'encre choisie sur sa teinte : 6,32 · 8,97 · 12,54 · 10,57 · 9,35 — tous au-dessus de 4,5:1, dans les deux thèmes.
+>
+> **Avant / après**, mesuré à `da8c0ce` puis `ebad5ba`, même lecture, mêmes largeurs, dans les deux thèmes :
+>
+> | thème / largeur | fieldset avant | rangées visuelles avant | fieldset après | Δ | pane avant → après |
+> | --- | --- | --- | --- | --- | --- |
+> | light 1280 | 66,5 px | 1 | 416,5 px | **+350,0** | 466 → 816 |
+> | light 380 | 122,5 px | 2 | 435,5 px | **+313,0** | 633 → 946 |
+> | dark 1280 | 66,5 px | 1 | 416,5 px | **+350,0** | 466 → 816 |
+> | dark 380 | 122,5 px | 2 | 435,5 px | **+313,0** | 633 → 946 |
+>
+> Le pane croît exactement du même nombre de pixels que le fieldset : rien d'autre n'a changé de taille.
+> Le delta est plus petit à 380 px parce que l'ancien contrôle y payait déjà son reflux — deux rangées
+> visuelles, étiquettes de **24 px**, les cibles minuscules du grill — et sa phrase n'était qu'un `title`
+> de survol (`claimsVisible: false`), donc invisible au clavier et au tactile.
+> À 380 px le pane « après » (946 px) dépasse le viewport de 900 px. La page ne déborde pas
+> horizontalement et rien ne bouge sous le doigt.
 
 ## Parent
 
