@@ -1,4 +1,4 @@
-Status: `ready-for-agent`
+Status: `done` — mergée sur `integration/US-23-review-route-consistency` le 2026-09-01 (FP verte 5/5 dans les deux thèmes : cinq teintes distinctes, 42,6 de distance RGB minimale, pièce noire à 13,31:1 et 11,78:1 sur les deux teintes neuves, 3 cases moteur sur `Analyse` et zéro du joueur ; un piège de pilotage encodé dans la bibliothèque)
 
 ## Parent
 
@@ -46,20 +46,20 @@ seul ». **Une case n'a ni colonne ni titre : elle n'a qu'une couleur.**
 
 ## Acceptance criteria
 
-- [ ] Sur la route de lecture, la case d'arrivée du coup courant est marquée dès qu'un verdict est posé
+- [x] Sur la route de lecture, la case d'arrivée du coup courant est marquée dès qu'un verdict est posé
       sur ce coup, pour **chacune** des cinq valeurs.
-- [ ] Les cinq teintes viennent de tokens ; deux tokens sont ajoutés pour `Sound` et `Good`, et `Sound`
+- [x] Les cinq teintes viennent de tokens ; deux tokens sont ajoutés pour `Sound` et `Good`, et `Sound`
       n'est pas peint comme une récompense.
-- [ ] Les tokens résolvent dans les deux thèmes, et la pièce posée sur la case garde son encre lisible
+- [x] Les tokens résolvent dans les deux thèmes, et la pièce posée sur la case garde son encre lisible
       dans les deux — même contrainte que la teinte du moteur.
-- [ ] Retirer le verdict retire la marque de la case.
-- [ ] Un verdict **postérieur** marque la case exactement comme un verdict scellé.
-- [ ] Un verdict posé sur un coup de l'adversaire marque la case comme les autres (le modèle ne distingue
+- [x] Retirer le verdict retire la marque de la case.
+- [x] Un verdict **postérieur** marque la case exactement comme un verdict scellé.
+- [x] Un verdict posé sur un coup de l'adversaire marque la case comme les autres (le modèle ne distingue
       pas le côté ; c'est l'écran qui dit qu'il ne sera pas compté).
-- [ ] Sur `Analyse`, la case continue de porter la teinte **du moteur**, et **aucune** marque du joueur
+- [x] Sur `Analyse`, la case continue de porter la teinte **du moteur**, et **aucune** marque du joueur
       n'apparaît sur cet échiquier.
-- [ ] Sur la route de lecture, **aucune** donnée du moteur n'atteint l'échiquier.
-- [ ] Aucune couleur n'est écrite en dur : l'audit des tokens reste vert.
+- [x] Sur la route de lecture, **aucune** donnée du moteur n'atteint l'échiquier.
+- [x] Aucune couleur n'est écrite en dur : l'audit des tokens reste vert.
 
 ### Feature Path (FP)
 
