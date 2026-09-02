@@ -483,12 +483,62 @@ Ce qui décide :
 sens d'ADR-0017. Peu, mais pas rien — et tranché maintenant parce que le rapport de D7 doit le
 produire **dès la revue**.
 
+## D16 — Deux ADR écrits
+
+Sur seize décisions, deux remplissent les trois critères (difficile à revenir dessus, surprenant sans
+le contexte, résultat d'un vrai arbitrage) :
+
+- **ADR-0023 — « The analysis names what it does not count »** (D3 + D15). Un lecteur futur verra un
+  glyphe sur un coup **exclu du dénominateur** et croira à une incohérence ; et 15c comme 15d se
+  bâtissent dessus, donc en changer après l'agrégat voudrait dire réécrire les deux côtés. L'ADR
+  consigne aussi le rejet le plus précieux : `Kc7` **falsifie** « il suffit d'abaisser un seuil ».
+- **ADR-0024 — « Reproducibility is the recap's, not the engine's »** (D2). Un lecteur qui découvre
+  que le driver n'envoie jamais `ucinewgame` conclura à un oubli et le « corrigera », payant un
+  ralentissement sur chaque recherche pour un déterminisme qui ne survit ni à une mise à jour de
+  Stockfish ni à un changement de profondeur. Garde-fou immédiat.
+
+Écartés, et pourquoi : **D8/D9** (affichage dérivé, écrit pour être supprimable) ; **D10** (protocole
+de mesure — sa place est le PRD) ; **D11** (méthode d'investigation ; si un signal devient un prédicat
+livré, c'est **lui** qui méritera un ADR) ; **D13** (principe pour une feature inexistante — il ira au
+glossaire avec elle) ; **D14** et **D12** (des mesures, rien de livré).
+
+## D17 — Découpage en sept tranches
+
+| # | Tranche | Ce qu'elle livre | Dépend de |
+| --- | --- | --- | --- |
+| **01** | Le tracé de dérive | ligne rouge à 100 %, échelle chiffrée, `ceiling = max(total, 100)` | — |
+| **02** | Le rapport re-jouable | outil sous `server/` + tests : une ligne **par coup du Player** — sévérité, motif d'exclusion, les cinq signaux, la `Phase` sous ses deux lectures, la sévérité adverse ; le récapitulatif par partie en est l'agrégat | — |
+| **03** | Les corpus | strates constituées, ~33 min d'analyse moteur, bilans lichess saisis, **double passe sur la 51** (l'écart 60,6 / 56,5) | 02 |
+| **04** | La revue | le dossier : discrimination des cinq signaux, sensibilité de la `Phase` et écart au découpage lichess, plancher à 10 % mesuré, attribution mesurée sur la partie disputée, **contrôle humain borné** là où la mécanique se trompe | 02, 03 |
+| **05** | Les arbitrages | décisions du demandeur : le prédicat, le seuil, où dépenser le bilan chess.com | 04 |
+| **06** | Le prédicat livré | glyphe + signal nommé sur les coups de la zone morte, dénominateur inchangé (ADR-0023) | 05 |
+| **07** | HP + PR | suite HP, PR `integration → develop` | 06 |
+
+Trois points à ne pas perdre :
+
+- **01 est indépendante.** D1 la classe en prérequis bloquant, mais elle ne bloque que la lecture
+  *visuelle* des parties — or la revue lira des **chiffres**. Elle reste en tête par honnêteté envers
+  D1 ; la déplacer ne casse rien.
+- **05 est une tranche sans code**, comme la 06 d'US-11 et la 07 d'US-12 : un point d'arrêt HITL,
+  gardé **explicite** parce que les stories précédentes ont montré qu'une décision implicite se fait
+  prendre par l'agent.
+- **06 peut ne rien livrer.** Si aucun des cinq signaux ne sépare, la tranche devient « documenter
+  l'angle mort ». C'est un résultat légitime (ADR-0023 le dit) et **le PRD doit l'écrire**, pour
+  qu'un agent ne se croie pas obligé de trouver quelque chose.
+
+Hors tranches, à ticketer séparément : le **bug** « Analyser cette partie silencieusement avalé sous
+une bannière de pass non acquittée » (l'écran montrant pendant ce temps la progression d'une **autre**
+partie ; le chemin de réanalyse de la tranche 07 d'US-15a n'est pas touché), et le **report de la
+feature de vocabulaire positif** (D13).
+
 ---
 
-# ⏸ Grill en pause — reprendre ici
+# ✅ Grill terminé
 
-~~Mis en pause après D10, à la question 11.~~ **Grill repris le 2026-09-02** ; la question 11 est
-tranchée en D11 ci-dessus. Ce qui suit reste la liste des sujets ouverts.
+~~Mis en pause après D10.~~ **Grill terminé le 2026-09-02** — D1→D17, deux ADR (0023, 0024), sept
+tranches. Prochaine étape : `/to-prd` puis `/to-issues`. Ce qui suit est l'ancienne liste des sujets
+ouverts, conservée pour mémoire : tous sont désormais tranchés, sauf les deux explicitement reportés
+(où dépenser le second bilan chess.com — après la revue ; le bug à ticketer — hors périmètre).
 
 ## La question 11, telle qu'elle était posée
 
