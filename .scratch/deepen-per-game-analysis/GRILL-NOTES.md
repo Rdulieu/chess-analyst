@@ -445,6 +445,44 @@ phase.** Il y a donc un comparateur, et comme pour D6 il est **ouvert** : on peu
 confronter nos frontières aux leurs, mais **lire leur règle**. Le relevé porte donc deux choses : la
 sensibilité de notre règle à ses deux lectures, et son écart au découpage lichess.
 
+## D15 — Les motifs d'exclusion restent **deux** ; le signal est nommé à côté
+
+D'abord, la question « faut-il retirer la distinction des coups forcés à l'écran ? » se referme
+d'elle-même. Le glossaire dit que **`forced` peut exclure un coup qui *est* signalé** — un unique coup
+légal qui se trouve être une reprise catastrophique fait chuter les chances comme un `Blunder` et
+n'est la faute de personne. « Aucun coup forcé n'est jamais signalé » sur sept parties est donc un
+**fait d'échantillon**, pas une propriété. C'est même exactement le cas que le mécanisme « montré par
+la partie, non retenu par l'analyse » avait été bâti pour porter — et **D3 vient de lui donner un
+second occupant**. Le mécanisme n'était pas mort, il n'avait jamais tiré. On s'apprête à s'en servir.
+
+Reste le vrai choix de modèle. Les coups de la zone morte que D3 va marquer (`Ke6`, `Bxb2`, `Bd4`)
+sont **déjà** exclus, sous le motif `decided`.
+
+Rejeté — **les laisser `decided` sans plus** : deux coups exclus pour la même raison s'afficheraient
+différemment, l'un avec un glyphe, l'autre sans, et **rien dans le modèle n'expliquerait pourquoi**.
+Rejeté — **un troisième motif** (« décidée, mais la faute est visible ») : le modèle dirait ce que
+l'écran montre, mais au prix d'un motif de plus dans un vocabulaire qu'ADR-0017 tient volontairement
+court, et 15c devrait décider quoi en faire.
+
+**Retenu** : le motif reste `decided` — `UncountedReason` garde ses **deux** valeurs — et c'est le
+**signal** qui est nommé à côté. Deux axes distincts : *pourquoi ce n'est pas compté* (le motif,
+inchangé) et *pourquoi c'est quand même montré* (le signal qui l'a déclenché : « du matériel a changé
+de camp », « le mat est passé de 7 à 1 »).
+
+Ce qui décide :
+
+1. La propriété qu'ADR-0017 protège reste **intacte** — les motifs partitionnent le dénominateur et
+   leur nombre ne bouge pas. **15c continue de sommer deux motifs, pas trois.**
+2. C'est cohérent avec la façon dont l'app parle déjà : le glossaire refuse les adjectifs inventés
+   (« erreur tactique ») et montre **la ligne** ; ici on montre **le signal** — un fait mécanique,
+   pas notre jugement, et vérifiable par le Player sur l'échiquier.
+3. Ça reste ouvert : si la revue trouve **deux** signaux discriminants au lieu d'un, ce modèle les
+   accueille sans motif nouveau, là où un troisième motif en demanderait un quatrième.
+
+**Prix assumé** : un champ de plus dans le relevé par coup, donc dans ce qu'une partie « porte » au
+sens d'ADR-0017. Peu, mais pas rien — et tranché maintenant parce que le rapport de D7 doit le
+produire **dès la revue**.
+
 ---
 
 # ⏸ Grill en pause — reprendre ici
