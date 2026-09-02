@@ -560,6 +560,85 @@
   > Du confort de liste, **pas** de l'analyse : rien ici ne touche au modèle, aux `Evaluation`s ni à la
   > `Confrontation`. À prendre **après US-26**, qui elle touche une garantie documentée.
 
+- **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
+  niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.
+  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur : une partie fraîchement
+  > analysée s'est ouverte **en `Détaillé`**, alors que la lecture autonome suppose `Sans aide`.
+  >
+  > ### Ce n'est pas un bug : deux phrases de `CONTEXT.md` se contredisent
+  >
+  > À dire au grill d'emblée, pour qu'il sache qu'il **amende une décision** et ne répare pas un
+  > oubli. Le code fait exactement ce qui est écrit, et c'est écrit deux fois, en sens contraire :
+  >
+  > > *« The default is **Unaided**: a Game is opened to be read, and the engine's verdict is
+  > > something the Player asks for rather than something the app volunteers. **The choice is
+  > > remembered**, so it is made once and not on every Game. »*
+  >
+  > `loadReviewMode()` rend `unaided` **uniquement quand rien n'est stocké** ; dès que le joueur a
+  > choisi `Détaillé` une fois, `saveReviewMode` l'écrit dans `localStorage`
+  > (`chess-analyst.review-mode`) et **toutes les parties suivantes s'ouvrent là**, indéfiniment et
+  > sur toutes les sessions. Le comportement est **couvert par les tests**
+  > (`client/test/reviewMode.test.ts` : *« remembers the chosen level, so it is chosen once and not
+  > on every Game »*). Le « défaut par défaut » ne s'applique donc qu'au tout premier usage.
+  >
+  > Écarté après vérification : la promotion de fin de passe n'y est pour rien. `atLeastAnnotated`
+  > monte `unaided` à `annotated` et **jamais** à `detailed`, et elle n'est pas persistée. Le
+  > `Détaillé` observé vient bien du choix mémorisé.
+  >
+  > ### La vraie conséquence : la provenance est estampillée à l'ouverture
+  >
+  > C'est ce qui fait la gravité, et ce que la note ne dit pas. `GameViewer` porte un `useEffect` qui
+  > s'exécute **au montage** :
+  >
+  > ```
+  > if (showsEngine({ analyzed: game.analyzed, mode })) noteEngineShown(game.id);
+  > ```
+  >
+  > `showsEngine` est vrai dès que la partie est analysée **et** que le niveau dépasse `Sans aide`.
+  > Donc ouvrir une partie fraîchement analysée avec un `Détaillé` mémorisé **inscrit immédiatement**
+  > la partie dans `chess-analyst.engine-seen` — avant toute lecture, sans geste du joueur. Et
+  > `noteEngineShown` n'a **pas de contraire** : repasser en `Sans aide` dans la seconde ne l'efface
+  > pas.
+  >
+  > Or ce drapeau n'est pas décoratif. `CONTEXT.md` le désigne comme **la seule chose affichée qui
+  > devient persistante** — il est remis au serveur au sceau et **étiquette l'`Analyse personnelle`**
+  > (« lue à l'aveugle » vs « lue informée »), c'est-à-dire ce qui rend la `Confrontation`
+  > interprétable. Une lecture réellement autonome peut donc être archivée comme informée. Le
+  > commentaire d'`engineSeen.ts` prévient lui-même du sens de l'erreur : un drapeau faux *« serait
+  > pire qu'inutile, parce qu'il se tromperait dans la direction qui discrédite le travail du
+  > joueur »*. C'est exactement le cas ici, et la garantie qu'`engineSeen` protège explicitement est
+  > franchie par un simple `localStorage` de la veille.
+  >
+  > **Ce que la story ne prétend pas** : `Review mode` n'a jamais été une contrainte, seulement un
+  > libellé (le glossaire a refusé le nom *Blind mode* pour cette raison). Il ne s'agit pas
+  > d'empêcher de regarder, mais que **l'app ne montre pas d'elle-même** ce qu'on ne lui a pas
+  > demandé, et n'en tire pas une conclusion sur le joueur.
+  >
+  > ### Le levier existe déjà dans le code
+  >
+  > La distinction utile est **déjà faite** ailleurs, et bien commentée : à la fin d'une passe,
+  > `setMode(atLeastAnnotated)` bouge **cette revue-ci** sans écrire le niveau mémorisé — *« Only
+  > THIS review moves — the remembered level is left alone. »* Le défaut est que l'ouverture, elle,
+  > ne connaît qu'une seule portée. Séparer « le niveau de cette revue » de « le niveau mémorisé »
+  > est vraisemblablement tout le correctif.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Quelle phrase de `CONTEXT.md` survit** — la mémorisation disparaît, ou elle se réduit (à la
+  >   session, à la partie), ou le défaut redevient inconditionnel à chaque ouverture. La glose du
+  >   glossaire est à réécrire dans tous les cas, et c'est une décision de produit.
+  > - **Le drapeau doit-il rester posé au montage ?** Un niveau hérité n'est pas un geste. Une piste :
+  >   ne l'inscrire qu'après un choix explicite, ou qu'après un rendu réellement regardé — sans
+  >   retomber dans la promesse d'étanchéité que le projet a refusée.
+  > - **Que faire des drapeaux déjà posés à tort.** Ils vivent dans le `localStorage` du navigateur,
+  >   et pour les lectures déjà scellées ils sont **en base**. `CONTEXT.md` interdit de deviner (tout
+  >   repli vaut « non vu »), donc les corriger d'office est exclu ; les laisser fausse les
+  >   `Confrontation` passées. À nommer explicitement plutôt qu'à découvrir après coup.
+  >
+  > **Lien** : la `Confrontation` est le consommateur de ce drapeau, donc **US-26** a intérêt à ce que
+  > celle-ci soit tranchée d'abord — sans quoi elle bâtira un écran de détail sur une provenance
+  > dont on sait qu'elle peut mentir.
+
 ## Doing
 
 ## In review
