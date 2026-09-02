@@ -17,6 +17,21 @@
 export type Phase = "early" | "middlegame" | "endgame";
 
 /**
+ * Which half-move the move cap fires on, and it is a **reading** rather than a
+ * setting: `after-white` — the one this app has always used — means White's
+ * `MOVE_CAP`-th Move is the first no longer in the Early game; `on-number` is the
+ * naive test on the move number alone, which a FEN satisfies half a move earlier,
+ * on **Black's** 14th, because the number rises on Black's Move.
+ *
+ * The alternative exists so the choice can be **measured** on real Games instead
+ * of argued (D14 of US-15a-bis): the `Phase` enters no calculation today, and
+ * knowing how many Moves the two readings disagree about is what says whether the
+ * debate is empty or whether US-15c must not build on this axis yet. It is not a
+ * feature and nothing in the app passes it.
+ */
+export type CapReading = "after-white" | "on-number";
+
+/**
  * The move at which the Early game ends whatever the position looks like — a
  * backstop against a passive Game claiming to still be starting after forty
  * moves, not the usual boundary, which is development.
@@ -60,13 +75,13 @@ const MINOR_HOME: Record<"white" | "black", { square: string; piece: string }[]>
  * Positions reached in two Games can be in different Phases, and that is
  * correct.
  */
-export function phases(fens: string[]): Phase[] {
+export function phases(fens: string[], cap: CapReading = "after-white"): Phase[] {
   let reached: Phase = "early";
   return fens.map((fen) => {
     const position = parse(fen);
     if (reached !== "endgame" && pieceCount(position.placement) <= ENDGAME_PIECES) {
       reached = "endgame";
-    } else if (reached === "early" && startIsOver(position)) {
+    } else if (reached === "early" && startIsOver(position, cap)) {
       reached = "middlegame";
     }
     return reached;
@@ -98,8 +113,8 @@ function parse(fen: string): Position {
  * Game's and not one Player's: a Game where White has castled and Black has not
  * yet moved a piece has not finished starting.
  */
-function startIsOver(position: Position): boolean {
-  if (capReached(position)) return true;
+function startIsOver(position: Position, cap: CapReading): boolean {
+  if (capReached(position, cap)) return true;
   return (["white", "black"] as const).every((side) => developed(position, side));
 }
 
@@ -108,9 +123,12 @@ function startIsOver(position: Position): boolean {
  * reached. A Position after White's Move has **Black** to move on the same move
  * number, which is exactly the half-move the naive `fullmove >= cap` gets wrong.
  */
-function capReached(position: Position): boolean {
+function capReached(position: Position, cap: CapReading): boolean {
   if (position.fullmove > MOVE_CAP) return true;
-  return position.fullmove === MOVE_CAP && position.toMove === "b";
+  if (position.fullmove !== MOVE_CAP) return false;
+  // On the number alone the cap fires as soon as the Position carries it, which
+  // is one half-move before White has played their `MOVE_CAP`-th Move.
+  return cap === "on-number" || position.toMove === "b";
 }
 
 /**
