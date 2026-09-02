@@ -58,51 +58,58 @@ export function DriftGraph({
           </li>
         ))}
       </ul>
-      <svg aria-hidden="true" viewBox={`0 0 ${span} 100`} preserveAspectRatio="none">
-        {/* The area under the running total: a surface reads as an accumulation,
-            where a bare line reads as a value. */}
-        <polygon points={`0,100 ${line} ${lastX},100`} />
-        {/* The Phase boundaries, drawn OVER the area and never as a background
-            band: the area is opaque and full height, so anything painted behind
-            it is invisible — and tinting over it would move the measured contrast
-            of the marks (ADR-0013). */}
-        {bands.slice(1).map((band) => (
+      {/* The plot's own box, and it earns a wrapper: the frame, the ground and the
+          one pixel of headroom the whole-Game rule needs are declared on it. That
+          headroom is load-bearing — the rule sits flush on the top edge on any
+          Game under 100 %, which is most of them, and half its stroke would
+          otherwise be clipped by the very frame it is meant to be inside. */}
+      <div data-part="drift-plot">
+        <svg aria-hidden="true" viewBox={`0 0 ${span} 100`} preserveAspectRatio="none">
+          {/* The area under the running total: a surface reads as an accumulation,
+              where a bare line reads as a value. */}
+          <polygon points={`0,100 ${line} ${lastX},100`} />
+          {/* The Phase boundaries, drawn OVER the area and never as a background
+              band: the area is opaque and full height, so anything painted behind
+              it is invisible — and tinting over it would move the measured contrast
+              of the marks (ADR-0013). */}
+          {bands.slice(1).map((band) => (
+            <line
+              key={band.from}
+              data-mark="phase-boundary"
+              x1={band.from}
+              y1={0}
+              x2={band.from}
+              y2={100}
+              strokeWidth={0.5}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          {/* A whole Game's worth of chances, ruled across the box. Above it a Game
+              cost more than a Game is worth; below it, less. It is drawn OVER the
+              area for the same reason as the Phase boundaries — the area is opaque
+              — and it is never identified by its colour alone: the scale prints
+              "100 %" beside it, at its own height. */}
           <line
-            key={band.from}
-            data-mark="phase-boundary"
-            x1={band.from}
-            y1={0}
-            x2={band.from}
-            y2={100}
-            strokeWidth={0.5}
+            data-mark="hundred"
+            x1={0}
+            y1={hundred}
+            x2={span}
+            y2={hundred}
+            strokeWidth={1}
+            strokeDasharray="4 3"
             vectorEffect="non-scaling-stroke"
           />
-        ))}
-        {/* A whole Game's worth of chances, ruled across the box. Above it a Game
-            cost more than a Game is worth; below it, less. It is drawn OVER the
-            area for the same reason as the Phase boundaries — the area is opaque
-            — and it is never identified by its colour alone: the scale prints
-            "100 %" beside it, at its own height. */}
-        <line
-          data-mark="hundred"
-          x1={0}
-          y1={hundred}
-          x2={span}
-          y2={hundred}
-          strokeWidth={1}
-          strokeDasharray="4 3"
-          vectorEffect="non-scaling-stroke"
-        />
-        <line
-          data-mark="cursor"
-          x1={currentPly}
-          y1={0}
-          x2={currentPly}
-          y2={100}
-          strokeWidth={0.8}
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+          <line
+            data-mark="cursor"
+            x1={currentPly}
+            y1={0}
+            x2={currentPly}
+            y2={100}
+            strokeWidth={0.8}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </div>
     </div>
   );
 }

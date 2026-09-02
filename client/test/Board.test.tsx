@@ -735,6 +735,21 @@ describe("Board — the second drawing", () => {
     expect((label as HTMLElement).style.top).toBe(`${rule.getAttribute("y1")}%`);
   });
 
+  it("frames the plot in its own box, so the scale's figures sit OUTSIDE the frame", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    const plot = container.querySelector('[data-part="drift-plot"]')!;
+    const scale = container.querySelector('[data-part="drift-scale"]')!;
+    // The frame, the ground and the one pixel of headroom the rule needs are all
+    // declared on this element: without it in the markup, ten lines of the
+    // stylesheet are inert and the drawing has no frame at all — which is what
+    // the Feature Path of this slice found.
+    expect(plot.querySelector("svg")).not.toBeNull();
+    expect(plot.contains(scale)).toBe(false);
+  });
+
   it("keeps the second drawing out of Annotated, where its figures exist in no text", () => {
     const { container } = render(<Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} />);
 
