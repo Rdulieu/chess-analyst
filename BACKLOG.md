@@ -91,7 +91,14 @@
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
   > - **US-15a** — Comprendre l'analyse sur **une** partie. Sortie de l'EPIC en story autonome, sur
   >   sa propre branche d'intégration : **livrée et mergée** (PR #58, 2026-08-23), voir `## Done`.
-  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
+  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur). **Prémisse corrigée le
+  >   2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.** `clocks=true` n'est pas envoyé
+  >   à l'export (`platform/lichess/client.ts` n'envoie que `since`, `until`, `pgnInJson`, `opening`,
+  >   `sort`), donc le PGN arrive **sans** `[%clk]`. Mesuré en base : **282 parties chess.com sur 282
+  >   portent l'horloge, 1 sur 434 côté lichess.** La story n'est donc pas « un parseur, zéro coût
+  >   moteur » : c'est un paramètre d'export, **plus une reprise d'import** des parties lichess déjà
+  >   là — et le PGN stocké devra être remplacé, pas complété. Tant que ce n'est pas fait, tout axe
+  >   « pression du temps » ne vaudrait que pour un compte sur deux, en silence.
   > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
   >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
   >   du récapitulatif par partie (ADR-0017), tout approximatif se propage.
@@ -113,6 +120,20 @@
   > - Méthode : **dorsale sans motifs** (axes dérivés du moteur et du FEN — phase, matériel,
   >   tactique manquée vs dérive, pression du temps, position calme/tranchante), puis **détection par
   >   règles greffée un motif à la fois**. **Pas de LLM** (décision du demandeur).
+  > - **Retour de terrain, 2026-09-02** — première évaluation d'une lecture réelle de bout en bout
+  >   (partie 715, rapport hors app). Deux des axes annoncés ci-dessus viennent de recevoir leur
+  >   première preuve d'utilité, et le constat est le même dans les deux cas : **l'app a la donnée et
+  >   n'en fait rien.**
+  >   - **Matériel.** La partie s'est perdue dans une finale **deux tours contre une dame**, et
+  >     **81 % des dégâts comptés** y sont concentrés. Le joueur a nommé ce thème lui-même, en
+  >     aveugle, au moment où il commençait à le subir. Rien dans l'app ne sait reconnaître ce
+  >     déséquilibre : la conclusion la plus utile du rapport a dû être lue dans le PGN à la main.
+  >     L'axe « matériel » n'est donc plus une hypothèse de méthode, il a un cas.
+  >   - **Phase.** Le champ existe **déjà** sur chaque demi-coup (`phase` dans les annotations), et
+  >     n'est agrégé nulle part : le récapitulatif donne des totaux, jamais une répartition. Localiser
+  >     les dégâts a demandé de sommer `chancesLost` par tranche à la main. Le coût d'exploitation est
+  >     donc bien plus faible que celui d'une détection neuve — c'est un `group by` sur une donnée
+  >     déjà écrite.
   > - **Premier chantier** : le moteur calcule `bestmove` **et la variante**, et on les **jette** —
   >   `uci-driver.ts` collecte toutes les lignes `info` puis n'en garde que le score et `bestmove`.
   >   Tout motif est une affirmation sur l'écart entre le coup joué et le meilleur coup, donc sans
@@ -177,6 +198,18 @@
   >
   > **Matière première déjà identifiée** — les points laissés ouverts par les sept FP, à instruire
   > sur de vraies parties plutôt qu'à trancher sur le papier :
+  > - **`cp2` est payé et n'est lu par personne — ajouté le 2026-09-02.** Le score de la deuxième
+  >   ligne est **écrit en base** (`evaluations.cp2` / `mate2`, 108 lignes sur 110 pour la partie
+  >   715), au prix de MultiPV = 2, soit le **2,1×** de temps moteur mesuré et assumé en 15a-01. Il
+  >   est produit par `analysis/service.ts` et **consommé nulle part** : `grep cp2` ne rend que le
+  >   schéma et l'écriture, ni serveur ni client ne le relisent. Son propre commentaire dit à quoi il
+  >   sert : *« ce qui dit si le meilleur coup était le seul à jouer »*.
+  >   C'est **la** question à laquelle une évaluation de lecture ne sait pas répondre aujourd'hui :
+  >   manquer le seul coup gagnant et en manquer un parmi trois ne disent pas la même chose du
+  >   joueur. Cette story est le bon endroit — le temps moteur est **déjà dépensé**, l'exposer est
+  >   dérivé (ADR-0009), donc sans ré-analyse ni migration, exactement comme le reste de la passe.
+  >   Reste à trancher : jusqu'où le rendre visible (une lecture par coup ? un axe « coup forcé /
+  >   coup unique » ?), sachant qu'un **coup forcé n'est jamais signalé** par construction.
   > - **Les seuils de `Phase`.** Annoncés « heuristiques, pas des faits » et affichés exprès pour
   >   être contestés. Le cap « coup 15 » est implémenté comme *le 15e coup des Blancs est le premier
   >   hors début de partie* ; l'autre lecture décale d'un coup entier. Et « développement achevé »
@@ -716,6 +749,91 @@
   > portent déjà le sens, la teinte s'y ajoute — c'est bien le cas ici, la demande est additive.
   > Les jetons se déclarent en toutes lettres, jamais par interpolation : l'audit de cohérence des
   > jetons lit la feuille comme source et ne voit pas un nom assemblé dans une boucle.
+
+- **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
+  invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
+  > **Pas encore grillée.** Ouverte le 2026-09-02, à partir d'une demande écrite **dans une lecture**
+  > (partie 715, note du coup 17) : *« Voir les erreurs de l'adversaire me paraît important aussi. Il
+  > faut qu'on réfléchisse si on veut ajouter ce point dans l'analyse. »*
+  >
+  > ### Le constat
+  >
+  > L'`Analysis pass` évalue **toutes** les positions — les 110 demi-coups de la partie 715 sont en
+  > base — mais ne classe en sévérité **que les coups du joueur**. Les coups de l'adversaire n'ont
+  > donc jamais de verdict moteur, alors que la donnée qui permettrait de le calculer est déjà là.
+  >
+  > Côté joueur, la conséquence est plus dure : il **marque** des coups adverses (23 sur cette
+  > partie), et la `Confrontation` les jette dans `unscored.opponent`. Il travaille, et son travail
+  > n'est ni noté ni rendu.
+  >
+  > ### Ce que ça a coûté, mesuré
+  >
+  > Sur la partie 715, en recalculant hors application avec **la bande publiée du projet**
+  > (`classifyMove` : ≥ 10 imprécision, ≥ 20 erreur, ≥ 30 bévue) :
+  > - l'adversaire a commis **7 fautes réelles** ;
+  > - le joueur en a jugé 14 coups : **8 justes, 2 manques lourds** (`20.b3` à −27,9 et `35.Qd4` à
+  >   −22,0 — deux cadeaux non ramassés), **3 fausses alertes**, 1 rangée une bande trop haut ;
+  > - **3 fautes adverses réelles** (`22.Kh1`, `23.hxg4`, `25.Ree1`, ~−12 chacune) n'ont même pas été
+  >   regardées.
+  >
+  > Ce dernier chiffre est le plus parlant : ce que le joueur ne regarde pas du tout est **invisible
+  > à l'app**, donc absent de tout futur profil de faiblesses. Un joueur qui rate systématiquement
+  > les occasions qu'on lui donne a un problème que l'agrégat d'US-15c ne verra jamais.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Une sévérité adverse est-elle la même chose qu'une sévérité du joueur ?** Le vocabulaire est
+  >   partagé (`Inaccuracy`/`Mistake`/`Blunder`), mais un `Counted Move` est défini sur le joueur, et
+  >   `Drift` compte ses pertes à lui. Réutiliser les mêmes tables sans le dire mélangerait deux
+  >   comptes qui n'ont pas le même sujet.
+  > - **Un seul seuil, toujours.** `move-quality.ts` dit en toutes lettres pourquoi il ne doit pas y
+  >   en avoir un second. Un seuil adverse distinct serait exactement la divergence que ce commentaire
+  >   interdit — et la première mesure hors app est tombée dans le piège avant d'être corrigée.
+  > - **Où ça s'affiche.** Deux lectures sur un même écran, c'est le sujet d'**US-26** ; ADR-0022 dit
+  >   qu'une case ne peut pas porter deux auteurs. Ajouter un **troisième** auteur (le moteur sur
+  >   l'adversaire) est à instruire avec elle, pas contre elle.
+  > - **Le taux d'accord doit-il l'intégrer ?** Sinon la demande du joueur reste à moitié satisfaite :
+  >   il verrait les fautes adverses sans jamais savoir s'il les a bien lues.
+  >
+  > **Dépendance faible à US-26**, qui porte l'écran ; aucune au moteur, la donnée existe déjà.
+
+- **US-31**: Horodater chaque marque d'une lecture — pour savoir dans quel ordre le joueur a
+  vraiment réfléchi, et pas seulement ce qu'il a conclu.
+  > **Pas encore grillée. Basse priorité, explicitement** — arbitrée comme telle par le demandeur le
+  > 2026-09-02, la moins intéressante des cinq lacunes relevées ce jour-là. La position en fin de
+  > `## To do` ne suffit pas à le dire (l'ordre de cette section n'est pas un rang), donc c'est écrit
+  > ici.
+  >
+  > ### Le constat
+  >
+  > `personal_marks` porte `(analysis_id, ply, declared_severity, note, key_moment, posterior)` et
+  > **aucun horodatage** : ni date d'écriture, ni ordre. Seul `personal_analyses` en a deux, pour la
+  > création et le sceau. On sait donc *quand la lecture a commencé et fini*, jamais *comment elle
+  > s'est déroulée*.
+  >
+  > ### Ce que ça a coûté, une fois
+  >
+  > L'évaluation de la partie 715 a conclu que « l'analyse ne se relit pas elle-même » : un regret
+  > écrit au coup 36 (*« pousser le pion en e2 était mieux »*) n'a jamais été appliqué au coup 36
+  > après que le coup 37 en a montré la conséquence. **Cette conclusion suppose que les notes ont été
+  > écrites dans l'ordre des coups, et rien ne le prouve.** Si le joueur est revenu en arrière,
+  > l'observation tombe. Elle a été rendue avec plus d'assurance qu'elle n'en méritait.
+  >
+  > ### Ce que ça ouvrirait
+  >
+  > Un `written_at` par marque est la seule donnée qui dirait **comment** le joueur analyse plutôt que
+  > ce qu'il conclut : où il hésite, où il revient, où il accélère, combien de temps il passe sur un
+  > coup qu'il finit par déclarer correct. C'est de la même famille que la contrainte d'auditabilité
+  > d'US-15 — sauf que l'objet audité serait le raisonnement, pas le calcul.
+  >
+  > ### Ce que le grill devra trancher, s'il a lieu
+  >
+  > - **Une colonne ou plusieurs ?** Première écriture, dernière modification, ou un journal — trois
+  >   coûts très différents, et un journal n'est plus une colonne mais une table.
+  > - **La migration est due** (ADR-0015) : colonne nullable, les marques existantes restant sans
+  >   date. Aucune reconstruction possible, et c'est un fait à assumer, pas une dette.
+  > - **Est-ce observer le joueur ?** Mesurer le temps passé sur chaque coup change la nature de
+  >   l'exercice. À poser avant de coder, pas après.
 
 ## Doing
 
