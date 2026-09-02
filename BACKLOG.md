@@ -193,6 +193,27 @@
   >
   > **Matière première déjà identifiée** — les points laissés ouverts par les sept FP, à instruire
   > sur de vraies parties plutôt qu'à trancher sur le papier :
+  > - **Le seuil d'`Inaccuracy` est trop haut — ajouté le 2026-09-02, retour du demandeur.** *« Je
+  >   vois souvent des trucs qui ne sont pas mis en valeur par le moteur. »* C'est **la** story pour
+  >   ça : son argument porteur est que tout est dérivé (ADR-0009) et donc **retunable sans
+  >   ré-analyse ni migration** — `recap.ts` le dit à l'endroit exact du calcul, *« retuning a
+  >   threshold retunes this »*.
+  >   **Mais un seuil ne se baisse pas tout seul, et le grill doit savoir ce qu'il déplace :**
+  >   - `INACCURACY_DROP = 10` est **aussi le plancher du `Counted Move`** — exporté pour les deux
+  >     usages, exprès, « un seuil publié, lu aux deux endroits ». Le baisser élargit donc du même
+  >     geste l'ensemble des coups qui *comptent*, pas seulement celui des coups signalés.
+  >   - **`Drift` est le complément du seuil**, avec l'invariant `flaggedLoss + drift ===
+  >     chancesLost`. Descendre le plancher **transfère de la masse de la dérive vers le signalé** :
+  >     tous les récapitulatifs changent, et l'agrégat d'US-15c avec eux. Ce n'est pas un effet de
+  >     bord, c'est le mécanisme.
+  >   - **`CONTEXT.md` publie la bande** (« 10–20 % », « en dessous de 10 % n'est pas signalé ») :
+  >     la changer est un amendement de glossaire, pas un réglage.
+  >   **Contre-hypothèse à instruire avant de toucher au seuil** : l'évaluation de la partie 715 a
+  >   conclu l'inverse — à **profondeur 16 sur deux lignes**, en blitz, un écart de 10 points de
+  >   chances est du bruit autant qu'une faute. Si le demandeur voit des coups faibles non signalés,
+  >   la cause peut être le **`Search regime`** et non le plancher. Baisser le seuil sur un régime
+  >   trop court produirait du signalement de bruit — précisément ce que le plancher existe pour
+  >   éviter. Les deux pistes se testent sur les mêmes parties, et cette story est faite pour ça.
   > - **`cp2` est payé et n'est lu par personne — ajouté le 2026-09-02.** Le score de la deuxième
   >   ligne est **écrit en base** (`evaluations.cp2` / `mate2`, 108 lignes sur 110 pour la partie
   >   715), au prix de MultiPV = 2, soit le **2,1×** de temps moteur mesuré et assumé en 15a-01. Il
@@ -889,6 +910,84 @@
   >
   > **Coût moteur : aucun.** Les deux axes sont dérivables de ce qui est déjà stocké — `phase` est
   > écrit, le matériel se lit dans le FEN de chaque `Evaluation`. Aucune ré-analyse, aucune migration.
+
+- **US-33**: Rendre l'écran de revue tenable — le relevé du coup à portée de main, les raccourcis
+  partout, leur aide dans une infobulle, et une disposition qui cesse d'empiler.
+  > **Pas encore grillée.** Ouverte le 2026-09-02, sur trois retours du demandeur qui portent tous
+  > sur le **même écran** et le même défaut de fond : la route de revue s'est enrichie tranche après
+  > tranche (US-7, US-14, US-15a, US-16a, US-22, US-23) et **tout ce qui a été ajouté s'est empilé
+  > sous le plateau**. Chaque ajout était juste ; la somme ne l'est plus.
+  >
+  > Ce n'est pas une redite d'**US-23** : celle-ci tenait la **cohérence** entre écrans (le même
+  > clavier, la même liste, les mêmes verdicts). Ici tout est cohérent — et malcommode.
+  >
+  > ### 1. Le relevé du coup, donc la réfutation, est hors de portée
+  >
+  > *« Ce serait bien d'avoir rapidement accès à la séquence de réfutation quand on analyse une
+  > partie. Actuellement c'est tout en bas et difficile de cliquer. »*
+  >
+  > Exact, et **délibéré** — c'est le point que le grill doit ouvrir en connaissance de cause.
+  > `MoveRecord` est le **dernier bloc** de la page, sous le récapitulatif, et le seul chemin est un
+  > lien d'évitement « Aller au relevé du coup ». Le commentaire de `Board.tsx` donne la raison :
+  > *« EN DESSOUS de la rangée — c'est délibéré, sa hauteur varie et rien au-dessus du diagramme ne
+  > doit bouger »*, et il tranche déjà l'arbitrage dans l'autre sens : *« devoir défiler pour
+  > l'atteindre est acceptable ; ignorer qu'il existe ne l'est pas. »*
+  >
+  > La contrainte derrière est **ADR-0021, « ce sur quoi le joueur agit ne bouge jamais »**, plus
+  > celle d'US-14 : toute hauteur empilée au-dessus du diagramme est de la hauteur que le diagramme
+  > n'a pas. Le demandeur dit aujourd'hui que « acceptable » ne l'est plus. La question n'est donc
+  > pas « faut-il le remonter » — le remonter tel quel rouvre le défaut qu'ADR-0021 a fermé — mais
+  > **comment le rendre atteignable sans qu'une hauteur variable s'installe au-dessus du plateau** :
+  > panneau latéral, hauteur réservée, repli, ou survol. C'est un arbitrage de disposition, pas une
+  > correction.
+  >
+  > ### 2. Une passe de raccourcis sur toutes les fonctions intéressantes
+  >
+  > L'inventaire actuel est court : les **flèches** (portées par le composant plateau, donc sur les
+  > deux routes depuis US-23), **`1`–`5`** pour le verdict et **`k`** pour le moment clé — ces deux
+  > dernières sur la seule route de lecture. N'ont **aucun** raccourci : changer de `Review mode`,
+  > sceller, lancer ou relancer une analyse, atteindre le relevé du coup, retourner le plateau,
+  > passer à la `Confrontation`, changer de partie.
+  >
+  > Le garde-fou d'US-22 reste : **un raccourci doit être inerte pendant la saisie d'une note**, et
+  > une touche qui écrit ne se répète pas sur maintien. Et celui d'US-23 : un groupe de contrôles
+  > natif porte déjà des gestes clavier qu'on ne retire pas sans les remplacer.
+  >
+  > ### 3. L'aide passe en infobulle, et la notice disparaît
+  >
+  > *« Les aides doivent se trouver dans une info-bulle pour ne pas polluer l'écran de
+  > visualisation. »*
+  >
+  > `ShortcutsNotice` est aujourd'hui **une phrase constante et permanente**, à hauteur fixe par
+  > construction — *« une notice qui grandirait ou rétrécirait avec le demi-coup reconstruirait le
+  > défaut qu'ADR-0021 a fermé »*. La sortir de l'écran règle ce problème par disparition, mais
+  > **rouvre celui qu'elle existait pour résoudre** : *« un raccourci découvert par accident
+  > n'existe pas »*. Le grill doit dire par quoi la découvrabilité est assurée — une infobulle ne se
+  > survole que si l'on sait qu'elle est là.
+  >
+  > **Cette story absorbe deux constats laissés ouverts par US-22**, tous deux sur cette notice, et
+  > qui tombent d'eux-mêmes si elle disparaît : elle **passe sous la ligne de flottaison à 380 px**,
+  > et elle n'est **vraie qu'au tiers** à la position de départ. Une aide contextuelle règle le second
+  > sans effort ; une notice fixe ne le pouvait pas.
+  >
+  > ### 4. Reprendre la disposition
+  >
+  > *« Il faudra aussi retravailler la position des différents éléments pour améliorer cet écran. »*
+  > C'est le chapeau des trois précédents et c'est ce qui justifie une story unique : traiter la
+  > réfutation, les raccourcis et l'aide séparément produirait trois déplacements successifs sur le
+  > même écran, chacun invalidant le précédent.
+  >
+  > ### Garde-fous du projet à ne pas perdre
+  >
+  > - **ADR-0021** — ce sur quoi le joueur agit ne bouge jamais. Toute nouvelle disposition doit
+  >   pouvoir montrer un **déplacement nul** entre demi-coups, comme US-22 et US-23 l'ont mesuré.
+  > - **ADR-0013** — aucun indice uniquement chromatique, et la contrainte de largeur à 380 px.
+  > - **La hauteur du diagramme est un budget** (US-14) : ce qui monte au-dessus du plateau se prend
+  >   sur lui.
+  >
+  > **Lien avec US-26 et US-29** : les trois retouchent la même surface. Si les trois passent, cette
+  > story devrait passer **en dernier** — elle range un écran dont US-26 change le contenu et US-29
+  > la couleur.
 
 ## Doing
 
