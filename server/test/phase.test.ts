@@ -51,6 +51,25 @@ describe("Phase — the Early game boundary", () => {
     expect(result[10]).toBe("early");
   });
 
+  it("offers the OTHER reading of the cap, so the choice can be measured instead of argued", () => {
+    // The same passive Game as above, read both ways. The kept reading is "after
+    // WHITE's 15th Move"; the other is the naive "as soon as the move number says
+    // 15", which a FEN reaches on Black's 14th because the number rises on
+    // Black's Move.
+    const pairs = ["Rh3 Rh6", "Rg3 Rg6"];
+    const shuffle = Array.from({ length: 15 }, (_, i) => `${i + 2}. ${pairs[i % 2]}`).join(" ");
+    const fens = gamePositions(`1. h4 h5 ${shuffle}`);
+
+    const kept = phases(fens);
+    const onNumber = phases(fens, "on-number");
+
+    // The half-move the two readings disagree about, and only it: the Phase
+    // latches, so an earlier boundary shows up as exactly one shifted ply.
+    expect(kept[28]).toBe("early");
+    expect(onNumber[28]).toBe("middlegame");
+    expect(onNumber.filter((phase, i) => phase !== kept[i])).toHaveLength(1);
+  });
+
   it("counts a minor that has been captured as no longer at home", () => {
     // Both bishops of each side captured, both knights out, both kings having
     // lost the right: development is complete even though four minors are gone.
