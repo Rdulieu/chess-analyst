@@ -269,6 +269,34 @@ describe("the Analyse row (US-14's arrangement, on fluid bases)", () => {
   });
 });
 
+describe("the drift trace's scale and its plot, one geometry", () => {
+  const plot = declarationsFor(css, '[data-part="drift"] [data-part="drift-plot"]');
+  const scale = declarationsFor(css, '[data-part="drift"] [data-part="drift-scale"]');
+  const drawing = declarationsFor(css, '[data-part="drift"] [data-part="drift-plot"] svg');
+
+  /** A `1px` hairline as a number, for the two boxes that must agree on it. */
+  const px = (value: string | undefined) => Number((value ?? "").match(/(\d+(?:\.\d+)?)px/)?.[1]);
+
+  it("lets the whole-Game rule paint its full stroke instead of clipping itself", () => {
+    // The rule sits flush on the drawing's top edge on any Game under 100 % —
+    // that is, on most of them — and an svg clips its own content at the viewBox
+    // edge, so half the stroke was lost there. The FP measured it: four device
+    // rows of red against the eight a rule drawn mid-box gets. The plot's own
+    // frame is what keeps the stroke inside the box.
+    expect(drawing.get("overflow")).toBe("visible");
+    expect(plot.get("overflow")).toBe("hidden");
+  });
+
+  it("insets the printed scale by exactly what insets the drawing, so a figure names its own height", () => {
+    // The figures are placed in percent, and the two boxes are different boxes:
+    // the scale spans the frame, the drawing spans the plot's CONTENT box. Left
+    // unequal, every figure drifts by up to the inset — measured at 2 px, and the
+    // figure printed at the rule's height IS the non-chromatic cue ADR-0013 asks
+    // for, so its alignment is the acceptance criterion rather than tidiness.
+    expect(px(scale.get("border-block"))).toBe(px(plot.get("border")) + px(plot.get("padding-block")));
+  });
+});
+
 /**
  * The end of a story that started before there was a stylesheet: nine components
  * carried `style={{…}}` attributes because there was nowhere to put a selector

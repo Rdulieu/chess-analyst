@@ -691,6 +691,14 @@ section[aria-label="partie"] {
   }
 }
 
+// The drift box's geometry, written once because two boxes have to agree on it:
+// the plot's frame, and the pixel of headroom the whole-Game rule needs to paint
+// its full stroke when it lands on the very top edge. Their sum is what insets
+// the drawing, hence what must inset the printed scale.
+$drift-frame: 1px;
+$drift-headroom: 1px;
+$drift-inset: $drift-frame + $drift-headroom;
+
 // The second drawing: the cumulative trace of what the Player lost. Shorter than
 // the curve — it carries one quantity, not two shares — and landscape for the
 // same reason: squeezed narrow, a trace stops being a time axis and reads as a
@@ -712,10 +720,20 @@ section[aria-label="partie"] {
   // The scale's own column, as narrow as three figures and no narrower: it is
   // taken out of the free space before the plot takes the rest, so the plot never
   // has to reflow when a Game's ceiling grows a digit.
+  //
+  // **Inset by exactly what insets the drawing**, and this is load-bearing rather
+  // than tidiness: a figure is placed in PERCENT of its own box, and the box the
+  // trace is drawn in is the plot's *content* box — inset by the frame and by the
+  // rule's headroom. Left unequal, every figure drifts by up to that inset (the
+  // Feature Path measured 2 px at the ends), and the figure printed at the rule's
+  // own height IS the non-chromatic cue ADR-0013 requires, so its alignment is an
+  // acceptance criterion. A transparent border, because a percentage resolves
+  // against the PADDING box: padding here would not move the figures at all.
   [data-part="drift-scale"] {
     position: relative;
     flex: 0 0 2.25rem;
     margin: 0;
+    border-block: $drift-inset solid transparent;
     padding: 0;
     list-style: none;
     font: var(--text-s) / 1 var(--mono);
@@ -742,12 +760,22 @@ section[aria-label="partie"] {
   [data-part="drift-plot"] {
     flex: 1 1 auto;
     min-inline-size: 0;
-    padding-block: 1px;
-    border: 1px solid var(--border);
+    padding-block: $drift-headroom;
+    border: $drift-frame solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
     position: relative;
     background: var(--ground-sunk);
+
+    // An svg clips its own content at the viewBox edge, and the whole-Game rule
+    // is drawn flush on that edge on any Game under 100 % — so half its stroke
+    // was lost there (four device rows of red, where a rule drawn mid-box gets
+    // eight). It paints into this box's headroom instead, and the frame above is
+    // what keeps it inside: the clipping contract belongs to the plot, not to the
+    // drawing.
+    svg {
+      overflow: visible;
+    }
   }
 
   svg {
