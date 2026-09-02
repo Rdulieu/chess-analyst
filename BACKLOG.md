@@ -446,6 +446,120 @@
   > avoir traité ce point rejouerait précisément la régression que la contrainte du demandeur
   > interdit. **US-21 devrait donc passer d'abord**, ou au minimum ce point-là.
 
+- **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
+  verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
+  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
+  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md).
+  > US-23 avait **explicitement laissé ce sujet dehors** (« un sujet à part entière, à ouvrir comme
+  > tel ») ; c'est celui-ci.
+  >
+  > ### Une seule story pour neuf notes
+  >
+  > Les **neuf** remarques du « compte rendu d'analyse » du 25/08 disent la même chose sous neuf
+  > angles : *pas très visuel* (1), *parcourir le board avec les flags* (2), *le verdict sur chacun
+  > des coups* (5), *quand j'ai dit « erreur » à tort* (6), *l'évaluation du moment clé peu visible*
+  > (7), *mettre en avant les divergences* (9), *ce que j'ai vu juste n'est pas clair* (4), plus les
+  > deux notes de contestation ci-dessous (3 et 8).
+  >
+  > **Le défaut est un seul** : la `Confrontation` est **agrégée**. Elle donne trois taux, une matrice
+  > (`ConfusionMatrixTable`) et des comptes, et ne dit **nulle part quel coup a produit quelle case**.
+  > Un joueur qui lit « 1 sur 4 » ne peut pas retrouver les trois autres. Relevé sur `develop` :
+  > `ConfrontationReadout`, `ConfusionMatrixTable`, `UnscoredReadout`, `KeyMomentReadout`, `Figure` —
+  > **aucun échiquier**, aucune entrée par ply.
+  >
+  > ### Deux notes contestent une décision documentée — c'est le cœur du grill
+  >
+  > Elles ne sont pas des défauts, ce sont des désaccords avec des choix pris exprès. Les traiter en
+  > passant reviendrait à défaire une garantie sans le savoir.
+  >
+  > **Note 3 — « Devoir cocher chaque coup analysé mais non important est fastidieux ».** `CONTEXT.md`
+  > tient l'inverse : *« `Sound` est ce qui rend la confrontation possible. Sans lui, "je n'ai rien dit
+  > ici" et "je dis que ce coup est correct" seraient le même silence »*. Le coût signalé **est le prix
+  > exact** de cette garantie — 22 coups posés pour n'en examiner que 4. La question n'est donc pas
+  > « faut-il garder `Sound` » mais **« comment le poser coûte-t-il moins cher »**.
+  > **Attention, la note a vieilli** : US-22 a depuis livré le verdict au clavier (`1`–`5`, flèches,
+  > inerte pendant la saisie d'une note). Le grill doit **re-mesurer le coût sur l'app telle que
+  > mergée** avant de concevoir quoi que ce soit — il a peut-être déjà largement baissé.
+  >
+  > **Note 8 — « La liste des éva sur position déjà décidée prend beaucoup de place alors qu'elle
+  > n'apporte rien ».** ADR-0017 exige l'inverse : une partie où le joueur a joué quatre bévues peut
+  > contribuer **zéro** erreur comptée, et *« un écran qui laisse cet écart illisible détruit la
+  > confiance exactement là où la divergence est la chose à expliquer »*. Mais **l'ADR exige la
+  > lisibilité, pas une liste** : sur la partie testée, 16 coups exclus étaient rendus un à un. Le
+  > volume vient du **rendu**, pas de la règle — un compte et une phrase tiendraient la décision en
+  > trois lignes. Distinguer la décision de son rendu est ici tout le travail.
+  >
+  > ### Un point à ne pas confondre au grill
+  >
+  > La note 2 demande **l'échiquier dans la `Confrontation`**. `ConfrontationPage` porte une décision
+  > voisine mais **différente** : la `Confrontation` est une route à part et **non un panneau sur la
+  > route de lecture**, parce que *« cette route est aveugle par nature et le reste — y montrer le
+  > moteur détruirait la seule chose qu'elle garantit »*. Cet argument protège la **lecture**, il ne
+  > dit rien contre un échiquier **sur la route de confrontation**, où le sceau est déjà tombé. Le
+  > second motif cité — la densité et le reflow — reste, lui, entièrement valable.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Où vit le détail par coup** : une entrée dans la matrice qui mène aux coups, un échiquier
+  >   parcourable portant les deux lectures, ou les deux. La contrainte d'auditabilité d'US-15 vaut
+  >   ici aussi — la vue par coup et l'agrégat doivent être **le même calcul**.
+  > - **Nommer les quatre cases**, pas seulement les compter. « Ce que j'ai vu juste » (note 4) et
+  >   « quand j'ai crié à l'erreur pour rien » (note 6) sont deux cases de la matrice qui n'ont pas
+  >   de mots ; le faux positif n'en a aujourd'hui aucun.
+  > - **Le sort de la note 3**, une fois le coût re-mesuré : rien à faire, ou un geste de masse.
+  > - **Le rendu des exclus** (note 8) sans toucher à ADR-0017.
+  >
+  > **Garde-fou du projet** : aucun indice ne peut être **uniquement chromatique** — sur un écran qui
+  > oppose deux lectures, la tentation est maximale.
+  >
+  > ### Angle mort connu, à traiter avant ou pendant
+  >
+  > L'écran **« Mes lectures »** (`/confrontation`, le bilan sur tout l'historique) **n'a jamais été
+  > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
+  > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
+  > session de test dessus devrait précéder le grill, ou en faire partie.
+
+- **US-27**: Retrouver une partie dans « Mes parties » sans faire défiler cent soixante-dix lignes —
+  trier, filtrer, chercher, et savoir ce que compte un compteur.
+  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
+  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md)
+  > (« Mes parties » 2 et 3, et le libellé du compteur). Sujet **explicitement laissé dehors par
+  > US-23**, faute d'être dans le périmètre que le demandeur lui avait donné.
+  >
+  > ### Le constat
+  >
+  > `GameList` est un tableau de six colonnes — Date, Adversaire, Résultat, Cadence, État, Lecture —
+  > et **ne porte aucun contrôle** : pas de tri, pas de filtre, pas de recherche. Le profil
+  > `DudulSmash` compte aujourd'hui **177 parties**, `Metalyst` **354** : retrouver une partie précise
+  > se fait à l'œil, en défilant. Ce n'était pas un problème à trente parties ; l'import de plusieurs
+  > mois (US-9, US-17) l'a rendu structurel.
+  >
+  > ### Trois points, dont un qui n'est pas celui qu'on croit
+  >
+  > **1. Tri / filtre / recherche** — demandé tel quel. Les axes évidents sont déjà les colonnes
+  > (date, adversaire, résultat, cadence, état d'analyse, lecture personnelle), ce qui rend le
+  > périmètre lisible mais pose la question du **rendu** : des en-têtes cliquables, une barre de
+  > filtres, ou les deux.
+  >
+  > **2. L'heure manque, et c'est du tri déguisé.** *« Les dates sont-elles véridiques ? »* — **oui** :
+  > elles viennent de l'en-tête `[Date]` du PGN et ne sont jamais recalculées, aucune conversion de
+  > fuseau. Ce que la date ne dit pas, c'est **l'heure** : deux parties du même jour sont
+  > **indiscernables** dans la liste, et un tri par date ne les départage pas. Vérifier d'abord si
+  > l'heure est disponible à l'import sur les deux plateformes — sinon le tri n'a pas de clef stable.
+  >
+  > **3. Le libellé « X/Y positions évaluées » ne dit ni ce qu'il compte, ni qui l'a lancé.**
+  > Toujours présent mot pour mot sur `develop` (`AnalysisPassStatus.tsx:55`). Le jour du test il
+  > affichait « 30/85 » : le compteur était juste, mais la passe avait été **lancée par l'agent** sur
+  > l'instance de test, sans l'annoncer — le joueur voyait avancer un travail qui n'était pas le sien.
+  > **L'incident était un fantôme, le défaut ne l'est pas** : rien dans le libellé ne permet de savoir
+  > de quelle partie il parle ni d'où vient la passe. Petit, mais il appartient à cet écran ; le
+  > traiter ici évite une story d'une ligne.
+  >
+  > ### Frontière
+  >
+  > Du confort de liste, **pas** de l'analyse : rien ici ne touche au modèle, aux `Evaluation`s ni à la
+  > `Confrontation`. À prendre **après US-26**, qui elle touche une garantie documentée.
+
 ## Doing
 
 ## In review
