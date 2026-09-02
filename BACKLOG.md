@@ -241,6 +241,62 @@
   >
   > À grillier avec de vraies parties sous les yeux, pas en salle : c'est une story de **mesure et
   > d'arbitrage**, pas de construction.
+  >
+  > ### Grillée le 2026-09-02 — PRD et sept tranches
+  >
+  > Décisions **D1→D18** dans
+  > [`GRILL-NOTES.md`](.scratch/deepen-per-game-analysis/GRILL-NOTES.md), coutures dans
+  > [`SEAMS.md`](.scratch/deepen-per-game-analysis/SEAMS.md), PRD dans
+  > [`PRD.md`](.scratch/deepen-per-game-analysis/PRD.md). Branche
+  > `integration/US-15a-bis-deepen-per-game-analysis`. Deux ADR :
+  > [`0023`](docs/adr/0023-the-analysis-names-what-it-does-not-count.md) — l'analyse **nomme ce
+  > qu'elle ne compte pas** — et [`0024`](docs/adr/0024-reproducibility-is-the-recap-s-not-the-engine-s.md)
+  > — la reproductibilité est celle du **récapitulatif**, pas du moteur. `CONTEXT.md` **inchangé** :
+  > aucun terme nouveau n'est livré.
+  >
+  > | # | Tranche | Type |
+  > | --- | --- | --- |
+  > | [01](.scratch/deepen-per-game-analysis/issues/01-the-drift-trace-gets-a-scale.md) | Le tracé de dérive gagne une échelle et un repère | AFK |
+  > | [02](.scratch/deepen-per-game-analysis/issues/02-the-replayable-report.md) | Le rapport re-jouable, une ligne par coup du Player | AFK |
+  > | [03](.scratch/deepen-per-game-analysis/issues/03-the-two-corpora.md) | Les deux corpus blitz, et la double passe sur la 51 | AFK |
+  > | [04](.scratch/deepen-per-game-analysis/issues/04-the-review.md) | La revue : quel signal sépare | AFK |
+  > | [05](.scratch/deepen-per-game-analysis/issues/05-the-arbitrations.md) | Les arbitrages du demandeur | **HITL** |
+  > | [06](.scratch/deepen-per-game-analysis/issues/06-the-predicate-shipped.md) | Le prédicat livré : nommer sans compter | AFK |
+  > | [07](.scratch/deepen-per-game-analysis/issues/07-hp-suite-and-the-pr.md) | La suite HP et la PR vers `develop` | **HITL** |
+  >
+  > **Cinq faits que le grill a établis dans le code, et qui corrigent le relevé ci-dessus :**
+  >
+  > 1. **Les données de la comparaison chess.com n'existent plus.** Parties 41, 51, 72, 86 :
+  >    `analyzed = 0`, zéro `Evaluation`, rien dans les cinq `.bak` ni les six worktrees. Produites
+  >    dans une base de worktree éphémère, disparue avec lui. **Une mesure faite dans un worktree
+  >    meurt avec lui.**
+  > 2. **« Rien ici ne coûte de temps moteur » est faux** — la matière première en coûte (~33 min à
+  >    ~1,25 s/position) ; les arbitrages, non.
+  > 3. **« Analyser l'adversaire coûte le double par partie » est faux** : `evaluations` porte une
+  >    ligne par demi-coup, **les deux couleurs**. L'attribution est donc **mesurée** dans cette
+  >    story (jamais affichée), et la réserve du demandeur tient : la mesure porte sur la partie
+  >    **encore disputée**.
+  > 4. **Le vocabulaire positif « meilleur coup joué » est interdit par le glossaire** — il
+  >    enseignerait l'imitation. Principe retenu : fondé sur le **coût**, avec un seuil **très bas**
+  >    (« n'est pas une faute » et « est bien joué » sont deux barres différentes). Feature reportée.
+  > 5. **Le cap de `Phase` n'est pas un bug** : le code implémente correctement la lecture retenue.
+  >    On mesure donc la **sensibilité** au choix, et l'écart au découpage **lichess** — qui existe,
+  >    contrairement à ce que l'agent avait d'abord posé.
+  >
+  > **Le tracé de dérive est gardé** (décision du demandeur) : plafond par partie conservé, plus une
+  > ligne rouge à 100 % et une échelle chiffrée, avec `ceiling = max(total, 100)`. « Je ne sais
+  > toujours pas vraiment si c'est utile, mais c'est trop tôt pour supprimer. »
+  >
+  > **La lecture personnelle de la 715 est faite** (2026-09-02) et entre au corpus. Réserve :
+  > `engine_seen_before_seal = 1`, donc les sévérités déclarées ne prouvent pas que l'humain a vu ce
+  > que l'app manquait ; les **notes**, si. Deux d'entre elles sont de la matière de revue — le
+  > demandeur demande l'**attribution** spontanément (coup 33) et confirme le signal **matériel**
+  > (coup 74, « j'ai pas vu que ma tour était en prise »).
+  >
+  > **Quatre demandes produit** sorties de cette lecture, hors périmètre, à ticketer :
+  > la notion de `Coup manqué` (« gain manqué »), une valeur « je ne sais pas » dans la
+  > `Declared severity`, un mode « apprendre de mes erreurs », et le **bug** « Analyser cette partie »
+  > silencieusement avalé sous une bannière de pass non acquittée.
 
 - **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
   ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
