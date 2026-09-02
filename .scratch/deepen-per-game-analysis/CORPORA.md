@@ -240,15 +240,19 @@ analyse machine : la mesure D14 est donc, elle, complète de ce côté.
 **Corrigé après la FP de la tranche, qui a trouvé l'erreur.** Ce paragraphe affirmait qu'aucune
 lecture non contaminée n'existait et renvoyait la tâche au demandeur. C'était faux, et l'erreur
 cachait du travail déjà fait : la partie **161**, membre de ce corpus, porte une lecture **scellée le
-2026-09-01 avec `engine_seen_before_seal = 0`** — 26 coups marqués, un verdict déclaré sur chacun,
-une note tapée à la main. L'app elle-même l'affiche : « **Lue à l'aveugle** — l'analyse du moteur
-n'avait pas été affichée pour cette partie avant le scellement. » Elle a été scellée **28 secondes
-avant** que la passe 4 ne lance le moteur sur cette même partie.
+2026-09-01 avec `engine_seen_before_seal = 0`** — 26 coups marqués, **dont 13 sur ses propres
+coups**, un verdict déclaré sur chacun, une note tapée à la main. L'app elle-même l'affiche :
+« **Lue à l'aveugle** — l'analyse du moteur n'avait pas été affichée pour cette partie avant le
+scellement. » Elle a été scellée **28 secondes avant** que la passe 4 ne lance le moteur sur cette
+même partie.
 
 **L'AC « au moins une lecture personnelle est scellée avec `engine_seen_before_seal` à faux » est
 donc satisfaite**, de la main du demandeur et non d'un agent. La tranche 04 y gagne la comparaison
-que le PRD croyait indisponible — un jugement humain **non contaminé** face au moteur — et en tire
-une section entière.
+que le PRD croyait indisponible : un jugement humain **non contaminé** face au moteur.
+
+Et il faut la lire au même barème que les trois bilans lichess de la section précédente — une
+partie, treize coups du Player jugés à l'aveugle, cinq coups signalés en commun : **de quoi
+falsifier, pas de quoi conclure.**
 
 Ce qui reste vrai de l'ancien paragraphe et vaut d'être gardé : **un agent ne peut pas produire une
 lecture humaine.** Des marques posées par un agent et scellées « sans aide » seraient une lecture de
@@ -259,8 +263,13 @@ Deux réserves sur la portée du drapeau, elles aussi relevées par la FP :
 
 - le drapeau est **une étiquette, pas un verrou** (`server/src/personal/repository.ts`) : il dit ce
   que l'app a montré **dans cette route**, pas ce que le demandeur a pu voir ailleurs ;
-- la lecture de la 161 ne couvre que ses **28 premiers plies** sur 45 : la fin de la partie n'est pas
-  jugée.
+- la lecture de la 161 s'arrête au ply **28** d'une partie qui en compte **44** (le ply 0 est la
+  position de départ, pas un coup). Mais la troncature tombe presque entièrement sur ce que la revue
+  écarte de toute façon, et la FP a raison d'insister : les **8** coups exclus de la 161 sont **tous**
+  au ply ≥ 27 (la queue `decided` / `forced`), **5 des 6** coups signalés sont dans la lecture, et
+  **12 des 14 coups comptés** portent un verdict aveugle (seuls les plies 21 et 37 manquent). Dire
+  « elle s'arrête au ply 28 sur 44 » invite à imaginer un tiers de partie non jugé ; ce qui n'est pas
+  jugé est surtout ce que le dénominateur ne retient pas.
 
 ## Ce que la tranche livre, et ce qu'elle laisse
 
