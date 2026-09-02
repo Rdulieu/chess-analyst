@@ -299,12 +299,62 @@ Contrainte matérielle à connaître : **DudulSmash n'a que 2 nulles**, toutes d
 
 Coût : ~20 parties ≈ 1 600 positions ≈ **33 minutes** de moteur, dont 7 parties déjà analysées.
 
+## D11 — Le relevé : cinq signaux mécaniques, plus un contrôle humain **borné**
+
+**Tout est déjà en base.** La table `evaluations` porte par demi-coup `fen`, `cp`, `mate`, `pv`,
+`cp2`, `mate2`. Les signaux candidats coûtent donc **zéro temps moteur** — l'option n'est pas
+« construire un appareil de mesure » mais « lire cinq colonnes qu'on stocke déjà » :
+
+| Signal | D'où il sort | Le coup qu'il vise |
+| --- | --- | --- |
+| Variation de **matériel** | comptage sur les `fen` de deux demi-coups consécutifs | `Kc7` (la tour perdue) |
+| **Distance au mat** | la colonne `mate` | `Bd4` (M7 → M1) |
+| Chute en **centipions** | la colonne `cp` | le calibrage brut |
+| Séquence **forcée** | `pv`, et « un seul coup légal » depuis la `fen` | le motif d'exclusion existant |
+| **Écart à la deuxième ligne** | `cp2` / `mate2` | « il n'y avait qu'un coup » — l'acuité de la position |
+
+Le cinquième n'avait pas été listé : c'est un usage du **MultiPV 2** qu'US-15a a payé 2,1× et dont on
+ne tirait jusqu'ici que la `Best line`. Un coup joué là où trois coups se valent n'a pas le même
+statut qu'un coup joué là où un seul tenait.
+
+Rejeté — le **jugement au coup par coup sur tout le corpus** : une centaine de jugements
+**rétrospectifs**, et on trouve toujours *une* explication à un coup dont on sait déjà qu'il est
+mauvais. Le risque n'est pas la lenteur, c'est de **fabriquer un prédicat qui n'existe que parce
+qu'on l'a cherché**.
+
+**Retenu** : les cinq signaux calculés sur **tous** les coups du Player — signalés ou non, comptés ou
+non — puis un test de **discrimination** : lequel sépare les coups que lichess signale et que nous
+manquons, du reste. Un signal qui ne sépare pas est écarté **par les données**, pas par une opinion.
+Ce qui décide : cela transforme une tâche de jugement en tâche de **lecture**, c'est **re-jouable**
+(donc compatible avec D2 — essayer un signal, rejouer le rapport, regarder), et c'est la seule
+approche capable d'un **résultat négatif exploitable**. « Aucun des cinq signaux ne sépare » serait
+une vraie conclusion, et pousserait vers « assumer l'angle mort » sur des **données** plutôt que par
+lassitude.
+
+**Le contrôle humain est gardé mais borné** — décision du demandeur : « on garde A en contrôle mais
+pas sur tous les coups, trop cher ». Il ne s'applique **pas** au corpus entier mais aux seuls
+endroits où la mécanique se trompe : les coups qu'un signal désigne et que **personne** ne signale,
+et les coups que lichess signale et qu'**aucun** signal ne rattrape. C'est là que le jugement humain
+vaut son prix, pas sur les quatre-vingts coups évidents. Le rapport de D7 doit donc **produire cette
+liste lui-même** — le contrôle se lit, il ne se cherche pas.
+
+**Deux garde-fous, coût nul :**
+
+1. **Relever les signaux sur les coups *non* problématiques aussi.** Un signal vrai sur les six coups
+   manqués mais aussi sur cent coups corrects ne sert à rien — sans le dénominateur complet, on ne
+   peut pas le voir.
+2. **Attribuer le désaccord avec lichess avant de l'expliquer** (parade de D6) : notre `Best line`
+   recommande-t-elle déjà leur coup ? Si oui le désaccord est un **seuil**, sinon c'est le **moteur**.
+
+**Implication pour l'outil de D7** : il sort une ligne **par coup du Player**, pas par partie — le
+récapitulatif par partie en est l'agrégat. La forme du *fold* de 15c.
+
 ---
 
 # ⏸ Grill en pause — reprendre ici
 
-Mis en pause par le demandeur après D10, **à la question 11**, jugée trop lourde pour être tranchée
-à chaud. Tout ce qui précède (D1→D10) est **acquis** ; rien n'est à re-débattre.
+~~Mis en pause après D10, à la question 11.~~ **Grill repris le 2026-09-02** ; la question 11 est
+tranchée en D11 ci-dessus. Ce qui suit reste la liste des sujets ouverts.
 
 ## La question 11, telle qu'elle était posée
 
