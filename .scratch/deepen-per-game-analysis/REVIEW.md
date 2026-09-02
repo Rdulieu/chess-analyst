@@ -48,8 +48,8 @@ uniformément plus muets.
 
 **Trois des cinq signaux ne séparent rien** : ils ne tirent sur aucun des coups manqués. Le mat et la
 séquence forcée sont écartés par les données, pas par une opinion. L'écart à la deuxième ligne — le
-`cp2` payé 2,1× — tire sur neuf coups anodins et sur aucun coup manqué : **l'acuité de la position ne
-dit rien de la qualité du coup joué.**
+`cp2` payé 2,1× — tire sur **huit** coups anodins et sur aucun coup manqué : **l'acuité de la
+position ne dit rien de la qualité du coup joué.**
 
 **Le garde-fou de D11 fait son travail** : mesuré sur les coups que l'app signale déjà, `cpDrop` tire
 sur **13 des 14**. Un signal qui coïncide à 93 % avec la sévérité n'est pas un second axe ; c'est le
@@ -98,9 +98,11 @@ construction*.
 | n'importe lequel | **jamais les 3 derniers** | | |
 
 Et le prix que le backlog annonçait est chiffré : `INACCURACY_DROP` étant **aussi** le plancher du
-`Counted Move`, le baisser à 2 ferait passer la zone morte de 33 à ~15 coups (DudulSmash) et de 48 à
-~10 (Metalyst) — **le dénominateur grossirait de 23 et 38 coups**, et tous les récapitulatifs avec
-lui. Ce n'est pas un effet de bord, c'est le mécanisme.
+`Counted Move`, le baisser à 2 ferait passer la zone morte de 33 à **11** coups (DudulSmash) et de 48
+à **10** (Metalyst) — **le dénominateur grossirait de 22 et de 38 coups**, et tous les récapitulatifs
+avec lui. Ce n'est pas un effet de bord, c'est le mécanisme. (Chiffres recomputés par la FP de la
+tranche avec `winningChances` et `isForced`, les fonctions de l'app : les valeurs de chances qui
+encadrent la barre sont 1,922 et 2,014, donc aucune lecture flottante ne les déplace.)
 
 **La contre-hypothèse du backlog est, elle, écartée par la mesure** : « à profondeur 16, 10 points de
 chances sont du bruit ». La double passe de la tranche 03 chiffre ce bruit à **0,3 à 1,2 point par
@@ -192,7 +194,7 @@ vide.**
 | Frontière | parties comparables | écart médian | étendue |
 | --- | --- | --- | --- |
 | **finale** | 9 | **0 ply** | 0..0 — **identique à chaque fois** |
-| milieu de partie | 10 | **+6 plies** | +2..+14 |
+| milieu de partie | 10 | **+6,5 plies** | +2..+14 |
 
 Deux implémentations indépendantes tombent sur **exactement** le même ply de début de finale, neuf
 fois sur neuf. Cet axe est solide.
@@ -216,7 +218,13 @@ perdues est de la dérive** : ce qu'aucun coup signalé n'explique.
 
 ### Les coups forcés
 
-**10 coups forcés sur 744**, et **aucun n'est signalé** — dans aucun des deux corpus.
+**10 coups forcés sur 744**, et **aucun n'est signalé** — dans aucun des deux corpus (0 sur 7 chez
+DudulSmash, 0 sur 3 chez Metalyst).
+
+> C'est le **seul pourcentage de ce dossier qui somme les deux corpus** — les 1,3 % ci-dessous. Il est
+> gardé parce que le compte par corpus est dans le tableau du plancher juste au-dessus (7 coups soit
+> 2 %, et 3 coups soit 1 %) et que la conclusion « jamais signalé » tient séparément des deux côtés.
+> Signalé plutôt que passé sous silence.
 
 Le glossaire dit qu'un coup `forced` *peut* être signalé (un unique coup légal qui est une reprise
 catastrophique). « Jamais vu » était un fait d'échantillon sur sept parties ; c'en est maintenant un
@@ -302,9 +310,10 @@ joueur ; elle empêche de la tenir pour acquise.
 1. **La référence extérieure est de trois parties**, toutes du même profil et du même site. C'est
    assez pour **falsifier** un prédicat — et trois signaux le sont, sans appel. Ce n'est **pas** assez
    pour en **valider** un : la précision de 50 % de `cpDrop` repose sur dix coups.
-2. **Les deux corpus ne sont pas contemporains** (biais n° 1 de [`CORPORA.md`](CORPORA.md)) : cinq ans
-   séparent le blitz de Metalyst de celui de DudulSmash. Les taux se comparent entre corpus avec
-   cette réserve.
+2. **Les deux corpus ne sont pas contemporains** (biais n° 1 de [`CORPORA.md`](CORPORA.md)), et il
+   faut le dire exactement : **trois** des dix parties Metalyst sont d'août-septembre 2026, donc
+   contemporaines de la fenêtre DudulSmash ; les **sept** autres sont de 2021–2023. Les taux se
+   comparent entre corpus avec cette réserve.
 3. **La lecture de la 715 n'est pas aveugle** ; celle de la 161 l'est et couvre 12 de ses 14 coups
    comptés, mais c'est **une** partie.
 4. **Les taux valent pour ces vingt parties**, choisies par récence — pas pour « ses parties » en
