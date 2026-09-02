@@ -298,3 +298,90 @@ Contrainte matérielle à connaître : **DudulSmash n'a que 2 nulles**, toutes d
 « 1 nulle » est réalisable mais sans marge — ce sera l'une des deux, sans choix.
 
 Coût : ~20 parties ≈ 1 600 positions ≈ **33 minutes** de moteur, dont 7 parties déjà analysées.
+
+---
+
+# ⏸ Grill en pause — reprendre ici
+
+Mis en pause par le demandeur après D10, **à la question 11**, jugée trop lourde pour être tranchée
+à chaud. Tout ce qui précède (D1→D10) est **acquis** ; rien n'est à re-débattre.
+
+## La question 11, telle qu'elle était posée
+
+**Comment relève-t-on « ce qui aurait permis de voir le coup » ?** C'est l'opération centrale que le
+contrat D3 impose, et la plus coûteuse si elle est mal conçue : vingt parties × ~40 coups du Player
+≈ 800 coups.
+
+- **(A) Jugement au coup par coup.** Pour chaque coup que lichess signale et pas nous, regarder la
+  position et écrire ce qui l'explique. Fidèle à « avec de vraies parties sous les yeux ». Mais une
+  centaine de jugements, et surtout **rétrospectifs** : on trouve toujours *une* explication à un
+  coup dont on sait déjà qu'il est mauvais. Le risque n'est pas la lenteur, c'est de fabriquer un
+  prédicat qui n'existe que parce qu'on l'a cherché.
+- **(B) Signaux candidats calculés sur *tous* les coups, puis test de discrimination.** L'outil
+  calcule mécaniquement, pour chaque coup du Player — signalé ou non, compté ou non — des signaux qui
+  ne sont **pas** des chances de gain : variation de **matériel** (le signal de `Kc7`), **distance au
+  mat** quand il y en a un (celui de `Bd4`), **chute en centipions** brute, présence d'une **séquence
+  forcée**. Puis on regarde lequel **sépare** les coups que lichess signale et que nous manquons, du
+  reste. Un signal qui ne sépare pas est écarté par les données, pas par une opinion.
+- **(C) Les deux** : (B) produit la séparation, (A) contrôle sur un petit nombre de coups qu'on n'a
+  pas trouvé une corrélation absurde.
+
+**Recommandation de l'agent au moment de la pause : (C), avec (B) comme moteur.** Ce qui décide :
+(B) transforme une tâche de **jugement** en tâche de **lecture**, et elle est re-jouable — donc
+compatible avec la discipline de D2 (essayer un signal, rejouer le rapport, regarder). C'est aussi
+la seule approche capable d'un **résultat négatif exploitable** : « aucun de ces quatre signaux ne
+sépare » serait une vraie conclusion, et pousserait vers le contrat « assumer l'angle mort » sur des
+**données** plutôt que par lassitude. Le rôle de (A) devient alors borné : une dizaine de coups
+regardés à la main, choisis **là où (B) se trompe** — les coups qu'un signal désigne et que personne
+ne signale, et l'inverse.
+
+**Deux garde-fous proposés, coût nul :**
+
+1. **Relever les signaux sur les coups *non* problématiques aussi.** Un signal vrai sur les six coups
+   manqués mais aussi sur cent coups corrects ne sert à rien — sans le dénominateur complet, on ne
+   peut pas le voir.
+2. **Attribuer le désaccord avec lichess avant de l'expliquer** — seuil ou moteur — par la parade de
+   D6 : notre `Best line` recommande-t-elle déjà le coup de lichess ? Sinon on cherchera un prédicat
+   pour expliquer un écart qui n'est qu'une différence de force de moteur.
+
+**Implication pour l'outil de D7** : il sort une ligne **par coup du Player**, pas par partie — le
+récapitulatif par partie en est l'agrégat. Encore une fois, la forme du *fold* de 15c.
+
+## Ce qui reste ouvert après la question 11
+
+Rien de tout cela n'a été abordé ; à traiter à la reprise, dans cet ordre suggéré :
+
+- **Les seuils de `Phase`.** Le cap « coup 15 » est implémenté comme *le 15e coup des Blancs est le
+  premier hors début de partie* ; l'autre lecture décale d'un coup entier. Et « développement
+  achevé » est exigé **des deux camps** — lecture retenue, jamais validée sur des parties. Annoncés
+  « heuristiques, pas des faits » et affichés exprès pour être contestés.
+- **Le plancher `Counted Move` à 10 %**, jamais regardé sur des données : combien de coups une vraie
+  partie perd-elle par « position déjà décidée » ? Si la part est grosse, le dénominateur de 15c
+  l'est aussi. Seule mesure connue, et **perdue avec sa base** : 4 coups sur 22 sur la partie 51.
+- **Les coups forcés.** Mesuré sur sept parties : **aucun coup forcé n'est jamais signalé** (avant et
+  après sont deux lectures de la **même** recherche). Le motif d'exclusion « forcé » n'existe donc
+  que pour le dénominateur — vérifier qu'il vaut encore la peine d'être **distingué à l'écran**.
+- **Le vocabulaire positif** (« meilleur coup joué »). Quasi gratuit — la `Best line` est déjà
+  stockée, c'est une égalité de chaînes — et compatible avec les trois contrats de D3. Peut se
+  décider seul, à tout moment.
+- **L'attribution** — l'app ne peut jamais dire « en face c'était très bien joué » (l'adversaire de
+  la 51 a joué à 96,1, zéro faute, niveau estimé 1800). Le Player ne peut pas distinguer *je me suis
+  effondré* de *il a été trop fort*, deux conclusions opposées sur ce qu'il faut travailler.
+  **Structurel** (les sévérités sont Player-only par décision) et c'est ce qui menace le plus le
+  verdict de 15d. À décider : dans cette story, ou renvoyé à 15d ?
+- **Où dépenser le second bilan chess.com** — décision explicitement reportée après la revue.
+- **Le découpage en tranches**, puis `/to-prd` et `/to-issues`.
+- **Bug antérieur à ticketer**, hors périmètre : « Analyser cette partie » est silencieusement avalé
+  tant qu'une bannière de pass non acquittée est affichée — rien ne se passe, aucun message — et
+  l'écran montre pendant ce temps la progression d'une **autre** partie. Le chemin de réanalyse de
+  la tranche 07 n'est **pas** touché (re-testé) ; le chemin ordinaire l'est.
+
+## État matériel du dépôt à la pause
+
+- Branche `integration/US-15a-bis-deepen-per-game-analysis`, depuis `develop` à jour (`1fcf9f3`).
+  Aucun code touché ; seul ce fichier a été écrit.
+- **Analysées** sous profondeur 16 / 2 lignes : **161, 165, 166** (profil 1), **271** (profil 2),
+  **714, 715, 716** (profil 3). Sept parties.
+- **Non analysées, et il le faut** : la **51** et les autres parties des deux strates.
+- Profils : 1 `DudulSmash` (chesscom), 2 `Nonomoho` (chesscom), 3 `Metalyst` (lichess),
+  4 `Monado_Boy` (lichess).
