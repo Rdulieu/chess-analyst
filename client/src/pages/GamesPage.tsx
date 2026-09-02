@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { fetchGames } from "../api";
 import { useAnalysisPass } from "../features/analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../features/analysis/AnalysisPassStatus";
@@ -7,7 +7,7 @@ import { GameList } from "../features/games/GameList";
 import { AnalyzedCount } from "../features/games/AnalyzedCount";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
-import type { Profile } from "../types";
+import { platformLabel, type Profile } from "../types";
 
 /**
  * Mes parties (`/`): **the current `Profile`'s** Game list and the engine-
@@ -25,7 +25,6 @@ import type { Profile } from "../types";
 export function GamesPage({ profile }: { profile: Profile }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const { status, nothingToDo, run, acknowledge, running } = useAnalysisPass(profile.id);
-  const navigate = useNavigate();
 
   const load = useCallback(() => fetchGames(profile.id), [profile.id]);
   const games = useLoaded(load, [profile.id]);
@@ -63,8 +62,9 @@ export function GamesPage({ profile }: { profile: Profile }) {
         // Named, and pointing at the Profile's own page: importing is an
         // operation ON a Profile, and this Profile is the one to act on.
         <p>
-          Aucune partie pour <strong>{profile.username}</strong> — <Link to={`/profiles/${profile.id}`}>importez son historique</Link>{" "}
-          pour commencer.
+          Aucune partie pour <strong>{profile.username}</strong> —{" "}
+          <Link to={`/profiles/${profile.id}#import`}>importez son historique</Link> pour
+          commencer.
         </p>
       )}
 
@@ -72,15 +72,35 @@ export function GamesPage({ profile }: { profile: Profile }) {
         <>
           <AnalyzedCount games={games.data} />
 
-          <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
-            Analyser la sélection
-          </button>
+          {/* The way back to the Import (US-23, D1). It lived only in the empty
+              state, so a Profile that already had a history had no way to add to
+              it. Importing is an operation ON a Profile (ADR-0014) and its form
+              does not move: it is the DOOR that navigates, and the `#import`
+              fragment asks for the form rather than merely for the page. */}
+          {/* ONE row for the two actions (US-23, F1). They were stacked siblings,
+              spending two rows on two short labels; the row's own rule — spacing,
+              and wrapping rather than overflowing — has existed since US-23-05,
+              and what was missing was that both actions be in it. Same shape as
+              the header of `/profiles`, where the two doors already share one. */}
+          <p data-part="actions">
+            <Link
+              to={`/profiles/${profile.id}#import`}
+              data-action=""
+              // Label first, then the Profile: a voice-control Player must be
+              // able to say what they read (WCAG 2.5.3).
+              aria-label={`Importer mes parties — ${profile.username} (${platformLabel(profile.platform)})`}
+            >
+              Importer mes parties
+            </Link>
+            <button type="button" onClick={analyze} disabled={selected.size === 0 || running}>
+              Analyser la sélection
+            </button>
+          </p>
 
           <AnalysisPassStatus status={status} nothingToDo={nothingToDo} onAcknowledge={acknowledge} />
 
           <GameList
             games={games.data}
-            onSelect={(g) => navigate(`/analyse/${g.id}`)}
             selectedIds={selected}
             onToggleSelect={toggleSelect}
           />

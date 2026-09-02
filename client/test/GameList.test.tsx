@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi } from "vitest";
 import { GameList } from "../src/features/games/GameList";
 import type { Game } from "../src/types";
@@ -28,12 +29,13 @@ describe("GameList", () => {
 
   it("lets the table scroll inside its own container, never the page", () => {
     render(
-      <GameList
-        games={[game({ id: 1 })]}
-        onSelect={noop}
-        selectedIds={new Set()}
-        onToggleSelect={noop}
-      />,
+      <MemoryRouter>
+        <GameList
+          games={[game({ id: 1 })]}
+          selectedIds={new Set()}
+          onToggleSelect={noop}
+        />
+      </MemoryRouter>,
     );
 
     // Six columns of `nowrap` cells outgrow a narrow content column, and when
@@ -51,12 +53,13 @@ describe("GameList", () => {
 
   it("is a table whose header row names the columns", () => {
     render(
-      <GameList
-        games={[game({ id: 1 })]}
-        onSelect={noop}
-        selectedIds={new Set()}
-        onToggleSelect={noop}
-      />,
+      <MemoryRouter>
+        <GameList
+          games={[game({ id: 1 })]}
+          selectedIds={new Set()}
+          onToggleSelect={noop}
+        />
+      </MemoryRouter>,
     );
 
     const table = screen.getByRole("table", { name: /parties/i });
@@ -80,12 +83,13 @@ describe("GameList", () => {
 
   it("shows an 'analysée' badge only on analyzed Games", () => {
     render(
-      <GameList
-        games={[game({ id: 1, opponent: "a", analyzed: true }), game({ id: 2, opponent: "b", analyzed: false })]}
-        onSelect={noop}
-        selectedIds={new Set()}
-        onToggleSelect={noop}
-      />,
+      <MemoryRouter>
+        <GameList
+          games={[game({ id: 1, opponent: "a", analyzed: true }), game({ id: 2, opponent: "b", analyzed: false })]}
+          selectedIds={new Set()}
+          onToggleSelect={noop}
+        />
+      </MemoryRouter>,
     );
 
     // Read from the État cell of each row, not from the row at large: the badge
@@ -97,12 +101,13 @@ describe("GameList", () => {
 
   it("gives each Game one row, with one fact per cell", () => {
     render(
-      <GameList
-        games={[game({ id: 1, opponent: "Alice", result: "loss", date: "2026-05-17", timeControlCategory: "rapid" })]}
-        onSelect={noop}
-        selectedIds={new Set()}
-        onToggleSelect={noop}
-      />,
+      <MemoryRouter>
+        <GameList
+          games={[game({ id: 1, opponent: "Alice", result: "loss", date: "2026-05-17", timeControlCategory: "rapid" })]}
+          selectedIds={new Set()}
+          onToggleSelect={noop}
+        />
+      </MemoryRouter>,
     );
 
     const [row] = within(screen.getByRole("table", { name: /parties/i }).querySelector("tbody")!).getAllByRole("row");
@@ -120,12 +125,13 @@ describe("GameList", () => {
 
   it("carries a textual cue on the badge — colour alone is not a cue", () => {
     render(
-      <GameList
-        games={[game({ id: 1, analyzed: true })]}
-        onSelect={noop}
-        selectedIds={new Set()}
-        onToggleSelect={noop}
-      />,
+      <MemoryRouter>
+        <GameList
+          games={[game({ id: 1, analyzed: true })]}
+          selectedIds={new Set()}
+          onToggleSelect={noop}
+        />
+      </MemoryRouter>,
     );
 
     const badge = screen.getByLabelText(/analysée/i);
@@ -138,34 +144,49 @@ describe("GameList", () => {
     expect(badge.getAttribute("style")).toBeNull();
   });
 
-  it("opens the Game from its opponent cell", async () => {
-    const onSelect = vi.fn();
+  it("opens the Game from its opponent cell — as an ANCHOR, not a button", async () => {
+    // The one element of the app whose TYPE was wrong (D2): it navigated by
+    // program from a `<button>`, so middle-click, "open in a new tab" and the
+    // status bar all did nothing. Being an anchor is the whole point.
     const alice = game({ id: 42, opponent: "Alice" });
     render(
-      <GameList games={[alice]} onSelect={onSelect} selectedIds={new Set()} onToggleSelect={noop} />,
+      <MemoryRouter>
+        <GameList games={[alice]} selectedIds={new Set()} onToggleSelect={noop} />
+      </MemoryRouter>,
     );
 
     const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
     // The opponent is the row's target, and it is the ONLY one: a whole row of
     // clickable cells reads as a wall of buttons, and the date or the cadence
     // are facts to compare, not doors to walk through.
-    const opener = within(cells[2]).getByRole("button", { name: "Alice" });
-    expect(within(cells[1]).queryByRole("button")).toBeNull();
+    const opener = within(cells[2]).getByRole("link", { name: "Alice" });
+    expect(opener.getAttribute("href")).toBe("/analyse/42");
+    expect(within(cells[1]).queryByRole("link")).toBeNull();
+    expect(within(cells[2]).queryByRole("button")).toBeNull();
+  });
 
-    await userEvent.click(opener);
+  it("leaves that link BARE — a dense table gains no control in each of its rows", () => {
+    // It navigates, and styling it as a control would put a slab in every one of
+    // 54 rows. The action marker is for acts, not for navigation (D2).
+    render(
+      <MemoryRouter>
+        <GameList games={[game({ id: 9, opponent: "Bob" })]} selectedIds={new Set()} onToggleSelect={noop} />
+      </MemoryRouter>,
+    );
 
-    expect(onSelect).toHaveBeenCalledWith(alice);
+    expect(screen.getByRole("link", { name: "Bob" }).hasAttribute("data-action")).toBe(false);
   });
 
   it("lets the Player select a Game via its checkbox", async () => {
     const onToggleSelect = vi.fn();
     render(
-      <GameList
-        games={[game({ id: 7, opponent: "z" })]}
-        onSelect={noop}
-        selectedIds={new Set()}
-        onToggleSelect={onToggleSelect}
-      />,
+      <MemoryRouter>
+        <GameList
+          games={[game({ id: 7, opponent: "z" })]}
+          selectedIds={new Set()}
+          onToggleSelect={onToggleSelect}
+        />
+      </MemoryRouter>,
     );
 
     await userEvent.click(screen.getByRole("checkbox"));

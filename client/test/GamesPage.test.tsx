@@ -500,3 +500,103 @@ describe("GamesPage — an empty history and a failed load are not the same scre
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
+
+describe("GamesPage — the door back to the Import (US-23)", () => {
+  const withGames = (games: Game[]) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.startsWith("/api/games")) return json(games);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+  const renderPage = () =>
+    render(
+      <MemoryRouter>
+        <GamesPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+  it("offers the Import of THIS Profile even once it has Games", async () => {
+    // The invitation of the empty state was the only way in, so a Profile with a
+    // history had no way to add to it. The fragment asks for the form, not merely
+    // for the page (ADR-0014: the Import is an operation ON a Profile).
+    withGames([GAME]);
+    renderPage();
+
+    const door = await screen.findByRole("link", { name: /importer/i });
+    expect(door.getAttribute("href")).toBe("/profiles/7#import");
+    // It reads as an action, per the sheet's rule for `a[data-action]` (D2).
+    expect(door.hasAttribute("data-action")).toBe(true);
+  });
+
+  it("names the Profile it would import for, label first", async () => {
+    withGames([GAME]);
+    renderPage();
+
+    const door = await screen.findByRole("link", { name: /importer/i });
+    expect(door.getAttribute("aria-label")).toMatch(/^Importer mes parties — Alice/);
+  });
+
+  it("does not double the invitation when there is no Game to show", async () => {
+    // The empty state keeps its own sentence, which already carries the way in;
+    // adding the door beside it would say the same thing twice.
+    withGames([]);
+    renderPage();
+
+    const invitation = await screen.findByText(/aucune partie/i);
+    expect(invitation.textContent).toContain("Alice");
+    expect(screen.getAllByRole("link", { name: /importez|importer/i })).toHaveLength(1);
+    // And that single way in reaches the form itself.
+    expect(
+      screen.getByRole("link", { name: /importez|importer/i }).getAttribute("href"),
+    ).toBe("/profiles/7#import");
+  });
+});
+
+describe("GamesPage — the two actions share a row (US-23, F1)", () => {
+  const withGames = (games: Game[]) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.startsWith("/api/games")) return json(games);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+  it("puts the Import door and the analysis action in ONE row of actions", async () => {
+    // They were two stacked sibling blocks — a `<p>` then a bare `<button>` —
+    // spending two rows on two short actions. The row's own rule (spacing, and
+    // wrapping rather than overflowing) has existed since US-23-05; what was
+    // missing was that both actions be IN it.
+    withGames([GAME]);
+    render(
+      <MemoryRouter>
+        <GamesPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    const door = await screen.findByRole("link", { name: /importer/i });
+    const row = door.closest('[data-part="actions"]')!;
+    expect(row).not.toBeNull();
+    // The same row holds the analysis action.
+    expect(within(row as HTMLElement).getByRole("button", { name: /analyser la sélection/i })).toBeTruthy();
+  });
+
+  it("leaves the analysis action disabled until Games are selected", async () => {
+    // Moving it must not change what it does.
+    withGames([GAME]);
+    render(
+      <MemoryRouter>
+        <GamesPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    const analyse = (await screen.findByRole("button", { name: /analyser la sélection/i })) as HTMLButtonElement;
+    expect(analyse.disabled).toBe(true);
+
+    await userEvent.click(screen.getByRole("checkbox"));
+    expect((screen.getByRole("button", { name: /analyser la sélection/i }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});

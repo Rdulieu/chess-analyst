@@ -3,10 +3,39 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fenStringToPositionObject } from "react-chessboard";
 import { Board } from "../src/components/Board";
+import { SEVERITY_SQUARE_TINT } from "../src/chess/severity";
 import { MoveMarks } from "../src/features/personal/MoveMarks";
 import { startingPosition } from "../src/chess/history";
 import { OPERA_PGN } from "./fixtures";
 import type { MoveAnnotation } from "../src/types";
+/**
+ * The current-Move readout names this Move — number then notation since US-23
+ * (F3), so a test that means "the readout is on this Move" says that rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function expectCurrentMove(san: string) {
+  if (san === "Start") {
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    return;
+  }
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(screen.getByLabelText("current move").textContent).toMatch(
+    new RegExp(`^\\d+[.\u2026]${escaped}$`),
+  );
+}
+
+
+/**
+ * The list control for one Move, found by its notation.
+ *
+ * Since US-23 (D4) the control's name carries the Move number too — `2…d6`, not
+ * `d6` — so a test that means "the control for this Move" says so rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function moveControl(san: string): HTMLElement {
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return screen.getByRole("button", { name: new RegExp(`^\\d+[.\u2026]${escaped}$`) });
+}
 
 function pieceAt(container: HTMLElement, square: string): string | null {
   const piece = container.querySelector(`[data-square="${square}"] [data-piece]`);
@@ -40,7 +69,7 @@ describe("Board", () => {
     // After 1. e4 the pawn has moved from e2 to e4.
     expect(pieceAt(container, "e2")).toBeNull();
     expect(pieceAt(container, "e4")).toBe("wP");
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
   });
 
   it("reverts exactly one Move on Previous (not back to the start)", async () => {
@@ -52,7 +81,7 @@ describe("Board", () => {
     await user.click(next); // 1... e5
     await user.click(screen.getByRole("button", { name: /previous/i })); // back to 1. e4
 
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
     expect(pieceAt(container, "e4")).toBe("wP");
     expect(pieceAt(container, "e5")).toBeNull(); // black has not replied yet
   });
@@ -72,7 +101,7 @@ describe("Board", () => {
 
     expect(next.disabled).toBe(true);
     expect(prev.disabled).toBe(false);
-    expect(screen.getByLabelText("current move").textContent).toMatch(/^Rd8/);
+    expect(screen.getByLabelText("current move").textContent).toMatch(/^\d+[.\u2026]Rd8/);
   });
 
   it("jumps directly to the Position after a selected Move, without stepping through", async () => {
@@ -80,9 +109,9 @@ describe("Board", () => {
     const { container } = render(<Board pgn={OPERA_PGN} />);
 
     // From the start, jump straight to White's 12th Move (queenside castling).
-    await user.click(screen.getByRole("button", { name: "O-O-O" }));
+    await user.click(moveControl("O-O-O"));
 
-    expect(screen.getByLabelText("current move").textContent).toBe("O-O-O");
+    expectCurrentMove("O-O-O");
     expect(pieceAt(container, "c1")).toBe("wK");
     expect(pieceAt(container, "d1")).toBe("wR");
     expect(pieceAt(container, "e1")).toBeNull();
@@ -91,11 +120,11 @@ describe("Board", () => {
   it("continues stepping correctly from a jumped-to Position", async () => {
     const user = userEvent.setup();
     const { container } = render(<Board pgn={OPERA_PGN} />);
-    await user.click(screen.getByRole("button", { name: "O-O-O" }));
+    await user.click(moveControl("O-O-O"));
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(screen.getByLabelText("current move").textContent).toBe("Rd8");
+    expectCurrentMove("Rd8");
     expect(pieceAt(container, "d8")).toBe("bR");
   });
 
@@ -154,7 +183,18 @@ describe("Board", () => {
       { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
+    // The engine's table, supplied the way `Analyse` supplies it since ADR-0022:
+    // the board draws the square, the screen says whose verdict it is.
+    const { container } = render(
+      <Board
+        pgn="1. e4 e5"
+        annotations={annotations}
+        squareTint={(ply) => {
+          const severity = annotations[ply]?.severity;
+          return severity ? SEVERITY_SQUARE_TINT[severity] : undefined;
+        }}
+      />,
+    );
     const next = screen.getByRole("button", { name: /next/i });
 
     await user.click(next); // Position after e4 (blunder)
@@ -177,7 +217,16 @@ describe("Board", () => {
       { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
     ];
     const user = userEvent.setup();
-    const { container } = render(<Board pgn="1. e4" annotations={annotations} />);
+    const { container } = render(
+      <Board
+        pgn="1. e4"
+        annotations={annotations}
+        squareTint={(ply) => {
+          const severity = annotations[ply]?.severity;
+          return severity ? SEVERITY_SQUARE_TINT[severity] : undefined;
+        }}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
@@ -215,9 +264,9 @@ describe("Board", () => {
     const promoPgn = "1. a4 b5 2. axb5 a6 3. bxa6 c6 4. a7 c5 5. axb8=Q";
     const { container } = render(<Board pgn={promoPgn} />);
 
-    await user.click(screen.getByRole("button", { name: "axb8=Q" }));
+    await user.click(moveControl("axb8=Q"));
 
-    expect(screen.getByLabelText("current move").textContent).toBe("axb8=Q");
+    expectCurrentMove("axb8=Q");
     expect(pieceAt(container, "b8")).toBe("wQ");
   });
 });
@@ -325,7 +374,7 @@ describe("Evaluation curve", () => {
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4 e5" annotations={three} />);
 
-    await user.click(screen.getByRole("button", { name: "e5" }));
+    await user.click(moveControl("e5"));
 
     expect(cursorX(container)).toBe(2);
   });
@@ -817,7 +866,7 @@ describe("Board — the reviewed Move's record", () => {
     // the Player is* still names the reviewed Move: readout, balance bar, the
     // move list's current item, the curve's cursor.
     expect(screen.getByLabelText("current move").textContent).toContain("e4");
-    expect(screen.getByRole("button", { name: "e4", current: true })).toBeTruthy();
+    expect(moveControl("e4").getAttribute("aria-current")).toBe("true");
   });
 
   it("ends a preview when the Player navigates, rather than leaving another Move's line on the board", async () => {
@@ -976,5 +1025,213 @@ describe("the rule that travels with US-22's glyph reversal", () => {
     expect(declared.textContent).toBe(measured.textContent);
     // So the glyph cannot be what tells them apart, and the name is.
     expect(declared.getAttribute("aria-label")).not.toBe(measured.getAttribute("aria-label"));
+  });
+});
+
+describe("Board — the move list is findable (US-23, D4/D5)", () => {
+  /** The move controls of the list, in order — the phase boundaries are not ones. */
+  const moveButtons = () =>
+    within(screen.getByRole("list", { name: "moves" })).getAllByRole("button");
+
+  it("numbers every half-Move, the side telling the two halves apart", () => {
+    // « le coup 16 » was not findable otherwise than by counting: the list
+    // rendered the SAN alone.
+    render(<Board pgn={OPERA_PGN} />);
+
+    const names = moveButtons().map((b) => b.textContent);
+    expect(names[0]).toBe("1.e4");
+    expect(names[1]).toBe("1…e5");
+    expect(names[2]).toBe("2.Nf3");
+    expect(names[3]).toBe("2…d6");
+  });
+
+  it("puts the number INSIDE the control, so it is part of the accessible name", () => {
+    // A Player on a screen reader hears which Move they are reaching, and a
+    // Player who dictates can say what they read.
+    render(<Board pgn={OPERA_PGN} />);
+
+    expect(screen.getByRole("button", { name: "2…d6" })).toBeTruthy();
+  });
+
+  it("scrolls nothing on its own — the board is the major element, the list a landmark", () => {
+    // A guard-rail kept from the requester's decision, not an omission: an
+    // automatic scroll to the current chip would move the page under a Player
+    // who is looking at the board.
+    render(<Board pgn={OPERA_PGN} />);
+    expect(screen.getByRole("list", { name: "moves" }).outerHTML).not.toContain("scroll");
+  });
+
+  it("marks the Move being looked at, and says so on the element rather than by tint", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn={OPERA_PGN} />);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+
+    const current = moveButtons().filter((b) => b.getAttribute("aria-current") === "true");
+    expect(current).toHaveLength(1);
+    expect(current[0].textContent).toBe("1.e4");
+  });
+});
+
+describe("Board — the list's existing marks are untouched (US-23)", () => {
+  const items = () =>
+    within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+
+  it("keeps the severity glyph, the evaluation and the not-counted mark on their own Move", () => {
+    // The numbering is added INSIDE the control; everything the list already
+    // carried sits beside it, still attached to the Move it judges.
+    // `annotations[i + 1]` is the Move at `plies[i]`, so index 0 is the starting
+    // Position and nobody's Move.
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: false, reason: "forced" }, chancesLost: null },
+    ];
+    render(<Board pgn={OPERA_PGN} annotations={annotations} />);
+
+    const first = items()[0];
+    // The Move's own control carries the number and the SAN, and nothing else.
+    expect(within(first).getByRole("button").textContent).toBe("1.e4");
+    // Its marks are siblings of that control, inside the same row.
+    expect(within(first).getByLabelText("blunder")).toBeTruthy();
+    expect(within(first).getByLabelText("evaluation")).toBeTruthy();
+    // And the "does not count" mark, beside the glyph rather than replacing it.
+    expect(first.querySelector('[data-part="uncounted"]')).not.toBeNull();
+  });
+});
+
+describe("Board — the arrows are announced by whoever has them (US-23, D6)", () => {
+  /*
+   * "A shortcut nothing on screen mentions does not exist, and one that works on
+   * a screen that never mentions it is worse than none." That rule was a comment,
+   * and a comment cannot stop the next caller passing the prop. So the Board
+   * announces the arrows ITSELF: working and announced become the same act, and a
+   * third caller inherits both without knowing anything.
+   */
+  it("says the arrows step the Moves, when they do", () => {
+    render(<Board pgn={OPERA_PGN} keyboardStepping />);
+
+    const notice = screen.getByText(/pour changer de coup/i);
+    expect(notice.textContent).toMatch(/←/);
+    expect(notice.textContent).toMatch(/→/);
+  });
+
+  it("says nothing about them when they do not step", () => {
+    render(<Board pgn={OPERA_PGN} />);
+
+    expect(screen.queryByText(/pour changer de coup/i)).toBeNull();
+  });
+
+  it("announces only what it owns — no verdict, no key moment", () => {
+    // The reading route's notice promised three commands; two of them do nothing
+    // here, and a notice promising three where one works is worse than none.
+    render(<Board pgn={OPERA_PGN} keyboardStepping />);
+
+    const notice = screen.getByText(/pour changer de coup/i);
+    expect(notice.textContent).not.toMatch(/verdict/i);
+    expect(notice.textContent).not.toMatch(/moment clé/i);
+  });
+
+  it("puts the announcement BELOW the step controls, never above (ADR-0021)", () => {
+    const { container } = render(<Board pgn={OPERA_PGN} keyboardStepping />);
+
+    const stepper = container.querySelector('[data-part="stepper"]')!;
+    const notice = screen.getByText(/pour changer de coup/i);
+    // Document order: the stepper comes first, so nothing that appears with the
+    // ply can push the buttons the Player is clicking.
+    expect(stepper.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("steps a half-Move per arrow, and stops at the ends of the Game", async () => {
+    const user = userEvent.setup();
+    render(<Board pgn="1. e4 e5" keyboardStepping />);
+
+    await user.keyboard("{ArrowRight}");
+    expectCurrentMove("e4");
+    await user.keyboard("{ArrowRight}");
+    expectCurrentMove("e5");
+    // At the end it stays put rather than wrapping or throwing.
+    await user.keyboard("{ArrowRight}");
+    expectCurrentMove("e5");
+
+    await user.keyboard("{ArrowLeft}{ArrowLeft}");
+    expectCurrentMove("Start");
+    await user.keyboard("{ArrowLeft}");
+    expectCurrentMove("Start");
+  });
+});
+
+describe("Board — one board, one author (US-23, ADR-0022)", () => {
+  const squareTint = (container: HTMLElement, square: string) =>
+    container
+      .querySelector<HTMLElement>(`[data-square="${square}"] > div`)
+      ?.style.backgroundColor ?? "";
+
+  it("marks the current Move's destination square with the tint its CALLER supplies", async () => {
+    // The device belongs to the board; the source does not. A square has neither
+    // a column nor a title, only a colour, so it cannot hold two authors — and it
+    // is the screen that says which one it is showing.
+    const user = userEvent.setup();
+    const { container } = render(
+      <Board pgn="1. e4 e5" squareTint={(ply) => (ply === 1 ? "var(--square-sound)" : undefined)} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(squareTint(container, "e4")).toBe("var(--square-sound)");
+
+    // Ply 2 has no verdict, so its square carries nothing.
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(squareTint(container, "e5")).toBe("");
+  });
+
+  it("marks nothing at the starting Position — it is nobody's Move", () => {
+    const { container } = render(<Board pgn="1. e4" squareTint={() => "var(--square-blunder)"} />);
+
+    expect(container.querySelectorAll("[style*='--square-blunder']")).toHaveLength(0);
+  });
+
+  it("paints no square at all when its caller supplies no source", () => {
+    // The reading route before this slice, and any future caller with nothing to
+    // say: silence rather than a default author.
+    const { container } = render(<Board pgn="1. e4 e5" />);
+
+    // The base squares are painted from this family too, so the assertion names
+    // the verdicts rather than the prefix.
+    for (const verdict of ["blunder", "mistake", "inaccuracy", "sound", "good"]) {
+      expect(container.querySelectorAll(`[style*='--square-${verdict}']`)).toHaveLength(0);
+    }
+  });
+});
+
+describe("Board — the current-Move readout carries its number (US-23, F3)", () => {
+  it("names the Move as the list does: the number, then the notation", () => {
+    // Slice 03 numbered the list and left this readout showing the SAN alone, so
+    // "le coup 23" was findable in one place and not in the other — the same need
+    // and the same rule (D4). It lives in this component, so both screens inherit.
+    render(<Board pgn={OPERA_PGN} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("current move").textContent).toBe("1.e4");
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("current move").textContent).toBe("1\u2026e5");
+  });
+
+  it("leaves the starting Position unnumbered — it is nobody's Move", () => {
+    render(<Board pgn={OPERA_PGN} />);
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+  });
+
+  it("stays ONE line in every state, evaluation included", () => {
+    // ADR-0021: this readout sits above the caller's controls and below the
+    // stepper, and it displaces nothing because it never wraps to a second line.
+    const annotations: MoveAnnotation[] = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
+    ];
+    render(<Board pgn="1. e4" annotations={annotations} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    const readout = screen.getByLabelText("current move");
+    // Number, notation, and the evaluation the readout already carried.
+    expect(readout.textContent).toMatch(/^1\.e4 \(/);
   });
 });

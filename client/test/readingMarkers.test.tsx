@@ -18,16 +18,17 @@ afterEach(() => {
 describe("the Games list says which Games carry a reading", () => {
   it("names each state in words, in its own column", () => {
     render(
+      <MemoryRouter>
       <GameList
         games={[
           { ...OPERA_GAME, id: 1, opponent: "sans", reading: "none" },
           { ...OPERA_GAME, id: 2, opponent: "en cours", reading: "open" },
           { ...OPERA_GAME, id: 3, opponent: "scellée", reading: "sealed" },
         ]}
-        onSelect={() => {}}
         selectedIds={new Set()}
         onToggleSelect={() => {}}
-      />,
+      />
+      </MemoryRouter>,
     );
 
     const table = screen.getByRole("table", { name: "parties" });

@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PersonalReading } from "../src/features/personal/PersonalReading";
 import { OPERA_GAME } from "./fixtures";
-import type { PersonalAnalysis } from "../src/types";
+import type { PersonalAnalysis, PersonalMark } from "../src/types";
 
 const EMPTY: PersonalAnalysis = {
   gameId: 1,
@@ -1334,12 +1334,17 @@ describe("posing a verdict from the keyboard (US-22)", () => {
     render(<PersonalReading game={{ ...OPERA_GAME, analyzed: false }} profileId={1} />);
     await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
 
-    const notice = document.querySelector('[data-part="shortcuts"]');
-    expect(notice?.textContent).toContain("1");
-    expect(notice?.textContent).toContain("5");
-    expect(notice?.textContent).toMatch(/moment clé/i);
-    // The same sentence in every state, so it can never move anything.
-    expect(document.querySelectorAll('[data-part="shortcuts"]')).toHaveLength(1);
+    // TWO notices since US-23 (D6), each announcing what it owns: the arrows come
+    // from the board component, the verdict and the Key moment from this screen.
+    // What matters is unchanged — every command on this screen is announced on it,
+    // and each sentence is the same in every state, so neither can move anything.
+    const notices = [...document.querySelectorAll('[data-part="shortcuts"]')];
+    expect(notices).toHaveLength(2);
+    const own = notices.find((n) => /verdict/i.test(n.textContent ?? ""))!;
+    expect(own.textContent).toContain("1");
+    expect(own.textContent).toContain("5");
+    expect(own.textContent).toMatch(/moment clé/i);
+    expect(notices.some((n) => /changer de coup/i.test(n.textContent ?? ""))).toBe(true);
   });
 
   it("writes into the posterior layer after the seal, exactly as the mouse does", async () => {
@@ -1358,5 +1363,238 @@ describe("posing a verdict from the keyboard (US-22)", () => {
     await waitFor(() => expect(checked()).toEqual(["good"]));
     // The sealed layer is beside it, untouched.
     expect(document.querySelector('[data-part="sealed-mark"]')?.textContent).toContain("Erreur");
+  });
+});
+
+describe("PersonalReading — who announces which command (US-23, D6)", () => {
+  /*
+   * The reading route announces the commands it owns — the verdict and the Key
+   * moment — and no longer the arrows, which belong to the board component and
+   * are announced by it. The Player still sees all three; they now come from two
+   * places, each saying what it actually has.
+   */
+  it("announces the verdict and the Key moment, and leaves the arrows to the board", async () => {
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    const own = await screen.findByText(/pour le verdict/i);
+    expect(own.textContent).toMatch(/moment clé/i);
+    // Not this notice's business any more.
+    expect(own.textContent).not.toMatch(/changer de coup/i);
+  });
+
+  it("still shows the Player all three commands on that screen", async () => {
+    stubReading();
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    // Two notices, one screen: the arrows from the board, the rest from here.
+    expect(await screen.findByText(/pour changer de coup/i)).toBeTruthy();
+    expect(screen.getByText(/pour le verdict/i)).toBeTruthy();
+  });
+});
+
+describe("PersonalReading — the door to the Confrontation (US-23, D7)", () => {
+  /*
+   * Before the seal there is nothing fixed to confront, and that stays true. What
+   * was missing was not the ability to confront an unfinished reading but knowing
+   * that the confrontation exists and when — so a SENTENCE, never a greyed-out
+   * button: the project's own idiom, already written beside the refusal of an
+   * empty reading ("disabled on its own says only that something is wrong, never
+   * what").
+   */
+  it("says the confrontation comes after the seal, beside the act of sealing", async () => {
+    stubReading({ ...EMPTY, marks: [{ ply: 4, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }] });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    const seal = await screen.findByRole("button", { name: /sceller ma lecture/i });
+    const notice = screen.getByText(/après le scellement/i);
+    expect(notice.textContent).toMatch(/confront/i);
+    // Beside the act it is about, not somewhere else on the screen.
+    expect(seal.closest('[data-part="seal"]')!.contains(notice)).toBe(true);
+  });
+
+  it("offers NO way into the Confrontation while the reading is unsealed", async () => {
+    stubReading({ ...EMPTY, marks: [{ ply: 4, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }] });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+
+    await screen.findByRole("button", { name: /sceller ma lecture/i });
+    // A sentence, not a control: nothing to follow, and nothing greyed out either.
+    expect(screen.queryByRole("link", { name: /confronter/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /confronter/i })).toBeNull();
+  });
+
+  it("does not promise it on a Game that is not the current Profile's", async () => {
+    // A screen that has just refused a Game must not, in the same breath, offer a
+    // door to it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        ({ ok: false, status: 404, json: async () => ({ error: "Partie introuvable pour ce profil : 1" }) }) as Response,
+      ),
+    );
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={9} />);
+
+    await screen.findByText(/n'appartient pas au profil courant/i);
+    expect(screen.queryByText(/après le scellement/i)).toBeNull();
+    expect(screen.queryByRole("link", { name: /confronter/i })).toBeNull();
+  });
+
+  it("hands the caller the seal's state, so the door appears without a reload", async () => {
+    // The entry goes through the SAME channel as the way back to Analyse — a slot
+    // the screen does not fill when the Game is not the current Profile's. What
+    // the slot needs to know is whether the reading is sealed, so it is asked.
+    const user = userEvent.setup();
+    stubReading({ ...EMPTY, marks: [{ ply: 4, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false }] });
+    render(
+      <PersonalReading
+        game={{ ...OPERA_GAME, analyzed: true }}
+        profileId={1}
+        onwards={(sealed) => <p>{sealed ? "scellée" : "pas encore"}</p>}
+      />,
+    );
+
+    expect(await screen.findByText("pas encore")).toBeTruthy();
+
+    await user.click(await screen.findByRole("button", { name: /sceller ma lecture/i }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: /^sceller$/i }));
+
+    // No manual reload: the slot is re-rendered with the new state.
+    expect(await screen.findByText("scellée")).toBeTruthy();
+  });
+});
+
+describe("PersonalReading — the Player's verdict on their own board (US-23, ADR-0022)", () => {
+  const squareOf = (container: HTMLElement, square: string) =>
+    container
+      .querySelector<HTMLElement>(`[data-square="${square}"] > div`)
+      ?.style.backgroundColor ?? "";
+
+  const mark = (over: Partial<PersonalMark>): PersonalMark => ({
+    ply: 1,
+    declaredSeverity: null,
+    note: null,
+    keyMoment: false,
+    posterior: false,
+    ...over,
+  });
+
+  /** The reading route over a Game whose first Move is 1.e4 (so e4 is ply 1's square). */
+  const readingWith = async (marks: PersonalMark[]) => {
+    stubReading({ ...EMPTY, marks });
+    const view = render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    return view;
+  };
+
+  it("marks the destination square for EACH of the five verdicts, and tells them apart", async () => {
+    const seen = new Set<string>();
+    for (const value of ["blunder", "mistake", "inaccuracy", "sound", "good"] as const) {
+      const { container, unmount } = await readingWith([mark({ ply: 1, declaredSeverity: value })]);
+      const tint = squareOf(container, "e4");
+      expect(tint, `square tint for ${value}`).toBeTruthy();
+      seen.add(tint);
+      unmount();
+      vi.unstubAllGlobals();
+    }
+    // Five values, five distinct tints — a verdict the Player cannot tell from
+    // another is not a verdict shown.
+    expect(seen.size).toBe(5);
+  });
+
+  it("does not paint `Correct` like a reward, and paints `Bon` with its own tint", async () => {
+    const { container, unmount } = await readingWith([mark({ ply: 1, declaredSeverity: "sound" })]);
+    // `Sound` is "I looked, and I find nothing to fault" — not a compliment.
+    expect(squareOf(container, "e4")).toBe("var(--square-sound)");
+    unmount();
+    vi.unstubAllGlobals();
+
+    const good = await readingWith([mark({ ply: 1, declaredSeverity: "good" })]);
+    expect(squareOf(good.container, "e4")).toBe("var(--square-good)");
+  });
+
+  it("leaves the square unmarked when nothing is said about that Move", async () => {
+    const { container } = await readingWith([mark({ ply: 4, declaredSeverity: "blunder" })]);
+
+    // A mark on another ply is not a mark on this one.
+    expect(squareOf(container, "e4")).toBe("");
+  });
+
+  it("marks a POSTERIOR verdict exactly as a sealed one", async () => {
+    // No distinction on the square: the panel already names the layer in words,
+    // and putting that difference on a tint would be the colour-only cue
+    // ADR-0013 forbids.
+    const { container, unmount } = await readingWith([
+      mark({ ply: 1, declaredSeverity: "good", posterior: false }),
+    ]);
+    const sealed = squareOf(container, "e4");
+    unmount();
+    vi.unstubAllGlobals();
+
+    const after = await readingWith([mark({ ply: 1, declaredSeverity: "good", posterior: true })]);
+    expect(squareOf(after.container, "e4")).toBe(sealed);
+  });
+
+  it("shows NOTHING of the engine on this board, whatever the remembered Review mode", async () => {
+    // The guarantee this screen exists to make: no engine prop reaches the
+    // diagram, so no measured severity can tint a square here.
+    localStorage.setItem("chess-analyst.review-mode", "detailed");
+    const { container } = await readingWith([mark({ ply: 1, declaredSeverity: "sound" })]);
+
+    // The Player's own tint is there...
+    expect(squareOf(container, "e4")).toBe("var(--square-sound)");
+    // ...and no evaluation, no curve, no engine glyph came with it.
+    expect(screen.queryByLabelText("evaluation")).toBeNull();
+  });
+});
+
+describe("PersonalReading — the sealed verdict is readable in the sealed section (US-23, F2)", () => {
+  it("recalls it beside the posterior choice, on the Move that carries both", async () => {
+    // The requester's own case: a Move verdicted `Erreur` before the seal and
+    // amended to `Bon` after it. Both must be legible, and the amendment must not
+    // read as having replaced the sealed one.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-25T14:43:45.735Z",
+      engineSeenBeforeSeal: false,
+      marks: [
+        { ply: 1, declaredSeverity: "mistake", note: null, keyMoment: false, posterior: false },
+        { ply: 1, declaredSeverity: "good", note: null, keyMoment: false, posterior: true },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // The section is named after the seal, and it now says what was sealed.
+    const group = screen.getByRole("group", { name: /après le scellement/i });
+    expect(within(group).getByText(/au scellement/i).textContent).toMatch(/erreur/i);
+    // And the posterior choice is what the control has selected.
+    expect(
+      within(group).getAllByRole("radio").filter((r) => (r as HTMLInputElement).checked),
+    ).toHaveLength(1);
+  });
+
+  it("keeps the full recall where it is, with the note and the Key moment", async () => {
+    // `SealedMarkReadout` is the block whose height genuinely varies, and it is
+    // low in the panel by a measured decision (ADR-0021). Only the comparison
+    // line moved up.
+    const user = userEvent.setup();
+    stubReading({
+      ...EMPTY,
+      sealedAt: "2026-08-25T14:43:45.735Z",
+      engineSeenBeforeSeal: false,
+      marks: [
+        { ply: 1, declaredSeverity: "mistake", note: "ce que j'avais écrit", keyMoment: true, posterior: false },
+      ],
+    });
+    render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const full = screen.getByRole("group", { name: /ma lecture scellée de ce coup/i });
+    expect(within(full).getByText(/ce que j'avais écrit/)).toBeTruthy();
+    expect(within(full).getByText(/moment clé/i)).toBeTruthy();
   });
 });

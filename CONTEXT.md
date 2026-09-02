@@ -486,7 +486,10 @@ by construction identical.
   decision**: severities are computed for the Player's own Moves only, because this tool is about the
   Player's own improvement. Only the Player's own Moves ever meet a measured severity.
 _Avoid_: Player severity (reads as a severity belonging to the Player rather than one they assert),
-Self-assessment, Guess, Rating
+Self-assessment, Guess, Rating, Evaluation (the engine's score on a Position), Annotation (the
+engine's per-Move record) — the last two because the slip is recurrent and it inverts the meaning:
+asking for "the Player's evaluations, as annotations" reads, taken literally, as a request to put the
+engine's record on the Player's own board (ADR-0022)
 
 **Line check**:
 Running the engine on the Position a `Candidate line` reaches, so the Player's idea can be priced

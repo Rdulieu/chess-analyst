@@ -70,7 +70,11 @@ function AnalysisOfOneGame({ profile }: { profile: Profile }) {
           reading stands (US-16a). Offered here because the reading route is
           Game-scoped: it is reached from a Game, never from the `Nav`. */}
       <p data-part="reading-entry">
-        <Link to={`/analyse/${game.id}/lecture`}>{READING_ENTRY[reading]}</Link>{" "}
+        {/* An ACT, so it reads as one (US-23, D2) — and it stays an anchor, so
+            middle-click, "open in a new tab" and the status bar keep working. */}
+        <Link to={`/analyse/${game.id}/lecture`} data-action="">
+          {READING_ENTRY[reading]}
+        </Link>{" "}
         {/* The state in words beside the way in: "resume" and "see" are different
             invitations, and a Player who cannot tell a started reading from a
             sealed one does not know which they are about to do. */}
@@ -82,7 +86,7 @@ function AnalysisOfOneGame({ profile }: { profile: Profile }) {
           discover a refusal rather than be told the order of the exercise. */}
       {reading === "sealed" && (
         <p data-part="confrontation-entry">
-          <Link to={`/analyse/${game.id}/confrontation`}>
+          <Link to={`/analyse/${game.id}/confrontation`} data-action="">
             Confronter ma lecture au moteur
           </Link>
         </p>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Board } from "../../components/Board";
 import { parseGame } from "../../chess/history";
+import { SEVERITY_SQUARE_TINT } from "../../chess/severity";
 import { fetchGameAnnotations } from "../../api";
 import { useAnalysisPass } from "../analysis/useAnalysisPass";
 import { AnalysisPassStatus } from "../analysis/AnalysisPassStatus";
@@ -117,7 +118,21 @@ export function GameViewer({
       <Board
         pgn={game.pgn}
         orientation={game.playerColor}
+        // The arrows step the Moves here too (US-23, D6). Passing this is also
+        // what makes the board SAY so — the two cannot come apart — so `Analyse`
+        // no longer has a navigation the reading route has and it lacks.
+        keyboardStepping
         annotations={mode === "unaided" ? undefined : (annotations ?? undefined)}
+        // The ENGINE's verdict on the square, because this is the engine's screen
+        // (ADR-0022). It follows the Review mode like everything else the engine
+        // says here: at `Unaided` there is nothing of the engine to show, so the
+        // square carries nothing either. None of the Player's own marks ever
+        // reach this diagram.
+        squareTint={(ply) => {
+          if (mode === "unaided") return undefined;
+          const severity = annotations?.[ply]?.severity;
+          return severity ? SEVERITY_SQUARE_TINT[severity] : undefined;
+        }}
         detailed={mode === "detailed"}
         recap={recap}
         // Handed to the board as controls rather than stacked above it: they

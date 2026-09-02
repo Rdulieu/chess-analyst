@@ -4,6 +4,21 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { App } from "../src/App";
 import { OPERA_GAME } from "./fixtures";
+/**
+ * The current-Move readout names this Move — number then notation since US-23
+ * (F3), so a test that means "the readout is on this Move" says that rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function expectCurrentMove(san: string) {
+  if (san === "Start") {
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    return;
+  }
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(screen.getByLabelText("current move").textContent).toMatch(
+    new RegExp(`^\\d+[.\u2026]${escaped}$`),
+  );
+}
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, json: async () => body } as Response;
@@ -103,7 +118,7 @@ describe("App — routing & navigation", () => {
 
     // The landing page shows the game list — and only it: the import form is
     // an operation on a Profile and lives on that Profile's own page (US-11).
-    expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: /Duke Karl/i })).toBeTruthy();
     expect(screen.queryByRole("form", { name: /import/i })).toBeNull();
   });
 
@@ -111,14 +126,14 @@ describe("App — routing & navigation", () => {
     const user = userEvent.setup();
     const { container } = renderApp(["/"]);
 
-    await user.click(await screen.findByRole("button", { name: /Duke Karl/i }));
+    await user.click(await screen.findByRole("link", { name: /Duke Karl/i }));
 
     // The board (which lives only on the Analyse page) renders the starting position.
     await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
 
     // Previous/Next work exactly as before: Next advances one Move.
     await user.click(screen.getByRole("button", { name: /next/i }));
-    expect(screen.getByLabelText("current move").textContent).toBe("e4");
+    expectCurrentMove("e4");
   });
 
   it("reaches a Profile's own page from the Profils list, and imports from there", async () => {
@@ -186,19 +201,19 @@ describe("App — routing & navigation", () => {
 
     // No list visit first: the page loads its own Game from the route param.
     await waitFor(() => expect(container.querySelectorAll("[data-piece]")).toHaveLength(32));
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
   });
 
   it("moves between pages through the menu, back to Mes parties", async () => {
     const user = userEvent.setup();
     renderApp(["/"]);
-    await screen.findByRole("button", { name: /Duke Karl/i });
+    await screen.findByRole("link", { name: /Duke Karl/i });
 
     await user.click(screen.getByRole("link", { name: /stats/i }));
     expect(await screen.findByText(/par cadence/i)).toBeTruthy();
 
     await user.click(screen.getByRole("link", { name: /mes parties/i }));
-    expect(await screen.findByRole("button", { name: /Duke Karl/i })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: /Duke Karl/i })).toBeTruthy();
   });
 });
 
@@ -355,6 +370,7 @@ describe("App — import UI", () => {
   });
 
   it("surfaces an import error without crashing", async () => {
+
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string | URL): Promise<Response> => {

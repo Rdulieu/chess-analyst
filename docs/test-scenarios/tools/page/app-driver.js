@@ -12,8 +12,14 @@
  * Two facts about this app are encoded here rather than rediscovered every run,
  * because rediscovering them has produced false findings:
  *
- * - **A Game row is a `button`, not a link.** A driver hunting for an `href` matching
- *   `/analyse/` finds nothing and records the screen as unreachable (2026-08-19).
+ * - **A Game row opens through the opponent's name, and it is an anchor.** It was a
+ *   `button` that navigated by program until US-23 (2026-09-01, D2) — so the fact
+ *   worth encoding is no longer the element type but WHERE the door is: only the
+ *   opponent cell carries one, the rest of the row is facts to compare. A driver
+ *   clicking the row itself, or hunting for a button in it, finds nothing.
+ * - **A board square's style sits on a div INSIDE `[data-square]`**, because that is
+ *   where `react-chessboard` puts `squareStyles`. Reading the square itself reports
+ *   an unmarked board (2026-09-01).
  * - **Month fields are framework-controlled**, so assigning `value` does nothing at
  *   all: it takes the native value setter plus an event — and then a read-back, since
  *   the same run that discovered this nearly imported the wrong months (2026-08-19).
@@ -53,22 +59,44 @@ var agenticDriver = {
     return [...document.querySelectorAll("table tbody tr")].map((tr, index) => ({
       index,
       text: tr.innerText.replace(/\s+/g, " ").trim(),
-      openable: Boolean(tr.querySelector("button")),
+      openable: Boolean(tr.querySelector('a[href*="/analyse/"]')),
     }));
   },
 
-  /** Open a Game from the list. The row is a `button`, not a link. */
+  /** Open a Game from the list, through the one door its row has: the opponent. */
   openGameRow(index = 0) {
     const rows = [...document.querySelectorAll("table tbody tr")];
-    const button = rows[index] && rows[index].querySelector("button");
-    if (!button) return false;
-    button.click();
+    const door = rows[index] && rows[index].querySelector('a[href*="/analyse/"]');
+    if (!door) return false;
+    door.click();
     return true;
   },
 
   /** Open the first Game from the list. */
   openFirstGame() {
     return this.openGameRow(0);
+  },
+
+  /**
+   * Every board square that carries a background of its own, as `{ square: value }`.
+   *
+   * **The style is on a div INSIDE the `[data-square]` element**, not on the
+   * element: `react-chessboard` 5.10 puts `squareStyles` there. A driver reading
+   * the square itself concludes "nothing is marked" while the tint is right there
+   * — measured on the FP of US-23-06 (2026-09-01), where it produced a false red
+   * that was only lifted by re-reading the DOM.
+   *
+   * Raw values, judged by nobody here (ADR-0020): what a tint MEANS, and whose
+   * verdict it is, is the scenario's reading.
+   */
+  squareTints() {
+    const marked = {};
+    for (const cell of document.querySelectorAll("[data-square]")) {
+      const painted = cell.querySelector(":scope > div");
+      const value = painted && painted.style.backgroundColor;
+      if (value) marked[cell.getAttribute("data-square")] = value;
+    }
+    return marked;
   },
 
   /** Open the first Profile from the list of Profiles. */

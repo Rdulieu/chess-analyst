@@ -125,3 +125,137 @@ describe("which Game the walk opens", () => {
     expect(openerFor(undefined, { route: "/analyse/:gameId" })).toBe(undefined);
   });
 });
+
+describe("where selecting a Profile leaves the walk", () => {
+  /*
+   * Until US-23, "Sélectionner" only recorded the current Profile and the walk stayed
+   * on `/profiles`. It is now a **composed act** — it records, then leads to "Mes
+   * parties" — so a helper that waits for `/profiles` after the click waits for a
+   * screen the app has deliberately left. Measured on the FP of US-23-01, 2026-09-01:
+   * the scenario had to drive it by hand, and every HP going through this helper would
+   * have failed on a false red.
+   *
+   * The asymmetry is the point: a Profile that is ALREADY current has no button to
+   * click, so nothing navigates and the walk is still on `/profiles`. The wait must
+   * follow what the click actually did, not what it usually does.
+   */
+  const sessionAnswering = (outcome) => {
+    const seen = [];
+    let path = "/profiles";
+    return {
+      seen,
+      pendingRequests: () => 0,
+      evaluate: async (script) => {
+        seen.push(script);
+        /* The script carries the whole page-driver source, so every method NAME
+           appears in it. Only the trailing `agenticDriver.<call>` says what is
+           being called. */
+        if (script.includes("agenticDriver.followNav(")) return JSON.stringify(true);
+        if (script.includes("agenticDriver.selectProfile(")) {
+          // The app navigates only when there was something to click.
+          if (outcome === "clicked") path = "/";
+          return JSON.stringify(outcome);
+        }
+        if (script.includes("agenticDriver.where()")) return JSON.stringify({ path, text: 12 });
+        return JSON.stringify(null);
+      },
+    };
+  };
+
+  /** Short waits: the point is which screen is waited for, not how patiently. */
+  const FAST = { timeoutMs: 600, settleMs: 10 };
+
+  it("waits for Mes parties when the click actually selected a Profile", async () => {
+    const { selectProfile } = await import("./navigate.mjs");
+    const session = sessionAnswering("clicked");
+
+    const picked = await selectProfile(session, {
+      port: "5231",
+      username: "Nonomoho",
+      waitOptions: FAST,
+    });
+
+    expect(picked).toBe("clicked");
+    // It did not sit waiting for a screen the act has left behind.
+    expect(session.seen.some((s) => s.includes("agenticDriver.selectProfile("))).toBe(true);
+  });
+
+  it("stays on the Profile list when there was nothing to click", async () => {
+    const { selectProfile } = await import("./navigate.mjs");
+    const session = sessionAnswering("already");
+
+    expect(
+      await selectProfile(session, { port: "5231", username: "Nonomoho", waitOptions: FAST }),
+    ).toBe("already");
+  });
+});
+
+describe("how the page half opens a Game", () => {
+  /*
+   * The Game row was a `button` that navigated by program, and the page half
+   * encoded that — twice in code and twice in prose. US-23 (D2) made it an
+   * anchor, and nothing here failed: the page half has no unit seam by design
+   * (driving a fake DOM would test a different mechanism than the one that
+   * ships), so `openGameRow` silently returned false and `reachScreen` could no
+   * longer open ANY `/analyse/...` screen. Found by the FP of US-23-02,
+   * 2026-09-01 — every HP scenario would have gone red for a reason that is not
+   * the app.
+   *
+   * What is testable without a DOM is what the source LOOKS FOR. That is a
+   * coarse seam, and it is the one that would have caught this.
+   */
+  const source = readFileSync(join(HERE, "..", "page", "app-driver.js"), "utf8");
+
+  /** The body of one method of the page driver, by name. */
+  const methodBody = (name) => {
+    const at = source.indexOf(`  ${name}(`);
+    expect(at, `no method named ${name}`).toBeGreaterThan(-1);
+    return source.slice(at, source.indexOf("\n  },", at));
+  };
+
+  it("looks for the row's anchor, not for a button that is no longer there", () => {
+    for (const name of ["gameRows", "openGameRow"]) {
+      const body = methodBody(name);
+      expect(body, `${name} still hunts for a button in the row`).not.toMatch(
+        /querySelector\(\s*["']button["']\s*\)/,
+      );
+      expect(body, `${name} does not look for the Analyse link`).toMatch(/\/analyse\//);
+    }
+  });
+
+  it("does not still teach that a Game row is a button", () => {
+    // A stale instruction is worse than none: it is obeyed. The prose at the top
+    // of the file taught the opposite of what ships.
+    expect(source).not.toMatch(/row is a `button`, not a link/);
+  });
+});
+
+describe("how the page half reads a marked board square", () => {
+  /*
+   * `react-chessboard` 5.10 applies `squareStyles` to a **div inside** the
+   * `[data-square]` element, not to the element itself. A driver reading the style
+   * of `[data-square]` concludes "no square is marked" while the tint is right
+   * there — the false red produced, and then lifted by re-reading the DOM, on the
+   * FP of US-23-06 (2026-09-01).
+   *
+   * Encoded here for the same reason as "the door of a Game row is the opponent's
+   * name": a fact about this app that costs a run every time it is rediscovered.
+   */
+  const source = readFileSync(join(HERE, "..", "page", "app-driver.js"), "utf8");
+
+  it("reads the inner div, because that is where the library puts the style", () => {
+    const at = source.indexOf("  squareTints(");
+    expect(at, "no squareTints() in the page half").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n  },", at));
+    // It descends into the square rather than reading the square itself.
+    expect(body).toMatch(/data-square/);
+    expect(body).toMatch(/querySelector\(\s*["']:scope\s*>\s*div["']\s*\)|children\[0\]|firstElementChild/);
+  });
+
+  it("hands back the raw values and judges none of them", () => {
+    const at = source.indexOf("  squareTints(");
+    const body = source.slice(at, source.indexOf("\n  },", at));
+    // ADR-0020: it drives, it never judges. No token name, no expected colour.
+    expect(body).not.toMatch(/--square-(blunder|mistake|inaccuracy|sound|good)/);
+  });
+});

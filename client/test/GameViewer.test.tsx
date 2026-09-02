@@ -1,9 +1,25 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GameViewer } from "../src/features/games/GameViewer";
 import { OPERA_GAME } from "./fixtures";
 import type { MoveAnnotation } from "../src/types";
+/**
+ * The current-Move readout names this Move — number then notation since US-23
+ * (F3), so a test that means "the readout is on this Move" says that rather than
+ * spelling the label. What the label IS is pinned once, in its own test.
+ */
+function expectCurrentMove(san: string) {
+  if (san === "Start") {
+    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    return;
+  }
+  const escaped = san.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  expect(screen.getByLabelText("current move").textContent).toMatch(
+    new RegExp(`^\\d+[.\u2026]${escaped}$`),
+  );
+}
+
 
 function stubAnnotations(plies: MoveAnnotation[]) {
   vi.stubGlobal(
@@ -160,7 +176,7 @@ describe("GameViewer", () => {
       el.hasAttribute("aria-label"),
     );
     expect(ours).toHaveLength(0); // no pass running here, and the move readout is no longer live
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
   });
 
   it("does not fetch annotations, and offers no level control, for a not-yet-analyzed Game", () => {
@@ -193,7 +209,7 @@ describe("GameViewer", () => {
   it("keeps the board free of annotations until the Game has been analyzed", () => {
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
-    expect(screen.getByLabelText("current move").textContent).toBe("Start");
+    expectCurrentMove("Start");
     expect(screen.queryByLabelText("evaluation")).toBeNull();
   });
 
@@ -419,3 +435,83 @@ const ANNOTATED_FOR_PROVENANCE = [
   { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early", counted: null, chancesLost: null },
   { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early", counted: null, chancesLost: null },
 ] satisfies MoveAnnotation[];
+
+describe("GameViewer — Analyse steps from the keyboard (US-23, D6)", () => {
+  it("announces the arrows, and no verdict command — it has none", async () => {
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    const notice = await screen.findByText(/pour changer de coup/i);
+    expect(notice.textContent).not.toMatch(/verdict|moment clé/i);
+
+    // And they work: the board follows the arrow.
+    await user.keyboard("{ArrowRight}");
+    expectCurrentMove("e4");
+  });
+
+  it("leaves the arrows to a focused radio group — the Review mode keeps its own", async () => {
+    // Confirmed with the requester as the intended behaviour, not a defect: the
+    // group keeps its native arrows, and the control does not hand focus back
+    // after a choice. Taking them away would break a convention assistive
+    // technology takes for granted.
+    const user = userEvent.setup();
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    const annotated = await screen.findByRole("radio", { name: /annoté/i });
+    await user.click(annotated);
+
+    /* `fireEvent`, not `user.keyboard`, and for a reason worth recording:
+       user-event runs its own radio-group walk on an arrow and that helper throws
+       inside jsdom (`Cannot read properties of undefined (reading 'escape')`).
+       That is the driver, not the app — and the real keystroke on a real radio is
+       the Feature Path's job. What is testable here is that the board declines a
+       keystroke whose target is a radio. */
+    fireEvent.keyDown(annotated, { key: "ArrowRight" });
+
+    // The Move did not change: the keystroke was the group's, not the board's.
+    expectCurrentMove("Start");
+
+    // And off the group, the same key is the board's again.
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    expectCurrentMove("e4");
+  });
+});
+
+describe("GameViewer — one board, one author (US-23, ADR-0022)", () => {
+  const squareOf = (container: HTMLElement, square: string) =>
+    container
+      .querySelector<HTMLElement>(`[data-square="${square}"] > div`)
+      ?.style.backgroundColor ?? "";
+
+  it("keeps the ENGINE's tint on the square, and none of the Player's marks", async () => {
+    // The counterpart of the reading route's guarantee. A square has neither a
+    // column nor a title, only a colour, so it cannot hold two authors — and this
+    // screen's author is the engine.
+    const user = userEvent.setup();
+    localStorage.setItem("chess-analyst.review-mode", "annotated");
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("button", { name: "Next" }));
+
+    // Whatever tint is on the square, it is one of the engine's own tokens.
+    const tint = squareOf(container, "e4");
+    if (tint) expect(tint).toMatch(/^var\(--square-(inaccuracy|mistake|blunder)\)$/);
+    // And nothing of the Player's reading is drawn on this diagram.
+    expect(container.querySelector('[data-part="move-marks"]')).toBeNull();
+    for (const own of ["sound", "good"]) {
+      expect(container.querySelectorAll(`[style*='--square-${own}']`)).toHaveLength(0);
+    }
+  });
+
+  it("paints no square at Unaided — there is nothing of the engine to show", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("chess-analyst.review-mode", "unaided");
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+
+    await user.click(await screen.findByRole("button", { name: "Next" }));
+
+    for (const severity of ["inaccuracy", "mistake", "blunder"]) {
+      expect(container.querySelectorAll(`[style*='--square-${severity}']`)).toHaveLength(0);
+    }
+  });
+});

@@ -12,9 +12,10 @@ import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
-import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../chess/severity";
+import { SEVERITY_GLYPH } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
+import { moveName, plyNumber, startingPoint } from "../features/confrontation/moveName";
 import { BOARD_SQUARES } from "../chess/boardTheme";
 import type { GameRecap, MoveAnnotation } from "../types";
 
@@ -45,6 +46,7 @@ export function Board({
   controls,
   keyboardStepping = false,
   moveMarks,
+  squareTint,
 }: {
   pgn: string;
   annotations?: MoveAnnotation[];
@@ -82,14 +84,31 @@ export function Board({
    */
   moveMarks?: (ply: number) => ReactNode;
   /**
+   * The tint for one ply's destination square, or nothing — **the caller's
+   * verdict, not this component's** (US-23, ADR-0022).
+   *
+   * `Analyse` supplies the engine's measured severity, the reading route the
+   * Player's declared one, and a caller with nothing to say supplies nothing: a
+   * board with no author paints no square rather than falling back on one.
+   *
+   * The tint is never the only cue — the glyph stays in the move list (ADR-0013),
+   * which is `moveMarks`' business on the reading route and the list's own on
+   * `Analyse`.
+   */
+  squareTint?: (ply: number) => string | undefined;
+  /**
    * Whether `←` and `→` step the Moves while this Board is on screen.
    *
-   * Opt-in, and the reason is not caution: a shortcut is only offered where it is
-   * **announced**, and the announcement lives in the caller's own panel. A
+   * Opt-in, and **self-announcing**: turning them on makes this component say so,
+   * below the stepper, so working and announced can no longer come apart. A
    * shortcut discovered by accident does not exist, and one that works on a
    * screen that never mentions it is worse than none — the Player learns a rule
-   * that then fails silently elsewhere. The reading route announces them
-   * (`ShortcutsNotice`); the Analyse page does not, so it does not get them.
+   * that then fails silently elsewhere. That used to be a rule in a comment, which
+   * could not stop a caller passing the prop and announcing nothing (US-23, D6).
+   *
+   * The announcement covers only the arrows, which are all this component owns.
+   * A caller with commands of its own announces those itself — the reading route
+   * does, for the verdict and the Key moment (`ShortcutsNotice`).
    */
   keyboardStepping?: boolean;
   /**
@@ -102,6 +121,10 @@ export function Board({
   orientation?: "white" | "black";
 }) {
   const { startFen, plies } = useMemo(() => parseGame(pgn), [pgn]);
+  // Where the numbering counts from. Almost every Game starts the usual way, but
+  // one set up from a Position has Black to move at ply 1 and its own Move
+  // number, so numbering from 1. would name every Move of it wrongly.
+  const start = useMemo(() => startingPoint(startFen), [startFen]);
   const [index, setIndex] = useState(0);
   /**
    * A Position shown **temporarily**, while the Player points at (or focuses) a
@@ -120,7 +143,17 @@ export function Board({
   // affordance, and a Player reading the line by keyboard must not lose the
   // preview because the mouse drifted off the button that still holds focus.
   const position = preview.focus ?? preview.hover ?? navigated;
-  const currentMove = index === 0 ? "Start" : plies[index - 1].san;
+  /*
+   * How the Move just reached is named in the readout: the number, then the
+   * notation — `23.Bxh5`, not `Bxh5` (US-23, F3). The list was numbered by the
+   * slice that added `plyNumber` and this readout was left showing the SAN alone,
+   * so "le coup 23" was findable in one place and not the other. Same rule, and
+   * `moveName` is where it lives.
+   *
+   * The starting Position keeps its own word: it is nobody's Move, so it carries
+   * no number.
+   */
+  const currentMove = index === 0 ? "Start" : moveName(index, plies[index - 1].san, start);
   const atStart = index === 0;
   const atEnd = index === plies.length;
 
@@ -201,19 +234,24 @@ export function Board({
   const bands = useMemo(() => (annotations ? phaseBands(annotations) : []), [annotations]);
 
   const currentAnnotation = annotations?.[index];
-  const squareStyles =
-    index > 0 && currentAnnotation?.severity
-      ? // The CONSTANT variant, not the chrome's: `react-chessboard` paints the
-        // piece on top of this square and the piece keeps its ink in both themes
-        // (ADR-0013 — the theme-varying tint measured 1.49:1 in dark). This prop
-        // is also the reason the tokens are custom properties: a third-party API
-        // taking a style object cannot be reached by a class.
-        {
-          [plies[index - 1].to]: {
-            backgroundColor: SEVERITY_SQUARE_TINT[currentAnnotation.severity],
-          },
-        }
-      : undefined;
+  /*
+   * The destination square of the current Move, tinted by whatever the CALLER
+   * says about that ply (ADR-0022). The device is this component's; the source is
+   * not — a square has neither a column nor a title, only a colour, so it cannot
+   * hold two authors, and it is the screen that decides which one it shows.
+   *
+   * Always the CONSTANT token family, whoever supplies it: `react-chessboard`
+   * paints the piece on top of this square and the piece keeps its ink in both
+   * themes (ADR-0013 — a theme-varying tint measured 1.49:1 in dark). This prop
+   * is also why the tokens are custom properties: a third-party API taking a
+   * style object cannot be reached by a class.
+   *
+   * Nothing at ply 0: the starting Position is nobody's Move.
+   */
+  const tint = index > 0 ? squareTint?.(index) : undefined;
+  const squareStyles = tint
+    ? { [plies[index - 1].to]: { backgroundColor: tint } }
+    : undefined;
 
   /**
    * The board's arrows for the record: the Move that should have been played,
@@ -310,6 +348,27 @@ export function Board({
             {currentMove}
             {currentAnnotation && ` (${formatEvaluation(currentAnnotation.whiteEval)})`}
           </p>
+          {/*
+            The arrows, said on the screen — by the component that HAS them
+            (US-23, D6). "A shortcut nothing on screen mentions does not exist,
+            and one that works on a screen that never mentions it is worse than
+            none": that rule was a comment, and a comment cannot stop the next
+            caller passing the prop. Announcing here makes working and announced
+            the same act — they cannot come apart, and a third caller inherits
+            both without knowing anything.
+
+            It announces ONLY what it owns. The reading route's notice promised
+            three commands, two of which do nothing here, and a notice promising
+            three where one works is worse than none.
+
+            Below the stepper and one line in every state, like the readout above
+            it and for the same reason (ADR-0021).
+          */}
+          {keyboardStepping && (
+            <p data-part="shortcuts">
+              Au clavier : <kbd>←</kbd> <kbd>→</kbd> pour changer de coup.
+            </p>
+          )}
           {controls?.(index)}
           {/*
             The way to the record, from beside the board. The panel itself is
@@ -374,11 +433,18 @@ export function Board({
                   </li>
                 ),
                 <li key={i}>
+                  {/* The number is INSIDE the control (US-23, D4), so it is part
+                      of the accessible name: a Player on a screen reader hears
+                      which Move they are reaching, and one who dictates can say
+                      what they read. `12.` on White's half and `12…` on Black's —
+                      the whole Move's number on both would print `12. Nf3` then
+                      `12. Nc6`, and the second is false. */}
                   <button
                     type="button"
                     aria-current={index === i + 1 ? "true" : undefined}
                     onClick={() => goTo(i + 1)}
                   >
+                    {plyNumber(i + 1, start)}
                     {ply.san}
                   </button>
                   {moveMarks?.(i + 1)}
