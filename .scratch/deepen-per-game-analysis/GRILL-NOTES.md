@@ -168,3 +168,62 @@ stockées.
 
 **Le second bilan chess.com n'est pas dépensé maintenant** — décision du demandeur : lancer la revue
 d'abord, et le garder pour un cas qu'elle fera émerger.
+
+## D7 — Le rapport de la revue : re-jouable **et** raisonné
+
+La discipline de D2 (retuner sur les lignes stockées) veut qu'on refasse la comparaison à **chaque**
+essai de seuil ou de prédicat : dix parties × N réglages. Un dossier écrit à la main borne le nombre
+d'essais à deux ou trois, donc borne la qualité de l'arbitrage.
+
+- **Un outil re-jouable**, sous `server/` **avec ses tests** (pas dans `.scratch/`) : il lit les
+  `Evaluation`s, applique les seuils **courants**, et sort l'alignement par partie — nos coups
+  signalés, ceux de lichess, les écarts, les motifs d'exclusion, le récapitulatif. Le coût d'un
+  essai devient quasi nul.
+- **Contrainte dure** : l'outil appelle `gameRecap`, `moveSeverities`, `countedMoves` — **jamais une
+  copie**. Une seconde implémentation de la méthode n'agréerait que par chance et divergerait en
+  silence, ce qu'ADR-0017 refuse explicitement. Le script ne calcule rien, il met en forme.
+  `GET /api/games/:id/annotations` (`server/src/routes/games.ts:41`) rend déjà le relevé par coup.
+- Les **bilans lichess** sont la seule donnée non dérivable : saisis une fois à la main.
+- Le **dossier markdown** porte le raisonnement et les arbitrages, l'outil porte les chiffres.
+
+Effet de bord à noter : rejouer ce rapport **est** l'expérience d'auditabilité qu'ADR-0017 promet au
+Player. L'outil a une chance de survivre à la story — raison de le construire là où il peut rester.
+
+## D8 — Le tracé de dérive : plafond par partie **conservé**, plus une ligne rouge et une échelle
+
+Défaut confirmé dans le code : `client/src/components/DriftGraph.tsx:41` fait
+`ceiling = Math.max(total, 1)`, donc **tout** tracé finit en haut de sa boîte, qu'il vaille 5 % ou
+191 %.
+
+Rejeté — l'**échelle fixe partagée** que proposait l'agent (plafond à 100 pour tous). Rejeté aussi —
+un plafond **calculé sur le corpus** (95e centile) : l'échelle changerait à chaque import, donc le
+dessin d'une partie changerait sans que la partie change, ce qu'ADR-0017 déteste. Rejeté — une
+**échelle non linéaire** : on échangerait un mensonge contre un autre, moins visible.
+
+**Retenu, décision du demandeur** : garder le plafond par partie, et rendre le mensonge impossible
+plutôt que le corriger — une **ligne horizontale rouge à 100 %** et une **échelle chiffrée à
+gauche**. L'œil ne lit plus « hauteur = gravité » puisqu'il a les graduations.
+
+**Conséquence assumée** : deux parties ne se comparent plus d'un coup d'œil mais en lisant les
+graduations. Acceptable ici, parce que la revue compare sur les **chiffres** du rapport (D7), pas
+sur les dessins ; le graphique redevient la forme d'**une** partie, honnêtement graduée.
+
+**7b — `ceiling = max(total, 100)`.** Sinon la ligne rouge tombe hors cadre sur toute partie perdant
+moins de 100 %, c'est-à-dire le cas le plus fréquent (la 51 est à 57,2 %). Avec ce plafond :
+
+| Total | Le tracé finit… | La ligne rouge |
+| --- | --- | --- |
+| 5 % | tout en bas, quasi plat | tout en haut |
+| 57 % (la 51) | à 57 % de la hauteur | tout en haut |
+| 191 % | en haut | à mi-hauteur (100/191) |
+| 300 % | en haut | au tiers |
+
+Le défaut disparaît donc **sous** 100 % et est **désamorcé** au-dessus : la ligne rouge devient
+elle-même la règle graduée — deux tracés se comparent par la **position du trait**, repère de taille
+constante dans une boîte de taille constante. C'est ce qu'une échelle partagée apportait, sans
+plafond arbitraire et sans écrêtage (qui aurait menti précisément sur les parties que la story veut
+regarder).
+
+À regarder pendant la revue, pas tranché : faut-il distinguer par une teinte l'**aire au-delà du
+trait rouge** ? Ça nommerait « la part au-delà d'une partie entière », mais ajoute un encodage à un
+graphique qui en porte déjà deux. Se voit mieux sur de vraies parties que sur le papier.
