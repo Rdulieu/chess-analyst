@@ -75,14 +75,25 @@ issues de la passe **7** (profondeur 16, 2 lignes) ; les dix **se réconcilient*
 | 619 | 2021-02-10 | D | 35 | 25 | 8 | 2 | 3 | 146,4 | 42,1 | 23 | 29 | bascule tôt · bilan lichess |
 | 592 | 2021-01-07 | D | 22 | 21 | 0 | 1 | 9 | 281,9 | 17,7 | **0** | 6 | défaite serrée |
 | 591 | 2021-01-07 | D | 30 | 30 | 0 | 0 | 3 | 191,8 | 74,1 | **0** | 39 | défaite serrée |
-| 587 | 2021-01-06 | D | 30 | 29 | 1 | 0 | 4 | 162,1 | 122,7 | 3 | 24 | défaite serrée · bilan lichess |
+| 587 | 2021-01-06 | D | 30 | 29 | 1 | 0 | 4 | 162,1 | 39,4 | 3 | 24 | défaite serrée · bilan lichess |
 | 716 | 2026-09-02 | V | 48 | 48 | 0 | 0 | 7 | 145,0 | 63,9 | 0 | 44 | victoire |
 | 714 | 2026-08-25 | V | 37 | 37 | 0 | 0 | 1 | 111,6 | 73,6 | 0 | **66** | victoire · dérive majoritaire |
 | 621 | 2023-08-04 | V | 38 | 38 | 0 | 0 | 10 | 230,0 | 24,6 | 0 | 11 | victoire |
 | 582 | 2021-01-04 | N | 35 | 35 | 0 | 0 | 4 | 125,6 | 70,5 | 0 | 56 | nulle |
 
-**La stratification est intégralement remplie** ici aussi, et avec la **même** répartition 6/3/1 que
-l'autre corpus — ce qui est ce qui rend deux taux comparables entre eux.
+**Les strates sont remplies** ici aussi, et avec la **même** répartition 6/3/1 que l'autre corpus —
+ce qui est ce qui rend deux taux comparables entre eux.
+
+> **Et les strates ne sont pas une partition** — la FP de la tranche l'a relevé, et la phrase est
+> corrigée plutôt que défendue. Trois précisions :
+>
+> - la « dérive majoritaire » (`drift > chancesLost / 2`) est vraie de **six** parties des deux
+>   corpus (51, 713, 706, 708 · 582, 714), pas des deux seules qui portent l'étiquette ; l'étiquette
+>   va aux deux plus fortes (708 à 69 %, 714 à 66 %) ;
+> - côté Metalyst la strate est remplie par une **victoire** (714), ce que l'AC autorise — elle dit
+>   « 1 partie », pas « 1 défaite » ;
+> - la 709 est classée « serrée » avec 5 coups `decided` (6 % de 77) : c'est la clause « ou presque »
+>   du critère qui travaille, et Metalyst compte **trois** serrées là où l'AC en demande deux.
 
 ## Le temps moteur, mesuré
 
@@ -137,6 +148,13 @@ mesure qui exigerait de ré-analyser serait bruitée à ±6 % sur les totaux.
 Note au passage : `13...Kc7`, le coup sur lequel ADR-0023 fonde sa falsification, coûte **1,12** en
 passe 6 et **2,27** en passe 8 — deux fois très loin sous le plancher de n'importe quel barème, dans
 les deux passes. La falsification tient.
+
+> **Limite, nommée après la FP** : la passe 8 a **écrasé** les lignes de la passe 6 — c'est ce que
+> `overwrite` fait, et c'était le geste voulu. La colonne de gauche de ce tableau n'existe donc plus
+> que **dans ce dossier** : elle est désormais une **citation**, pas une mesure re-vérifiable. Ce qui
+> reste falsifiable est la colonne de droite, que la base porte, et la cohérence interne de l'écart
+> (59,21 − 55,96 = 3,25 ; 31,39 − 29,20 = 2,19 ; 27,82 − 26,76 = 1,06). Une prochaine mesure de ce
+> genre devrait écrire les deux passes ailleurs **avant** d'écraser la première.
 
 ## Le biais, noir sur blanc
 
@@ -217,16 +235,32 @@ positivement sur un prédicat — alors que cela suffit très bien à en **falsi
 En revanche le **découpage de phases** de lichess est disponible pour les dix parties Metalyst, sans
 analyse machine : la mesure D14 est donc, elle, complète de ce côté.
 
-### 5. La lecture personnelle non contaminée n'est pas livrable par un agent
+### 5. Une lecture **aveugle** existe déjà dans le corpus — et ce dossier l'avait niée
 
-L'AC « au moins une lecture personnelle est scellée avec `engine_seen_before_seal` à faux » est la
-seule de la tranche qu'un agent ne peut pas honorer : une `Personal analysis` est le **jugement du
-demandeur**, et des marques posées par un agent ne seraient pas une lecture humaine — elles seraient
-une lecture de machine déguisée en humain, exactement ce que le drapeau existe pour empêcher. La
-lecture de la 715 porte `engine_seen_before_seal = 1` et reste donc contaminée (D18).
+**Corrigé après la FP de la tranche, qui a trouvé l'erreur.** Ce paragraphe affirmait qu'aucune
+lecture non contaminée n'existait et renvoyait la tâche au demandeur. C'était faux, et l'erreur
+cachait du travail déjà fait : la partie **161**, membre de ce corpus, porte une lecture **scellée le
+2026-09-01 avec `engine_seen_before_seal = 0`** — 26 coups marqués, un verdict déclaré sur chacun,
+une note tapée à la main. L'app elle-même l'affiche : « **Lue à l'aveugle** — l'analyse du moteur
+n'avait pas été affichée pour cette partie avant le scellement. » Elle a été scellée **28 secondes
+avant** que la passe 4 ne lance le moteur sur cette même partie.
 
-**Reste au demandeur** : ouvrir une partie du corpus en `Sans aide`, la lire, la sceller. Le corpus
-est prêt pour ça.
+**L'AC « au moins une lecture personnelle est scellée avec `engine_seen_before_seal` à faux » est
+donc satisfaite**, de la main du demandeur et non d'un agent. La tranche 04 y gagne la comparaison
+que le PRD croyait indisponible — un jugement humain **non contaminé** face au moteur — et en tire
+une section entière.
+
+Ce qui reste vrai de l'ancien paragraphe et vaut d'être gardé : **un agent ne peut pas produire une
+lecture humaine.** Des marques posées par un agent et scellées « sans aide » seraient une lecture de
+machine déguisée en humain, exactement ce que le drapeau d'US-16a existe pour empêcher. Ce n'était
+simplement pas la question, puisque le demandeur l'avait déjà écrite.
+
+Deux réserves sur la portée du drapeau, elles aussi relevées par la FP :
+
+- le drapeau est **une étiquette, pas un verrou** (`server/src/personal/repository.ts`) : il dit ce
+  que l'app a montré **dans cette route**, pas ce que le demandeur a pu voir ailleurs ;
+- la lecture de la 161 ne couvre que ses **28 premiers plies** sur 45 : la fin de la partie n'est pas
+  jugée.
 
 ## Ce que la tranche livre, et ce qu'elle laisse
 
@@ -238,13 +272,19 @@ au format que `--reference` attend), le temps moteur rapporté.
 
 **Laissé au demandeur** :
 
-1. **Sceller une lecture personnelle non contaminée** — un agent ne peut pas produire un jugement
-   humain (biais n° 5).
-2. **Arbitrer le corpus Metalyst** : blitz sur cinq ans, blitz sur trois parties, ou rapide
+1. **Arbitrer le corpus Metalyst** : blitz sur cinq ans, blitz sur trois parties, ou rapide
    contemporain (biais n° 1).
-3. **Décider comment obtenir davantage de référence extérieure** : demander l'analyse lichess sur
+2. **Décider comment obtenir davantage de référence extérieure** : demander l'analyse lichess sur
    les sept parties qui n'en ont pas, ou dépenser le second bilan chess.com tenu en réserve
    (biais n° 4).
+3. **Une lecture aveugle plus complète, s'il le souhaite** : celle de la 161 s'arrête au ply 28. Rien
+   n'est bloqué — l'AC est satisfaite (biais n° 5) — mais c'est la matière la plus rare du dossier.
+
+**Constat pour une autre story** : `analysis_passes` enregistre la profondeur et le nombre de lignes,
+et **rien sur le moteur**. « WASM Stockfish 18 Lite, un thread » n'est donc pas vérifiable après
+coup, et un corpus qui mélangerait deux forces de moteur serait **indétectable** — alors que comparer
+à un moteur extérieur est précisément le but de ce corpus. Une colonne de provenance vaudrait son
+prix ; elle est hors périmètre ici, et elle devrait sa migration (CLAUDE.md).
 
 ## Comment rejouer tout ceci
 
