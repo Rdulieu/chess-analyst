@@ -227,3 +227,74 @@ regarder).
 À regarder pendant la revue, pas tranché : faut-il distinguer par une teinte l'**aire au-delà du
 trait rouge** ? Ça nommerait « la part au-delà d'une partie entière », mais ajoute un encodage à un
 graphique qui en porte déjà deux. Se voit mieux sur de vraies parties que sur le papier.
+
+## D9 — Le tracé garde le **cumul total**
+
+Rejeté — **le résidu seul**. Et rejeté pour la bonne raison : le backlog craignait qu'un tracé du
+résidu heurte la décision grillée d'US-15a, mais **ADR-0017 ne l'interdit pas**. L'ADR proscrit la
+dérive en **épisodes bornés** (un épisode contenant un coup signalé compterait sa perte deux fois) ;
+un **cumul** du résidu reste purement additif et ne double-compte rien.
+
+La vraie raison de garder le cumul est la **réconciliation visuelle** : le tracé finit exactement sur
+le total que le récapitulatif affiche à côté, vérifiable d'un coup d'œil — la promesse d'ADR-0017.
+Un tracé du résidu finirait sur un nombre qui ne figure nulle part comme total, et il faudrait
+expliquer l'écart. D8 renforce ce choix : avec la ligne des 100 % et l'échelle, le cumul devient
+lisible, ce qui était son seul vrai défaut.
+
+**Réserve du demandeur, à consigner telle quelle** : « je ne sais toujours pas vraiment si c'est
+utile, mais c'est trop tôt pour supprimer ». Le graphique reste donc **écrit pour être supprimable**
+(dérivé client, aucun schéma, aucun temps moteur), comme la tranche 06 d'US-15a l'avait prévu.
+
+À regarder pendant la revue, avec la question de la teinte : tracer le cumul **en distinguant la part
+du résidu** (deux aires empilées dont la somme est le total) garderait la réconciliation intacte tout
+en rendant visible, comme surface, la part que rien d'autre ne montre. Un encodage de plus sur un
+graphique qui en porte déjà trois — se juge après avoir vu dix parties.
+
+## D10 — Deux corpus séparés, un par profil, **tous en blitz**
+
+Le demandeur impose la partie **715** au corpus (Metalyst contre M10102010, « super intéressante »,
+lecture personnelle en cours). Elle est déjà analysée sous profondeur 16 / 2 lignes — 110
+évaluations, gratuite. Mais elle casse la contrainte « profil unique » de D5 : la 51 est
+**DudulSmash / chess.com**, la 715 est **Metalyst / lichess**.
+
+Elle apporte en échange deux choses non prévues :
+
+- **Metalyst est un compte lichess**, donc le bilan lichess de cette partie est **natif** et non une
+  approximation obtenue en réimportant un PGN. La réserve de D6 (« moteur ou méthode ? ») s'y
+  applique moins qu'ailleurs : c'est le meilleur point de comparaison du corpus.
+- **La lecture personnelle en cours est une donnée de la revue.** La `Confrontation` (US-16b) oppose
+  la sévérité **déclarée** par le demandeur à celle **dérivée** par l'app. Sur cette partie on aura
+  donc trois voix — l'app, lichess, et l'humain — et la troisième est la seule qui juge « valeur pour
+  la progression » plutôt que « valeur pour le résultat », c'est-à-dire exactement la tension de D3.
+  Des coups déclarés graves que l'app ne signale pas, ce serait un relevé du **prédicat manquant**
+  fait par un humain sur une vraie partie.
+
+Rejeté — **abandonner la contrainte** (dix parties tous profils) : on perdrait la lecture des
+**taux**, dont 15c a besoin pour son dénominateur ; mêler deux joueurs de niveaux différents rend
+ininterprétable la part de coups sous le plancher ou la part de dérive. Rejeté — **l'ossature plus
+des cas nommés** (recommandation de l'agent) : moins cher, mais le demandeur accepte la longueur.
+
+**Retenu** : **deux corpus séparés**, un par profil, chacun stratifié selon D5 — soit une vingtaine
+de parties. Le demandeur : « ce n'est pas grave si c'est long, cela permet de commencer à travailler
+sur de la revue **en batch** ». Conséquence à exploiter : le rapport de D7 cesse d'être un outil à
+une partie, et c'est déjà la forme du *fold* dont 15c aura besoin.
+
+**Cadence fixée au blitz dans les deux corpus.** Le relevé montre que chez Metalyst le vrai facteur
+confondant n'est pas le profil mais la **cadence** — 5 cadences, dont 23 défaites en correspondance
+et 5 en bullet : deux jeux différents, où le taux de coups sous le plancher et la dérive n'ont rien
+de comparable. DudulSmash est blitz à 96 % ; Metalyst a 45 défaites, 36 victoires et 4 nulles en
+blitz, largement de quoi bâtir la strate. Bénéfice supplémentaire : **les deux corpus deviennent
+directement comparables entre eux**, donc un écart se lit comme un écart de joueur et non de cadence.
+
+Raison de fond : un **prédicat** se trouve sur des cas homogènes ; introduire la cadence maintenant,
+c'est se donner une explication de rechange pour chaque désaccord — « c'est peut-être la cadence » —
+l'ambiguïté même qu'on a neutralisée en D6. Le demandeur ajoute que le blitz est **sa cadence la plus
+jouée et celle où il veut progresser en ce moment**.
+
+Gardé en réserve, et il redeviendra net **après** la revue : quelques parties de correspondance en
+cas nommés, pour demander « est-ce que le prédicat tient aussi en correspondance ? ».
+
+Contrainte matérielle à connaître : **DudulSmash n'a que 2 nulles**, toutes deux en blitz. La strate
+« 1 nulle » est réalisable mais sans marge — ce sera l'une des deux, sans choix.
+
+Coût : ~20 parties ≈ 1 600 positions ≈ **33 minutes** de moteur, dont 7 parties déjà analysées.
