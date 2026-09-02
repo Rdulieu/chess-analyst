@@ -697,13 +697,59 @@ section[aria-label="partie"] {
 // vertical drip. The geometry is here and not in the component.
 [data-part="drift"] {
   block-size: 6rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  position: relative;
-  background: var(--ground-sunk);
 
-  > div,
+  // The graph's own wrapper: the graduated scale and the plot, side by side. The
+  // figures are OUTSIDE the frame and never over the area — laid over it they
+  // would print on the trace itself, and the fill under the marks is measured at
+  // 0.12 exactly so that what is drawn over it stays legible (ADR-0013).
+  > [data-part="drift-frame"] {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-1);
+    block-size: 100%;
+  }
+
+  // The scale's own column, as narrow as three figures and no narrower: it is
+  // taken out of the free space before the plot takes the rest, so the plot never
+  // has to reflow when a Game's ceiling grows a digit.
+  [data-part="drift-scale"] {
+    position: relative;
+    flex: 0 0 2.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font: var(--text-s) / 1 var(--mono);
+    color: var(--ink-muted);
+    // The figures are text, and the only part of the drawing that says a number
+    // in words. They are inside the `aria-hidden` wrapper on the same grounds as
+    // the rest of it: every figure they graduate is in the recap's text above.
+    text-align: end;
+
+    li {
+      position: absolute;
+      inset-inline-end: 0;
+      // Centred ON its height rather than starting at it — the curve's marker
+      // idiom. A figure means "this height", so it straddles it.
+      transform: translateY(-50%);
+      white-space: nowrap;
+    }
+  }
+
+  // The plot: the frame, the ground, and the clip. One pixel of headroom inside
+  // it, and it is load-bearing — the whole-Game rule sits at the very top of the
+  // box on any Game under 100 %, that is on most of them, and half its stroke
+  // would be clipped by the very frame it is meant to be inside.
+  [data-part="drift-plot"] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    padding-block: 1px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    background: var(--ground-sunk);
+  }
+
   svg {
     display: block;
     inline-size: 100%;
@@ -729,12 +775,33 @@ section[aria-label="partie"] {
     vector-effect: non-scaling-stroke;
   }
 
-  [data-mark="cursor"] {
+  line[data-mark="cursor"] {
     stroke: var(--curve-cursor);
   }
 
-  [data-mark="phase-boundary"] {
+  line[data-mark="phase-boundary"] {
     stroke: var(--curve-equality);
+  }
+
+  // A whole Game's worth of chances. It is the one mark in either drawing that
+  // states a THRESHOLD rather than a position, which is what earns it the red —
+  // and it is never identified by that red alone: it is DASHED where every other
+  // rule in this box is solid, and the scale prints "100 %" beside it at its own
+  // height (the project's non-chromatic rule, ADR-0013).
+  //
+  // It borrows the blunder ink rather than declaring a token: ADR-0013 freezes
+  // the set, that pair is the palette's red, and "this Game cost a whole Game"
+  // is the reading it already carries. Measured against the worse of the two
+  // grounds it lands on — the area fill, `--ink-muted` at 0.12 over
+  // `--ground-sunk` — it clears 10.7:1 in light and 8.2:1 in dark, well over the
+  // ADR's 3:1 floor for a mark.
+  line[data-mark="hundred"] {
+    stroke: var(--tint-blunder-ink);
+  }
+
+  // The same ink on the figure that names it, so the two are read as one mark.
+  [data-part="drift-scale"] [data-mark="hundred"] {
+    color: var(--tint-blunder-ink);
   }
 }
 

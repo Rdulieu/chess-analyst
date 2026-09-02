@@ -663,6 +663,78 @@ describe("Board — the second drawing", () => {
     }
   });
 
+  // The plotted y of each point, read off the drawn polygon: 0 is the top of the
+  // box and 100 the bottom, the drawing's own convention.
+  const plotted = (container: HTMLElement) =>
+    container
+      .querySelector('[data-part="drift"] polygon')!
+      .getAttribute("points")!
+      .trim()
+      .split(/\s+/)
+      .slice(1, -1)
+      .map((pair) => Number(pair.split(",")[1]));
+
+  it("draws a Game that lost 35 % at a THIRD of the box, not at the top of it", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    // The box is a whole Game's worth, so 35 % lost reads as 35 % of the height.
+    // Normalised by the Game's own total, this same trace ended flush at the top —
+    // the same picture as a Game that lost 191 %.
+    expect(plotted(container).at(-1)).toBeCloseTo(65, 5);
+  });
+
+  it("rules the whole-Game mark ACROSS the box, and inside it on a Game under 100 %", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    const rule = container.querySelector('[data-part="drift"] line[data-mark="hundred"]')!;
+    // Horizontal, edge to edge: it is a reading line, not a marker.
+    expect(rule.tagName.toLowerCase()).toBe("line");
+    expect(rule.getAttribute("y1")).toBe(rule.getAttribute("y2"));
+    // At the very top here — the box is exactly one Game's worth.
+    expect(Number(rule.getAttribute("y1"))).toBeCloseTo(0, 5);
+  });
+
+  it("drops the rule INTO the box on a Game past 100 %, where it becomes the ruler", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 91, null, 100)} detailed />,
+    );
+
+    const rule = container.querySelector('[data-part="drift"] line[data-mark="hundred"]')!;
+    expect(Number(rule.getAttribute("y1"))).toBeCloseTo(47.6, 1);
+    // And the trace, worth 191 %, now fills the box to the top.
+    expect(plotted(container).at(-1)).toBeCloseTo(0, 5);
+  });
+
+  it("prints the scale in FIGURES down the left edge, so the height is read and not guessed", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} detailed />,
+    );
+
+    const scale = container.querySelector('[data-part="drift-scale"]')!;
+    expect([...scale.querySelectorAll("li")].map((li) => li.textContent)).toEqual([
+      "100 %",
+      "0",
+      "50",
+    ]);
+  });
+
+  it("names the rule in TEXT at the rule's own height, so it is not identified by its colour", () => {
+    const { container } = render(
+      <Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 91, null, 100)} detailed />,
+    );
+
+    const label = container.querySelector('[data-part="drift-scale"] [data-mark="hundred"]')!;
+    const rule = container.querySelector('[data-part="drift"] line[data-mark="hundred"]')!;
+    expect(label.textContent).toBe("100 %");
+    // The figure and the rule are placed by the same number: they cannot drift
+    // apart, which is what makes the label an identification and not a caption.
+    expect((label as HTMLElement).style.top).toBe(`${rule.getAttribute("y1")}%`);
+  });
+
   it("keeps the second drawing out of Annotated, where its figures exist in no text", () => {
     const { container } = render(<Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} />);
 
