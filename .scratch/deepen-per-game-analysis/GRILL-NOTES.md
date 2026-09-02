@@ -531,6 +531,53 @@ une bannière de pass non acquittée » (l'écran montrant pendant ce temps la p
 partie ; le chemin de réanalyse de la tranche 07 d'US-15a n'est pas touché), et le **report de la
 feature de vocabulaire positif** (D13).
 
+## D18 — La lecture personnelle de la 715 est faite, et elle est déjà de la matière
+
+Scellée le 2026-09-02 à 08:29 (`personal_analyses.id = 4`, profil 3, partie 715). 68 coups marqués,
+9 notes. **Elle entre dans le corpus comme prévu par D10, avec une réserve qui doit être dite.**
+
+### La réserve, d'abord : la lecture n'est pas aveugle
+
+`engine_seen_before_seal = 1`. Le moteur avait donc été vu **avant** le scellement. Conséquence sur
+l'usage qu'on peut en faire, et elle est nette : les **sévérités déclarées** peuvent être ancrées sur
+ce que l'app montrait, donc « l'humain a trouvé ce que l'app manquait » n'est **pas** une inférence
+disponible sur cette partie. Ce qui reste pleinement exploitable, ce sont les **notes** — des
+jugements et des demandes que rien dans l'app ne suggérait. C'est précisément ce que le drapeau
+d'US-16a existe pour rendre lisible ; il fait son travail.
+
+Pour que la revue dispose d'un point de comparaison **non contaminé**, il faudra au moins une lecture
+scellée **avant** d'avoir vu le moteur. À prévoir dans la tranche 03.
+
+### Ce que les notes apportent, et qui ne vient pas de nous
+
+- **Coup 33, `mistake` + moment clé** — « *Voir les erreurs de l'adversaire me parait important
+  aussi. Il faut qu'on réfléchisse si on veut ajouter ce point dans l'analyse.* » Le demandeur marque
+  un coup **de l'adversaire** et demande l'attribution, **spontanément et indépendamment de D12**. La
+  mesure décidée en D12 n'est donc plus seulement une précaution pour 15d : elle répond à une demande
+  formulée sur une vraie partie.
+- **Coup 74, `blunder` + moment clé** — « *J'ai pas vu que ma tour était en prise...* » Une tour en
+  prise, c'est **du matériel**. Un humain confirme ici, sur une vraie partie et sans y avoir été
+  invité, le premier des cinq signaux de D11 — celui-là même que `Kc7` avait désigné.
+- **Coup 67, `blunder`** — « *gain manqué* ». Le demandeur atteint spontanément le concept de
+  **`Coup manqué`** que `COMPARISON-CHESSCOM.md` listait comme un angle mort de notre côté (« pas de
+  notion d'occasion manquée »). À verser aux arbitrages de la tranche 05.
+- **Coup 56, `sound`** — « *À partir de 28, je pense qu'il y a mieux mais je n'ai pas trouvé. Je me
+  sens devant mais je n'ai pas réussi à conclure. Il faut que je travaille 2 rooks VS Queen.* » Le
+  demandeur **produit lui-même le verdict** que 15d vise : un thème nommé, travaillable. À confronter
+  à ce que l'analyse dira de la même partie — c'est un cas de test pour 15d avant 15d.
+- **Coup 43** : une note (« Coup 22, je suis bien ») **sans sévérité déclarée**, et coup 50 :
+  « *On pourrait ajouter un indicateur : « Je ne sais pas »* ». Les deux disent la même chose — le
+  vocabulaire de la `Declared severity` **manque une valeur** pour « je ne sais pas juger ce coup ».
+  Aujourd'hui l'absence de marque et l'incertitude déclarée sont indistinguables.
+- **Coup 60, `mistake`** — « *À rejouer cette partie en mode « apprendre de mes erreurs »* ».
+  Demande de feature, hors périmètre, à ticketer.
+
+### Ce qu'on en fait
+
+Les deux premiers points sont de la **matière de revue** et entrent dans les tranches 03/04. Les
+quatre autres sont des **demandes produit** : elles vont dans les arbitrages de la tranche 05 ou en
+issues séparées, et ne grossissent pas la revue.
+
 ---
 
 # ✅ Grill terminé
