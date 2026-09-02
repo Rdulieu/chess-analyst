@@ -411,6 +411,40 @@ une story de construction.
 Où le principe est consigné : **ici et dans le PRD**, pas dans `CONTEXT.md` — le glossaire ne décrit
 pas un concept qui n'existe pas encore. Il y entrera avec la feature.
 
+## D14 — `Phase` : mesurer la **sensibilité**, et confronter au découpage lichess
+
+Ce que le code dit, et qui corrige le backlog — `server/src/analysis/phase.ts` :
+
+- **Le cap n'est pas un bug.** `capReached` teste `fullmove === 15 && toMove === "b"`, soit « la
+  position après le 15e coup des **Blancs** », et le commentaire nomme explicitement le piège que
+  `fullmove >= 15` seul déclencherait (un demi-coup trop tôt, au 14e des Noirs). C'est une **lecture**
+  appliquée correctement ; l'autre lecture décale d'un coup entier.
+- **« Développement achevé » est bien exigé des deux camps**, avec sa raison écrite : la `Phase` est
+  celle de la **partie**, pas d'un joueur — une partie où les Blancs ont roqué et les Noirs n'ont pas
+  bougé une pièce n'a pas fini de commencer.
+- **La `Phase` n'entre dans aucun calcul.** `recap.ts` ne la lit pas : elle est affichée sur chaque
+  coup, rien de plus. Elle ne devient une variable qu'en 15c/15d, comme axe d'agrégation — le grill
+  d'US-16 avait déjà noté que « l'axe Phase attend une détection fiable ».
+
+Rejeté — **regarder vingt parties et juger à l'œil si « ça semble juste »** : de l'esthétique
+déguisée en mesure, dont le résultat serait le sentiment de celui qui regarde. Rejeté — **sortir la
+`Phase` du périmètre** : défendable puisqu'elle n'alimente rien, mais elle coûte ici une colonne dans
+un rapport qu'on écrit de toute façon, et l'écarter ferait redécouvrir le problème à 15c **après**
+avoir bâti dessus.
+
+**Retenu** : mesurer la **sensibilité** plutôt que la justesse. Question posée autrement — *est-ce que
+le choix change quelque chose ?* On calcule les deux lectures du cap (et l'exigence à un camp plutôt
+qu'aux deux) sur les vingt parties, et on compte combien de coups changent de `Phase`. Un coup par
+partie : le débat est vide et on le **clôt**. Quinze : l'axe est fragile et **15c doit le savoir avant
+de bâtir dessus**. C'est un fait, pas une opinion — et les deux lectures se calculent sur les mêmes
+`fen` déjà stockées.
+
+**Correction apportée par le demandeur, et elle change la portée** : l'agent avait posé qu'aucune
+référence externe n'existait pour la `Phase`. **Faux — les analyses lichess donnent les segments de
+phase.** Il y a donc un comparateur, et comme pour D6 il est **ouvert** : on peut non seulement
+confronter nos frontières aux leurs, mais **lire leur règle**. Le relevé porte donc deux choses : la
+sensibilité de notre règle à ses deux lectures, et son écart au découpage lichess.
+
 ---
 
 # ⏸ Grill en pause — reprendre ici
