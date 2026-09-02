@@ -96,3 +96,75 @@ l'app manque, ce qui aurait permis de le voir (matériel perdu ? séquence forc�
 - **Bug antérieur à ticketer** (hors tranche) : « Analyser cette partie » est silencieusement avalé
   tant qu'une bannière de pass non acquittée est affichée, et l'écran montre pendant ce temps la
   progression d'une **autre** partie.
+
+## D4 — La matière première n'existe plus : il faut la ré-analyser
+
+Vérifié pendant le grill, et ça corrige une prémisse du backlog :
+
+- La partie **51** est bien en base (`id=51`, noirs, défaite, `Sarvarcikk` — l'identification de
+  `COMPARISON-CHESSCOM.md` est exacte) mais porte **`analyzed = 0` et zéro `Evaluation`**. Idem
+  pour 41, 72 et 86, les trois autres parties dont les parts de dérive ont été mesurées.
+- Rien dans les **cinq `.bak`** (elles ne portent que 145-164, l'ancienne passe profondeur 0 /
+  0 ligne, écartée par US-15a comme *legacy*), rien dans les **six worktrees**, rien dans les bases
+  de test. Ces mesures ont été produites dans une base de worktree éphémère, disparue avec lui.
+
+**Les chiffres de `COMPARISON-CHESSCOM.md` ne sont donc pas vérifiables en l'état**, et ADR-0015
+dit que rien ne les reconstitue sinon du temps moteur.
+
+Ce que la base porte aujourd'hui sous profondeur 16 / 2 lignes : **7 parties** — 161, 165, 166
+(profil 1), 271 (profil 2), 714, 715, 716 (profil 3). Ce sont celles de la mesure sur les coups
+forcés, pas celles de la comparaison.
+
+**Le corollaire heureux du backlog — « rien de ce qui suit ne coûte de temps moteur » — est faux,
+mais sans gravité** : mesuré sur les passes réelles, ~**1,25 s par position** (passe 5 : 280
+positions en 5 min 50). Dix parties ≈ 800 positions ≈ **17 minutes**. C'est la matière première qui
+coûte du moteur ; les arbitrages, eux, n'en coûtent toujours pas.
+
+## D5 — L'échantillon : stratifié, profil unique, la 51 obligatoire
+
+Rejeté — le **tirage aléatoire** : la question de la story n'est pas « à quelle fréquence l'angle
+mort se produit-il » mais « **quel prédicat le referme** ». Il faut des cas, pas un taux ; un tirage
+qui ne contient aucune fin de partie perdue est ici un tirage inutile. Rejeté — **les 7 déjà
+analysées** : gratuites, mais choisies pour une autre mesure, donc d'un biais **silencieux**.
+
+Retenu — un **échantillon stratifié**, dont le biais est avouable en une ligne, sur un **profil
+unique** (ne pas mêler trois joueurs) :
+
+- la **51** (pièce à conviction, seul bilan chess.com existant) ;
+- 3 défaites où la partie bascule tôt — la zone morte, celle que la story vise ;
+- 2 défaites serrées ;
+- 2 victoires ;
+- 1 nulle ;
+- 1 partie dont le récapitulatif annonce une **dérive majoritaire**.
+
+Ré-analyser la 51 teste au passage D2 : si le récapitulatif retombe sur 57,2 %, l'écart 60,6 / 56,5
+était un artefact de rapport ; sinon, il est réel.
+
+## D6 — Lichess est la référence de travail ; chess.com reste en réserve
+
+Le demandeur ne peut fournir qu'**un** bilan chess.com de plus, mais **autant de bilans lichess que
+nécessaire**. C'est mieux ainsi, et pas seulement par quantité : lichess est **ouvert** — sa
+formule de précision est publiée (c'est déjà celle dont nous tirons la conversion en chances de
+gain) et ses seuils vivent dans du code lisible. Un désaccord avec lichess est **diagnosticable** ;
+un désaccord avec chess.com ne l'est jamais.
+
+**L'expérience la plus tranchante de la revue, et donc la première à faire** — lichess classe,
+comme nous, sur les chances de gain. Sur la partie 51 :
+
+- **s'il manque `Kc7` et `Ke6` comme nous** → l'inférence du dossier est confirmée, chess.com a bien
+  une composante **non probabiliste**, et notre angle mort est celui de *toute* méthode en chances
+  de gain — la story cherche alors un prédicat concret ;
+- **s'il les signale** → le problème n'est pas la métrique mais **notre calibrage** (seuils 10/20/30,
+  plancher à 10 %, ou les deux), et la réponse est un retunage, sans seuil d'une nature nouvelle.
+
+Deux issues, deux stories différentes, pour le prix d'une importation de PGN.
+
+**Réserve à ne pas escamoter** : le rapport lichess dépend de **leur** régime moteur, pas du nôtre
+(profondeur 16, 2 lignes, WASM). Un désaccord pourra donc être « moteur plus fort » plutôt que
+« méthode différente » — l'ambiguïté qui a déjà brouillé la lecture de chess.com. **Parade** : sur
+chaque désaccord, regarder si notre propre `Best line` recommande déjà le coup de lichess. Si oui,
+le désaccord est un **seuil** ; sinon, c'est le **moteur**. Cela se lit sur des données déjà
+stockées.
+
+**Le second bilan chess.com n'est pas dépensé maintenant** — décision du demandeur : lancer la revue
+d'abord, et le garder pour un cas qu'elle fera émerger.
