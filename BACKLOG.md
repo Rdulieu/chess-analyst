@@ -327,6 +327,56 @@
   > sur `Analyse`, faute d'y être annoncées. Détail dans les issues 04 et 05.
 
 
+- **US-24**: Ne plus laisser un import réussir sans rien importer — pour qu'une demande qui ne peut
+  rien rapporter soit refusée à l'entrée, et non conclue par un compte-rendu vert à zéro.
+  > **Pas encore grillée.** Constatée le 2026-09-02, en important à la main les mois d'août et
+  > septembre pour `DudulSmash` (chess.com) et `Metalyst` (lichess) sur la vraie base. L'import a
+  > fini par marcher — 11 et 3 parties — mais **deux appels avant** avaient rendu « 0 importée »
+  > sans qu'aucune erreur ne le dise.
+  >
+  > Le point commun des deux défauts est ce qui les rend coûteux : **le symptôme est identique et
+  > il ressemble à une vérité métier**. « Aucune partie trouvée » est une réponse légitime — le
+  > joueur n'a peut-être pas joué ce mois-là — donc rien, dans le compte-rendu, ne distingue « tu
+  > n'as pas joué » de « ta demande était inexploitable ». Un trou dans l'historique se lit alors
+  > comme un fait sur le joueur.
+  >
+  > ### Défaut 1 — une plage de cadences vide filtre tout, en silence
+  >
+  > `POST /api/import` sans champ `categories` répond **202**, va chercher les parties (30
+  > rapportées pour août), et **n'en importe aucune** : `importRange` construit
+  > `new Set(params.categories)` et tout tombe hors périmètre. Aucun défaut n'est appliqué, aucune
+  > validation ne s'y oppose. Le compte-rendu final dit « Aucune partie trouvée de 2026-08 à
+  > 2026-09 **dans les cadences sélectionnées** » — alors que `totalFetched` valait 30.
+  >
+  > **Ce n'est pas qu'un défaut d'API** : `ImportForm` envoie
+  > `CATEGORIES.filter((c) => categories.has(c))`, et **rien n'empêche de décocher les cinq cases**
+  > — ni un `disabled` sur le bouton, ni un contrôle avant l'appel. Le chemin est donc atteignable
+  > à la souris, et il fait payer un aller-retour complet à la plateforme pour ne rien produire.
+  >
+  > ### Défaut 2 — une plage mal formée n'est pas refusée non plus
+  >
+  > `normalizeRange` ne valide **que l'ordre** des deux bornes (`ordinal(from) > ordinal(to)`).
+  > Un `from`/`to` qui n'est pas un `MonthRef` (`"2026-08"` au lieu de `{year, month}`) traverse
+  > toute la chaîne, et ressort dans le message d'un import terminé : *« Aucune partie trouvée de
+  > **undefined-undefined** à **undefined-undefined** »*. Une donnée d'entrée invalide est ainsi
+  > rapportée comme un résultat, en fin de course, plutôt que refusée au bord.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Où est la frontière** : l'API refuse-t-elle (400) une plage de cadences vide, ou est-ce le
+  >   formulaire qui rend l'état inatteignable — ou les deux ? Le PRD d'US-9/ADR-0010 a déjà posé
+  >   un partage (le serveur ne plafonne rien, l'UI confirme les longues plages) ; celui-ci doit
+  >   s'y accorder plutôt que le contredire.
+  > - **Le vocabulaire du compte-rendu** : « aucune partie trouvée » doit cesser de recouvrir deux
+  >   choses. Un import qui n'a rien pu chercher n'est pas un import qui n'a rien trouvé, et
+  >   `totalFetched > 0` avec `imported == 0` est un état qui mérite d'être nommé.
+  > - **La validation des bornes** : `MonthRef` est une forme, pas un type vérifié à l'entrée.
+  >   Faut-il valider au bord de l'API, ou resserrer le contrat plus profond ?
+  >
+  > Aucun de ces deux défauts n'a corrompu de données : rien n'a été écrit de travers, il n'y a
+  > donc **pas de migration ni de reprise** à prévoir — seulement des imports qui n'ont pas eu
+  > lieu, et un compte-rendu qui ne le disait pas.
+
 ## Doing
 
 ## In review
