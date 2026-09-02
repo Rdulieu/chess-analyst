@@ -377,6 +377,75 @@
   > donc **pas de migration ni de reprise** à prévoir — seulement des imports qui n'ont pas eu
   > lieu, et un compte-rendu qui ne le disait pas.
 
+- **US-25**: Reprendre les mises à jour de l'usine amont sans perdre les nôtres — pour que rejouer
+  l'installation cesse d'être un choix entre « rester en arrière » et « écraser huit mois de
+  terrain ».
+  > **Pas encore grillée.** Demandée le 2026-09-02. L'usine vient de
+  > [`Loulen/prompt-driven-software-factory`](https://github.com/Loulen/prompt-driven-software-factory)
+  > (voir `skills-lock.json`), installée ici le **2026-07-20** (`bfe5c4a`). L'amont a poussé pour la
+  > dernière fois le **2026-09-01**. **Contrainte posée par le demandeur : la reprise ne doit rien
+  > écraser de ce qui a été modifié ici.**
+  >
+  > ### Pourquoi ce n'est pas un « git pull » de skills
+  >
+  > Les deux côtés ont bougé, et **pas de la même façon** :
+  >
+  > | | Depuis l'installation |
+  > | --- | --- |
+  > | **Amont** | 11 commits ; `agentic-tests` 1, `build-factory` 3, `git-flow` 1, `grill-with-docs` 2, `tdd` 1, `triage` 1 |
+  > | **Ici** | `agentic-tests/SKILL.md` : **78 → 740 lignes**, 37 commits ; `git-flow/SKILL.md` : +45/-12, 2 commits |
+  >
+  > Notre `agentic-tests` n'est pas une version modifiée de celle de l'amont : c'est **dix fois son
+  > volume**, et ce volume est du terrain payé cher — l'orchestrateur HP, le plafond
+  > `min(3, floor(nproc/4))` arraché à trois jours de gels, les pièges de course de la suite du
+  > 31/08, la récupération des rapports perdus par `SendMessage`. C'est très exactement ce que la
+  > contrainte protège.
+  >
+  > ### Trois constats vérifiés, à ne pas redécouvrir au grill
+  >
+  > 1. **L'installateur amont écrase, franchement.** `install.sh` procède par
+  >    `cp -R "$_src/skills/$_s" "$_dest/$_s"` — répertoire entier, aucune comparaison, aucune
+  >    fusion. Seuls les blocs `CLAUDE.md`/`AGENTS.md` sont traités avec ménagement
+  >    (`write_block`, qui ne mange jamais le contenu de l'utilisateur). Les skills, non.
+  > 2. **`skills-lock.json` ne protège rien — et ne dit pas la vérité.** `install.sh` ne le
+  >    mentionne nulle part : ni écrit, ni lu. Pire, ses `computedHash` ne sont pas reproductibles
+  >    ici : `tdd/SKILL.md` **n'a jamais été touché localement** et son sha256 (`85ac12…`) diffère
+  >    du `computedHash` du lock (`8986a0…`). Le fichier a donc l'apparence d'un garde-fou sans en
+  >    être un ; **on ne peut pas s'en servir pour décider ce qui a divergé**. Le grill devra dire
+  >    s'il est réparé ou retiré.
+  > 3. **L'amont a renommé son vocabulaire, ce n'est plus le nôtre.** Ses skills sont aujourd'hui :
+  >    `to-spec`, `to-tickets`, `to-us`, `implement`, `grilling`, `codebase-design`,
+  >    `domain-modeling`, `clean-context`, `code-review`, `verify-factory` — quand nous tenons
+  >    `to-prd` et `to-issues`, **qui n'existent plus là-bas**. Reprendre l'amont n'est donc pas une
+  >    mise à jour de fichiers mais une **migration de vocabulaire**, qui traverse `CLAUDE.md`,
+  >    `docs/agents/`, et les PRD déjà livrés.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Reprendre quoi ?** Tout n'est pas également désirable. Une skill jamais touchée ici
+  >   (`tdd`, `triage`, `to-prd`…) peut se reprendre presque telle quelle ; `agentic-tests` et
+  >   `git-flow` demandent une fusion à la main, dans ce sens-là : **l'amont vient enrichir le
+  >   nôtre**, jamais l'inverse.
+  > - **Adopter ou refuser les renommages.** Suivre `to-spec`/`to-tickets` coûte une migration à
+  >   travers tout le dépôt ; ne pas les suivre nous coupe des mises à jour futures de ces skills.
+  >   C'est le vrai arbitrage de la story, et il n'est pas technique.
+  > - **Comment on saura, la prochaine fois.** Le besoin réel derrière la demande n'est pas cette
+  >   reprise-ci mais **la suivante** : il faut sortir d'ici avec un moyen de dire, sans relire 800
+  >   lignes, ce que l'amont a changé et ce que nous avons changé. Un lock qui marche est une piste ;
+  >   un remote `upstream` avec une branche de vendoring en est une autre.
+  > - **Le sort des seeds `build-factory/*.md`**, déjà signalé comme deuxième source de vérité par
+  >   l'audit du 24/08 (§1.5).
+  >
+  > ### Frontière avec US-21
+  >
+  > **Elles ne font pas le même travail et l'ordre compte.** US-21 remet l'usine d'accord **avec
+  > elle-même** (ce que le dépôt dit vs ce qu'il fait) ; celle-ci la remet d'accord **avec son
+  > amont**. Le recouvrement est réel sur un point unique : le gabarit `CLAUDE.md` de
+  > `build-factory`, dont l'audit du 24/08 (§1.4) dit qu'il **régresse la méthode** si on rejoue la
+  > skill — c'est la seule incohérence connue qui *détruit* du travail. Reprendre l'amont **sans**
+  > avoir traité ce point rejouerait précisément la régression que la contrainte du demandeur
+  > interdit. **US-21 devrait donc passer d'abord**, ou au minimum ce point-là.
+
 ## Doing
 
 ## In review
