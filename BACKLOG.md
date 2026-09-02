@@ -2,6 +2,85 @@
 
 ## To do
 
+- **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
+  verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
+  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
+  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md).
+  > US-23 avait **explicitement laissé ce sujet dehors** (« un sujet à part entière, à ouvrir comme
+  > tel ») ; c'est celui-ci.
+  >
+  > **Placée en tête de `To do` le 2026-09-02, sur décision du demandeur** — c'est la story qu'il veut
+  > traiter. À noter pour l'ordonnancement : US-28 recommande d'être tranchée **avant** celle-ci, la
+  > provenance « moteur vu » étant ce qui rend une `Confrontation` interprétable. La recommandation
+  > n'est pas retirée, elle est **arbitrée** : si US-26 passe d'abord, elle bâtira son écran de détail
+  > sur un drapeau dont on sait qu'il peut mentir, et devra le savoir en le faisant.
+  >
+  > ### Une seule story pour neuf notes
+  >
+  > Les **neuf** remarques du « compte rendu d'analyse » du 25/08 disent la même chose sous neuf
+  > angles : *pas très visuel* (1), *parcourir le board avec les flags* (2), *le verdict sur chacun
+  > des coups* (5), *quand j'ai dit « erreur » à tort* (6), *l'évaluation du moment clé peu visible*
+  > (7), *mettre en avant les divergences* (9), *ce que j'ai vu juste n'est pas clair* (4), plus les
+  > deux notes de contestation ci-dessous (3 et 8).
+  >
+  > **Le défaut est un seul** : la `Confrontation` est **agrégée**. Elle donne trois taux, une matrice
+  > (`ConfusionMatrixTable`) et des comptes, et ne dit **nulle part quel coup a produit quelle case**.
+  > Un joueur qui lit « 1 sur 4 » ne peut pas retrouver les trois autres. Relevé sur `develop` :
+  > `ConfrontationReadout`, `ConfusionMatrixTable`, `UnscoredReadout`, `KeyMomentReadout`, `Figure` —
+  > **aucun échiquier**, aucune entrée par ply.
+  >
+  > ### Deux notes contestent une décision documentée — c'est le cœur du grill
+  >
+  > Elles ne sont pas des défauts, ce sont des désaccords avec des choix pris exprès. Les traiter en
+  > passant reviendrait à défaire une garantie sans le savoir.
+  >
+  > **Note 3 — « Devoir cocher chaque coup analysé mais non important est fastidieux ».** `CONTEXT.md`
+  > tient l'inverse : *« `Sound` est ce qui rend la confrontation possible. Sans lui, "je n'ai rien dit
+  > ici" et "je dis que ce coup est correct" seraient le même silence »*. Le coût signalé **est le prix
+  > exact** de cette garantie — 22 coups posés pour n'en examiner que 4. La question n'est donc pas
+  > « faut-il garder `Sound` » mais **« comment le poser coûte-t-il moins cher »**.
+  > **Attention, la note a vieilli** : US-22 a depuis livré le verdict au clavier (`1`–`5`, flèches,
+  > inerte pendant la saisie d'une note). Le grill doit **re-mesurer le coût sur l'app telle que
+  > mergée** avant de concevoir quoi que ce soit — il a peut-être déjà largement baissé.
+  >
+  > **Note 8 — « La liste des éva sur position déjà décidée prend beaucoup de place alors qu'elle
+  > n'apporte rien ».** ADR-0017 exige l'inverse : une partie où le joueur a joué quatre bévues peut
+  > contribuer **zéro** erreur comptée, et *« un écran qui laisse cet écart illisible détruit la
+  > confiance exactement là où la divergence est la chose à expliquer »*. Mais **l'ADR exige la
+  > lisibilité, pas une liste** : sur la partie testée, 16 coups exclus étaient rendus un à un. Le
+  > volume vient du **rendu**, pas de la règle — un compte et une phrase tiendraient la décision en
+  > trois lignes. Distinguer la décision de son rendu est ici tout le travail.
+  >
+  > ### Un point à ne pas confondre au grill
+  >
+  > La note 2 demande **l'échiquier dans la `Confrontation`**. `ConfrontationPage` porte une décision
+  > voisine mais **différente** : la `Confrontation` est une route à part et **non un panneau sur la
+  > route de lecture**, parce que *« cette route est aveugle par nature et le reste — y montrer le
+  > moteur détruirait la seule chose qu'elle garantit »*. Cet argument protège la **lecture**, il ne
+  > dit rien contre un échiquier **sur la route de confrontation**, où le sceau est déjà tombé. Le
+  > second motif cité — la densité et le reflow — reste, lui, entièrement valable.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Où vit le détail par coup** : une entrée dans la matrice qui mène aux coups, un échiquier
+  >   parcourable portant les deux lectures, ou les deux. La contrainte d'auditabilité d'US-15 vaut
+  >   ici aussi — la vue par coup et l'agrégat doivent être **le même calcul**.
+  > - **Nommer les quatre cases**, pas seulement les compter. « Ce que j'ai vu juste » (note 4) et
+  >   « quand j'ai crié à l'erreur pour rien » (note 6) sont deux cases de la matrice qui n'ont pas
+  >   de mots ; le faux positif n'en a aujourd'hui aucun.
+  > - **Le sort de la note 3**, une fois le coût re-mesuré : rien à faire, ou un geste de masse.
+  > - **Le rendu des exclus** (note 8) sans toucher à ADR-0017.
+  >
+  > **Garde-fou du projet** : aucun indice ne peut être **uniquement chromatique** — sur un écran qui
+  > oppose deux lectures, la tentation est maximale.
+  >
+  > ### Angle mort connu, à traiter avant ou pendant
+  >
+  > L'écran **« Mes lectures »** (`/confrontation`, le bilan sur tout l'historique) **n'a jamais été
+  > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
+  > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
+  > session de test dessus devrait précéder le grill, ou en faire partie.
+
 - **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
   seulement par ouverture ou par position.
   > **Recadrage de l'objectif du produit** (2026-08-19). **Grillée** (2026-08-21) — état complet et
@@ -446,79 +525,6 @@
   > avoir traité ce point rejouerait précisément la régression que la contrainte du demandeur
   > interdit. **US-21 devrait donc passer d'abord**, ou au minimum ce point-là.
 
-- **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
-  verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
-  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
-  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md).
-  > US-23 avait **explicitement laissé ce sujet dehors** (« un sujet à part entière, à ouvrir comme
-  > tel ») ; c'est celui-ci.
-  >
-  > ### Une seule story pour neuf notes
-  >
-  > Les **neuf** remarques du « compte rendu d'analyse » du 25/08 disent la même chose sous neuf
-  > angles : *pas très visuel* (1), *parcourir le board avec les flags* (2), *le verdict sur chacun
-  > des coups* (5), *quand j'ai dit « erreur » à tort* (6), *l'évaluation du moment clé peu visible*
-  > (7), *mettre en avant les divergences* (9), *ce que j'ai vu juste n'est pas clair* (4), plus les
-  > deux notes de contestation ci-dessous (3 et 8).
-  >
-  > **Le défaut est un seul** : la `Confrontation` est **agrégée**. Elle donne trois taux, une matrice
-  > (`ConfusionMatrixTable`) et des comptes, et ne dit **nulle part quel coup a produit quelle case**.
-  > Un joueur qui lit « 1 sur 4 » ne peut pas retrouver les trois autres. Relevé sur `develop` :
-  > `ConfrontationReadout`, `ConfusionMatrixTable`, `UnscoredReadout`, `KeyMomentReadout`, `Figure` —
-  > **aucun échiquier**, aucune entrée par ply.
-  >
-  > ### Deux notes contestent une décision documentée — c'est le cœur du grill
-  >
-  > Elles ne sont pas des défauts, ce sont des désaccords avec des choix pris exprès. Les traiter en
-  > passant reviendrait à défaire une garantie sans le savoir.
-  >
-  > **Note 3 — « Devoir cocher chaque coup analysé mais non important est fastidieux ».** `CONTEXT.md`
-  > tient l'inverse : *« `Sound` est ce qui rend la confrontation possible. Sans lui, "je n'ai rien dit
-  > ici" et "je dis que ce coup est correct" seraient le même silence »*. Le coût signalé **est le prix
-  > exact** de cette garantie — 22 coups posés pour n'en examiner que 4. La question n'est donc pas
-  > « faut-il garder `Sound` » mais **« comment le poser coûte-t-il moins cher »**.
-  > **Attention, la note a vieilli** : US-22 a depuis livré le verdict au clavier (`1`–`5`, flèches,
-  > inerte pendant la saisie d'une note). Le grill doit **re-mesurer le coût sur l'app telle que
-  > mergée** avant de concevoir quoi que ce soit — il a peut-être déjà largement baissé.
-  >
-  > **Note 8 — « La liste des éva sur position déjà décidée prend beaucoup de place alors qu'elle
-  > n'apporte rien ».** ADR-0017 exige l'inverse : une partie où le joueur a joué quatre bévues peut
-  > contribuer **zéro** erreur comptée, et *« un écran qui laisse cet écart illisible détruit la
-  > confiance exactement là où la divergence est la chose à expliquer »*. Mais **l'ADR exige la
-  > lisibilité, pas une liste** : sur la partie testée, 16 coups exclus étaient rendus un à un. Le
-  > volume vient du **rendu**, pas de la règle — un compte et une phrase tiendraient la décision en
-  > trois lignes. Distinguer la décision de son rendu est ici tout le travail.
-  >
-  > ### Un point à ne pas confondre au grill
-  >
-  > La note 2 demande **l'échiquier dans la `Confrontation`**. `ConfrontationPage` porte une décision
-  > voisine mais **différente** : la `Confrontation` est une route à part et **non un panneau sur la
-  > route de lecture**, parce que *« cette route est aveugle par nature et le reste — y montrer le
-  > moteur détruirait la seule chose qu'elle garantit »*. Cet argument protège la **lecture**, il ne
-  > dit rien contre un échiquier **sur la route de confrontation**, où le sceau est déjà tombé. Le
-  > second motif cité — la densité et le reflow — reste, lui, entièrement valable.
-  >
-  > ### Ce que le grill devra trancher
-  >
-  > - **Où vit le détail par coup** : une entrée dans la matrice qui mène aux coups, un échiquier
-  >   parcourable portant les deux lectures, ou les deux. La contrainte d'auditabilité d'US-15 vaut
-  >   ici aussi — la vue par coup et l'agrégat doivent être **le même calcul**.
-  > - **Nommer les quatre cases**, pas seulement les compter. « Ce que j'ai vu juste » (note 4) et
-  >   « quand j'ai crié à l'erreur pour rien » (note 6) sont deux cases de la matrice qui n'ont pas
-  >   de mots ; le faux positif n'en a aujourd'hui aucun.
-  > - **Le sort de la note 3**, une fois le coût re-mesuré : rien à faire, ou un geste de masse.
-  > - **Le rendu des exclus** (note 8) sans toucher à ADR-0017.
-  >
-  > **Garde-fou du projet** : aucun indice ne peut être **uniquement chromatique** — sur un écran qui
-  > oppose deux lectures, la tentation est maximale.
-  >
-  > ### Angle mort connu, à traiter avant ou pendant
-  >
-  > L'écran **« Mes lectures »** (`/confrontation`, le bilan sur tout l'historique) **n'a jamais été
-  > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
-  > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
-  > session de test dessus devrait précéder le grill, ou en faire partie.
-
 - **US-27**: Retrouver une partie dans « Mes parties » sans faire défiler cent soixante-dix lignes —
   trier, filtrer, chercher, et savoir ce que compte un compteur.
   > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
@@ -638,6 +644,78 @@
   > **Lien** : la `Confrontation` est le consommateur de ce drapeau, donc **US-26** a intérêt à ce que
   > celle-ci soit tranchée d'abord — sans quoi elle bâtira un écran de détail sur une provenance
   > dont on sait qu'elle peut mentir.
+
+- **US-29**: Colorer les glyphes de verdict dans la liste des coups — pour que la lecture du joueur
+  se reconnaisse d'un coup d'œil dans la liste comme elle se reconnaît déjà sur les boutons et sur
+  l'échiquier.
+  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur, sur la page de lecture : *« les
+  > glyphes de notation sont toujours blancs. J'aimerais qu'ils soient de la même couleur que la
+  > lecture du joueur (couleur sur les boutons de sélection et dans le board). »*
+  >
+  > ### Le constat est exact, et l'écart est net
+  >
+  > `MoveMarks` rend le glyphe du verdict dans un `<span>` **sans aucun attribut de couleur** : il
+  > hérite de `--ink`, donc blanc en thème sombre. Il est le seul des trois porteurs du
+  > `Declared severity` à ne rien porter :
+  >
+  > | Où | Couleur | Source |
+  > | --- | --- | --- |
+  > | Boutons de sélection | oui, les 5 valeurs | `label[data-verdict="…"]:has(input:checked)` → famille `--square-*` |
+  > | Case de l'échiquier | oui, les 5 valeurs | `DECLARED_SEVERITY_SQUARE_TINT` → famille `--square-*` |
+  > | **Liste des coups** | **aucune** | — |
+  >
+  > Et l'asymétrie est double : sur `Analyse`, le glyphe du moteur **est** teinté dans la liste
+  > (`[data-severity]` → `--tint-*` + `--tint-*-ink`). La liste sait donc teinter un glyphe ; elle ne
+  > le fait que pour un des deux auteurs.
+  >
+  > ### Pourquoi ce n'est pas une ligne de CSS : deux familles de couleurs, pas une
+  >
+  > ADR-0013 tient **deux** familles, et la demande tombe pile sur leur frontière.
+  >
+  > - `--tint-*` (chrome) **suit le thème**, et chaque teinte porte son `--tint-*-ink` pour que le
+  >   contraste ne dépende jamais de l'encre héritée.
+  > - `--square-*` (échiquier) est **délibérément constante entre thèmes**, parce que
+  >   `react-chessboard` peint la pièce par-dessus. Mesuré sur le pilote : la teinte de chrome
+  >   utilisée sur une case rendait sa pièce à **1,49:1** en sombre.
+  >
+  > Le demandeur demande la couleur **des boutons et du board**, c'est-à-dire la famille `--square-*`
+  > — sur un élément de **chrome**, la liste. C'est exactement le croisement que la séparation des
+  > deux familles existe pour éviter, dans l'autre sens. Trois issues, et le grill doit en choisir
+  > une plutôt que la découvrir :
+  > 1. porter `--square-*` dans la liste, en lui **donnant son encre** (les boutons le font déjà :
+  >    `color: var(--square-notation)`) ;
+  > 2. créer les paires de chrome manquantes et teinter avec `--tint-*` — cohérent avec la liste du
+  >    moteur, mais **une autre couleur que le board**, donc pas ce qui est demandé ;
+  > 3. rapprocher les deux familles, ce qui rouvre ADR-0013 et se paie cher.
+  >
+  > **Deux valeurs sur cinq n'ont pas de jeton de chrome du tout.** `sound` et `good` n'existent qu'en
+  > `--square-sound` / `--square-good` : *« la palette n'avait jamais eu à peindre un verdict
+  > favorable, le moteur ne rapportant que des fautes. »* L'option 2 demande donc **deux paires de
+  > jetons neuves, en clair et en sombre**, contrastées et validées.
+  >
+  > ### Le piège est déjà documenté — ne pas le repayer
+  >
+  > La correction naïve consiste à poser `data-severity` sur le `<span>` de `MoveMarks`. Elle est
+  > **déjà connue pour être fausse** : `DeclaredSeverityControl` a rencontré exactement ça et porte le
+  > commentaire qui l'explique — la feuille teinte **tout** `[data-severity]` avec la paire de chrome,
+  > ce qui n'a coloré que 3 des 5 valeurs et **a fait tomber `Bévue` à 2,75:1**. C'est pourquoi ce
+  > composant porte `data-verdict` et non `data-severity`. Le même choix s'impose ici.
+  >
+  > ### La contrainte qui vient d'US-26, et qui pourrait la contredire
+  >
+  > `declaredSeverity.ts` porte une règle explicite, attachée au fait que le joueur emprunte les
+  > glyphes du moteur : *« le jour où un écran montre les deux auteurs à la fois — la pente naturelle
+  > d'US-16b — des glyphes identiques ne suffiront plus, et ils devront être distingués par autre
+  > chose que la couleur. »* **US-26 est précisément cet écran**, et elle est maintenant en tête de
+  > `To do`. Colorer les glyphes du joueur comme ceux du moteur consommerait donc le seul canal qui
+  > restait pour les séparer. À trancher **avec** US-26, pas contre elle.
+  >
+  > ### Garde-fous
+  >
+  > Aucun indice ne peut être **uniquement chromatique** (ADR-0013) : le glyphe et son nom accessible
+  > portent déjà le sens, la teinte s'y ajoute — c'est bien le cas ici, la demande est additive.
+  > Les jetons se déclarent en toutes lettres, jamais par interpolation : l'audit de cohérence des
+  > jetons lit la feuille comme source et ne voit pas un nom assemblé dans une boucle.
 
 ## Doing
 
