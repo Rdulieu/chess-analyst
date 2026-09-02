@@ -349,6 +349,39 @@ liste lui-même** — le contrôle se lit, il ne se cherche pas.
 **Implication pour l'outil de D7** : il sort une ligne **par coup du Player**, pas par partie — le
 récapitulatif par partie en est l'agrégat. La forme du *fold* de 15c.
 
+## D12 — L'attribution entre dans la story, comme **mesure** seulement
+
+**Le dossier se trompe sur le prix, et ça décide la question.** `evaluations` porte **une ligne par
+demi-coup, les deux couleurs confondues** — partie 715 : plies 0 à 109, 110 lignes pour 110
+demi-coups. Le moteur évalue donc **déjà toutes les positions**, y compris celles qui suivent un
+coup de l'adversaire ; une évaluation de position ne connaît pas la couleur de qui vient de jouer.
+
+Donc l'option 3 de `COMPARISON-CHESSCOM.md` — « analyser aussi l'adversaire coûte du temps moteur,
+**le double par partie** » — est **fausse**. Les sévérités de l'adversaire se **dérivent** des mêmes
+lignes (ADR-0009) : la même fonction appliquée à l'autre couleur. Coût moteur **zéro**, migration
+zéro. L'objection n'est donc pas le prix mais le **périmètre**.
+
+Le problème qu'elle traite : l'adversaire de la 51 a joué à 96,1, zéro faute, niveau estimé 1800, et
+notre app ne peut **jamais** le dire — les sévérités sont Player-only par décision. Le Player ne
+distingue pas *je me suis effondré* de *il a été trop fort*, deux conclusions opposées sur ce qu'il
+faut travailler. C'est ce qui menace le plus le verdict de 15d.
+
+Rejeté — **renvoyer à 15d** : la revue va de toute façon lire chaque coup de vingt parties ; dériver
+l'autre couleur au passage ne coûte qu'une colonne de plus, alors que le refaire plus tard voudrait
+dire re-monter tout l'appareil. Rejeté — **mesure et affichage** : le plus utile au Player, mais le
+plus loin du périmètre annoncé, et la décision d'affichage mérite d'être prise sur un chiffre.
+
+**Retenu** : on dérive les sévérités de l'adversaire pour les vingt parties, elles entrent dans le
+rapport de D7, et **rien n'est affiché dans l'app**. Aucun schéma, aucun seuil, aucun dénominateur —
+ni ADR-0017 ni le contrat D3 ne bougent. C'est la définition d'une mesure. Effet recherché : si le
+jeu adverse n'explique presque rien sur vingt parties, **15d n'a pas de problème d'attribution** et
+on aura économisé une feature ; sinon, 15d saura combien elle doit payer.
+
+**Réserve du demandeur, retenue explicitement** : « zéro faute en face » n'est pas « il a bien joué ».
+Un adversaire qui ne fait aucune faute dans une position gagnée depuis le coup 12 n'a rien prouvé. La
+mesure porte donc sur ses coups **dans la partie encore disputée** — sinon elle dirait mécaniquement
+que tous les adversaires jouent bien, le symétrique exact de notre propre angle mort.
+
 ---
 
 # ⏸ Grill en pause — reprendre ici
