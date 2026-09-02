@@ -106,6 +106,10 @@
   >   conditionnels », avec de vraies données sous les yeux.
   > - **US-15d** — Le verdict « sur quoi travailler » (et le sort de `/openings` et `/danger`).
   > - **US-15e+** — Les motifs, un par un.
+  > - **US-32** — Rendre exploitables les axes **phase** et **matériel** (ouverte le 2026-09-02, hors
+  >   grill de l'EPIC). Ne s'insère pas dans la suite lettrée : elle n'ouvre pas une étape neuve, elle
+  >   arme deux axes que la dorsale annonçait déjà. **À faire avant US-15c**, qui construirait sinon
+  >   son agrégat sans eux.
   > - Non planifié : le suivi dans le temps (est-ce que ça s'améliore ?).
   >
   > Ce n'est **pas une US mais une EPIC** : elle se découpera en plusieurs US grillées séparément.
@@ -120,20 +124,11 @@
   > - Méthode : **dorsale sans motifs** (axes dérivés du moteur et du FEN — phase, matériel,
   >   tactique manquée vs dérive, pression du temps, position calme/tranchante), puis **détection par
   >   règles greffée un motif à la fois**. **Pas de LLM** (décision du demandeur).
-  > - **Retour de terrain, 2026-09-02** — première évaluation d'une lecture réelle de bout en bout
-  >   (partie 715, rapport hors app). Deux des axes annoncés ci-dessus viennent de recevoir leur
-  >   première preuve d'utilité, et le constat est le même dans les deux cas : **l'app a la donnée et
-  >   n'en fait rien.**
-  >   - **Matériel.** La partie s'est perdue dans une finale **deux tours contre une dame**, et
-  >     **81 % des dégâts comptés** y sont concentrés. Le joueur a nommé ce thème lui-même, en
-  >     aveugle, au moment où il commençait à le subir. Rien dans l'app ne sait reconnaître ce
-  >     déséquilibre : la conclusion la plus utile du rapport a dû être lue dans le PGN à la main.
-  >     L'axe « matériel » n'est donc plus une hypothèse de méthode, il a un cas.
-  >   - **Phase.** Le champ existe **déjà** sur chaque demi-coup (`phase` dans les annotations), et
-  >     n'est agrégé nulle part : le récapitulatif donne des totaux, jamais une répartition. Localiser
-  >     les dégâts a demandé de sommer `chancesLost` par tranche à la main. Le coût d'exploitation est
-  >     donc bien plus faible que celui d'une détection neuve — c'est un `group by` sur une donnée
-  >     déjà écrite.
+  > - **Deux de ces axes ont reçu leur premier cas réel le 2026-09-02** — « matériel » et « phase »,
+  >   sur l'évaluation de la partie 715. **L'EPIC ne se re-grille pas pour autant** (décision du
+  >   demandeur) : le constat et son instruction sont sortis dans **US-32**, à griller séparément
+  >   comme n'importe quelle story lettrée. Rien de la méthode ci-dessus n'est remis en cause — les
+  >   deux axes étaient déjà annoncés, ils cessent simplement d'être des hypothèses.
   > - **Premier chantier** : le moteur calcule `bestmove` **et la variante**, et on les **jette** —
   >   `uci-driver.ts` collecte toutes les lignes `info` puis n'en garde que le score et `bestmove`.
   >   Tout motif est une affirmation sur l'écart entre le coup joué et le meilleur coup, donc sans
@@ -834,6 +829,66 @@
   >   date. Aucune reconstruction possible, et c'est un fait à assumer, pas une dette.
   > - **Est-ce observer le joueur ?** Mesurer le temps passé sur chaque coup change la nature de
   >   l'exercice. À poser avant de coder, pas après.
+
+- **US-32**: Rendre exploitables les axes **phase** et **matériel** — pour que « je m'effondre en
+  finale » cesse d'être une phrase qu'on lit dans un PGN à la main.
+  > **Pas encore grillée.** Ouverte le 2026-09-02, **hors du grill d'US-15** : l'EPIC est grillée et
+  > le demandeur ne la rouvre pas. Elle n'invalide rien de la dorsale — « phase » et « matériel »
+  > figuraient **déjà** parmi les axes annoncés. Ce qu'elle apporte, c'est leur **premier cas réel**,
+  > et la mesure de ce que leur absence a coûté.
+  >
+  > **Où elle s'insère** : pas dans la suite lettrée (elle n'ouvre pas d'étape neuve), mais **avant
+  > US-15c**, qui bâtirait sinon son agrégat sans ces deux axes — et ADR-0017 fait de l'agrégat la
+  > somme du récapitulatif par partie, donc un axe manquant ici manque partout ensuite.
+  >
+  > ### D'où ça vient
+  >
+  > La première évaluation d'une lecture réelle de bout en bout (partie 715, rapport produit **hors
+  > application**). Le constat est le même pour les deux axes, et c'est ce qui les réunit dans une
+  > seule story : **l'app a la donnée, ou de quoi la dériver, et n'en fait rien.**
+  >
+  > ### Phase — le champ existe, il n'est agrégé nulle part
+  >
+  > `phase` est écrit sur **chaque demi-coup** dans les annotations. Le récapitulatif, lui, ne rend
+  > que des totaux : `chancesLost`, `flaggedLoss`, `drift`, `countedErrors`. **Aucune répartition.**
+  > Localiser les dégâts de la partie 715 a demandé de sommer `chancesLost` par tranche à la main —
+  > et c'est ce calcul, pas le total, qui a produit la conclusion utile.
+  >
+  > Le coût est donc sans commune mesure avec une détection neuve : c'est un `group by` sur une
+  > donnée **déjà écrite**, dérivé (ADR-0009), sans temps moteur ni migration.
+  >
+  > **Réserve à porter au grill** : les seuils de `Phase` sont annoncés « heuristiques, pas des
+  > faits » et **US-15a-bis doit les instruire sur de vraies parties**. Agréger par phase avant que
+  > les seuils soient validés donnerait une répartition précise et fausse. L'ordre naturel est donc
+  > 15a-bis d'abord, ou au minimum le volet « seuils » de celle-ci.
+  >
+  > ### Matériel — rien dans l'app ne sait ce qui est sur l'échiquier
+  >
+  > La partie 715 s'est perdue dans une finale **deux tours contre une dame**, et **81 % des dégâts
+  > comptés** (159 points de chances sur 197) y sont concentrés. Les quatre pires coups de la partie
+  > sont tous dans cette phase.
+  >
+  > Le joueur avait nommé ce thème **lui-même, en aveugle**, dans une note écrite au moment où il
+  > commençait à le subir : *« il faut que je travaille 2 rooks VS Queen »*. L'application ne pouvait
+  > ni le confirmer ni le contredire — le déséquilibre a dû être lu dans le PGN à la main. C'est la
+  > conclusion la plus utile du rapport, et elle vient **entièrement de l'extérieur des données**.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Jusqu'où va « matériel » ?** Un simple compte de matériel par camp ne dit pas « deux tours
+  >   contre une dame » : c'est un **déséquilibre de nature**, pas un écart de points. Le minimum utile
+  >   est probablement la signature des pièces restantes de chaque camp, pas un solde. À cadrer, sinon
+  >   la story dérive vers une classification de finales.
+  > - **Un axe, ou une dimension de tous les comptes ?** Répartir les dégâts par phase est un
+  >   `group by` ; en faire un axe du futur verdict d'US-15d en est un autre, et l'EPIC prévient déjà
+  >   que **les axes sont corrélés** (en blitz, les coups de finale *sont* les coups à faible horloge).
+  >   Cette story arme les axes ; elle ne doit pas décider du classement, qui appartient à 15c.
+  > - **Le déséquilibre est-il une propriété du coup ou de la partie ?** Il change en cours de route —
+  >   celui de la 715 naît au 26ᵉ coup. Le rattacher au demi-coup le rend sommable ; le rattacher à la
+  >   partie est plus simple et plus faux.
+  >
+  > **Coût moteur : aucun.** Les deux axes sont dérivables de ce qui est déjà stocké — `phase` est
+  > écrit, le matériel se lit dans le FEN de chaque `Evaluation`. Aucune ré-analyse, aucune migration.
 
 ## Doing
 
