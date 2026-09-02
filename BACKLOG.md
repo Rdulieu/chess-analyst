@@ -2,6 +2,85 @@
 
 ## To do
 
+- **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
+  verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
+  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
+  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md).
+  > US-23 avait **explicitement laissé ce sujet dehors** (« un sujet à part entière, à ouvrir comme
+  > tel ») ; c'est celui-ci.
+  >
+  > **Placée en tête de `To do` le 2026-09-02, sur décision du demandeur** — c'est la story qu'il veut
+  > traiter. À noter pour l'ordonnancement : US-28 recommande d'être tranchée **avant** celle-ci, la
+  > provenance « moteur vu » étant ce qui rend une `Confrontation` interprétable. La recommandation
+  > n'est pas retirée, elle est **arbitrée** : si US-26 passe d'abord, elle bâtira son écran de détail
+  > sur un drapeau dont on sait qu'il peut mentir, et devra le savoir en le faisant.
+  >
+  > ### Une seule story pour neuf notes
+  >
+  > Les **neuf** remarques du « compte rendu d'analyse » du 25/08 disent la même chose sous neuf
+  > angles : *pas très visuel* (1), *parcourir le board avec les flags* (2), *le verdict sur chacun
+  > des coups* (5), *quand j'ai dit « erreur » à tort* (6), *l'évaluation du moment clé peu visible*
+  > (7), *mettre en avant les divergences* (9), *ce que j'ai vu juste n'est pas clair* (4), plus les
+  > deux notes de contestation ci-dessous (3 et 8).
+  >
+  > **Le défaut est un seul** : la `Confrontation` est **agrégée**. Elle donne trois taux, une matrice
+  > (`ConfusionMatrixTable`) et des comptes, et ne dit **nulle part quel coup a produit quelle case**.
+  > Un joueur qui lit « 1 sur 4 » ne peut pas retrouver les trois autres. Relevé sur `develop` :
+  > `ConfrontationReadout`, `ConfusionMatrixTable`, `UnscoredReadout`, `KeyMomentReadout`, `Figure` —
+  > **aucun échiquier**, aucune entrée par ply.
+  >
+  > ### Deux notes contestent une décision documentée — c'est le cœur du grill
+  >
+  > Elles ne sont pas des défauts, ce sont des désaccords avec des choix pris exprès. Les traiter en
+  > passant reviendrait à défaire une garantie sans le savoir.
+  >
+  > **Note 3 — « Devoir cocher chaque coup analysé mais non important est fastidieux ».** `CONTEXT.md`
+  > tient l'inverse : *« `Sound` est ce qui rend la confrontation possible. Sans lui, "je n'ai rien dit
+  > ici" et "je dis que ce coup est correct" seraient le même silence »*. Le coût signalé **est le prix
+  > exact** de cette garantie — 22 coups posés pour n'en examiner que 4. La question n'est donc pas
+  > « faut-il garder `Sound` » mais **« comment le poser coûte-t-il moins cher »**.
+  > **Attention, la note a vieilli** : US-22 a depuis livré le verdict au clavier (`1`–`5`, flèches,
+  > inerte pendant la saisie d'une note). Le grill doit **re-mesurer le coût sur l'app telle que
+  > mergée** avant de concevoir quoi que ce soit — il a peut-être déjà largement baissé.
+  >
+  > **Note 8 — « La liste des éva sur position déjà décidée prend beaucoup de place alors qu'elle
+  > n'apporte rien ».** ADR-0017 exige l'inverse : une partie où le joueur a joué quatre bévues peut
+  > contribuer **zéro** erreur comptée, et *« un écran qui laisse cet écart illisible détruit la
+  > confiance exactement là où la divergence est la chose à expliquer »*. Mais **l'ADR exige la
+  > lisibilité, pas une liste** : sur la partie testée, 16 coups exclus étaient rendus un à un. Le
+  > volume vient du **rendu**, pas de la règle — un compte et une phrase tiendraient la décision en
+  > trois lignes. Distinguer la décision de son rendu est ici tout le travail.
+  >
+  > ### Un point à ne pas confondre au grill
+  >
+  > La note 2 demande **l'échiquier dans la `Confrontation`**. `ConfrontationPage` porte une décision
+  > voisine mais **différente** : la `Confrontation` est une route à part et **non un panneau sur la
+  > route de lecture**, parce que *« cette route est aveugle par nature et le reste — y montrer le
+  > moteur détruirait la seule chose qu'elle garantit »*. Cet argument protège la **lecture**, il ne
+  > dit rien contre un échiquier **sur la route de confrontation**, où le sceau est déjà tombé. Le
+  > second motif cité — la densité et le reflow — reste, lui, entièrement valable.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Où vit le détail par coup** : une entrée dans la matrice qui mène aux coups, un échiquier
+  >   parcourable portant les deux lectures, ou les deux. La contrainte d'auditabilité d'US-15 vaut
+  >   ici aussi — la vue par coup et l'agrégat doivent être **le même calcul**.
+  > - **Nommer les quatre cases**, pas seulement les compter. « Ce que j'ai vu juste » (note 4) et
+  >   « quand j'ai crié à l'erreur pour rien » (note 6) sont deux cases de la matrice qui n'ont pas
+  >   de mots ; le faux positif n'en a aujourd'hui aucun.
+  > - **Le sort de la note 3**, une fois le coût re-mesuré : rien à faire, ou un geste de masse.
+  > - **Le rendu des exclus** (note 8) sans toucher à ADR-0017.
+  >
+  > **Garde-fou du projet** : aucun indice ne peut être **uniquement chromatique** — sur un écran qui
+  > oppose deux lectures, la tentation est maximale.
+  >
+  > ### Angle mort connu, à traiter avant ou pendant
+  >
+  > L'écran **« Mes lectures »** (`/confrontation`, le bilan sur tout l'historique) **n'a jamais été
+  > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
+  > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
+  > session de test dessus devrait précéder le grill, ou en faire partie.
+
 - **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
   seulement par ouverture ou par position.
   > **Recadrage de l'objectif du produit** (2026-08-19). **Grillée** (2026-08-21) — état complet et
@@ -12,7 +91,14 @@
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
   > - **US-15a** — Comprendre l'analyse sur **une** partie. Sortie de l'EPIC en story autonome, sur
   >   sa propre branche d'intégration : **livrée et mergée** (PR #58, 2026-08-23), voir `## Done`.
-  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur).
+  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur). **Prémisse corrigée le
+  >   2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.** `clocks=true` n'est pas envoyé
+  >   à l'export (`platform/lichess/client.ts` n'envoie que `since`, `until`, `pgnInJson`, `opening`,
+  >   `sort`), donc le PGN arrive **sans** `[%clk]`. Mesuré en base : **282 parties chess.com sur 282
+  >   portent l'horloge, 1 sur 434 côté lichess.** La story n'est donc pas « un parseur, zéro coût
+  >   moteur » : c'est un paramètre d'export, **plus une reprise d'import** des parties lichess déjà
+  >   là — et le PGN stocké devra être remplacé, pas complété. Tant que ce n'est pas fait, tout axe
+  >   « pression du temps » ne vaudrait que pour un compte sur deux, en silence.
   > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
   >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
   >   du récapitulatif par partie (ADR-0017), tout approximatif se propage.
@@ -20,6 +106,10 @@
   >   conditionnels », avec de vraies données sous les yeux.
   > - **US-15d** — Le verdict « sur quoi travailler » (et le sort de `/openings` et `/danger`).
   > - **US-15e+** — Les motifs, un par un.
+  > - **US-32** — Rendre exploitables les axes **phase** et **matériel** (ouverte le 2026-09-02, hors
+  >   grill de l'EPIC). Ne s'insère pas dans la suite lettrée : elle n'ouvre pas une étape neuve, elle
+  >   arme deux axes que la dorsale annonçait déjà. **À faire avant US-15c**, qui construirait sinon
+  >   son agrégat sans eux.
   > - Non planifié : le suivi dans le temps (est-ce que ça s'améliore ?).
   >
   > Ce n'est **pas une US mais une EPIC** : elle se découpera en plusieurs US grillées séparément.
@@ -34,6 +124,11 @@
   > - Méthode : **dorsale sans motifs** (axes dérivés du moteur et du FEN — phase, matériel,
   >   tactique manquée vs dérive, pression du temps, position calme/tranchante), puis **détection par
   >   règles greffée un motif à la fois**. **Pas de LLM** (décision du demandeur).
+  > - **Deux de ces axes ont reçu leur premier cas réel le 2026-09-02** — « matériel » et « phase »,
+  >   sur l'évaluation de la partie 715. **L'EPIC ne se re-grille pas pour autant** (décision du
+  >   demandeur) : le constat et son instruction sont sortis dans **US-32**, à griller séparément
+  >   comme n'importe quelle story lettrée. Rien de la méthode ci-dessus n'est remis en cause — les
+  >   deux axes étaient déjà annoncés, ils cessent simplement d'être des hypothèses.
   > - **Premier chantier** : le moteur calcule `bestmove` **et la variante**, et on les **jette** —
   >   `uci-driver.ts` collecte toutes les lignes `info` puis n'en garde que le score et `bestmove`.
   >   Tout motif est une affirmation sur l'écart entre le coup joué et le meilleur coup, donc sans
@@ -98,6 +193,39 @@
   >
   > **Matière première déjà identifiée** — les points laissés ouverts par les sept FP, à instruire
   > sur de vraies parties plutôt qu'à trancher sur le papier :
+  > - **Le seuil d'`Inaccuracy` est trop haut — ajouté le 2026-09-02, retour du demandeur.** *« Je
+  >   vois souvent des trucs qui ne sont pas mis en valeur par le moteur. »* C'est **la** story pour
+  >   ça : son argument porteur est que tout est dérivé (ADR-0009) et donc **retunable sans
+  >   ré-analyse ni migration** — `recap.ts` le dit à l'endroit exact du calcul, *« retuning a
+  >   threshold retunes this »*.
+  >   **Mais un seuil ne se baisse pas tout seul, et le grill doit savoir ce qu'il déplace :**
+  >   - `INACCURACY_DROP = 10` est **aussi le plancher du `Counted Move`** — exporté pour les deux
+  >     usages, exprès, « un seuil publié, lu aux deux endroits ». Le baisser élargit donc du même
+  >     geste l'ensemble des coups qui *comptent*, pas seulement celui des coups signalés.
+  >   - **`Drift` est le complément du seuil**, avec l'invariant `flaggedLoss + drift ===
+  >     chancesLost`. Descendre le plancher **transfère de la masse de la dérive vers le signalé** :
+  >     tous les récapitulatifs changent, et l'agrégat d'US-15c avec eux. Ce n'est pas un effet de
+  >     bord, c'est le mécanisme.
+  >   - **`CONTEXT.md` publie la bande** (« 10–20 % », « en dessous de 10 % n'est pas signalé ») :
+  >     la changer est un amendement de glossaire, pas un réglage.
+  >   **Contre-hypothèse à instruire avant de toucher au seuil** : l'évaluation de la partie 715 a
+  >   conclu l'inverse — à **profondeur 16 sur deux lignes**, en blitz, un écart de 10 points de
+  >   chances est du bruit autant qu'une faute. Si le demandeur voit des coups faibles non signalés,
+  >   la cause peut être le **`Search regime`** et non le plancher. Baisser le seuil sur un régime
+  >   trop court produirait du signalement de bruit — précisément ce que le plancher existe pour
+  >   éviter. Les deux pistes se testent sur les mêmes parties, et cette story est faite pour ça.
+  > - **`cp2` est payé et n'est lu par personne — ajouté le 2026-09-02.** Le score de la deuxième
+  >   ligne est **écrit en base** (`evaluations.cp2` / `mate2`, 108 lignes sur 110 pour la partie
+  >   715), au prix de MultiPV = 2, soit le **2,1×** de temps moteur mesuré et assumé en 15a-01. Il
+  >   est produit par `analysis/service.ts` et **consommé nulle part** : `grep cp2` ne rend que le
+  >   schéma et l'écriture, ni serveur ni client ne le relisent. Son propre commentaire dit à quoi il
+  >   sert : *« ce qui dit si le meilleur coup était le seul à jouer »*.
+  >   C'est **la** question à laquelle une évaluation de lecture ne sait pas répondre aujourd'hui :
+  >   manquer le seul coup gagnant et en manquer un parmi trois ne disent pas la même chose du
+  >   joueur. Cette story est le bon endroit — le temps moteur est **déjà dépensé**, l'exposer est
+  >   dérivé (ADR-0009), donc sans ré-analyse ni migration, exactement comme le reste de la passe.
+  >   Reste à trancher : jusqu'où le rendre visible (une lecture par coup ? un axe « coup forcé /
+  >   coup unique » ?), sachant qu'un **coup forcé n'est jamais signalé** par construction.
   > - **Les seuils de `Phase`.** Annoncés « heuristiques, pas des faits » et affichés exprès pour
   >   être contestés. Le cap « coup 15 » est implémenté comme *le 15e coup des Blancs est le premier
   >   hors début de partie* ; l'autre lecture décale d'un coup entier. Et « développement achevé »
@@ -382,6 +510,540 @@
   > 380 px ; elle est vraie au tiers à la position de départ ; et les flèches ne fonctionnent pas
   > sur `Analyse`, faute d'y être annoncées. Détail dans les issues 04 et 05.
 
+
+- **US-24**: Ne plus laisser un import réussir sans rien importer — pour qu'une demande qui ne peut
+  rien rapporter soit refusée à l'entrée, et non conclue par un compte-rendu vert à zéro.
+  > **Pas encore grillée.** Constatée le 2026-09-02, en important à la main les mois d'août et
+  > septembre pour `DudulSmash` (chess.com) et `Metalyst` (lichess) sur la vraie base. L'import a
+  > fini par marcher — 11 et 3 parties — mais **deux appels avant** avaient rendu « 0 importée »
+  > sans qu'aucune erreur ne le dise.
+  >
+  > Le point commun des deux défauts est ce qui les rend coûteux : **le symptôme est identique et
+  > il ressemble à une vérité métier**. « Aucune partie trouvée » est une réponse légitime — le
+  > joueur n'a peut-être pas joué ce mois-là — donc rien, dans le compte-rendu, ne distingue « tu
+  > n'as pas joué » de « ta demande était inexploitable ». Un trou dans l'historique se lit alors
+  > comme un fait sur le joueur.
+  >
+  > ### Défaut 1 — une plage de cadences vide filtre tout, en silence
+  >
+  > `POST /api/import` sans champ `categories` répond **202**, va chercher les parties (30
+  > rapportées pour août), et **n'en importe aucune** : `importRange` construit
+  > `new Set(params.categories)` et tout tombe hors périmètre. Aucun défaut n'est appliqué, aucune
+  > validation ne s'y oppose. Le compte-rendu final dit « Aucune partie trouvée de 2026-08 à
+  > 2026-09 **dans les cadences sélectionnées** » — alors que `totalFetched` valait 30.
+  >
+  > **Ce n'est pas qu'un défaut d'API** : `ImportForm` envoie
+  > `CATEGORIES.filter((c) => categories.has(c))`, et **rien n'empêche de décocher les cinq cases**
+  > — ni un `disabled` sur le bouton, ni un contrôle avant l'appel. Le chemin est donc atteignable
+  > à la souris, et il fait payer un aller-retour complet à la plateforme pour ne rien produire.
+  >
+  > ### Défaut 2 — une plage mal formée n'est pas refusée non plus
+  >
+  > `normalizeRange` ne valide **que l'ordre** des deux bornes (`ordinal(from) > ordinal(to)`).
+  > Un `from`/`to` qui n'est pas un `MonthRef` (`"2026-08"` au lieu de `{year, month}`) traverse
+  > toute la chaîne, et ressort dans le message d'un import terminé : *« Aucune partie trouvée de
+  > **undefined-undefined** à **undefined-undefined** »*. Une donnée d'entrée invalide est ainsi
+  > rapportée comme un résultat, en fin de course, plutôt que refusée au bord.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Où est la frontière** : l'API refuse-t-elle (400) une plage de cadences vide, ou est-ce le
+  >   formulaire qui rend l'état inatteignable — ou les deux ? Le PRD d'US-9/ADR-0010 a déjà posé
+  >   un partage (le serveur ne plafonne rien, l'UI confirme les longues plages) ; celui-ci doit
+  >   s'y accorder plutôt que le contredire.
+  > - **Le vocabulaire du compte-rendu** : « aucune partie trouvée » doit cesser de recouvrir deux
+  >   choses. Un import qui n'a rien pu chercher n'est pas un import qui n'a rien trouvé, et
+  >   `totalFetched > 0` avec `imported == 0` est un état qui mérite d'être nommé.
+  > - **La validation des bornes** : `MonthRef` est une forme, pas un type vérifié à l'entrée.
+  >   Faut-il valider au bord de l'API, ou resserrer le contrat plus profond ?
+  >
+  > Aucun de ces deux défauts n'a corrompu de données : rien n'a été écrit de travers, il n'y a
+  > donc **pas de migration ni de reprise** à prévoir — seulement des imports qui n'ont pas eu
+  > lieu, et un compte-rendu qui ne le disait pas.
+
+- **US-25**: Reprendre les mises à jour de l'usine amont sans perdre les nôtres — pour que rejouer
+  l'installation cesse d'être un choix entre « rester en arrière » et « écraser huit mois de
+  terrain ».
+  > **Pas encore grillée.** Demandée le 2026-09-02. L'usine vient de
+  > [`Loulen/prompt-driven-software-factory`](https://github.com/Loulen/prompt-driven-software-factory)
+  > (voir `skills-lock.json`), installée ici le **2026-07-20** (`bfe5c4a`). L'amont a poussé pour la
+  > dernière fois le **2026-09-01**. **Contrainte posée par le demandeur : la reprise ne doit rien
+  > écraser de ce qui a été modifié ici.**
+  >
+  > ### Pourquoi ce n'est pas un « git pull » de skills
+  >
+  > Les deux côtés ont bougé, et **pas de la même façon** :
+  >
+  > | | Depuis l'installation |
+  > | --- | --- |
+  > | **Amont** | 11 commits ; `agentic-tests` 1, `build-factory` 3, `git-flow` 1, `grill-with-docs` 2, `tdd` 1, `triage` 1 |
+  > | **Ici** | `agentic-tests/SKILL.md` : **78 → 740 lignes**, 37 commits ; `git-flow/SKILL.md` : +45/-12, 2 commits |
+  >
+  > Notre `agentic-tests` n'est pas une version modifiée de celle de l'amont : c'est **dix fois son
+  > volume**, et ce volume est du terrain payé cher — l'orchestrateur HP, le plafond
+  > `min(3, floor(nproc/4))` arraché à trois jours de gels, les pièges de course de la suite du
+  > 31/08, la récupération des rapports perdus par `SendMessage`. C'est très exactement ce que la
+  > contrainte protège.
+  >
+  > ### Trois constats vérifiés, à ne pas redécouvrir au grill
+  >
+  > 1. **L'installateur amont écrase, franchement.** `install.sh` procède par
+  >    `cp -R "$_src/skills/$_s" "$_dest/$_s"` — répertoire entier, aucune comparaison, aucune
+  >    fusion. Seuls les blocs `CLAUDE.md`/`AGENTS.md` sont traités avec ménagement
+  >    (`write_block`, qui ne mange jamais le contenu de l'utilisateur). Les skills, non.
+  > 2. **`skills-lock.json` ne protège rien — et ne dit pas la vérité.** `install.sh` ne le
+  >    mentionne nulle part : ni écrit, ni lu. Pire, ses `computedHash` ne sont pas reproductibles
+  >    ici : `tdd/SKILL.md` **n'a jamais été touché localement** et son sha256 (`85ac12…`) diffère
+  >    du `computedHash` du lock (`8986a0…`). Le fichier a donc l'apparence d'un garde-fou sans en
+  >    être un ; **on ne peut pas s'en servir pour décider ce qui a divergé**. Le grill devra dire
+  >    s'il est réparé ou retiré.
+  > 3. **L'amont a renommé son vocabulaire, ce n'est plus le nôtre.** Ses skills sont aujourd'hui :
+  >    `to-spec`, `to-tickets`, `to-us`, `implement`, `grilling`, `codebase-design`,
+  >    `domain-modeling`, `clean-context`, `code-review`, `verify-factory` — quand nous tenons
+  >    `to-prd` et `to-issues`, **qui n'existent plus là-bas**. Reprendre l'amont n'est donc pas une
+  >    mise à jour de fichiers mais une **migration de vocabulaire**, qui traverse `CLAUDE.md`,
+  >    `docs/agents/`, et les PRD déjà livrés.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Reprendre quoi ?** Tout n'est pas également désirable. Une skill jamais touchée ici
+  >   (`tdd`, `triage`, `to-prd`…) peut se reprendre presque telle quelle ; `agentic-tests` et
+  >   `git-flow` demandent une fusion à la main, dans ce sens-là : **l'amont vient enrichir le
+  >   nôtre**, jamais l'inverse.
+  > - **Adopter ou refuser les renommages.** Suivre `to-spec`/`to-tickets` coûte une migration à
+  >   travers tout le dépôt ; ne pas les suivre nous coupe des mises à jour futures de ces skills.
+  >   C'est le vrai arbitrage de la story, et il n'est pas technique.
+  > - **Comment on saura, la prochaine fois.** Le besoin réel derrière la demande n'est pas cette
+  >   reprise-ci mais **la suivante** : il faut sortir d'ici avec un moyen de dire, sans relire 800
+  >   lignes, ce que l'amont a changé et ce que nous avons changé. Un lock qui marche est une piste ;
+  >   un remote `upstream` avec une branche de vendoring en est une autre.
+  > - **Le sort des seeds `build-factory/*.md`**, déjà signalé comme deuxième source de vérité par
+  >   l'audit du 24/08 (§1.5).
+  >
+  > ### Frontière avec US-21
+  >
+  > **Elles ne font pas le même travail et l'ordre compte.** US-21 remet l'usine d'accord **avec
+  > elle-même** (ce que le dépôt dit vs ce qu'il fait) ; celle-ci la remet d'accord **avec son
+  > amont**. Le recouvrement est réel sur un point unique : le gabarit `CLAUDE.md` de
+  > `build-factory`, dont l'audit du 24/08 (§1.4) dit qu'il **régresse la méthode** si on rejoue la
+  > skill — c'est la seule incohérence connue qui *détruit* du travail. Reprendre l'amont **sans**
+  > avoir traité ce point rejouerait précisément la régression que la contrainte du demandeur
+  > interdit. **US-21 devrait donc passer d'abord**, ou au minimum ce point-là.
+
+- **US-27**: Retrouver une partie dans « Mes parties » sans faire défiler cent soixante-dix lignes —
+  trier, filtrer, chercher, et savoir ce que compte un compteur.
+  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
+  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md)
+  > (« Mes parties » 2 et 3, et le libellé du compteur). Sujet **explicitement laissé dehors par
+  > US-23**, faute d'être dans le périmètre que le demandeur lui avait donné.
+  >
+  > ### Le constat
+  >
+  > `GameList` est un tableau de six colonnes — Date, Adversaire, Résultat, Cadence, État, Lecture —
+  > et **ne porte aucun contrôle** : pas de tri, pas de filtre, pas de recherche. Le profil
+  > `DudulSmash` compte aujourd'hui **177 parties**, `Metalyst` **354** : retrouver une partie précise
+  > se fait à l'œil, en défilant. Ce n'était pas un problème à trente parties ; l'import de plusieurs
+  > mois (US-9, US-17) l'a rendu structurel.
+  >
+  > ### Trois points, dont un qui n'est pas celui qu'on croit
+  >
+  > **1. Tri / filtre / recherche** — demandé tel quel. Les axes évidents sont déjà les colonnes
+  > (date, adversaire, résultat, cadence, état d'analyse, lecture personnelle), ce qui rend le
+  > périmètre lisible mais pose la question du **rendu** : des en-têtes cliquables, une barre de
+  > filtres, ou les deux.
+  >
+  > **2. L'heure manque, et c'est du tri déguisé.** *« Les dates sont-elles véridiques ? »* — **oui** :
+  > elles viennent de l'en-tête `[Date]` du PGN et ne sont jamais recalculées, aucune conversion de
+  > fuseau. Ce que la date ne dit pas, c'est **l'heure** : deux parties du même jour sont
+  > **indiscernables** dans la liste, et un tri par date ne les départage pas. Vérifier d'abord si
+  > l'heure est disponible à l'import sur les deux plateformes — sinon le tri n'a pas de clef stable.
+  >
+  > **3. Le libellé « X/Y positions évaluées » ne dit ni ce qu'il compte, ni qui l'a lancé.**
+  > Toujours présent mot pour mot sur `develop` (`AnalysisPassStatus.tsx:55`). Le jour du test il
+  > affichait « 30/85 » : le compteur était juste, mais la passe avait été **lancée par l'agent** sur
+  > l'instance de test, sans l'annoncer — le joueur voyait avancer un travail qui n'était pas le sien.
+  > **L'incident était un fantôme, le défaut ne l'est pas** : rien dans le libellé ne permet de savoir
+  > de quelle partie il parle ni d'où vient la passe. Petit, mais il appartient à cet écran ; le
+  > traiter ici évite une story d'une ligne.
+  >
+  > ### Frontière
+  >
+  > Du confort de liste, **pas** de l'analyse : rien ici ne touche au modèle, aux `Evaluation`s ni à la
+  > `Confrontation`. À prendre **après US-26**, qui elle touche une garantie documentée.
+
+- **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
+  niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.
+  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur : une partie fraîchement
+  > analysée s'est ouverte **en `Détaillé`**, alors que la lecture autonome suppose `Sans aide`.
+  >
+  > ### Ce n'est pas un bug : deux phrases de `CONTEXT.md` se contredisent
+  >
+  > À dire au grill d'emblée, pour qu'il sache qu'il **amende une décision** et ne répare pas un
+  > oubli. Le code fait exactement ce qui est écrit, et c'est écrit deux fois, en sens contraire :
+  >
+  > > *« The default is **Unaided**: a Game is opened to be read, and the engine's verdict is
+  > > something the Player asks for rather than something the app volunteers. **The choice is
+  > > remembered**, so it is made once and not on every Game. »*
+  >
+  > `loadReviewMode()` rend `unaided` **uniquement quand rien n'est stocké** ; dès que le joueur a
+  > choisi `Détaillé` une fois, `saveReviewMode` l'écrit dans `localStorage`
+  > (`chess-analyst.review-mode`) et **toutes les parties suivantes s'ouvrent là**, indéfiniment et
+  > sur toutes les sessions. Le comportement est **couvert par les tests**
+  > (`client/test/reviewMode.test.ts` : *« remembers the chosen level, so it is chosen once and not
+  > on every Game »*). Le « défaut par défaut » ne s'applique donc qu'au tout premier usage.
+  >
+  > Écarté après vérification : la promotion de fin de passe n'y est pour rien. `atLeastAnnotated`
+  > monte `unaided` à `annotated` et **jamais** à `detailed`, et elle n'est pas persistée. Le
+  > `Détaillé` observé vient bien du choix mémorisé.
+  >
+  > ### La vraie conséquence : la provenance est estampillée à l'ouverture
+  >
+  > C'est ce qui fait la gravité, et ce que la note ne dit pas. `GameViewer` porte un `useEffect` qui
+  > s'exécute **au montage** :
+  >
+  > ```
+  > if (showsEngine({ analyzed: game.analyzed, mode })) noteEngineShown(game.id);
+  > ```
+  >
+  > `showsEngine` est vrai dès que la partie est analysée **et** que le niveau dépasse `Sans aide`.
+  > Donc ouvrir une partie fraîchement analysée avec un `Détaillé` mémorisé **inscrit immédiatement**
+  > la partie dans `chess-analyst.engine-seen` — avant toute lecture, sans geste du joueur. Et
+  > `noteEngineShown` n'a **pas de contraire** : repasser en `Sans aide` dans la seconde ne l'efface
+  > pas.
+  >
+  > Or ce drapeau n'est pas décoratif. `CONTEXT.md` le désigne comme **la seule chose affichée qui
+  > devient persistante** — il est remis au serveur au sceau et **étiquette l'`Analyse personnelle`**
+  > (« lue à l'aveugle » vs « lue informée »), c'est-à-dire ce qui rend la `Confrontation`
+  > interprétable. Une lecture réellement autonome peut donc être archivée comme informée. Le
+  > commentaire d'`engineSeen.ts` prévient lui-même du sens de l'erreur : un drapeau faux *« serait
+  > pire qu'inutile, parce qu'il se tromperait dans la direction qui discrédite le travail du
+  > joueur »*. C'est exactement le cas ici, et la garantie qu'`engineSeen` protège explicitement est
+  > franchie par un simple `localStorage` de la veille.
+  >
+  > **Ce que la story ne prétend pas** : `Review mode` n'a jamais été une contrainte, seulement un
+  > libellé (le glossaire a refusé le nom *Blind mode* pour cette raison). Il ne s'agit pas
+  > d'empêcher de regarder, mais que **l'app ne montre pas d'elle-même** ce qu'on ne lui a pas
+  > demandé, et n'en tire pas une conclusion sur le joueur.
+  >
+  > ### Le levier existe déjà dans le code
+  >
+  > La distinction utile est **déjà faite** ailleurs, et bien commentée : à la fin d'une passe,
+  > `setMode(atLeastAnnotated)` bouge **cette revue-ci** sans écrire le niveau mémorisé — *« Only
+  > THIS review moves — the remembered level is left alone. »* Le défaut est que l'ouverture, elle,
+  > ne connaît qu'une seule portée. Séparer « le niveau de cette revue » de « le niveau mémorisé »
+  > est vraisemblablement tout le correctif.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Quelle phrase de `CONTEXT.md` survit** — la mémorisation disparaît, ou elle se réduit (à la
+  >   session, à la partie), ou le défaut redevient inconditionnel à chaque ouverture. La glose du
+  >   glossaire est à réécrire dans tous les cas, et c'est une décision de produit.
+  > - **Le drapeau doit-il rester posé au montage ?** Un niveau hérité n'est pas un geste. Une piste :
+  >   ne l'inscrire qu'après un choix explicite, ou qu'après un rendu réellement regardé — sans
+  >   retomber dans la promesse d'étanchéité que le projet a refusée.
+  > - **Que faire des drapeaux déjà posés à tort.** Ils vivent dans le `localStorage` du navigateur,
+  >   et pour les lectures déjà scellées ils sont **en base**. `CONTEXT.md` interdit de deviner (tout
+  >   repli vaut « non vu »), donc les corriger d'office est exclu ; les laisser fausse les
+  >   `Confrontation` passées. À nommer explicitement plutôt qu'à découvrir après coup.
+  >
+  > **Lien** : la `Confrontation` est le consommateur de ce drapeau, donc **US-26** a intérêt à ce que
+  > celle-ci soit tranchée d'abord — sans quoi elle bâtira un écran de détail sur une provenance
+  > dont on sait qu'elle peut mentir.
+
+- **US-29**: Colorer les glyphes de verdict dans la liste des coups — pour que la lecture du joueur
+  se reconnaisse d'un coup d'œil dans la liste comme elle se reconnaît déjà sur les boutons et sur
+  l'échiquier.
+  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur, sur la page de lecture : *« les
+  > glyphes de notation sont toujours blancs. J'aimerais qu'ils soient de la même couleur que la
+  > lecture du joueur (couleur sur les boutons de sélection et dans le board). »*
+  >
+  > ### Le constat est exact, et l'écart est net
+  >
+  > `MoveMarks` rend le glyphe du verdict dans un `<span>` **sans aucun attribut de couleur** : il
+  > hérite de `--ink`, donc blanc en thème sombre. Il est le seul des trois porteurs du
+  > `Declared severity` à ne rien porter :
+  >
+  > | Où | Couleur | Source |
+  > | --- | --- | --- |
+  > | Boutons de sélection | oui, les 5 valeurs | `label[data-verdict="…"]:has(input:checked)` → famille `--square-*` |
+  > | Case de l'échiquier | oui, les 5 valeurs | `DECLARED_SEVERITY_SQUARE_TINT` → famille `--square-*` |
+  > | **Liste des coups** | **aucune** | — |
+  >
+  > Et l'asymétrie est double : sur `Analyse`, le glyphe du moteur **est** teinté dans la liste
+  > (`[data-severity]` → `--tint-*` + `--tint-*-ink`). La liste sait donc teinter un glyphe ; elle ne
+  > le fait que pour un des deux auteurs.
+  >
+  > ### Pourquoi ce n'est pas une ligne de CSS : deux familles de couleurs, pas une
+  >
+  > ADR-0013 tient **deux** familles, et la demande tombe pile sur leur frontière.
+  >
+  > - `--tint-*` (chrome) **suit le thème**, et chaque teinte porte son `--tint-*-ink` pour que le
+  >   contraste ne dépende jamais de l'encre héritée.
+  > - `--square-*` (échiquier) est **délibérément constante entre thèmes**, parce que
+  >   `react-chessboard` peint la pièce par-dessus. Mesuré sur le pilote : la teinte de chrome
+  >   utilisée sur une case rendait sa pièce à **1,49:1** en sombre.
+  >
+  > Le demandeur demande la couleur **des boutons et du board**, c'est-à-dire la famille `--square-*`
+  > — sur un élément de **chrome**, la liste. C'est exactement le croisement que la séparation des
+  > deux familles existe pour éviter, dans l'autre sens. Trois issues, et le grill doit en choisir
+  > une plutôt que la découvrir :
+  > 1. porter `--square-*` dans la liste, en lui **donnant son encre** (les boutons le font déjà :
+  >    `color: var(--square-notation)`) ;
+  > 2. créer les paires de chrome manquantes et teinter avec `--tint-*` — cohérent avec la liste du
+  >    moteur, mais **une autre couleur que le board**, donc pas ce qui est demandé ;
+  > 3. rapprocher les deux familles, ce qui rouvre ADR-0013 et se paie cher.
+  >
+  > **Deux valeurs sur cinq n'ont pas de jeton de chrome du tout.** `sound` et `good` n'existent qu'en
+  > `--square-sound` / `--square-good` : *« la palette n'avait jamais eu à peindre un verdict
+  > favorable, le moteur ne rapportant que des fautes. »* L'option 2 demande donc **deux paires de
+  > jetons neuves, en clair et en sombre**, contrastées et validées.
+  >
+  > ### Le piège est déjà documenté — ne pas le repayer
+  >
+  > La correction naïve consiste à poser `data-severity` sur le `<span>` de `MoveMarks`. Elle est
+  > **déjà connue pour être fausse** : `DeclaredSeverityControl` a rencontré exactement ça et porte le
+  > commentaire qui l'explique — la feuille teinte **tout** `[data-severity]` avec la paire de chrome,
+  > ce qui n'a coloré que 3 des 5 valeurs et **a fait tomber `Bévue` à 2,75:1**. C'est pourquoi ce
+  > composant porte `data-verdict` et non `data-severity`. Le même choix s'impose ici.
+  >
+  > ### La contrainte qui vient d'US-26, et qui pourrait la contredire
+  >
+  > `declaredSeverity.ts` porte une règle explicite, attachée au fait que le joueur emprunte les
+  > glyphes du moteur : *« le jour où un écran montre les deux auteurs à la fois — la pente naturelle
+  > d'US-16b — des glyphes identiques ne suffiront plus, et ils devront être distingués par autre
+  > chose que la couleur. »* **US-26 est précisément cet écran**, et elle est maintenant en tête de
+  > `To do`. Colorer les glyphes du joueur comme ceux du moteur consommerait donc le seul canal qui
+  > restait pour les séparer. À trancher **avec** US-26, pas contre elle.
+  >
+  > ### Garde-fous
+  >
+  > Aucun indice ne peut être **uniquement chromatique** (ADR-0013) : le glyphe et son nom accessible
+  > portent déjà le sens, la teinte s'y ajoute — c'est bien le cas ici, la demande est additive.
+  > Les jetons se déclarent en toutes lettres, jamais par interpolation : l'audit de cohérence des
+  > jetons lit la feuille comme source et ne voit pas un nom assemblé dans une boucle.
+
+- **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
+  invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
+  > **Pas encore grillée.** Ouverte le 2026-09-02, à partir d'une demande écrite **dans une lecture**
+  > (partie 715, note du coup 17) : *« Voir les erreurs de l'adversaire me paraît important aussi. Il
+  > faut qu'on réfléchisse si on veut ajouter ce point dans l'analyse. »*
+  >
+  > ### Le constat
+  >
+  > L'`Analysis pass` évalue **toutes** les positions — les 110 demi-coups de la partie 715 sont en
+  > base — mais ne classe en sévérité **que les coups du joueur**. Les coups de l'adversaire n'ont
+  > donc jamais de verdict moteur, alors que la donnée qui permettrait de le calculer est déjà là.
+  >
+  > Côté joueur, la conséquence est plus dure : il **marque** des coups adverses (23 sur cette
+  > partie), et la `Confrontation` les jette dans `unscored.opponent`. Il travaille, et son travail
+  > n'est ni noté ni rendu.
+  >
+  > ### Ce que ça a coûté, mesuré
+  >
+  > Sur la partie 715, en recalculant hors application avec **la bande publiée du projet**
+  > (`classifyMove` : ≥ 10 imprécision, ≥ 20 erreur, ≥ 30 bévue) :
+  > - l'adversaire a commis **7 fautes réelles** ;
+  > - le joueur en a jugé 14 coups : **8 justes, 2 manques lourds** (`20.b3` à −27,9 et `35.Qd4` à
+  >   −22,0 — deux cadeaux non ramassés), **3 fausses alertes**, 1 rangée une bande trop haut ;
+  > - **3 fautes adverses réelles** (`22.Kh1`, `23.hxg4`, `25.Ree1`, ~−12 chacune) n'ont même pas été
+  >   regardées.
+  >
+  > Ce dernier chiffre est le plus parlant : ce que le joueur ne regarde pas du tout est **invisible
+  > à l'app**, donc absent de tout futur profil de faiblesses. Un joueur qui rate systématiquement
+  > les occasions qu'on lui donne a un problème que l'agrégat d'US-15c ne verra jamais.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Une sévérité adverse est-elle la même chose qu'une sévérité du joueur ?** Le vocabulaire est
+  >   partagé (`Inaccuracy`/`Mistake`/`Blunder`), mais un `Counted Move` est défini sur le joueur, et
+  >   `Drift` compte ses pertes à lui. Réutiliser les mêmes tables sans le dire mélangerait deux
+  >   comptes qui n'ont pas le même sujet.
+  > - **Un seul seuil, toujours.** `move-quality.ts` dit en toutes lettres pourquoi il ne doit pas y
+  >   en avoir un second. Un seuil adverse distinct serait exactement la divergence que ce commentaire
+  >   interdit — et la première mesure hors app est tombée dans le piège avant d'être corrigée.
+  > - **Où ça s'affiche.** Deux lectures sur un même écran, c'est le sujet d'**US-26** ; ADR-0022 dit
+  >   qu'une case ne peut pas porter deux auteurs. Ajouter un **troisième** auteur (le moteur sur
+  >   l'adversaire) est à instruire avec elle, pas contre elle.
+  > - **Le taux d'accord doit-il l'intégrer ?** Sinon la demande du joueur reste à moitié satisfaite :
+  >   il verrait les fautes adverses sans jamais savoir s'il les a bien lues.
+  >
+  > **Dépendance faible à US-26**, qui porte l'écran ; aucune au moteur, la donnée existe déjà.
+
+- **US-31**: Horodater chaque marque d'une lecture — pour savoir dans quel ordre le joueur a
+  vraiment réfléchi, et pas seulement ce qu'il a conclu.
+  > **Pas encore grillée. Basse priorité, explicitement** — arbitrée comme telle par le demandeur le
+  > 2026-09-02, la moins intéressante des cinq lacunes relevées ce jour-là. La position en fin de
+  > `## To do` ne suffit pas à le dire (l'ordre de cette section n'est pas un rang), donc c'est écrit
+  > ici.
+  >
+  > ### Le constat
+  >
+  > `personal_marks` porte `(analysis_id, ply, declared_severity, note, key_moment, posterior)` et
+  > **aucun horodatage** : ni date d'écriture, ni ordre. Seul `personal_analyses` en a deux, pour la
+  > création et le sceau. On sait donc *quand la lecture a commencé et fini*, jamais *comment elle
+  > s'est déroulée*.
+  >
+  > ### Ce que ça a coûté, une fois
+  >
+  > L'évaluation de la partie 715 a conclu que « l'analyse ne se relit pas elle-même » : un regret
+  > écrit au coup 36 (*« pousser le pion en e2 était mieux »*) n'a jamais été appliqué au coup 36
+  > après que le coup 37 en a montré la conséquence. **Cette conclusion suppose que les notes ont été
+  > écrites dans l'ordre des coups, et rien ne le prouve.** Si le joueur est revenu en arrière,
+  > l'observation tombe. Elle a été rendue avec plus d'assurance qu'elle n'en méritait.
+  >
+  > ### Ce que ça ouvrirait
+  >
+  > Un `written_at` par marque est la seule donnée qui dirait **comment** le joueur analyse plutôt que
+  > ce qu'il conclut : où il hésite, où il revient, où il accélère, combien de temps il passe sur un
+  > coup qu'il finit par déclarer correct. C'est de la même famille que la contrainte d'auditabilité
+  > d'US-15 — sauf que l'objet audité serait le raisonnement, pas le calcul.
+  >
+  > ### Ce que le grill devra trancher, s'il a lieu
+  >
+  > - **Une colonne ou plusieurs ?** Première écriture, dernière modification, ou un journal — trois
+  >   coûts très différents, et un journal n'est plus une colonne mais une table.
+  > - **La migration est due** (ADR-0015) : colonne nullable, les marques existantes restant sans
+  >   date. Aucune reconstruction possible, et c'est un fait à assumer, pas une dette.
+  > - **Est-ce observer le joueur ?** Mesurer le temps passé sur chaque coup change la nature de
+  >   l'exercice. À poser avant de coder, pas après.
+
+- **US-32**: Rendre exploitables les axes **phase** et **matériel** — pour que « je m'effondre en
+  finale » cesse d'être une phrase qu'on lit dans un PGN à la main.
+  > **Pas encore grillée.** Ouverte le 2026-09-02, **hors du grill d'US-15** : l'EPIC est grillée et
+  > le demandeur ne la rouvre pas. Elle n'invalide rien de la dorsale — « phase » et « matériel »
+  > figuraient **déjà** parmi les axes annoncés. Ce qu'elle apporte, c'est leur **premier cas réel**,
+  > et la mesure de ce que leur absence a coûté.
+  >
+  > **Où elle s'insère** : pas dans la suite lettrée (elle n'ouvre pas d'étape neuve), mais **avant
+  > US-15c**, qui bâtirait sinon son agrégat sans ces deux axes — et ADR-0017 fait de l'agrégat la
+  > somme du récapitulatif par partie, donc un axe manquant ici manque partout ensuite.
+  >
+  > ### D'où ça vient
+  >
+  > La première évaluation d'une lecture réelle de bout en bout (partie 715, rapport produit **hors
+  > application**). Le constat est le même pour les deux axes, et c'est ce qui les réunit dans une
+  > seule story : **l'app a la donnée, ou de quoi la dériver, et n'en fait rien.**
+  >
+  > ### Phase — le champ existe, il n'est agrégé nulle part
+  >
+  > `phase` est écrit sur **chaque demi-coup** dans les annotations. Le récapitulatif, lui, ne rend
+  > que des totaux : `chancesLost`, `flaggedLoss`, `drift`, `countedErrors`. **Aucune répartition.**
+  > Localiser les dégâts de la partie 715 a demandé de sommer `chancesLost` par tranche à la main —
+  > et c'est ce calcul, pas le total, qui a produit la conclusion utile.
+  >
+  > Le coût est donc sans commune mesure avec une détection neuve : c'est un `group by` sur une
+  > donnée **déjà écrite**, dérivé (ADR-0009), sans temps moteur ni migration.
+  >
+  > **Réserve à porter au grill** : les seuils de `Phase` sont annoncés « heuristiques, pas des
+  > faits » et **US-15a-bis doit les instruire sur de vraies parties**. Agréger par phase avant que
+  > les seuils soient validés donnerait une répartition précise et fausse. L'ordre naturel est donc
+  > 15a-bis d'abord, ou au minimum le volet « seuils » de celle-ci.
+  >
+  > ### Matériel — rien dans l'app ne sait ce qui est sur l'échiquier
+  >
+  > La partie 715 s'est perdue dans une finale **deux tours contre une dame**, et **81 % des dégâts
+  > comptés** (159 points de chances sur 197) y sont concentrés. Les quatre pires coups de la partie
+  > sont tous dans cette phase.
+  >
+  > Le joueur avait nommé ce thème **lui-même, en aveugle**, dans une note écrite au moment où il
+  > commençait à le subir : *« il faut que je travaille 2 rooks VS Queen »*. L'application ne pouvait
+  > ni le confirmer ni le contredire — le déséquilibre a dû être lu dans le PGN à la main. C'est la
+  > conclusion la plus utile du rapport, et elle vient **entièrement de l'extérieur des données**.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Jusqu'où va « matériel » ?** Un simple compte de matériel par camp ne dit pas « deux tours
+  >   contre une dame » : c'est un **déséquilibre de nature**, pas un écart de points. Le minimum utile
+  >   est probablement la signature des pièces restantes de chaque camp, pas un solde. À cadrer, sinon
+  >   la story dérive vers une classification de finales.
+  > - **Un axe, ou une dimension de tous les comptes ?** Répartir les dégâts par phase est un
+  >   `group by` ; en faire un axe du futur verdict d'US-15d en est un autre, et l'EPIC prévient déjà
+  >   que **les axes sont corrélés** (en blitz, les coups de finale *sont* les coups à faible horloge).
+  >   Cette story arme les axes ; elle ne doit pas décider du classement, qui appartient à 15c.
+  > - **Le déséquilibre est-il une propriété du coup ou de la partie ?** Il change en cours de route —
+  >   celui de la 715 naît au 26ᵉ coup. Le rattacher au demi-coup le rend sommable ; le rattacher à la
+  >   partie est plus simple et plus faux.
+  >
+  > **Coût moteur : aucun.** Les deux axes sont dérivables de ce qui est déjà stocké — `phase` est
+  > écrit, le matériel se lit dans le FEN de chaque `Evaluation`. Aucune ré-analyse, aucune migration.
+
+- **US-33**: Rendre l'écran de revue tenable — le relevé du coup à portée de main, les raccourcis
+  partout, leur aide dans une infobulle, et une disposition qui cesse d'empiler.
+  > **Pas encore grillée.** Ouverte le 2026-09-02, sur trois retours du demandeur qui portent tous
+  > sur le **même écran** et le même défaut de fond : la route de revue s'est enrichie tranche après
+  > tranche (US-7, US-14, US-15a, US-16a, US-22, US-23) et **tout ce qui a été ajouté s'est empilé
+  > sous le plateau**. Chaque ajout était juste ; la somme ne l'est plus.
+  >
+  > Ce n'est pas une redite d'**US-23** : celle-ci tenait la **cohérence** entre écrans (le même
+  > clavier, la même liste, les mêmes verdicts). Ici tout est cohérent — et malcommode.
+  >
+  > ### 1. Le relevé du coup, donc la réfutation, est hors de portée
+  >
+  > *« Ce serait bien d'avoir rapidement accès à la séquence de réfutation quand on analyse une
+  > partie. Actuellement c'est tout en bas et difficile de cliquer. »*
+  >
+  > Exact, et **délibéré** — c'est le point que le grill doit ouvrir en connaissance de cause.
+  > `MoveRecord` est le **dernier bloc** de la page, sous le récapitulatif, et le seul chemin est un
+  > lien d'évitement « Aller au relevé du coup ». Le commentaire de `Board.tsx` donne la raison :
+  > *« EN DESSOUS de la rangée — c'est délibéré, sa hauteur varie et rien au-dessus du diagramme ne
+  > doit bouger »*, et il tranche déjà l'arbitrage dans l'autre sens : *« devoir défiler pour
+  > l'atteindre est acceptable ; ignorer qu'il existe ne l'est pas. »*
+  >
+  > La contrainte derrière est **ADR-0021, « ce sur quoi le joueur agit ne bouge jamais »**, plus
+  > celle d'US-14 : toute hauteur empilée au-dessus du diagramme est de la hauteur que le diagramme
+  > n'a pas. Le demandeur dit aujourd'hui que « acceptable » ne l'est plus. La question n'est donc
+  > pas « faut-il le remonter » — le remonter tel quel rouvre le défaut qu'ADR-0021 a fermé — mais
+  > **comment le rendre atteignable sans qu'une hauteur variable s'installe au-dessus du plateau** :
+  > panneau latéral, hauteur réservée, repli, ou survol. C'est un arbitrage de disposition, pas une
+  > correction.
+  >
+  > ### 2. Une passe de raccourcis sur toutes les fonctions intéressantes
+  >
+  > L'inventaire actuel est court : les **flèches** (portées par le composant plateau, donc sur les
+  > deux routes depuis US-23), **`1`–`5`** pour le verdict et **`k`** pour le moment clé — ces deux
+  > dernières sur la seule route de lecture. N'ont **aucun** raccourci : changer de `Review mode`,
+  > sceller, lancer ou relancer une analyse, atteindre le relevé du coup, retourner le plateau,
+  > passer à la `Confrontation`, changer de partie.
+  >
+  > Le garde-fou d'US-22 reste : **un raccourci doit être inerte pendant la saisie d'une note**, et
+  > une touche qui écrit ne se répète pas sur maintien. Et celui d'US-23 : un groupe de contrôles
+  > natif porte déjà des gestes clavier qu'on ne retire pas sans les remplacer.
+  >
+  > ### 3. L'aide passe en infobulle, et la notice disparaît
+  >
+  > *« Les aides doivent se trouver dans une info-bulle pour ne pas polluer l'écran de
+  > visualisation. »*
+  >
+  > `ShortcutsNotice` est aujourd'hui **une phrase constante et permanente**, à hauteur fixe par
+  > construction — *« une notice qui grandirait ou rétrécirait avec le demi-coup reconstruirait le
+  > défaut qu'ADR-0021 a fermé »*. La sortir de l'écran règle ce problème par disparition, mais
+  > **rouvre celui qu'elle existait pour résoudre** : *« un raccourci découvert par accident
+  > n'existe pas »*. Le grill doit dire par quoi la découvrabilité est assurée — une infobulle ne se
+  > survole que si l'on sait qu'elle est là.
+  >
+  > **Cette story absorbe deux constats laissés ouverts par US-22**, tous deux sur cette notice, et
+  > qui tombent d'eux-mêmes si elle disparaît : elle **passe sous la ligne de flottaison à 380 px**,
+  > et elle n'est **vraie qu'au tiers** à la position de départ. Une aide contextuelle règle le second
+  > sans effort ; une notice fixe ne le pouvait pas.
+  >
+  > ### 4. Reprendre la disposition
+  >
+  > *« Il faudra aussi retravailler la position des différents éléments pour améliorer cet écran. »*
+  > C'est le chapeau des trois précédents et c'est ce qui justifie une story unique : traiter la
+  > réfutation, les raccourcis et l'aide séparément produirait trois déplacements successifs sur le
+  > même écran, chacun invalidant le précédent.
+  >
+  > ### Garde-fous du projet à ne pas perdre
+  >
+  > - **ADR-0021** — ce sur quoi le joueur agit ne bouge jamais. Toute nouvelle disposition doit
+  >   pouvoir montrer un **déplacement nul** entre demi-coups, comme US-22 et US-23 l'ont mesuré.
+  > - **ADR-0013** — aucun indice uniquement chromatique, et la contrainte de largeur à 380 px.
+  > - **La hauteur du diagramme est un budget** (US-14) : ce qui monte au-dessus du plateau se prend
+  >   sur lui.
+  >
+  > **Lien avec US-26 et US-29** : les trois retouchent la même surface. Si les trois passent, cette
+  > story devrait passer **en dernier** — elle range un écran dont US-26 change le contenu et US-29
+  > la couleur.
 
 ## Doing
 
