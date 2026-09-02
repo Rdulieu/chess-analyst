@@ -237,3 +237,32 @@ function mateCameCloser({ before, after }: MoveSignals["mate"]): number {
   const was = distance(before);
   return was === null ? now : was - now;
 }
+
+/**
+ * The dial, read from `name=value` pairs — and **guarded**, because a mistyped
+ * one is the most expensive mistake this instrument can make: it runs at the
+ * defaults in silence, and the reader concludes that moving that threshold
+ * changes nothing. A bar that is not a number is worse still, since every
+ * comparison against `NaN` is false and the signal is switched **off** exactly
+ * where it looked like it separated nothing.
+ *
+ * Found by the Feature Path of US-15a-bis-02, where `--set materail=3` produced
+ * output byte-identical to the default run.
+ */
+export function parseThresholds(pairs: string[]): Partial<SignalThresholds> {
+  const parsed: Partial<SignalThresholds> = {};
+  for (const pair of pairs) {
+    const [name, raw] = pair.split("=");
+    if (!(name in DEFAULT_THRESHOLDS)) {
+      throw new Error(
+        `No such threshold: "${name}". The dials are ${Object.keys(DEFAULT_THRESHOLDS).join(", ")}.`,
+      );
+    }
+    const value = Number(raw);
+    if (!Number.isFinite(value)) {
+      throw new Error(`Threshold "${name}" needs a number, not "${raw}".`);
+    }
+    parsed[name as keyof SignalThresholds] = value;
+  }
+  return parsed;
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { gameReport, type StoredLine } from "../src/review/report";
+import { parseThresholds } from "../src/review/signals";
 import { gameRecap } from "../src/analysis/recap";
 import { gamePositions } from "../src/chess/positions";
 
@@ -313,5 +314,38 @@ describe("The Moves where the mechanic gets it wrong — read, not hunted for", 
     // the second direction cannot be computed, and saying "none" would read as
     // "the signals caught everything".
     expect(report.attention.missedBySignals).toBeNull();
+  });
+});
+
+describe("Guarding the dial, and the reference that nothing derives", () => {
+  const TRADE = "1. e4 e5 2. Nf3 Nc6 3. Nxe5 Nxe5";
+
+  it("refuses a threshold nobody declared rather than running at the defaults in silence", () => {
+    // The Feature Path found this: `--set materail=3` produced output identical
+    // to the default run, and on an instrument whose whole purpose is replaying
+    // at a moved bar, a mistyped dial reads as "moving this threshold changes
+    // nothing" — the most expensive wrong conclusion the tool can hand back.
+    expect(() => parseThresholds(["materail=3"])).toThrow(/materail/);
+    // And a bar that is not a number switches its signal OFF everywhere, which
+    // reads exactly like a signal that separates nothing.
+    expect(() => parseThresholds(["material=abc"])).toThrow(/material/);
+    expect(parseThresholds(["material=3", "cpDrop=50"])).toEqual({ material: 3, cpDrop: 50 });
+  });
+
+  it("says how much of the outside reference it could place, rather than dropping it in silence", () => {
+    // Ply 4 is the opponent's half-move and 999 is nothing at all: a transcribed
+    // report with an off-by-one, or a colour confusion, would otherwise read as
+    // "the signals caught it".
+    const report = gameReport({ playerColor: "white", pgn: TRADE }, level(TRADE), {
+      flaggedElsewhere: [1, 4, 999],
+    });
+
+    expect(report.attention.reference).toEqual({ given: 3, placed: 1 });
+  });
+
+  it("states its own reconciliation with the recap, where a test can hold it", () => {
+    // The verdict a reader trusts most used to be computed in the untested
+    // envelope. It is the promise of ADR-0017; it belongs where the promise is.
+    expect(gameReport({ playerColor: "white", pgn: TRADE }, level(TRADE)).reconciles).toBe(true);
   });
 });

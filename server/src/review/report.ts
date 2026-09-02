@@ -91,6 +91,17 @@ export interface Attention {
    * disagree with, an empty list would read as "the signals caught everything".
    */
   missedBySignals: MoveReportRow[] | null;
+  /**
+   * How much of the outside reference could be **placed** on a Player Move.
+   * `null` when none was given.
+   *
+   * It is stated because that reference is the one datum nothing here derives —
+   * it is transcribed by hand — so an off-by-one in a ply, or a colour
+   * confusion, otherwise reads as "the signals caught it" (found by this slice's
+   * Feature Path, which passed an opponent half-move and a ply that does not
+   * exist and saw both vanish).
+   */
+  reference: { given: number; placed: number } | null;
 }
 
 /** The report of one Game: its lines, and what they add up to. */
@@ -102,6 +113,12 @@ export interface GameReport {
   recap: GameRecap;
   /** The same figures, folded from the lines above. */
   totals: ReportTotals;
+  /**
+   * Whether the fold and the recap agree — the promise of ADR-0017, stated by
+   * the report itself rather than by whatever prints it. The comparison is on
+   * the figures a reader checks, to the precision a reader checks them at.
+   */
+  reconciles: boolean;
 }
 
 /**
@@ -168,11 +185,14 @@ export function gameReport(
       opponentReply: reply(opponentSeverities, opponentCounted, i),
     });
   });
+  const recap = gameRecap(game, evals, options.regime ?? null);
+  const totals = fold(rows);
   return {
     rows,
     attention: attention(rows, options.flaggedElsewhere),
-    recap: gameRecap(game, evals, options.regime ?? null),
-    totals: fold(rows),
+    recap,
+    totals,
+    reconciles: reconciles(totals, recap),
   };
 }
 
@@ -183,13 +203,42 @@ function designatedAtAll(row: MoveReportRow): boolean {
 
 /** The two lists, both folded from the lines — nothing new is derived here. */
 function attention(rows: MoveReportRow[], flaggedElsewhere?: number[]): Attention {
+  const plies = new Set(rows.map((row) => row.ply));
   return {
     shownByNoOne: rows.filter((row) => designatedAtAll(row) && row.severity === null),
     missedBySignals:
       flaggedElsewhere === undefined
         ? null
         : rows.filter((row) => flaggedElsewhere.includes(row.ply) && !designatedAtAll(row)),
+    reference:
+      flaggedElsewhere === undefined
+        ? null
+        : {
+            given: flaggedElsewhere.length,
+            placed: flaggedElsewhere.filter((ply) => plies.has(ply)).length,
+          },
   };
+}
+
+/**
+ * Whether the lines add up to the recap, on the figures a reader checks and at
+ * the precision they check them at: six decimals is far past what any screen
+ * shows and far short of the last bit of a float, which two orders of summation
+ * can legitimately differ on.
+ */
+function reconciles(totals: ReportTotals, recap: GameRecap): boolean {
+  const close = (a: number, b: number) => a.toFixed(6) === b.toFixed(6);
+  return (
+    totals.playerMoves === recap.playerMoves &&
+    totals.countedMoves === recap.countedMoves &&
+    totals.excluded.forced === recap.excluded.forced &&
+    totals.excluded.decided === recap.excluded.decided &&
+    totals.flaggedMoves === recap.flaggedMoves &&
+    totals.countedErrors === recap.countedErrors &&
+    close(totals.chancesLost, recap.chancesLost) &&
+    close(totals.flaggedLoss, recap.flaggedLoss) &&
+    close(totals.drift, recap.drift)
+  );
 }
 
 /**

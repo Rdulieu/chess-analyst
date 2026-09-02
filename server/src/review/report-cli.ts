@@ -6,7 +6,8 @@ import { openDb } from "../db";
 import { evaluations, games } from "../db/schema";
 import { getGameAnnotations } from "../annotations/repository";
 import { gameReport, type GameReport } from "./report";
-import type { SignalThresholds, StoredLine } from "./signals";
+import { parseThresholds } from "./signals";
+import type { StoredLine } from "./signals";
 
 /**
  * The **thin envelope** around `gameReport` (D7): it opens the database, prints,
@@ -29,15 +30,25 @@ const DB_FILE = process.env.DB_FILE ?? resolve(here, "..", "..", "chess-analyst.
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
 const ids = argv.filter((arg) => /^\d+$/.test(arg)).map(Number);
-const thresholds = Object.fromEntries(
-  argv
-    .flatMap((arg, i) => (arg === "--set" ? [argv[i + 1]] : []))
-    .map((pair) => pair.split("="))
-    .map(([key, value]) => [key, Number(value)]),
-) as Partial<SignalThresholds>;
+// Parsed by the tested layer, which REFUSES a dial nobody declared: read here,
+// a mistyped `--set materail=3` ran at the defaults in silence and the reader
+// concluded that moving that threshold changed nothing.
+const thresholds = read(() =>
+  parseThresholds(argv.flatMap((arg, i) => (arg === "--set" ? [argv[i + 1]] : []))),
+);
 const referencePath = argv[argv.indexOf("--reference") + 1];
 const reference: Record<string, number[]> =
   argv.includes("--reference") ? JSON.parse(readFileSync(referencePath, "utf8")) : {};
+
+/** A refusal from the guarded layer, said in one line rather than as a stack. */
+function read<T>(parse: () => T): T {
+  try {
+    return parse();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+}
 
 if (ids.length === 0) {
   console.error("Give at least one Game id. See the header of this file.");
@@ -122,12 +133,22 @@ function print(id: number, opponent: string, report: GameReport): void {
         : missedBySignals.map((row) => `${row.ply} ${row.san}`).join(", ") || "none"
     }`,
   );
-  // The reconciliation of ADR-0017, printed rather than trusted: if these two
-  // lines ever disagree, the report is measuring something else than the app.
+  // The reconciliation of ADR-0017. The VERDICT comes from the report, which is
+  // where a test can hold it; this line only prints it.
   console.log(
     `-- folded from the lines: ${report.totals.countedMoves}/${report.totals.playerMoves} counted, ` +
       `${report.totals.chancesLost.toFixed(1)}% lost — ${
-        report.totals.chancesLost.toFixed(6) === recap.chancesLost.toFixed(6) ? "agrees with the recap" : "DISAGREES with the recap"
+        report.reconciles ? "agrees with the recap" : "DISAGREES with the recap"
       }`,
   );
+  // How much of a hand-transcribed reference could be placed at all: silence
+  // here would read as "the signals caught it".
+  if (report.attention.reference) {
+    const { placed, given } = report.attention.reference;
+    console.log(
+      `-- outside reference: ${placed} of ${given} plies matched a Player Move${
+        placed < given ? " — check the transcription (opponent half-move? off by one?)" : ""
+      }`,
+    );
+  }
 }
