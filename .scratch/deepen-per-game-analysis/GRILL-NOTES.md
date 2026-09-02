@@ -382,6 +382,35 @@ Un adversaire qui ne fait aucune faute dans une position gagnée depuis le coup 
 mesure porte donc sur ses coups **dans la partie encore disputée** — sinon elle dirait mécaniquement
 que tous les adversaires jouent bien, le symétrique exact de notre propre angle mort.
 
+## D13 — Vocabulaire positif : le **principe** est tranché, la feature est reportée
+
+**Le glossaire avait déjà tranché, et le dossier l'ignorait.** `CONTEXT.md`, à propos de la
+`Candidate line` : « la coïncidence textuelle avec la `Best line` — même premier coup ? — serait
+**gratuite**, et déclarerait une idée fausse pour avoir perdu 2 % des chances tout en déclarant juste
+un coup **copié**. Cela enseignerait l'imitation. » Or « meilleur coup joué »
+(`bestLine[0] === coup joué`), la formulation de `COMPARISON-CHESSCOM.md`, **est** cette
+comparaison-là. Elle est bon marché pour la raison même qui la rend fausse.
+
+**Principe retenu** : si un vocabulaire positif arrive un jour, il sera fondé sur le **coût**, comme
+tout le reste ici — un coup qui n'a rien coûté est bien joué, qu'il soit ou non celui du moteur —
+et **jamais** sur la coïncidence avec la `Best line`. C'est plus intéressant que le vocabulaire de
+chess.com : eux nomment le coup du moteur, nous nommerions le coup qui n'a rien coûté. Sur `Kc7`, ça
+change tout.
+
+**Réserve du demandeur, décisive pour la story qui livrera la feature** : le seuil devra être **très
+bas**, bien en-deçà de 10 %. Le glossaire dit qu'« un coup qui n'est pas le meilleur mais perd moins
+de 10 % **n'est pas une faute** » — mais **« n'est pas une faute » et « est bien joué » sont deux
+barres différentes**, et prendre la première pour la seconde serait précisément l'erreur. Le seuil
+haut borne la sévérité ; le vocabulaire positif en demande un autre, beaucoup plus exigeant.
+
+**Feature reportée hors de cette story** : c'est de l'affichage, la story est de mesure et
+d'arbitrage. Elle ne débloque pas 15c, ne referme pas l'angle mort, ne sert aucune des vingt parties
+de la revue. L'y glisser parce que « c'est pas cher » est la façon dont une story de mesure devient
+une story de construction.
+
+Où le principe est consigné : **ici et dans le PRD**, pas dans `CONTEXT.md` — le glossaire ne décrit
+pas un concept qui n'existe pas encore. Il y entrera avec la feature.
+
 ---
 
 # ⏸ Grill en pause — reprendre ici
