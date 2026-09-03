@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "review:report": "tsx src/review/report-cli.ts"
+    "review:report": "tsx src/review/report-cli.ts",
+    "repair:provenance": "tsx src/repair/reset-provenance-cli.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
