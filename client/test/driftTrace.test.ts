@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { driftTrace } from "../src/chess/driftTrace";
+import { driftScale, driftTrace } from "../src/chess/driftTrace";
 import { phaseBands } from "../src/chess/phaseBands";
 import type { MoveAnnotation } from "../src/types";
 
@@ -78,5 +78,67 @@ describe("The Phase bands both drawings share", () => {
 
   it("has no band at all with nothing to draw", () => {
     expect(phaseBands([])).toEqual([]);
+  });
+});
+
+describe("The scale the trace is drawn against", () => {
+  it("gives a Game that lost little a box worth a WHOLE Game, so the trace stays low in it", () => {
+    const scale = driftScale(5);
+
+    // The ceiling is not the Game's total: at `ceiling = total` every trace ends
+    // at the top of its box and the eye reads "height = gravity", which is false.
+    expect(scale.ceiling).toBe(100);
+  });
+
+  it("raises the ceiling to the total past a whole Game, so nothing is ever clipped", () => {
+    // The catastrophic Games are exactly the ones this story wants to look at: a
+    // clipped trace would lie about them precisely.
+    expect(driftScale(191).ceiling).toBe(191);
+  });
+
+  it("keeps the whole-Game rule INSIDE the frame on the common case, a Game under 100 %", () => {
+    // Under a whole Game the rule sits at the very top of the box: the box IS one
+    // Game's worth. Without the raised ceiling it would fall out of frame on every
+    // such Game — that is, on most of them.
+    expect(driftScale(57).hundred).toBe(0);
+  });
+
+  it("drops the rule DOWN the box as the Game gets worse, which is what makes it a ruler", () => {
+    // 191 % lost: the trace fills the box and the rule lands at 100/191 of the
+    // height. Two Games are then compared by where the rule sits — a mark of
+    // constant meaning in a box of constant size.
+    expect(driftScale(191).hundred).toBeCloseTo(47.6, 1);
+    expect(driftScale(200).hundred).toBe(50);
+  });
+
+  it("graduates the box in figures, each at its own height — the reader gets numbers, not a shape", () => {
+    const scale = driftScale(57);
+
+    // 100 itself is NOT a gradation: it is the rule, and the rule carries its own
+    // label, so the two would print the same figure twice at the same height.
+    expect(scale.ticks).toEqual([
+      { value: 0, y: 100 },
+      { value: 50, y: 50 },
+    ]);
+  });
+
+  it("coarsens its step on a catastrophic Game rather than printing a wall of figures", () => {
+    // A 6rem box prints four or five figures legibly, not twenty.
+    expect(driftScale(1000).ticks.map((t) => t.value)).toEqual([0, 250, 500, 750, 1000]);
+    // And the step stays a round share of a whole Game, at every scale.
+    expect(driftScale(380).ticks.map((t) => t.value)).toEqual([0, 200, 300]);
+  });
+
+  it("puts every gradation and the rule INSIDE the box, whatever the Game did", () => {
+    for (const total of [0, 5, 57, 100, 100.4, 191, 1000]) {
+      const scale = driftScale(total);
+
+      expect(scale.hundred).toBeGreaterThanOrEqual(0);
+      expect(scale.hundred).toBeLessThanOrEqual(100);
+      for (const tick of scale.ticks) {
+        expect(tick.y).toBeGreaterThanOrEqual(0);
+        expect(tick.y).toBeLessThanOrEqual(100);
+      }
+    }
   });
 });

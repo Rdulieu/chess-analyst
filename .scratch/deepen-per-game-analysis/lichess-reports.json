@@ -1,0 +1,1962 @@
+{
+ "_": "Lichess's own reports on the Metalyst corpus. The three of 715/619/587 were fetched 2026-09-02; the seven others on 2026-09-03, after the requester asked lichess for a computer analysis on each — so all ten now carry one. Source: https://lichess.org/game/export/<id>?evals=true&accuracy=true&division=true (NOT /api/game/<id>, which returns neither `analysis` nor `division`). `division` is lichess's own Phase split and exists whether or not an analysis was requested. `ourPly` is OUR numbering (the Position the judged Move led to) = lichess's index + 1. This file is DATA from an outside reference: it is never asserted (SEAMS).",
+ "games": {
+  "715": {
+   "lichessId": "cRKPywk1",
+   "playerColour": "black",
+   "division": {
+    "middle": 23,
+    "end": 45
+   },
+   "playerReport": {
+    "inaccuracy": 3,
+    "mistake": 4,
+    "blunder": 5,
+    "acpl": 93,
+    "accuracy": 56,
+    "phases": {
+     "opening": 83,
+     "middlegame": 58,
+     "endgame": 50
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 3,
+    "mistake": 3,
+    "blunder": 4,
+    "acpl": 73,
+    "accuracy": 66,
+    "phases": {
+     "opening": 90,
+     "middlegame": 56,
+     "endgame": 61
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 12,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. e5 was best.",
+     "best": "e7e5",
+     "eval": 44,
+     "mate": null
+    },
+    {
+     "ourPly": 13,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. exf5 was best.",
+     "best": "e4f5",
+     "eval": -23,
+     "mate": null
+    },
+    {
+     "ourPly": 14,
+     "name": "Mistake",
+     "comment": "Mistake. e6 was best.",
+     "best": "e7e6",
+     "eval": 90,
+     "mate": null
+    },
+    {
+     "ourPly": 24,
+     "name": "Blunder",
+     "comment": "Blunder. Bg7 was best.",
+     "best": "f6g7",
+     "eval": 261,
+     "mate": null
+    },
+    {
+     "ourPly": 26,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. d5 was best.",
+     "best": "d6d5",
+     "eval": 349,
+     "mate": null
+    },
+    {
+     "ourPly": 29,
+     "name": "Mistake",
+     "comment": "Mistake. Bxg5 was best.",
+     "best": "h6g5",
+     "eval": 97,
+     "mate": null
+    },
+    {
+     "ourPly": 38,
+     "name": "Blunder",
+     "comment": "Blunder. Qf5 was best.",
+     "best": "e4f5",
+     "eval": 516,
+     "mate": null
+    },
+    {
+     "ourPly": 39,
+     "name": "Blunder",
+     "comment": "Blunder. Bc4+ was best.",
+     "best": "e2c4",
+     "eval": 4,
+     "mate": null
+    },
+    {
+     "ourPly": 41,
+     "name": "Blunder",
+     "comment": "Blunder. Bf3 was best.",
+     "best": "e2f3",
+     "eval": -168,
+     "mate": null
+    },
+    {
+     "ourPly": 43,
+     "name": "Mistake",
+     "comment": "Mistake. Kh2 was best.",
+     "best": "g1h2",
+     "eval": -286,
+     "mate": null
+    },
+    {
+     "ourPly": 44,
+     "name": "Mistake",
+     "comment": "Mistake. e5 was best.",
+     "best": "e7e5",
+     "eval": -116,
+     "mate": null
+    },
+    {
+     "ourPly": 45,
+     "name": "Blunder",
+     "comment": "Blunder. Rxe7 was best.",
+     "best": "e1e7",
+     "eval": -360,
+     "mate": null
+    },
+    {
+     "ourPly": 49,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rae1 was best.",
+     "best": "a1e1",
+     "eval": -457,
+     "mate": null
+    },
+    {
+     "ourPly": 56,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. d5 was best.",
+     "best": "d6d5",
+     "eval": -365,
+     "mate": null
+    },
+    {
+     "ourPly": 58,
+     "name": "Blunder",
+     "comment": "Blunder. Re8 was best.",
+     "best": "f8e8",
+     "eval": -132,
+     "mate": null
+    },
+    {
+     "ourPly": 66,
+     "name": "Blunder",
+     "comment": "Blunder. Rd7 was best.",
+     "best": "f7d7",
+     "eval": 586,
+     "mate": null
+    },
+    {
+     "ourPly": 67,
+     "name": "Blunder",
+     "comment": "Blunder. Qxf4 was best.",
+     "best": "e3f4",
+     "eval": -391,
+     "mate": null
+    },
+    {
+     "ourPly": 69,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qe2 was best.",
+     "best": "e3e2",
+     "eval": -543,
+     "mate": null
+    },
+    {
+     "ourPly": 74,
+     "name": "Blunder",
+     "comment": "Blunder. Ree7 was best.",
+     "best": "e8e7",
+     "eval": 773,
+     "mate": null
+    },
+    {
+     "ourPly": 80,
+     "name": "Mistake",
+     "comment": "Checkmate is now unavoidable. Kg8 was best.",
+     "best": "g7g8",
+     "eval": null,
+     "mate": 6
+    },
+    {
+     "ourPly": 81,
+     "name": "Mistake",
+     "comment": "Lost forced checkmate sequence. g5 was best.",
+     "best": "g4g5",
+     "eval": 822,
+     "mate": null
+    },
+    {
+     "ourPly": 106,
+     "name": "Mistake",
+     "comment": "Checkmate is now unavoidable. Kxa6 was best.",
+     "best": "b6a6",
+     "eval": null,
+     "mate": 11
+    }
+   ],
+   "playerFlaggedPlies": [
+    12,
+    14,
+    24,
+    26,
+    38,
+    44,
+    56,
+    58,
+    66,
+    74,
+    80,
+    106
+   ]
+  },
+  "716": {
+   "lichessId": "hyI8RLpA",
+   "playerColour": "white",
+   "division": {
+    "middle": 21,
+    "end": 68
+   },
+   "playerReport": {
+    "inaccuracy": 5,
+    "mistake": 5,
+    "blunder": 0,
+    "acpl": 34,
+    "accuracy": 88,
+    "phases": {
+     "opening": 79,
+     "middlegame": 83,
+     "endgame": 83
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 2,
+    "mistake": 3,
+    "blunder": 4,
+    "acpl": 56,
+    "accuracy": 81,
+    "phases": {
+     "opening": 88,
+     "middlegame": 81,
+     "endgame": 60
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 5,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. d4 was best.",
+     "best": "d2d4",
+     "eval": -25,
+     "mate": null
+    },
+    {
+     "ourPly": 9,
+     "name": "Mistake",
+     "comment": "Mistake. e3 was best.",
+     "best": "e2e3",
+     "eval": -113,
+     "mate": null
+    },
+    {
+     "ourPly": 10,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. e5 was best.",
+     "best": "e7e5",
+     "eval": -14,
+     "mate": null
+    },
+    {
+     "ourPly": 11,
+     "name": "Mistake",
+     "comment": "Mistake. Nbd2 was best.",
+     "best": "b1d2",
+     "eval": -129,
+     "mate": null
+    },
+    {
+     "ourPly": 26,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Ne7 was best.",
+     "best": "g8e7",
+     "eval": -113,
+     "mate": null
+    },
+    {
+     "ourPly": 27,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Ne4 was best.",
+     "best": "c3e4",
+     "eval": -200,
+     "mate": null
+    },
+    {
+     "ourPly": 29,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. a3 was best.",
+     "best": "a2a3",
+     "eval": -243,
+     "mate": null
+    },
+    {
+     "ourPly": 31,
+     "name": "Mistake",
+     "comment": "Mistake. Re4 was best.",
+     "best": "e1e4",
+     "eval": -396,
+     "mate": null
+    },
+    {
+     "ourPly": 32,
+     "name": "Mistake",
+     "comment": "Mistake. Nf4 was best.",
+     "best": "g6f4",
+     "eval": -233,
+     "mate": null
+    },
+    {
+     "ourPly": 35,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bh3 was best.",
+     "best": "g2h3",
+     "eval": -327,
+     "mate": null
+    },
+    {
+     "ourPly": 38,
+     "name": "Mistake",
+     "comment": "Mistake. Kb8 was best.",
+     "best": "c8b8",
+     "eval": -148,
+     "mate": null
+    },
+    {
+     "ourPly": 39,
+     "name": "Mistake",
+     "comment": "Mistake. Bh3 was best.",
+     "best": "g2h3",
+     "eval": -324,
+     "mate": null
+    },
+    {
+     "ourPly": 66,
+     "name": "Blunder",
+     "comment": "Blunder. Be5 was best.",
+     "best": "d4e5",
+     "eval": 14,
+     "mate": null
+    },
+    {
+     "ourPly": 70,
+     "name": "Mistake",
+     "comment": "Mistake. g3 was best.",
+     "best": "g4g3",
+     "eval": 116,
+     "mate": null
+    },
+    {
+     "ourPly": 71,
+     "name": "Mistake",
+     "comment": "Mistake. Rf1 was best.",
+     "best": "c1f1",
+     "eval": -22,
+     "mate": null
+    },
+    {
+     "ourPly": 72,
+     "name": "Blunder",
+     "comment": "Blunder. Ne2 was best.",
+     "best": "f4e2",
+     "eval": 348,
+     "mate": null
+    },
+    {
+     "ourPly": 75,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Ng2 was best.",
+     "best": "h4g2",
+     "eval": 203,
+     "mate": null
+    },
+    {
+     "ourPly": 78,
+     "name": "Blunder",
+     "comment": "Blunder. Rxh1 was best.",
+     "best": "h8h1",
+     "eval": 528,
+     "mate": null
+    },
+    {
+     "ourPly": 94,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. Rh8 was best.",
+     "best": "h6h8",
+     "eval": null,
+     "mate": 10
+    }
+   ],
+   "playerFlaggedPlies": [
+    5,
+    9,
+    11,
+    27,
+    29,
+    31,
+    35,
+    39,
+    71,
+    75
+   ]
+  },
+  "714": {
+   "lichessId": "yND79sw6",
+   "playerColour": "white",
+   "division": {
+    "middle": 27,
+    "end": 70
+   },
+   "playerReport": {
+    "inaccuracy": 5,
+    "mistake": 0,
+    "blunder": 1,
+    "acpl": 55,
+    "accuracy": 78,
+    "phases": {
+     "opening": 50,
+     "middlegame": 93,
+     "endgame": 100
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 9,
+    "mistake": 3,
+    "blunder": 1,
+    "acpl": 85,
+    "accuracy": 68,
+    "phases": {
+     "opening": 45,
+     "middlegame": 86,
+     "endgame": 18
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 8,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qe7 was best.",
+     "best": "d8e7",
+     "eval": 79,
+     "mate": null
+    },
+    {
+     "ourPly": 14,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. d5 was best.",
+     "best": "d6d5",
+     "eval": 176,
+     "mate": null
+    },
+    {
+     "ourPly": 16,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nf6 was best.",
+     "best": "g4f6",
+     "eval": 265,
+     "mate": null
+    },
+    {
+     "ourPly": 17,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bxg7 was best.",
+     "best": "b2g7",
+     "eval": 148,
+     "mate": null
+    },
+    {
+     "ourPly": 19,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. h3 was best.",
+     "best": "h2h3",
+     "eval": 111,
+     "mate": null
+    },
+    {
+     "ourPly": 23,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qd2 was best.",
+     "best": "d1d2",
+     "eval": 51,
+     "mate": null
+    },
+    {
+     "ourPly": 24,
+     "name": "Mistake",
+     "comment": "Mistake. f5 was best.",
+     "best": "f7f5",
+     "eval": 189,
+     "mate": null
+    },
+    {
+     "ourPly": 25,
+     "name": "Blunder",
+     "comment": "Blunder. Qf3 was best.",
+     "best": "d1f3",
+     "eval": -493,
+     "mate": null
+    },
+    {
+     "ourPly": 26,
+     "name": "Blunder",
+     "comment": "Blunder. Nxe3 was best.",
+     "best": "g4e3",
+     "eval": 294,
+     "mate": null
+    },
+    {
+     "ourPly": 28,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. f5 was best.",
+     "best": "f7f5",
+     "eval": 410,
+     "mate": null
+    },
+    {
+     "ourPly": 29,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. O-O-O was best.",
+     "best": "e1a1",
+     "eval": 314,
+     "mate": null
+    },
+    {
+     "ourPly": 30,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Be7 was best.",
+     "best": "f6e7",
+     "eval": 410,
+     "mate": null
+    },
+    {
+     "ourPly": 32,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. a4 was best.",
+     "best": "a5a4",
+     "eval": 506,
+     "mate": null
+    },
+    {
+     "ourPly": 50,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rh8 was best.",
+     "best": "f8h8",
+     "eval": 700,
+     "mate": null
+    },
+    {
+     "ourPly": 51,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qe1 was best.",
+     "best": "e2e1",
+     "eval": 528,
+     "mate": null
+    },
+    {
+     "ourPly": 56,
+     "name": "Mistake",
+     "comment": "Mistake. Nf5 was best.",
+     "best": "h4f5",
+     "eval": 716,
+     "mate": null
+    },
+    {
+     "ourPly": 60,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rh8 was best.",
+     "best": "f8h8",
+     "eval": 1534,
+     "mate": null
+    },
+    {
+     "ourPly": 64,
+     "name": "Mistake",
+     "comment": "Checkmate is now unavoidable. Qd6 was best.",
+     "best": "b4d6",
+     "eval": null,
+     "mate": 10
+    },
+    {
+     "ourPly": 66,
+     "name": "Inaccuracy",
+     "comment": "Checkmate is now unavoidable. Rfb8 was best.",
+     "best": "f8b8",
+     "eval": null,
+     "mate": 7
+    }
+   ],
+   "playerFlaggedPlies": [
+    17,
+    19,
+    23,
+    25,
+    29,
+    51
+   ]
+  },
+  "622": {
+   "lichessId": "4Dkw8g7t",
+   "playerColour": "black",
+   "division": {
+    "middle": 15,
+    "end": 54
+   },
+   "playerReport": {
+    "inaccuracy": 2,
+    "mistake": 3,
+    "blunder": 4,
+    "acpl": 64,
+    "accuracy": 76,
+    "phases": {
+     "opening": 84,
+     "middlegame": 54,
+     "endgame": 78
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 3,
+    "mistake": 1,
+    "blunder": 4,
+    "acpl": 45,
+    "accuracy": 84,
+    "phases": {
+     "opening": 93,
+     "middlegame": 73,
+     "endgame": 90
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 14,
+     "name": "Mistake",
+     "comment": "Mistake. Qh4+ was best.",
+     "best": "d8h4",
+     "eval": 119,
+     "mate": null
+    },
+    {
+     "ourPly": 15,
+     "name": "Mistake",
+     "comment": "Mistake. h4 was best.",
+     "best": "h2h4",
+     "eval": -17,
+     "mate": null
+    },
+    {
+     "ourPly": 20,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Be7 was best.",
+     "best": "f8e7",
+     "eval": 105,
+     "mate": null
+    },
+    {
+     "ourPly": 21,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bd3 was best.",
+     "best": "f1d3",
+     "eval": 0,
+     "mate": null
+    },
+    {
+     "ourPly": 22,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qxf6 was best.",
+     "best": "d8f6",
+     "eval": 55,
+     "mate": null
+    },
+    {
+     "ourPly": 31,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bf2 was best.",
+     "best": "e3f2",
+     "eval": -2,
+     "mate": null
+    },
+    {
+     "ourPly": 41,
+     "name": "Blunder",
+     "comment": "Blunder. h5 was best.",
+     "best": "h4h5",
+     "eval": -355,
+     "mate": null
+    },
+    {
+     "ourPly": 42,
+     "name": "Blunder",
+     "comment": "Blunder. Rxf5 was best.",
+     "best": "f8f5",
+     "eval": 0,
+     "mate": null
+    },
+    {
+     "ourPly": 43,
+     "name": "Blunder",
+     "comment": "Blunder. Rde1 was best.",
+     "best": "d1e1",
+     "eval": -214,
+     "mate": null
+    },
+    {
+     "ourPly": 44,
+     "name": "Blunder",
+     "comment": "Blunder. Qd6 was best.",
+     "best": "f4d6",
+     "eval": 0,
+     "mate": null
+    },
+    {
+     "ourPly": 45,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qf7 was best.",
+     "best": "h7f7",
+     "eval": -75,
+     "mate": null
+    },
+    {
+     "ourPly": 46,
+     "name": "Blunder",
+     "comment": "Blunder. Kd8 was best.",
+     "best": "c8d8",
+     "eval": 713,
+     "mate": null
+    },
+    {
+     "ourPly": 59,
+     "name": "Blunder",
+     "comment": "Blunder. Rdg1 was best.",
+     "best": "d1g1",
+     "eval": 274,
+     "mate": null
+    },
+    {
+     "ourPly": 60,
+     "name": "Mistake",
+     "comment": "Mistake. Ng3 was best.",
+     "best": "f5g3",
+     "eval": 475,
+     "mate": null
+    },
+    {
+     "ourPly": 61,
+     "name": "Blunder",
+     "comment": "Blunder. Rfg1 was best.",
+     "best": "f1g1",
+     "eval": 217,
+     "mate": null
+    },
+    {
+     "ourPly": 62,
+     "name": "Blunder",
+     "comment": "Blunder. Ng3 was best.",
+     "best": "f5g3",
+     "eval": 623,
+     "mate": null
+    },
+    {
+     "ourPly": 102,
+     "name": "Mistake",
+     "comment": "Checkmate is now unavoidable. d4 was best.",
+     "best": "d5d4",
+     "eval": null,
+     "mate": 18
+    }
+   ],
+   "playerFlaggedPlies": [
+    14,
+    20,
+    22,
+    42,
+    44,
+    46,
+    60,
+    62,
+    102
+   ]
+  },
+  "619": {
+   "lichessId": "B1Zs2DHF",
+   "playerColour": "white",
+   "division": {
+    "middle": 23,
+    "end": 57
+   },
+   "playerReport": {
+    "inaccuracy": 5,
+    "mistake": 0,
+    "blunder": 3,
+    "acpl": 84,
+    "accuracy": 57,
+    "phases": {
+     "opening": 82,
+     "middlegame": 35,
+     "endgame": 36
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 2,
+    "mistake": 0,
+    "blunder": 3,
+    "acpl": 56,
+    "accuracy": 68,
+    "phases": {
+     "opening": 65,
+     "middlegame": 60,
+     "endgame": 100
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 11,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nxc6 was best.",
+     "best": "d4c6",
+     "eval": -13,
+     "mate": null
+    },
+    {
+     "ourPly": 13,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Be3 was best.",
+     "best": "c1e3",
+     "eval": -79,
+     "mate": null
+    },
+    {
+     "ourPly": 15,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nb3 was best.",
+     "best": "d4b3",
+     "eval": -163,
+     "mate": null
+    },
+    {
+     "ourPly": 18,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nxc3 was best.",
+     "best": "d5c3",
+     "eval": -68,
+     "mate": null
+    },
+    {
+     "ourPly": 19,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nxd5 was best.",
+     "best": "c3d5",
+     "eval": -162,
+     "mate": null
+    },
+    {
+     "ourPly": 20,
+     "name": "Blunder",
+     "comment": "Blunder. Nxc3 was best.",
+     "best": "d5c3",
+     "eval": 159,
+     "mate": null
+    },
+    {
+     "ourPly": 22,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. f6 was best.",
+     "best": "f7f6",
+     "eval": 213,
+     "mate": null
+    },
+    {
+     "ourPly": 23,
+     "name": "Blunder",
+     "comment": "Blunder. Ne4 was best.",
+     "best": "c3e4",
+     "eval": -231,
+     "mate": null
+    },
+    {
+     "ourPly": 24,
+     "name": "Blunder",
+     "comment": "Blunder. Qxd4 was best.",
+     "best": "b6d4",
+     "eval": 443,
+     "mate": null
+    },
+    {
+     "ourPly": 25,
+     "name": "Blunder",
+     "comment": "Blunder. Nxd5 was best.",
+     "best": "c3d5",
+     "eval": -440,
+     "mate": null
+    },
+    {
+     "ourPly": 28,
+     "name": "Blunder",
+     "comment": "Blunder. Bxe5 was best.",
+     "best": "g7e5",
+     "eval": -100,
+     "mate": null
+    },
+    {
+     "ourPly": 29,
+     "name": "Blunder",
+     "comment": "Blunder. c4 was best.",
+     "best": "c2c4",
+     "eval": -650,
+     "mate": null
+    },
+    {
+     "ourPly": 67,
+     "name": "Inaccuracy",
+     "comment": "Checkmate is now unavoidable. Re3 was best.",
+     "best": "f3e3",
+     "eval": null,
+     "mate": -7
+    }
+   ],
+   "playerFlaggedPlies": [
+    11,
+    13,
+    15,
+    19,
+    23,
+    25,
+    29,
+    67
+   ]
+  },
+  "592": {
+   "lichessId": "pknjwqcu",
+   "playerColour": "black",
+   "division": {
+    "middle": 25
+   },
+   "playerReport": {
+    "inaccuracy": 1,
+    "mistake": 0,
+    "blunder": 9,
+    "acpl": 236,
+    "accuracy": 32,
+    "phases": {
+     "opening": 47,
+     "middlegame": 18
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 2,
+    "mistake": 1,
+    "blunder": 7,
+    "acpl": 191,
+    "accuracy": 39,
+    "phases": {
+     "opening": 47,
+     "middlegame": 22
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 13,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. f4 was best.",
+     "best": "f2f4",
+     "eval": -110,
+     "mate": null
+    },
+    {
+     "ourPly": 15,
+     "name": "Blunder",
+     "comment": "Blunder. Ng4 was best.",
+     "best": "e5g4",
+     "eval": -610,
+     "mate": null
+    },
+    {
+     "ourPly": 16,
+     "name": "Blunder",
+     "comment": "Blunder. Qc7 was best.",
+     "best": "d8c7",
+     "eval": -35,
+     "mate": null
+    },
+    {
+     "ourPly": 17,
+     "name": "Blunder",
+     "comment": "Blunder. Ne4 was best.",
+     "best": "c3e4",
+     "eval": -489,
+     "mate": null
+    },
+    {
+     "ourPly": 18,
+     "name": "Blunder",
+     "comment": "Blunder. Qc7 was best.",
+     "best": "d8c7",
+     "eval": -130,
+     "mate": null
+    },
+    {
+     "ourPly": 19,
+     "name": "Blunder",
+     "comment": "Blunder. Ne4 was best.",
+     "best": "c3e4",
+     "eval": -590,
+     "mate": null
+    },
+    {
+     "ourPly": 20,
+     "name": "Blunder",
+     "comment": "Blunder. Qc7 was best.",
+     "best": "d8c7",
+     "eval": -240,
+     "mate": null
+    },
+    {
+     "ourPly": 21,
+     "name": "Mistake",
+     "comment": "Mistake. Qg3 was best.",
+     "best": "f4g3",
+     "eval": -415,
+     "mate": null
+    },
+    {
+     "ourPly": 22,
+     "name": "Blunder",
+     "comment": "Blunder. Nbd7 was best.",
+     "best": "b8d7",
+     "eval": -129,
+     "mate": null
+    },
+    {
+     "ourPly": 25,
+     "name": "Blunder",
+     "comment": "Blunder. Qxe4 was best.",
+     "best": "f4e4",
+     "eval": -541,
+     "mate": null
+    },
+    {
+     "ourPly": 26,
+     "name": "Blunder",
+     "comment": "Blunder. f6 was best.",
+     "best": "f7f6",
+     "eval": -200,
+     "mate": null
+    },
+    {
+     "ourPly": 30,
+     "name": "Blunder",
+     "comment": "Blunder. f5 was best.",
+     "best": "f7f5",
+     "eval": -56,
+     "mate": null
+    },
+    {
+     "ourPly": 31,
+     "name": "Blunder",
+     "comment": "Blunder. Rg4 was best.",
+     "best": "e4g4",
+     "eval": -375,
+     "mate": null
+    },
+    {
+     "ourPly": 32,
+     "name": "Blunder",
+     "comment": "Blunder. Nxd4 was best.",
+     "best": "c6d4",
+     "eval": 587,
+     "mate": null
+    },
+    {
+     "ourPly": 37,
+     "name": "Blunder",
+     "comment": "Blunder. Rg4 was best.",
+     "best": "e4g4",
+     "eval": -397,
+     "mate": null
+    },
+    {
+     "ourPly": 40,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Kf6 was best.",
+     "best": "g7f6",
+     "eval": -275,
+     "mate": null
+    },
+    {
+     "ourPly": 41,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. a3 was best.",
+     "best": "a2a3",
+     "eval": -404,
+     "mate": null
+    },
+    {
+     "ourPly": 42,
+     "name": "Blunder",
+     "comment": "Blunder. Rg8 was best.",
+     "best": "f8g8",
+     "eval": -24,
+     "mate": null
+    },
+    {
+     "ourPly": 43,
+     "name": "Blunder",
+     "comment": "Blunder. Re2 was best.",
+     "best": "e1e2",
+     "eval": -417,
+     "mate": null
+    },
+    {
+     "ourPly": 44,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. f5 was best.",
+     "best": "f7f5",
+     "eval": null,
+     "mate": 1
+    }
+   ],
+   "playerFlaggedPlies": [
+    16,
+    18,
+    20,
+    22,
+    26,
+    30,
+    32,
+    40,
+    42,
+    44
+   ]
+  },
+  "591": {
+   "lichessId": "fMwOn3jA",
+   "playerColour": "white",
+   "division": {
+    "middle": 17,
+    "end": 36
+   },
+   "playerReport": {
+    "inaccuracy": 7,
+    "mistake": 0,
+    "blunder": 3,
+    "acpl": 96,
+    "accuracy": 65,
+    "phases": {
+     "opening": 82,
+     "middlegame": 86,
+     "endgame": 35
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 3,
+    "mistake": 1,
+    "blunder": 2,
+    "acpl": 73,
+    "accuracy": 72,
+    "phases": {
+     "opening": 78,
+     "middlegame": 87,
+     "endgame": 44
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 2,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nf6 was best.",
+     "best": "g8f6",
+     "eval": 113,
+     "mate": null
+    },
+    {
+     "ourPly": 4,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nc6 was best.",
+     "best": "b8c6",
+     "eval": 185,
+     "mate": null
+    },
+    {
+     "ourPly": 5,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nc3 was best.",
+     "best": "b1c3",
+     "eval": 122,
+     "mate": null
+    },
+    {
+     "ourPly": 6,
+     "name": "Mistake",
+     "comment": "Mistake. Nc6 was best.",
+     "best": "b8c6",
+     "eval": 263,
+     "mate": null
+    },
+    {
+     "ourPly": 9,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. e4 was best.",
+     "best": "e2e4",
+     "eval": 182,
+     "mate": null
+    },
+    {
+     "ourPly": 13,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bd2 was best.",
+     "best": "c1d2",
+     "eval": 108,
+     "mate": null
+    },
+    {
+     "ourPly": 15,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qxe5+ was best.",
+     "best": "e4e5",
+     "eval": 25,
+     "mate": null
+    },
+    {
+     "ourPly": 18,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. f5 was best.",
+     "best": "f7f5",
+     "eval": 127,
+     "mate": null
+    },
+    {
+     "ourPly": 25,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Ba6 was best.",
+     "best": "b5a6",
+     "eval": 26,
+     "mate": null
+    },
+    {
+     "ourPly": 29,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bd2 was best.",
+     "best": "c1d2",
+     "eval": -44,
+     "mate": null
+    },
+    {
+     "ourPly": 39,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. b4 was best.",
+     "best": "b2b4",
+     "eval": -75,
+     "mate": null
+    },
+    {
+     "ourPly": 45,
+     "name": "Blunder",
+     "comment": "Blunder. Kf2 was best.",
+     "best": "g1f2",
+     "eval": -506,
+     "mate": null
+    },
+    {
+     "ourPly": 46,
+     "name": "Blunder",
+     "comment": "Blunder. Bxa7 was best.",
+     "best": "c5a7",
+     "eval": 0,
+     "mate": null
+    },
+    {
+     "ourPly": 49,
+     "name": "Blunder",
+     "comment": "Blunder. Rxe3 was best.",
+     "best": "e1e3",
+     "eval": -586,
+     "mate": null
+    },
+    {
+     "ourPly": 58,
+     "name": "Blunder",
+     "comment": "Blunder. R1e2+ was best.",
+     "best": "e1e2",
+     "eval": 72,
+     "mate": null
+    },
+    {
+     "ourPly": 59,
+     "name": "Blunder",
+     "comment": "Blunder. Kxe1 was best.",
+     "best": "f2e1",
+     "eval": -739,
+     "mate": null
+    }
+   ],
+   "playerFlaggedPlies": [
+    5,
+    9,
+    13,
+    15,
+    25,
+    29,
+    39,
+    45,
+    49,
+    59
+   ]
+  },
+  "587": {
+   "lichessId": "YakfX5jZ",
+   "playerColour": "white",
+   "division": {
+    "middle": 18,
+    "end": 31
+   },
+   "playerReport": {
+    "inaccuracy": 4,
+    "mistake": 1,
+    "blunder": 4,
+    "acpl": 108,
+    "accuracy": 64,
+    "phases": {
+     "opening": 86,
+     "middlegame": 50,
+     "endgame": 44
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 4,
+    "mistake": 0,
+    "blunder": 3,
+    "acpl": 75,
+    "accuracy": 73,
+    "phases": {
+     "opening": 83,
+     "middlegame": 53,
+     "endgame": 65
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 4,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. e6 was best.",
+     "best": "e7e6",
+     "eval": 70,
+     "mate": null
+    },
+    {
+     "ourPly": 5,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. cxd5 was best.",
+     "best": "c4d5",
+     "eval": 5,
+     "mate": null
+    },
+    {
+     "ourPly": 10,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. O-O was best.",
+     "best": "e8h8",
+     "eval": 78,
+     "mate": null
+    },
+    {
+     "ourPly": 16,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. O-O was best.",
+     "best": "e8g8",
+     "eval": 139,
+     "mate": null
+    },
+    {
+     "ourPly": 17,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nf3 was best.",
+     "best": "g1f3",
+     "eval": 55,
+     "mate": null
+    },
+    {
+     "ourPly": 18,
+     "name": "Blunder",
+     "comment": "Blunder. Nxc3 was best.",
+     "best": "e4c3",
+     "eval": 450,
+     "mate": null
+    },
+    {
+     "ourPly": 19,
+     "name": "Blunder",
+     "comment": "Blunder. Bxe4 was best.",
+     "best": "d3e4",
+     "eval": -17,
+     "mate": null
+    },
+    {
+     "ourPly": 29,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qxf6 was best.",
+     "best": "c3f6",
+     "eval": -35,
+     "mate": null
+    },
+    {
+     "ourPly": 37,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bc4 was best.",
+     "best": "e2c4",
+     "eval": -73,
+     "mate": null
+    },
+    {
+     "ourPly": 38,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Kf8 was best.",
+     "best": "g8f8",
+     "eval": 31,
+     "mate": null
+    },
+    {
+     "ourPly": 46,
+     "name": "Blunder",
+     "comment": "Blunder. Kf8 was best.",
+     "best": "g8f8",
+     "eval": 330,
+     "mate": null
+    },
+    {
+     "ourPly": 47,
+     "name": "Blunder",
+     "comment": "Blunder. Rxe8+ was best.",
+     "best": "e1e8",
+     "eval": 0,
+     "mate": null
+    },
+    {
+     "ourPly": 50,
+     "name": "Blunder",
+     "comment": "Blunder. Kf8 was best.",
+     "best": "g8f8",
+     "eval": 878,
+     "mate": null
+    },
+    {
+     "ourPly": 51,
+     "name": "Blunder",
+     "comment": "Blunder. Bxa4 was best.",
+     "best": "b3a4",
+     "eval": -52,
+     "mate": null
+    },
+    {
+     "ourPly": 53,
+     "name": "Blunder",
+     "comment": "Blunder. Ra1 was best.",
+     "best": "e1a1",
+     "eval": -822,
+     "mate": null
+    },
+    {
+     "ourPly": 59,
+     "name": "Mistake",
+     "comment": "Checkmate is now unavoidable. Re5 was best.",
+     "best": "e7e5",
+     "eval": null,
+     "mate": -9
+    }
+   ],
+   "playerFlaggedPlies": [
+    5,
+    17,
+    19,
+    29,
+    37,
+    47,
+    51,
+    53,
+    59
+   ]
+  },
+  "621": {
+   "lichessId": "iOZUxKVc",
+   "playerColour": "white",
+   "division": {
+    "middle": 21,
+    "end": 39
+   },
+   "playerReport": {
+    "inaccuracy": 0,
+    "mistake": 2,
+    "blunder": 8,
+    "acpl": 117,
+    "accuracy": 59,
+    "phases": {
+     "opening": 28,
+     "middlegame": 63,
+     "endgame": 71
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 4,
+    "mistake": 0,
+    "blunder": 10,
+    "acpl": 143,
+    "accuracy": 59,
+    "phases": {
+     "opening": 34,
+     "middlegame": 49,
+     "endgame": 58
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 14,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. d6 was best.",
+     "best": "d7d6",
+     "eval": 91,
+     "mate": null
+    },
+    {
+     "ourPly": 15,
+     "name": "Blunder",
+     "comment": "Blunder. d4 was best.",
+     "best": "d3d4",
+     "eval": -99,
+     "mate": null
+    },
+    {
+     "ourPly": 16,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. h6 was best.",
+     "best": "h7h6",
+     "eval": -28,
+     "mate": null
+    },
+    {
+     "ourPly": 17,
+     "name": "Mistake",
+     "comment": "Mistake. Nd5 was best.",
+     "best": "c3d5",
+     "eval": -142,
+     "mate": null
+    },
+    {
+     "ourPly": 18,
+     "name": "Blunder",
+     "comment": "Blunder. Qe8 was best.",
+     "best": "d8e8",
+     "eval": 639,
+     "mate": null
+    },
+    {
+     "ourPly": 19,
+     "name": "Blunder",
+     "comment": "Blunder. Qh5 was best.",
+     "best": "d1h5",
+     "eval": -395,
+     "mate": null
+    },
+    {
+     "ourPly": 20,
+     "name": "Blunder",
+     "comment": "Blunder. Qh4+ was best.",
+     "best": "d8h4",
+     "eval": 89,
+     "mate": null
+    },
+    {
+     "ourPly": 23,
+     "name": "Mistake",
+     "comment": "Mistake. Rf1 was best.",
+     "best": "h1f1",
+     "eval": -11,
+     "mate": null
+    },
+    {
+     "ourPly": 24,
+     "name": "Blunder",
+     "comment": "Blunder. Nxe5 was best.",
+     "best": "c6e5",
+     "eval": 438,
+     "mate": null
+    },
+    {
+     "ourPly": 33,
+     "name": "Blunder",
+     "comment": "Blunder. Qg4 was best.",
+     "best": "h5g4",
+     "eval": 58,
+     "mate": null
+    },
+    {
+     "ourPly": 36,
+     "name": "Blunder",
+     "comment": "Blunder. Bb7 was best.",
+     "best": "g2b7",
+     "eval": 454,
+     "mate": null
+    },
+    {
+     "ourPly": 40,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Nd6 was best.",
+     "best": "e8d6",
+     "eval": 558,
+     "mate": null
+    },
+    {
+     "ourPly": 44,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. Ba3 was best.",
+     "best": "b2a3",
+     "eval": null,
+     "mate": 10
+    },
+    {
+     "ourPly": 47,
+     "name": "Blunder",
+     "comment": "Lost forced checkmate sequence. Be3 was best.",
+     "best": "g5e3",
+     "eval": 672,
+     "mate": null
+    },
+    {
+     "ourPly": 48,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. Nd6 was best.",
+     "best": "e8d6",
+     "eval": null,
+     "mate": 7
+    },
+    {
+     "ourPly": 55,
+     "name": "Blunder",
+     "comment": "Lost forced checkmate sequence. Qg4+ was best.",
+     "best": "f3g4",
+     "eval": 636,
+     "mate": null
+    },
+    {
+     "ourPly": 56,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. f5 was best.",
+     "best": "f6f5",
+     "eval": null,
+     "mate": 2
+    },
+    {
+     "ourPly": 59,
+     "name": "Blunder",
+     "comment": "Lost forced checkmate sequence. Qh5# was best.",
+     "best": "g4h5",
+     "eval": 655,
+     "mate": null
+    },
+    {
+     "ourPly": 60,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. f5 was best.",
+     "best": "f6f5",
+     "eval": null,
+     "mate": 2
+    },
+    {
+     "ourPly": 61,
+     "name": "Blunder",
+     "comment": "Lost forced checkmate sequence. Qxf5+ was best.",
+     "best": "d7f5",
+     "eval": 623,
+     "mate": null
+    },
+    {
+     "ourPly": 65,
+     "name": "Blunder",
+     "comment": "Blunder. Ke1 was best.",
+     "best": "d2e1",
+     "eval": -146,
+     "mate": null
+    },
+    {
+     "ourPly": 66,
+     "name": "Blunder",
+     "comment": "Blunder. Bd4 was best.",
+     "best": "e5d4",
+     "eval": 740,
+     "mate": null
+    },
+    {
+     "ourPly": 68,
+     "name": "Blunder",
+     "comment": "Checkmate is now unavoidable. Rxf2+ was best.",
+     "best": "h2f2",
+     "eval": null,
+     "mate": 11
+    },
+    {
+     "ourPly": 72,
+     "name": "Inaccuracy",
+     "comment": "Checkmate is now unavoidable. Rxf2+ was best.",
+     "best": "h2f2",
+     "eval": null,
+     "mate": 4
+    }
+   ],
+   "playerFlaggedPlies": [
+    15,
+    17,
+    19,
+    23,
+    33,
+    47,
+    55,
+    59,
+    61,
+    65
+   ]
+  },
+  "582": {
+   "lichessId": "9cxVvvdp",
+   "playerColour": "white",
+   "division": {
+    "middle": 19,
+    "end": 34
+   },
+   "playerReport": {
+    "inaccuracy": 7,
+    "mistake": 3,
+    "blunder": 2,
+    "acpl": 56,
+    "accuracy": 78,
+    "phases": {
+     "opening": 91,
+     "middlegame": 97,
+     "endgame": 67
+    }
+   },
+   "opponentReport": {
+    "inaccuracy": 4,
+    "mistake": 3,
+    "blunder": 3,
+    "acpl": 61,
+    "accuracy": 77,
+    "phases": {
+     "opening": 87,
+     "middlegame": 95,
+     "endgame": 66
+    }
+   },
+   "judgments": [
+    {
+     "ourPly": 11,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Qb3 was best.",
+     "best": "d1b3",
+     "eval": 52,
+     "mate": null
+    },
+    {
+     "ourPly": 18,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. O-O was best.",
+     "best": "e8h8",
+     "eval": 182,
+     "mate": null
+    },
+    {
+     "ourPly": 35,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. c4 was best.",
+     "best": "c3c4",
+     "eval": 101,
+     "mate": null
+    },
+    {
+     "ourPly": 42,
+     "name": "Mistake",
+     "comment": "Mistake. Kf8 was best.",
+     "best": "g8f8",
+     "eval": 226,
+     "mate": null
+    },
+    {
+     "ourPly": 43,
+     "name": "Mistake",
+     "comment": "Mistake. a3 was best.",
+     "best": "a2a3",
+     "eval": 68,
+     "mate": null
+    },
+    {
+     "ourPly": 44,
+     "name": "Blunder",
+     "comment": "Blunder. c5 was best.",
+     "best": "c6c5",
+     "eval": 286,
+     "mate": null
+    },
+    {
+     "ourPly": 45,
+     "name": "Mistake",
+     "comment": "Mistake. a3 was best.",
+     "best": "a2a3",
+     "eval": 134,
+     "mate": null
+    },
+    {
+     "ourPly": 47,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Bc2 was best.",
+     "best": "b1c2",
+     "eval": 102,
+     "mate": null
+    },
+    {
+     "ourPly": 48,
+     "name": "Mistake",
+     "comment": "Mistake. Rb8 was best.",
+     "best": "c8b8",
+     "eval": 261,
+     "mate": null
+    },
+    {
+     "ourPly": 49,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rc3 was best.",
+     "best": "c1c3",
+     "eval": 137,
+     "mate": null
+    },
+    {
+     "ourPly": 50,
+     "name": "Blunder",
+     "comment": "Blunder. Rb8 was best.",
+     "best": "c8b8",
+     "eval": 368,
+     "mate": null
+    },
+    {
+     "ourPly": 53,
+     "name": "Mistake",
+     "comment": "Mistake. Rb1 was best.",
+     "best": "c1b1",
+     "eval": 133,
+     "mate": null
+    },
+    {
+     "ourPly": 58,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Kf8 was best.",
+     "best": "g8f8",
+     "eval": 186,
+     "mate": null
+    },
+    {
+     "ourPly": 60,
+     "name": "Blunder",
+     "comment": "Blunder. Rb1 was best.",
+     "best": "e1b1",
+     "eval": 460,
+     "mate": null
+    },
+    {
+     "ourPly": 61,
+     "name": "Blunder",
+     "comment": "Blunder. Rb2 was best.",
+     "best": "c2b2",
+     "eval": 119,
+     "mate": null
+    },
+    {
+     "ourPly": 62,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rb1 was best.",
+     "best": "h1b1",
+     "eval": 221,
+     "mate": null
+    },
+    {
+     "ourPly": 63,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Kf3 was best.",
+     "best": "g3f3",
+     "eval": 108,
+     "mate": null
+    },
+    {
+     "ourPly": 64,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rb1 was best.",
+     "best": "e1b1",
+     "eval": 210,
+     "mate": null
+    },
+    {
+     "ourPly": 65,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rc3 was best.",
+     "best": "c2c3",
+     "eval": 107,
+     "mate": null
+    },
+    {
+     "ourPly": 66,
+     "name": "Mistake",
+     "comment": "Mistake. Rb1 was best.",
+     "best": "h1b1",
+     "eval": 233,
+     "mate": null
+    },
+    {
+     "ourPly": 67,
+     "name": "Inaccuracy",
+     "comment": "Inaccuracy. Rc3 was best.",
+     "best": "c2c3",
+     "eval": 143,
+     "mate": null
+    },
+    {
+     "ourPly": 69,
+     "name": "Blunder",
+     "comment": "Blunder. Rc3 was best.",
+     "best": "c2c3",
+     "eval": 0,
+     "mate": null
+    }
+   ],
+   "playerFlaggedPlies": [
+    11,
+    35,
+    43,
+    45,
+    47,
+    49,
+    53,
+    61,
+    63,
+    65,
+    67,
+    69
+   ]
+  }
+ }
+}
