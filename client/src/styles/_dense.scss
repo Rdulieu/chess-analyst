@@ -576,11 +576,66 @@ section[aria-label="partie"] {
 
 // The Player's own marks IN the move list (US-16a) — a reading has to be
 // locatable without stepping through every Move. Glyphs, each with its own
-// accessible name; the tint is never the cue, so none is set here.
+// accessible name; the tint is never the ONLY cue (ADR-0013), which is what
+// lets the verdict take one below.
 [data-part="move-marks"] {
   display: inline-flex;
   gap: var(--space-1);
   color: var(--ink-muted);
+}
+
+// The Player's VERDICT in that list, tinted (US-29). The note and the key moment
+// keep the muted ink above: they say *something is written here*, and neither has
+// five values to tell apart.
+//
+// The colour comes from the SQUARE family, and that is the decision rather than a
+// slip. ADR-0013 keeps two families — `--tint-*` follows the theme, `--square-*`
+// is constant because a piece is painted over it — and this is chrome wearing the
+// board's. The frontier separates **authors**, not surfaces: the selection buttons
+// already do exactly this, so one verdict has one colour from the button that sets
+// it, to the square it lands on, to the list that recalls it. The ink is the
+// constant notation ink, the same pairing the buttons ship, so the contrast here
+// is one already carried in both themes rather than a new one to validate.
+//
+// `data-verdict`, never `data-severity`: the sheet tints ANY `[data-severity]`
+// with the chrome pair — that hook belongs to the ENGINE's glyph — and putting it
+// here would colour three of the five values and drop `Bévue` to 2.75:1. The
+// selection control met this exact trap and carries the note that explains it.
+[data-part="move-marks"] [data-verdict] {
+  font-family: var(--mono);
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding-inline: var(--space-1);
+}
+
+// Written out rather than generated from an `@each` over the five verdicts, for
+// the reason `_semantics.scss` gives about the three severities: the
+// token-consistency audit reads this file as source, so a token name assembled by
+// interpolation is a name the audit cannot see — and it is the only thing standing
+// in for the compile error custom properties cost us (ADR-0013).
+[data-part="move-marks"] [data-verdict="blunder"] {
+  background: var(--square-blunder);
+  color: var(--square-notation);
+}
+
+[data-part="move-marks"] [data-verdict="mistake"] {
+  background: var(--square-mistake);
+  color: var(--square-notation);
+}
+
+[data-part="move-marks"] [data-verdict="inaccuracy"] {
+  background: var(--square-inaccuracy);
+  color: var(--square-notation);
+}
+
+[data-part="move-marks"] [data-verdict="sound"] {
+  background: var(--square-sound);
+  color: var(--square-notation);
+}
+
+[data-part="move-marks"] [data-verdict="good"] {
+  background: var(--square-good);
+  color: var(--square-notation);
 }
 
 // Where the reading stands — its own figures, grouped. Set apart from the

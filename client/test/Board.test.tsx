@@ -1112,6 +1112,52 @@ describe("the rule that travels with US-22's glyph reversal", () => {
     expect(declared.textContent).toBe(measured.textContent);
     // So the glyph cannot be what tells them apart, and the name is.
     expect(declared.getAttribute("aria-label")).not.toBe(measured.getAttribute("aria-label"));
+    // And the colour is not it either, now that the Player's glyph has one
+    // (US-29): each author names its OWN hook, and a hook is not a distinction.
+    // The day a screen shows both, it still owes them a column or a heading —
+    // that their tints happen to differ is an accident, not a signal.
+    expect(declared.hasAttribute("data-verdict")).toBe(true);
+    expect(measured.hasAttribute("data-verdict")).toBe(false);
+  });
+
+  it("names the verdict's own value on the glyph, so the sheet can tint the five", () => {
+    // US-29: the list used to be the one of the three carriers that showed no
+    // colour — the buttons and the square both had it. The hook is what lets the
+    // sheet give it one, and it must be the PLAYER's hook.
+    const marks = [
+      { ply: 1, declaredSeverity: "sound", note: null, keyMoment: false, posterior: false },
+    ] as const;
+
+    render(<Board pgn={OPERA_PGN} moveMarks={(ply) => <MoveMarks marks={[...marks]} ply={ply} />} />);
+
+    const row = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")[0];
+    const verdict = within(row).getByLabelText("verdict : Correct");
+    expect(verdict.getAttribute("data-verdict")).toBe("sound");
+    // NOT `data-severity`: that hook is the engine's, and the sheet tints every
+    // one of them with the chrome pair — which colours three of the five values
+    // and drops `Bévue` to 2.75:1. The selection control met this exact trap.
+    expect(verdict.hasAttribute("data-severity")).toBe(false);
+    // The glyph and its spoken name still carry the meaning on their own; the
+    // colour is additive (ADR-0013).
+    expect(verdict.textContent).toBe("✓");
+  });
+
+  it("leaves the note and the key moment untinted — they have no five values", () => {
+    render(
+      <Board
+        pgn={OPERA_PGN}
+        moveMarks={(ply) => (
+          <MoveMarks
+            marks={[{ ply, declaredSeverity: null, note: "quelque chose", keyMoment: true, posterior: false }]}
+            ply={ply}
+          />
+        )}
+      />,
+    );
+
+    const row = within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")[0];
+    expect(within(row).getByLabelText("note écrite").hasAttribute("data-verdict")).toBe(false);
+    expect(within(row).getByLabelText("moment clé").hasAttribute("data-verdict")).toBe(false);
   });
 });
 
