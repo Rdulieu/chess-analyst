@@ -897,7 +897,8 @@
   > - La **dérive** perd la moitié de sa masse, or c'est elle qui portait l'argument d'ADR-0017 (un
   >   agrégat somme des récapitulatifs plutôt que des compteurs de fautes). Elle existe encore — 14 %
   >   des pertes chez Metalyst — mais elle cesse d'être le titre, et l'ADR mérite une note.
-  > - Environ **1,6× plus de glyphes** à l'écran : à re-regarder sur la page `Analyse`, c'est le seul
+  > - Environ **1,7× plus de glyphes** à l'écran (mesuré : **85 → 143** coups signalés sur les vingt
+  >   parties du corpus) : à re-regarder sur la page `Analyse`, c'est le seul
   >   point que la mesure ne peut pas trancher.
 
 ## Doing

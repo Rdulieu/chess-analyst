@@ -396,13 +396,13 @@ Deux conséquences à peser :
 
 Travaux : **aucune migration** (tout est dérivé — l'argument porteur de la story), deux constantes
 publiées, le commentaire du lien réécrit, `CONTEXT.md` amendé, et les tests de `recap`, `counted`,
-`move-quality` et de l'affichage des sévérités reprises. Environ **1,6× plus de glyphes** à l'écran.
+`move-quality` et de l'affichage des sévérités reprises. Environ **1,7× plus de glyphes** à l'écran (mesuré par la FP de la tranche 06 : **85 → 143** coups signalés sur les vingt parties, soit 1,68×).
 
 ### C. Impact du prédicat — et il **interfère** avec le barème
 
 Constat qui n'apparaît qu'en mesurant les deux ensemble : **le barème à 5 fait une partie du travail
 du prédicat, gratuitement.** Des 4 coups de la zone morte que lichess signale, **deux deviennent
-signalés par le seul barème** — `587/59` (chute 9,0 à 10,0 % de chances) et `715/106` (chute 5,5 à
+signalés par le seul barème** — `587/59` (chute 9,0 à **9,96 %** de chances) et `715/106` (chute 5,5 à
 5,8 %). Ces deux-là porteront déjà un glyphe **et** leur motif, par le mécanisme que la tranche 04
 d'US-15a avait construit et que personne n'avait jamais atteint.
 
