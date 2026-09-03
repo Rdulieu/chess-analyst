@@ -35,7 +35,21 @@ export function MoveMarks({ marks, ply }: { marks: PersonalMark[]; ply: number }
         // exactly what the sighted reader gets from the mark, and `Correct` is
         // the one that most needs saying — a Move examined and found sound is
         // not a Move nobody looked at (**silence is not a value**).
-        <span aria-label={`verdict : ${DECLARED_SEVERITY_LABEL[verdict]}`}>
+        <span
+          // The value names itself so the sheet can tint the five (US-29) — the
+          // list was the only one of the three carriers showing no colour, while
+          // the selection buttons and the square both had it.
+          //
+          // `data-verdict`, NEVER `data-severity`: the latter is the ENGINE's
+          // hook and the sheet tints every one of them with the chrome pair,
+          // which colours three of the five values and drops `Bévue` to 2.75:1.
+          // `DeclaredSeverityControl` met this exact trap and carries the note.
+          //
+          // The tint is additive: the glyph and this accessible name carry the
+          // meaning without it (ADR-0013).
+          data-verdict={verdict}
+          aria-label={`verdict : ${DECLARED_SEVERITY_LABEL[verdict]}`}
+        >
           {DECLARED_SEVERITY_GLYPH[verdict]}
         </span>
       )}
