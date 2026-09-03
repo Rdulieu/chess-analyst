@@ -28,8 +28,11 @@ writes and seals a reading, and it does so on a Game that has **not** been analy
 so that "Lue à l'aveugle" is earned rather than reported. But an unanalysed Game has nothing of the
 engine to hide, so that step cannot show that the reading route **stays** blind when there *is*
 something to show. Here there is: the route must render nothing of the engine on a Game the engine
-has fully evaluated, with a remembered `Review mode` of `Détaillé` — which is the promise US-16a
-actually made, and the one only this state can test. That check sits **after** the seal (step 11),
+has fully evaluated, with `Détaillé` **just chosen on that Game's Analyse page** — which is the
+promise US-16a actually made, and the one only this state can test. (Until US-28 the level was
+*remembered* across Games and this step leaned on that. The level no longer survives an opening, and
+the guarantee is unchanged: what makes the check bite is that the Game is fully evaluated and its
+record was on screen a moment ago, never that a store carried a level over.) That check sits **after** the seal (step 11),
 and deliberately: sealing freezes the provenance, so the engine may then be shown without relabelling
 a reading that was genuinely blind. Placed before it, the same check would record "engine seen" and
 turn « Lue à l'aveugle » into « Lue informée » — the app behaving correctly and the scenario
@@ -44,7 +47,8 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 
 ## Drive-by
 - `Analysis pass` (US-4/US-8): a pass runs to completion on selected Games and the Game list reflects it.
-- `Review mode` (US-15a): the level is remembered, and the reading route ignores it **by design**.
+- `Review mode` (US-15a, amended by US-28): every Game opens at `Sans aide` and the level is **not**
+  carried to the next Game, nor to the next session. The reading route ignores it **by design**.
 - `Board orientation` (US-10a): the reading route presents the board from the side the Player played.
 - `Counted Move` and `Drift` (US-15a, ADR-0017): the Confrontation is read in the vocabulary the
   per-Game analysis already publishes, and the excluded Moves are shown **with their reason**.
@@ -94,7 +98,7 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 8. Open Game B's `Confrontation` → **three figures side by side and no composite**: what was examined, what was seen rightly, and where the Player looked. The provenance reads **« Lue à l'aveugle »**, and the `Search regime` behind the engine's side is stated. **Write these three figures down**: step 11 compares against them literally.
 9. Read the **confusion matrix** → five declared bands against four measured ones (the fourth being "nothing flagged"), every cell carrying a count; the cells outside the `Bon` row **sum to the accuracy denominator printed beside them**. Read what the screen says about the direction of the bias — or that there is not enough to say.
 10. Read **« Montré, jamais noté »** → whatever the Game holds of it is there **with its reason**: the verdict on the opponent's Move, any `Bon`, and any Move the analysis does not count, `forcé` and `déjà décidée` told apart.
-11. **Now let the engine be seen, and come back.** Open Game B's Analyse page and set the `Niveau de revue` to **`Détaillé`** → the engine's record is shown: advantage bar, `Evaluation curve`, per-Move severities. Then **return to Game B's reading route** → with `Détaillé` **remembered**, on a Game the engine has **fully evaluated**, whose record was on screen a moment ago, the route still renders **nothing** of it. Write one more mark here → it is accepted, shown as **posterior**, and reopening the `Confrontation` shows **the same three figures as step 8**, unchanged.
+11. **Now let the engine be seen, and come back.** Open Game B's Analyse page and set the `Niveau de revue` to **`Détaillé`** → the engine's record is shown: advantage bar, `Evaluation curve`, per-Move severities. Then **return to Game B's reading route** → on a Game the engine has **fully evaluated**, whose record was on screen a moment ago, the route still renders **nothing** of it. Write one more mark here → it is accepted, shown as **posterior**, and reopening the `Confrontation` shows **the same three figures as step 8**, unchanged.
 
     > **This is the step the scenario exists to protect**, and it sits here for a reason discovered on
     > its first run: sealing **freezes the provenance**, so showing the engine now cannot retroactively
@@ -103,7 +107,7 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
     > contradicting itself. HP-01's step 9b asserts the blind route on a Game that is **not** analysed,
     > where there is nothing to hide; only here is there something.
 
-12. Open **Game A** from "Mes parties" → it opens on **`Détaillé`** without being asked (the level is remembered **across Games**), so the engine's record is shown for it too. Read Game A — declare at least one severity and a `Key moment` — and seal it → its provenance reads **« Lue informée »**. Open its `Confrontation` → three figures again, labelled informed.
+12. Open **Game A** from "Mes parties" → it opens on **`Sans aide`**, as every Game now does (US-28), *whatever* was chosen on Game B a moment ago. **Ask for `Détaillé` here**, deliberately, so the engine's record is shown for this Game too — this reading is meant to be an informed one, and since US-28 an informed reading is something the Player does rather than something they inherit. Read Game A — declare at least one severity and a `Key moment` — and seal it → its provenance reads **« Lue informée »**. Open its `Confrontation` → three figures again, labelled informed.
 13. Open **« Mes lectures »** from the navigation → the summary rests on **2 sealed readings**, says **1 lue à l'aveugle, 1 lue informée**, and shows the same three figures, separated. Check the fold **by hand**: each numerator and each denominator is the sum of the two Confrontations just read, the matrix included, cell by cell. Look for an axis — by opening, phase or cadence — and for a single score: there is neither.
 14. Switch the current `Profile` to `Nonomoho` → « Mes lectures » says that Profile has **no sealed reading**, rather than showing a summary of zeros, and Game B's `Confrontation` is unreachable under it. Switch back → both readings are there, unchanged.
 15. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
@@ -150,8 +154,8 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 - Step 8: three figures, each in its own group with its own question named, each carrying **its count beside its rate** — never a rate alone. **No composite**: count the percentages **inside the figures**, and expect one per figure that has a denominator and none besides. *(Do not count percentages in the surrounding prose: the `Drift` explanation contains the phrase "placerait 100 % hors d'atteinte", and a naive scan of the page reads it as a fourth figure.)* A figure whose denominator is zero reads **« Pas de chiffre »** or **« Pas de score »**, never `0 %`. The provenance label is present. The `Search regime` is stated. The `Drift` is reported beside the Key moment figure and said to be outside its division — **when it amounts to at least a point**: under that it is not shown at all, which is deliberate and not a miss.
 - Step 9: the matrix has five declared rows and four measured columns; every cell carries a number, zeros included; the diagonal is marked **without relying on colour alone**; the `Bon` row is present and said to be unscored; the sum of the cells outside it **equals** the accuracy denominator shown beside the matrix. The bias sentence is either derivable from the cells on screen, or replaced by a statement that there is not enough to conclude — never a confident claim the cells do not support.
 - Step 10: whichever of the categories the Game holds are shown **with their reason in words** and their own count; `forcé` and `déjà décidée` are **never merged**. If the Game holds none of them, the section is **absent entirely** rather than rendered empty — an empty section headed "not scored" sends the Player hunting for what is not there. *(On real data these categories are often empty: **their absence is not a failure**, and the check is that the screen is honest either way.)*
-- Step 11: with `Détaillé` remembered and the Game fully evaluated, the reading route still renders **nothing** of the engine and offers **no** `Niveau de revue` control. A stronger check, if the driver allows it: the route does not even **request** the Game's engine record — the Analyse page calls the per-Move endpoint and the reading route never does. The posterior mark is visible, **marked as posterior**, and the three figures are **identical** to what step 8 recorded — compare them literally. The provenance still reads « Lue à l'aveugle »: the seal froze it, and showing the engine afterwards cannot relabel what was already committed.
-- Step 12: Game A opens on `Détaillé` **without being asked**, which is the level being remembered across Games. Its provenance after sealing reads « Lue informée ». The two labels differ, and they differ because the runs differed — this is what shows the flag is recorded rather than defaulted.
+- Step 11: with the engine's record shown on the Analyse page a moment earlier and the Game fully evaluated, the reading route still renders **nothing** of the engine and offers **no** `Niveau de revue` control. A stronger check, if the driver allows it: the route does not even **request** the Game's engine record — the Analyse page calls the per-Move endpoint and the reading route never does. The posterior mark is visible, **marked as posterior**, and the three figures are **identical** to what step 8 recorded — compare them literally. The provenance still reads « Lue à l'aveugle »: the seal froze it, and showing the engine afterwards cannot relabel what was already committed.
+- Step 12: Game A opens on **`Sans aide`** — nothing was carried over from Game B (US-28), and that is now part of what this step checks. `Détaillé` is then **asked for**, and the provenance after sealing reads « Lue informée ». The two labels differ, and they differ because the two runs differed — which is what shows the flag is recorded rather than defaulted. It is a stronger reading of the same assertion than the old one: the informed provenance is now earned by a gesture instead of inherited from a store.
 - Step 13: the summary says how many readings it rests on and how many of each provenance; its figures are the **sum** of the two per-Game Confrontations, numerator by numerator and denominator by denominator, checked by hand. The **matrix folds too**, cell by cell. There is **no axis** — no control, and no mention of opening, phase or cadence — and no single score anywhere. *(Displayed point values are rounded, and the screen says so: a total may differ by a point from the sum of the rounded parts. That is the rounding, not a reconciliation failure.)*
 - Step 14: under `Nonomoho`, « Mes lectures » shows its own screen saying there is no sealed reading — **not** a summary of zeros, which would read as "you read badly" where the truth is "you have not read". Game B's `Confrontation` is refused under that Profile, and the refusal is about the Game not being that Profile's, not about the reading.
 - Step 15: on each screen, in **both** themes — every colour resolves, text contrast holds at 4.5:1
@@ -174,8 +178,8 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 
 ## Cleanup (best-effort)
 - The scenario writes to its own database file, restored from path 0's snapshot. Discard that file.
-- The `Review mode` and the current `Profile` live in the browser: clearing the browser state resets
-  both. So does the record of which Games had the engine shown — which is why the provenance flag is
+- The current `Profile` lives in the browser: clearing the browser state resets it. The `Review
+  mode` no longer outlives a review at all (US-28), so there is nothing of it to clear. So does the record of which Games had the engine shown — which is why the provenance flag is
   a **label and not a lock**, and why nothing here asserts that the Player did not look.
 
 ## Notes
