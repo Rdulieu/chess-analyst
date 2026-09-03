@@ -387,6 +387,37 @@ settle any of it.
 
 Answer these, and write the answers down:
 
+> **Audit of 2026-09-04 (US-28/US-29, five subagents: three FPs then path 0 then HP-03).** Delivery
+> worked **5 of 5**, unprompted, each report arriving twice — §5.1 stays closed, now across six
+> consecutive suites. §5.2 stays **unexercised**, a seventh time. Two FPs ran **concurrently** (the
+> §5.7 cap of 2 on this 8-thread machine), each from **its own git worktree** rather than the shared
+> checkout — a shape §5.4 does not describe and which removed the concern its last bullet raises
+> about `namesMe` matching a sibling by directory: with one worktree per agent the directory proof is
+> exact again. **The machine did not freeze.** Worth knowing: a worktree needs its three
+> `node_modules` symlinks before anything runs, and editing client source while another agent drives
+> the app is a real hazard — the Vite dev server hot-reloads, so the app under test changes underfoot.
+> That is what the worktrees were for, and it is not written anywhere else.
+>
+> Driver-produced false findings: **four**, every one caught by re-measuring, none reaching a report
+> as a defect. Two are new and specific enough to record: a US-29 tint read as missing because the
+> driver measured `color`, which is deliberately the SAME constant ink for all five values while the
+> tint is `background-color`; and `href.includes("confrontation")` matching the nav link
+> `/confrontation` instead of `/analyse/<id>/confrontation`, which produced a clean "the screen never
+> rendered" red. The other two are re-runs of known shapes (a stale Chrome `SingletonLock` in a reused
+> `--user-data-dir`, and a settle race on a table rendering ~1 s after the Profile is selected).
+>
+> **One absence probe was taken at the wrong ply**: `[data-bar="winning-chances"]` only exists on a
+> ply carrying an annotation, so probing at ply 0 reports "no advantage bar" on a Détaillé page that
+> has one. Same family as the in-page drill-down of 2026-08-31 — the state you assert absence over
+> has to be the state where presence was possible.
+>
+> **And a finding about the SCENARIOS rather than the run**: HP-03 and HP-01 both leaned on a rule
+> US-28 withdrew (the `Review mode` remembered across Games). HP-03's step 12 opened a Game "on
+> Détaillé without being asked" — a precondition that no longer exists, which would have made the
+> step untestable rather than red. Rewritten before the run, and the assertion came out stronger. The
+> lesson generalises: **a story that withdraws a rule owes the permanent suite a pass**, because a
+> scenario whose precondition has quietly become impossible does not fail loudly.
+
 > **Audit of 2026-08-31 (US-22, the full HP suite: path 0, then three scenarios two at a time).**
 > Delivery worked **4 of 4**, unprompted, each report arriving **twice** — once by the subagent's own
 > `SendMessage` and once as the completion notification. No relance, no transcript recovery: §5.2
