@@ -206,6 +206,8 @@ est un **amendement de glossaire**, pas un réglage, et c'est une raison légiti
 | 5. Les demandes produit | | |
 | 6. Le plancher | **la piste du régime est évacuée** (voir plus bas) ; la valeur du plancher reste à trancher | 2026-09-03 |
 | *(hors table)* | **dix bilans lichess demandés et obtenus** → recommandations 1, 2 et 3 **révisées** en fin de document | 2026-09-03 |
+| *(préférence)* | **garder le plancher du dénominateur à 10 %** — « j'aime bien son comportement aujourd'hui ». Impact mesuré : dissocier les deux usages de la constante laisse le dénominateur, les exclusions et les chances perdues **strictement inchangés** | 2026-09-03 |
+| *(ordre)* | recommandation révisée : **barème d'abord, prédicat ensuite** — le barème change l'ensemble-cible du prédicat (section D) | 2026-09-03 |
 
 ### 2026-09-03 — la piste « creuser plutôt que baisser la barre » est close
 
@@ -293,3 +295,138 @@ trompait. C'est le meilleur rapport information/coût des vingt parties.
 manqués que sur les coups ordinaires). Le `cp2` payé **2,1×** en 15a n'est donc pas seulement inutile
 pour cette question — il pointe dans le mauvais sens. La `Best line` reste, elle, indispensable
 (c'est elle qui rend l'attribution seuil/moteur possible).
+
+---
+
+## Impacts mesurés du 2026-09-03 — la deuxième ligne, et le coût des deux recommandations
+
+Demandé par le demandeur après la révision. **Rien n'est décidé ici** : ce sont les impacts chiffrés
+de deux hypothèses qu'il a posées — *« on baisse le seuil à 5 points mais on garde 10 % pour le
+dénominateur de fin de partie ignoré. J'aime bien son comportement aujourd'hui »* et le prédicat
+`material ≥ 1` et `cpDrop ≥ 200`. Une **préférence** y est en revanche exprimée et consignée dans la
+table : garder le plancher du dénominateur à 10 %.
+
+### A. Pourquoi l'écart à la deuxième ligne ne sert pas, et comment il induit en erreur
+
+Il mesure `cp − cp2` **à la position d'où le coup est joué** : de combien la meilleure ligne vaut
+mieux que la deuxième. C'est donc une propriété **de la position**, prise **avant** le coup —
+l'*occasion* de se tromper, jamais l'erreur.
+
+Ce qu'il prédit réellement, mesuré sur les 744 coups du Player des deux corpus :
+
+| Écart (cp) | Coups | A joué **le** coup du moteur | Coût médian | Coût moyen | Signalés par lichess |
+| --- | --- | --- | --- | --- | --- |
+| 0–25 | 420 | 27 % | 1,0 | 2,8 | 9 % |
+| 25–75 | 152 | 39 % | 2,0 | 5,7 | 18 % |
+| 75–150 | 64 | 52 % | 1,0 | 8,7 | 30 % |
+| 150–400 | 41 | **66 %** | **0,6** | 6,4 | 12 % |
+| 400 et + | 24 | 58 % | **0,3** | 7,3 | 12 % |
+
+**1. Un grand écart prédit que le Player a trouvé le coup** — de 27 % à 66 %. La raison est
+échiquéenne : un grand écart signifie une position **forçante** (une reprise, un échec, l'unique coup
+qui sauve une pièce), et ce sont les coups qu'un humain trouve. Un petit écart signifie que dix coups
+se valent : une position calme, où dériver coûte peu et passe inaperçu. Le coût **médian** le
+confirme : il baisse quand l'écart monte (1,0 → 0,3). Un grand écart est donc surtout le marqueur
+d'une position **bien jouée** — y poser un glyphe décorerait les bons coups les trois quarts du temps.
+C'est l'anti-corrélation × 0,25, expliquée par sa mécanique et non seulement constatée.
+
+**2. Le piège dans le piège** : le coût **moyen** ne baisse pas comme le médian (2,8 · 5,7 · 8,7 ·
+6,4 · 7,3). Dans les positions aiguës, les erreurs sont **rares mais chères** — ce qui donne
+l'impression trompeuse qu'il y a du signal. En réalité l'écart désigne **où une erreur ferait mal**,
+pas **où une erreur a eu lieu**. Confondre les deux, c'est tirer sur 65 coups pour en attraper 12 %
+de fautifs, dans un lot dont le coup médian perd 0,3 point.
+
+**3. Dans la zone morte, il devient du bruit** — et c'est le plus grave, puisque c'est là qu'ADR-0023
+veut un prédicat :
+
+| | n | médiane | moyenne | max |
+| --- | --- | --- | --- | --- |
+| partie vivante (comptés) | 628 | 16 | 57 | 925 |
+| **zone morte** (`decided`) | 73 | 13 | **258** | **5813** |
+
+Les **trois** écarts supérieurs à 1000 cp du corpus sont tous dans la zone morte : `cp` et `cp2` y
+sont deux évaluations saturées d'une position décidée, et leur différence part en vrille.
+
+**4. Quand il n'y a pas de deuxième ligne** (10 coups du corpus), c'est qu'il n'y avait qu'un coup
+légal — ce qui est **déjà** le motif `forced`. Il duplique alors un motif existant.
+
+En un mot : les deux lectures naturelles de l'écart sont fausses pour notre question. « La position
+était aiguë » ≠ « il s'est trompé » ; « la position était molle » ≠ « il a bien joué ».
+
+> **Ce que cela ne condamne pas** : la `Best line`, elle, est indispensable — c'est elle qui rend
+> possible l'attribution **seuil ou moteur**, l'outil le plus décisif de la revue. C'est le **second
+> score** en particulier qui n'achète rien pour cette question.
+
+### B. Impact d'un barème à 5 avec le plancher du dénominateur **maintenu à 10 %**
+
+**Un fait de structure d'abord** : `INACCURACY_DROP = 10` est **une** constante lue à deux endroits,
+où elle mesure deux choses différentes — une **chute** (la sévérité) et un **niveau** (le plancher du
+`Counted Move`). L'hypothèse les **dissocie**. C'est un petit changement de code (deux constantes
+nommées au lieu d'une) mais il défait un lien voulu, et le commentaire du code dit pourquoi : *« une
+position avec moins que ça à perdre ne peut structurellement pas produire un coup signalé »*. C'est
+vrai et mesuré — au barème 10, **0 des 81** coups de la zone morte est signalé, dans les deux corpus.
+À 5, cette justification tombe : un coup joué à 5,8 % de chances peut chuter de 5,5. **Le commentaire
+et `CONTEXT.md` devront donc être amendés, pas seulement la constante.**
+
+**Ce qui ne bouge pas d'un pouce** — c'est exactement ce que la préférence du demandeur voulait
+préserver : coups du Player, coups comptés, taille de la zone morte, coups forcés, et **chances
+perdues** (1272,9 et 1829,9 au dixième près, identiques aux deux barèmes). Le comportement de fin de
+partie est **intact**.
+
+**Ce qui bouge :**
+
+| | DudulSmash 10 → 5 | Metalyst 10 → 5 |
+| --- | --- | --- |
+| Coups signalés | 31 → **51** | 54 → **92** |
+| Erreurs comptées | 31 → 51 | 54 → 90 |
+| Chances perdues | 1273 → **1273** | 1830 → **1830** |
+| dont signalées | 841 → 981 | 1325 → 1576 |
+| **Dérive** | 432 → **292** (−32 %) | 505 → **254** (−50 %) |
+| Part signalée | 66 % → 77 % | 72 % → 86 % |
+| Accord avec lichess (les deux corpus) | 53 sur 96 | → **79 sur 96** (55 % → 82 %) |
+
+Deux conséquences à peser :
+
+- **La dérive fond de moitié.** C'est mécaniquement l'effet voulu — le barème convertit de la dérive
+  en erreurs nommées. Mais c'est la dérive qui portait l'argument selon lequel un agrégat doit
+  **sommer des récapitulatifs** plutôt que compter des fautes (ADR-0017). À 5 points, la dérive de
+  Metalyst tombe à 14 % des pertes : elle existe encore, elle cesse d'être le titre.
+- **`CONTEXT.md` publie la bande « 10–20 % »** : elle devient 5–20. Amendement de glossaire.
+
+Travaux : **aucune migration** (tout est dérivé — l'argument porteur de la story), deux constantes
+publiées, le commentaire du lien réécrit, `CONTEXT.md` amendé, et les tests de `recap`, `counted`,
+`move-quality` et de l'affichage des sévérités reprises. Environ **1,6× plus de glyphes** à l'écran.
+
+### C. Impact du prédicat — et il **interfère** avec le barème
+
+Constat qui n'apparaît qu'en mesurant les deux ensemble : **le barème à 5 fait une partie du travail
+du prédicat, gratuitement.** Des 4 coups de la zone morte que lichess signale, **deux deviennent
+signalés par le seul barème** — `587/59` (chute 9,0 à 10,0 % de chances) et `715/106` (chute 5,5 à
+5,8 %). Ces deux-là porteront déjà un glyphe **et** leur motif, par le mécanisme que la tranche 04
+d'US-15a avait construit et que personne n'avait jamais atteint.
+
+Ce que le prédicat ajoute alors réellement, sur vingt parties : **trois coups.**
+
+| Coup | Chute | Chances avant | Matériel | cp | Lichess |
+| --- | --- | --- | --- | --- | --- |
+| 619/67 `Rxf7` | 3,9 | 6,8 % | 4p | 246 | **signalé** ✓ |
+| 622/102 `Kc7` | 0,3 | 0,4 % | 1p | 268 | **signalé** ✓ |
+| 709/150 `Kc6` | 0,3 | 0,3 % | 1p | **5836** | aucune référence |
+
+Deux des trois sont confirmés par lichess, et ce sont exactement les cas de forme `Kc7` pour lesquels
+ADR-0023 a été écrit : **aucun seuil ne les atteindra jamais**, ils chutent de 3,9 et 0,3 point. Le
+troisième, avec son `cp 5836`, est précisément le bruit de saturation décrit en **A.3**.
+
+### D. Recommandation révisée — l'**ordre**, pas le fond
+
+**Décider le barème d'abord, le livrer, puis re-mesurer le prédicat.** Trois raisons :
+
+1. le barème **modifie l'ensemble-cible** du prédicat, donc livrer les deux dans la même tranche
+   confondrait leurs effets et rendrait impossible de dire lequel a produit quoi ;
+2. le volume honnête du prédicat tombe à **0,15 glyphe par partie** (3 coups sur 20 parties) ;
+3. le bilan chess.com de la **708** a été choisi pour **séparer** les deux candidats de prédicat : il
+   vaut mieux le dépenser avant de trancher, pas après.
+
+Après le barème, la question du prédicat cesse d'être « quel signal sépare » — la revue l'a répondu —
+pour devenir : **ces trois coups valent-ils un second axe dans le vocabulaire ?** C'est une question
+de produit, et elle se posera sur un écran qu'il sera possible de regarder.
