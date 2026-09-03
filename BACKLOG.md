@@ -904,6 +904,17 @@
   >   la cause peut être le **`Search regime`** et non le plancher. Baisser le seuil sur un régime
   >   trop court produirait du signalement de bruit — précisément ce que le plancher existe pour
   >   éviter. Les deux pistes se testent sur les mêmes parties, et cette story est faite pour ça.
+  >
+  >   **Instruite et tranchée le 2026-09-03 : la piste du régime est évacuée.** Sonde à profondeur 20
+  >   sur les trois parties à bilan lichess, trois bras (16 du corpus / 16 **rejouée** / 20) —
+  >   [`DEPTH-20-PROBE.md`](.scratch/deepen-per-game-analysis/DEPTH-20-PROBE.md). Elle coûte
+  >   **8,2× le temps** (4 h 21 pour le corpus au lieu de 26 min), rattrape **un** des quinze coups
+  >   manqués là où un **simple rejeu à 16 en rattrape deux** — donc sous le bruit du moteur — et son
+  >   effet de bord va à contresens : une position perdue est vue *plus* perdue, donc la zone morte
+  >   **grossit** et le dénominateur **rétrécit**. Décision du demandeur, dans ses termes : *« elle
+  >   rallonge énormément l'analyse et les effets de bord sont négatifs. Ils s'éloignent de ce qu'un
+  >   humain peut comprendre de la partie. »* Le **plancher** reste donc le seul levier, et sa valeur
+  >   reste à trancher.
   > - **`cp2` est payé et n'est lu par personne — ajouté le 2026-09-02.** Le score de la deuxième
   >   ligne est **écrit en base** (`evaluations.cp2` / `mate2`, 108 lignes sur 110 pour la partie
   >   715), au prix de MultiPV = 2, soit le **2,1×** de temps moteur mesuré et assumé en 15a-01. Il

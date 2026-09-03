@@ -167,4 +167,21 @@ est un **amendement de glossaire**, pas un réglage, et c'est une raison légiti
 | 3. Le second bilan chess.com | | |
 | 4. Implications pour US-15c | | |
 | 5. Les demandes produit | | |
-| 6. Le plancher | | |
+| 6. Le plancher | **la piste du régime est évacuée** (voir ci-dessous) ; la valeur du plancher reste à trancher | 2026-09-03 |
+
+### 2026-09-03 — la piste « creuser plutôt que baisser la barre » est close
+
+> « Évacue la piste de l'analyse en depth 20, elle rallonge énormément l'analyse et les effets de
+> bord sont négatifs. Ils s'éloignent de ce qu'un humain peut comprendre de la partie. »
+
+Le coût (8,2×) et les effets de bord (la zone morte grossit, le dénominateur rétrécit) étaient
+mesurés ; le troisième motif ne l'était pas et **il dépasse la mesure** : une recherche plus profonde
+n'aide pas le Player à **comprendre** sa partie. C'est la même discipline que celle qui fait refuser
+« erreur tactique » au profit de la ligne, et exiger d'ADR-0023 un signal vérifiable sur l'échiquier.
+
+**Ce que cela change pour l'arbitrage n° 6** : il n'a plus d'alternative. Le seul levier sur les 12
+coups manqués de la partie vivante est le **plancher**, et la recommandation reste **5 points** —
+avec son prix, qui est d'élargir aussi le dénominateur. Détail dans
+[`DEPTH-20-PROBE.md`](DEPTH-20-PROBE.md).
+
+**Ce que cela ne tranche pas** : la valeur du plancher, ni les cinq autres points.

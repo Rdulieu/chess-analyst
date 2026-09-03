@@ -151,3 +151,31 @@ les fera apparaître.
 Lite, un thread). Une profondeur intermédiaire (18) n'a pas été essayée, ni un moteur natif — qui
 serait plus rapide, mais mélangerait deux forces de moteur dans un corpus dont le but est justement
 de comparer (et rien ne l'enregistrerait, cf. **US-38**).
+
+## Décision du demandeur — 2026-09-03 : la piste est évacuée
+
+> « Évacue la piste de l'analyse en depth 20, elle rallonge énormément l'analyse et les effets de
+> bord sont négatifs. Ils s'éloignent de ce qu'un humain peut comprendre de la partie. »
+
+Trois motifs, dont le troisième n'était pas dans la mesure et **la dépasse** :
+
+1. **Le coût** — 8,2× le temps, mesuré.
+2. **Les effets de bord sont négatifs** — la zone morte grossit, le dénominateur rétrécit.
+3. **Et surtout : la profondeur éloigne l'analyse de ce qu'un humain peut comprendre de sa partie.**
+   C'est un argument de **produit**, pas de budget, et il est cohérent avec la discipline que le dépôt
+   s'est donnée : le glossaire refuse « erreur tactique » et montre **la ligne** ; ADR-0023 exige un
+   signal **vérifiable sur l'échiquier** (« du matériel a changé de camp ») plutôt qu'un adjectif ;
+   `Candidate line` refuse de créditer un coup **copié**. Un moteur qui creuse plus profond ne rend
+   pas la partie plus lisible — il voit une position perdue comme plus perdue et **retire** des coups
+   du dénominateur, c'est-à-dire qu'il en dit **moins** au Player, plus tard et plus cher.
+
+**Conséquences, immédiates :**
+
+- `ANALYSIS_DEPTH` **reste à 16** — la sonde n'a jamais touché au code, donc il n'y a rien à revenir.
+- **La piste du régime est close** : elle n'est plus une alternative à l'arbitrage n° 6, ni une raison
+  d'attendre pour décider du plancher. Le seul levier restant sur les 12 coups manqués de la partie
+  vivante est **le plancher**.
+- Une profondeur intermédiaire (18) **n'est pas à essayer** : la décision porte sur la direction, pas
+  sur la valeur. Si la question revenait, ce serait sur un argument neuf — pas sur celui-ci.
+- Les deux copies restent à côté de la base (`…probe-depth16-repeat…` et `…probe-depth20…`) : elles
+  sont la seule preuve re-vérifiable d'une décision désormais consignée. Supprimables sur un mot.
