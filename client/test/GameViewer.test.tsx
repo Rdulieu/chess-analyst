@@ -89,22 +89,12 @@ describe("GameViewer", () => {
     expect(screen.getByRole("region", { name: /relevé/i })).toBeTruthy();
   });
 
-  it("remembers the level, so the next Game opens at it without being asked again", async () => {
-    stubAnnotations(ANNOTATED);
-    const user = userEvent.setup();
-    const { unmount } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
-
-    await user.click(await screen.findByRole("radio", { name: /détaillé/i }));
-    unmount();
-    // Another Game — a remount is what navigating to one does.
-    render(<GameViewer game={{ ...OPERA_GAME, id: 99, analyzed: true }} />);
-
-    expect((await screen.findByRole("radio", { name: /détaillé/i })) as HTMLInputElement).toHaveProperty(
-      "checked",
-      true,
-    );
-    expect(screen.getByRole("region", { name: /relevé/i })).toBeTruthy();
-  });
+  /*
+   * "remembers the level, so the next Game opens at it without being asked
+   * again" stood here, and it was the withdrawn rule's own test. Its inversion
+   * lives below, in the US-28 block, with the reason it was withdrawn — the
+   * level was not only a display, it stamped the reading's provenance.
+   */
 
   it("offers to re-analyse a Game that is ALREADY analysed, which this screen used not to", async () => {
     stubAnnotations(ANNOTATED);
@@ -276,8 +266,9 @@ describe("GameViewer", () => {
         within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem")[0].textContent,
       ).toContain("??"),
     );
-    // ...but the Player never asked for that on their *other* Games.
-    expect(localStorage.getItem("chess-analyst.review-mode")).toBeNull();
+    // ...but the Player never asked for that on their *other* Games. Since
+    // US-28 nothing could carry it there even if the pass tried: the next Game
+    // opens Unaided, which the US-28 block below asserts directly.
   });
 
   it("notifies once the analysis pass completes, so the Game and its annotations can refresh", async () => {
@@ -393,6 +384,55 @@ describe("GameViewer — game header", () => {
 
 });
 
+describe("GameViewer — the level of THIS review, and of no other (US-28)", () => {
+  const seen = () => JSON.parse(localStorage.getItem("chess-analyst.engine-seen") ?? "[]");
+
+  it("opens Unaided whatever level a previous session left behind", async () => {
+    // The withdrawn rule, inverted. `Review mode` used to be remembered across
+    // Games and sessions, and this exact store is what reopened a freshly
+    // analysed Game in Détaillé — deciding in the Player's place.
+    localStorage.setItem("chess-analyst.review-mode", "detailed");
+    stubAnnotations(ANNOTATED_FOR_PROVENANCE);
+
+    render(<GameViewer game={{ ...OPERA_GAME, id: 42, analyzed: true }} />);
+
+    const group = await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+    expect(within(group).getByRole("radio", { checked: true })).toBe(
+      within(group).getByRole("radio", { name: /sans aide/i }),
+    );
+  });
+
+  it("does not carry the chosen level to the next Game", async () => {
+    stubAnnotations(ANNOTATED_FOR_PROVENANCE);
+    const user = userEvent.setup();
+    const { unmount } = render(<GameViewer game={{ ...OPERA_GAME, id: 42, analyzed: true }} />);
+    await user.click(await screen.findByRole("radio", { name: /détaillé/i }));
+    unmount();
+
+    render(<GameViewer game={{ ...OPERA_GAME, id: 43, analyzed: true }} />);
+
+    const group = await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+    expect(within(group).getByRole("radio", { checked: true })).toBe(
+      within(group).getByRole("radio", { name: /sans aide/i }),
+    );
+  });
+
+  it("records no provenance on opening, however the level was left", async () => {
+    // The invariant this slice exists to pin. A level above Unaided on an
+    // analysed Game is what marks a reading as informed, and it used to be
+    // reached at MOUNT, before the Player had read a thing — labelling an
+    // honestly blind reading as informed, the one direction `engineSeen`
+    // warns is worse than useless.
+    localStorage.setItem("chess-analyst.review-mode", "detailed");
+    stubAnnotations(ANNOTATED_FOR_PROVENANCE);
+
+    render(<GameViewer game={{ ...OPERA_GAME, id: 42, analyzed: true }} />);
+    await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+
+    expect(seen()).toEqual([]);
+  });
+});
+
 describe("GameViewer — recording that the engine was shown", () => {
   const seen = () => JSON.parse(localStorage.getItem("chess-analyst.engine-seen") ?? "[]");
 
@@ -488,13 +528,19 @@ describe("GameViewer — one board, one author (US-23, ADR-0022)", () => {
     // column nor a title, only a colour, so it cannot hold two authors — and this
     // screen's author is the engine.
     const user = userEvent.setup();
-    localStorage.setItem("chess-analyst.review-mode", "annotated");
+    // Annotations STUBBED, and the level ASKED for. Neither was here before, and
+    // between them they are why the tint assertion below now runs at all: with
+    // no annotations the square never had a tint, so the check was passing on an
+    // empty screen. A check that cannot fail has not passed.
+    stubAnnotations(ANNOTATED_FOR_PROVENANCE);
     const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
 
+    await user.click(await screen.findByRole("radio", { name: /annoté/i }));
     await user.click(await screen.findByRole("button", { name: "Next" }));
 
     // Whatever tint is on the square, it is one of the engine's own tokens.
     const tint = squareOf(container, "e4");
+    expect(tint).toBeTruthy();
     if (tint) expect(tint).toMatch(/^var\(--square-(inaccuracy|mistake|blunder)\)$/);
     // And nothing of the Player's reading is drawn on this diagram.
     expect(container.querySelector('[data-part="move-marks"]')).toBeNull();
@@ -505,7 +551,7 @@ describe("GameViewer — one board, one author (US-23, ADR-0022)", () => {
 
   it("paints no square at Unaided — there is nothing of the engine to show", async () => {
     const user = userEvent.setup();
-    localStorage.setItem("chess-analyst.review-mode", "unaided");
+    // Unaided is where every review now opens (US-28) — nothing to set.
     const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
 
     await user.click(await screen.findByRole("button", { name: "Next" }));
