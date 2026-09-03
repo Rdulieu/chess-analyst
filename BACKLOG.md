@@ -496,6 +496,16 @@
   > **Lien** : la `Confrontation` est le consommateur de ce drapeau, donc **US-26** a intérêt à ce que
   > celle-ci soit tranchée d'abord — sans quoi elle bâtira un écran de détail sur une provenance
   > dont on sait qu'elle peut mentir.
+  >
+  > **Grillée le 2026-09-03** (avec US-29, même branche d'intégration
+  > `integration/US-28-29-reading-screen-fixes`). PRD :
+  > `.scratch/unaided-default-and-verdict-tint/PRD.md`. Deux tranches :
+  > `issues/01-every-opening-starts-unaided.md` (AFK),
+  > `issues/02-reset-the-wrongly-posed-provenance.md` (HITL, bloquée par la 01).
+  > Tranché : **aucune mémorisation** du niveau, ni de session ni par partie ; le drapeau garde son
+  > déclencheur, l'invariant devenant vrai par construction ; les provenances déjà posées sont remises
+  > à « non vu » **par identifiant**, sur le constat du demandeur que toutes ses lectures ont été
+  > faites à l'aveugle. Aucun ADR — la règle est écrite dans `CONTEXT.md` (`Review mode`).
 
 - **US-29**: Colorer les glyphes de verdict dans la liste des coups — pour que la lecture du joueur
   se reconnaisse d'un coup d'œil dans la liste comme elle se reconnaît déjà sur les boutons et sur
@@ -568,6 +578,15 @@
   > portent déjà le sens, la teinte s'y ajoute — c'est bien le cas ici, la demande est additive.
   > Les jetons se déclarent en toutes lettres, jamais par interpolation : l'audit de cohérence des
   > jetons lit la feuille comme source et ne voit pas un nom assemblé dans une boucle.
+  >
+  > **Grillée le 2026-09-03** (avec US-28, même branche d'intégration). PRD :
+  > `.scratch/unaided-default-and-verdict-tint/PRD.md`. Une tranche :
+  > `issues/03-verdict-chip-in-the-move-list.md` (AFK, indépendante).
+  > Tranché : **option 1** — la famille de l'échiquier dans la liste, avec l'encre de notation, sur
+  > `data-verdict`. Aucun jeton neuf, contraste déjà éprouvé par les boutons. US-29 **ne bloque pas**
+  > sur US-26 : la couleur n'avait pas le droit de distinguer les deux auteurs, donc la teinter ici ne
+  > consomme aucun canal — US-26 apportera son écran et sa solution. Aucun ADR — la règle est écrite
+  > dans `CONTEXT.md` (`Declared severity`).
 
 - **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
   invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
