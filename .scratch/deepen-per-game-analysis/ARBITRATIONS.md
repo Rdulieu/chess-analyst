@@ -8,19 +8,37 @@ Le dossier de mesure est [`REVIEW.md`](REVIEW.md) ; les corpus et leurs biais so
 [`CORPORA.md`](CORPORA.md). **Aucune décision n'est prise ici.** Les décisions du demandeur seront
 consignées en bas de ce fichier, avec leur date.
 
+> **⚠️ Deux révisions datées sont en fin de document et font foi** : la piste profondeur 20 est
+> **évacuée** (2026-09-03), et les recommandations **1, 2 et 3 sont révisées** après l'obtention de
+> **dix** bilans lichess au lieu de trois (2026-09-03). Les sections 1 à 3 ci-dessous portent chacune
+> un avertissement à cet endroit.
+>
 > **Le résultat central, avant les arbitrages.** La revue ne dit pas ce que la story attendait.
-> L'écart avec lichess est **d'abord un écart de seuil, pas un angle mort** : sur les 15 coups qu'ils
-> signalent et que nous manquons, **12 ont été joués dans des positions que nous comptons**, chacun
-> coûtant 2,3 à 9,5 points — juste sous le plancher de 10. L'angle mort de la zone morte existe, il
-> est **petit** (3 sur 15), et le signal matériel l'atteint entièrement. Les deux mécanismes sont
-> complémentaires, et chacun des arbitrages ci-dessous porte sur l'un ou l'autre.
+> L'écart avec lichess est **d'abord un écart de seuil, pas un angle mort** : sur les **43** coups
+> qu'ils signalent et que nous manquons, **39 ont été joués dans des positions que nous comptons**
+> (91 %), chacun coûtant 1,3 à 9,5 points — sous le plancher de 10. L'angle mort de la zone morte
+> existe, il est **petit** (4 sur 43), et il faut **deux signaux conjoints** pour l'atteindre sans
+> bruit. Les deux mécanismes sont complémentaires, et chacun des arbitrages ci-dessous porte sur l'un
+> ou l'autre.
+>
+> *(Chiffres du rejeu sur dix bilans. Sur les trois premiers bilans ils étaient 12 sur 15, et le
+> matériel seul suffisait — voir la révision.)*
 
 ## 1. Le prédicat : lequel des cinq signaux remplit le cas « montré, non compté » ?
+
+> ⚠️ **PÉRIMÉ le 2026-09-03 — lire la [révision](#révision-du-2026-09-03--dix-bilans-lichess-au-lieu-de-trois) en fin de document.**
+> Cette section a été écrite quand la référence lichess comptait **trois** parties. Elle en compte
+> **dix** depuis, et le chiffre qui la portait a changé de sens : `material ≥ 3` fait **3 sur 7**, pas
+> 3 sur 3. La recommandation en vigueur est **`material ≥ 1` et `cpDrop ≥ 200`**. Le texte ci-dessous
+> est conservé **comme trace** — il montre que son falsificateur était écrit d'avance et qu'il a
+> tiré — et non comme une recommandation.
 
 **Recommandation : la variation de matériel.** C'est le seul des cinq que les données soutiennent
 pour *ce* cas, et il est soutenu par trois choses indépendantes :
 
-- il atteint **3 des 3** coups de la zone morte que lichess signale (715/106, 619/67, 587/59) ;
+- il atteint **3 des 3** coups de la zone morte que lichess signale (715/106, 619/67, 587/59) —
+  ⚠️ **chiffre périmé** : sur dix bilans il en atteint **3 sur 4**, et il désigne **7** coups pour ces
+  trois-là, soit une précision de **43 %** ;
 - il est **verifiable sur l'échiquier** — « du matériel a changé de camp » — ce qui est le contrat
   d'ADR-0023, là où une chute de centipions demande de croire le moteur ;
 - il a été **confirmé sans être sollicité** par le demandeur lui-même, au coup 74 de la 715 : « j'ai
@@ -44,16 +62,24 @@ change alors de nature, et rien dans les mesures n'oblige à livrer un prédicat
 
 ## 2. Son seuil
 
+> ⚠️ **PÉRIMÉ le 2026-09-03 — lire la [révision](#révision-du-2026-09-03--dix-bilans-lichess-au-lieu-de-trois) en fin de document.**
+> Cette section a été écrite quand la référence lichess comptait **trois** parties. Elle en compte
+> **dix** depuis, et le chiffre qui la portait a changé de sens : `material ≥ 3` fait **3 sur 7**, pas
+> 3 sur 3. La recommandation en vigueur est **`material ≥ 1` et `cpDrop ≥ 200`**. Le texte ci-dessous
+> est conservé **comme trace** — il montre que son falsificateur était écrit d'avance et qu'il a
+> tiré — et non comme une recommandation.
+
 **Recommandation : une pièce, soit `material ≥ 3` pions.** Mesuré sur les vingt parties :
 
 | Barre | Coups désignés dans la zone morte | Par partie | Cas connus attrapés |
 | --- | --- | --- | --- |
-| ≥ 1 pion | 10 (DudulSmash) + 13 (Metalyst) | 1,2 | 3 / 3 |
-| **≥ 3 (une pièce)** | **5 + 7** | **0,6** | **3 / 3** |
-| ≥ 5 (une tour) | 2 + 4 | 0,3 | 1 / 3 |
+| ≥ 1 pion | 10 (DudulSmash) + 13 (Metalyst) | 1,2 | ~~3 / 3~~ → **4 / 4**, précision **31 %** |
+| ~~**≥ 3 (une pièce)**~~ | **5 + 7** | **0,6** | ~~3 / 3~~ → **3 / 4**, précision **43 %** |
+| ≥ 5 (une tour) | 2 + 4 | 0,3 | ~~1 / 3~~ → **1 / 4**, précision **25 %** |
 
 À une pièce, le volume est **divisé par deux** sans qu'un seul cas connu soit perdu ; à une tour, on
-en perd deux sur trois. En dessous, ce qui entre est du **bruit d'échange** : le signal compte le
+en perd deux sur trois. ⚠️ **Ce raisonnement ne tient plus** : avec dix bilans, la barre à une pièce
+**manque** un des quatre cas connus et se trompe sur quatre des sept coups qu'elle désigne. En dessous, ce qui entre est du **bruit d'échange** : le signal compte le
 matériel sur la paire coup + réponse, donc toute reprise qui finit un pion en retard le déclenche.
 
 **Ce qui rendrait un autre choix meilleur** : si le demandeur veut *tout* voir de sa zone morte,
@@ -62,6 +88,13 @@ un glyphe qu'il croit toujours, ou un glyphe qu'il vérifie souvent. Les douze c
 une pièce sont listés en entier dans [`REVIEW.md`](REVIEW.md) : ils se relisent en cinq minutes.
 
 ## 3. Où dépenser le second bilan chess.com
+
+> ⚠️ **PÉRIMÉ le 2026-09-03 — lire la [révision](#révision-du-2026-09-03--dix-bilans-lichess-au-lieu-de-trois) en fin de document.**
+> Cette section a été écrite quand la référence lichess comptait **trois** parties. Elle en compte
+> **dix** depuis, et le chiffre qui la portait a changé de sens : `material ≥ 3` fait **3 sur 7**, pas
+> 3 sur 3. La recommandation en vigueur est **`material ≥ 1` et `cpDrop ≥ 200`**. Le texte ci-dessous
+> est conservé **comme trace** — il montre que son falsificateur était écrit d'avance et qu'il a
+> tiré — et non comme une recommandation.
 
 **Recommandation : sur la partie 708 (DudulSmash, défaite du 16 août).** Elle achète trois réponses
 d'un coup :
@@ -123,16 +156,20 @@ n'est dans le périmètre de cette story.
 l'entrée backlog de cette story : *« je vois souvent des trucs qui ne sont pas mis en valeur par le
 moteur »*. La revue chiffre exactement ce que ça coûte.
 
-| Plancher | Coups manqués rattrapés (sur 15) | Coups signalés — DudulSmash / Metalyst | Part des coups du Player |
+| Plancher | Coups manqués rattrapés | Coups signalés — DudulSmash / Metalyst | Part des coups du Player |
 | --- | --- | --- | --- |
-| **10** (actuel) | 0 | 31 / 54 | 8,7 % / 14 % |
-| **5** | 6 | 51 / 92 | 14 % / 24 % |
-| 3 | 11 | 88 / 124 | 25 % / 32 % |
-| 2 | 12 | 115 / 147 | 32 % / 38 % |
+| **10** (actuel) | 0 sur 43 | 31 / 54 | 8,7 % / 14 % |
+| **5** | **24 sur 43** | 51 / 92 | 14 % / 24 % |
+| 3 | 33 sur 43 | 88 / 124 | 25 % / 32 % |
+| 2 | 36 sur 43 | 115 / 147 | 32 % / 38 % |
+
+> Colonne de gauche **mise à jour au rejeu du 2026-09-03** (dix bilans) : elle disait 0 / 6 / 11 / 12
+> sur les quinze coups manqués que trois bilans montraient. Les deux autres colonnes sont mesurées
+> sur les vingt parties et n'ont pas bougé — elles ne dépendent pas de la référence.
 
 **Recommandation : 5 points, et pas plus bas.** Trois raisons mesurées :
 
-- à 5, on rattrape **6 des 12** coups que lichess signale dans la partie vivante, et la part des
+- à 5, on rattrape **24 des 39** coups que lichess signale dans la partie vivante, et la part des
   coups signalés passe à 14–24 % — l'ordre de grandeur de lichess lui-même sur ces parties (10 à 12
   coups par partie) ;
 - à 5, on reste **4 à 15 fois au-dessus du bruit moteur mesuré** : la double passe sur la 51 déplace
