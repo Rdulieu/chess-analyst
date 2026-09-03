@@ -345,3 +345,91 @@ chiffré.
 6. **L'attribution** : elle discrimine partie par partie et pas globalement. Restreinte à la partie
    disputée, elle ne flatte pas l'adversaire — ce que la comparaison avec la précision « toute
    partie » de lichess démontre.
+
+## 10. Rejeu du 2026-09-03 — la référence passe de **trois** à **dix** parties
+
+Le demandeur a lancé l'analyse lichess sur les sept parties Metalyst qui n'en avaient pas. **Les dix
+en ont désormais une**, soit **96 coups signalés** par lichess pour le Player au lieu de 24. Tout ce
+qui suit est le **même rapport rejoué** sur les mêmes `Evaluation`s — zéro seconde de moteur — avec la
+référence élargie. Les sections 1 à 4 gardent leurs chiffres de trois parties ; **là où le rejeu les
+contredit, c'est le rejeu qui vaut.**
+
+### Ce qui se durcit
+
+| | 3 bilans | **10 bilans** |
+| --- | --- | --- |
+| Coups signalés par lichess / par nous | 24 / 14 | **96 / 54** |
+| Coups manqués (eux seuls) | 15 | **43** |
+| Signalés par **nous seuls** | 0 | **1** (716/67 `Rxe8`) |
+| Manqués joués dans une position **comptée** | 12 sur 15 (80 %) | **39 sur 43 (91 %)** |
+| Manqués dans la **zone morte** | 3 | **4** |
+| Attribués au **seuil** | 10 sur 15 (67 %) | **32 sur 43 (74 %)** |
+| Idem, groupe de contrôle | 11 sur 14 (79 %) | **48 sur 53 (91 %)** |
+| `Inaccuracy` dans leur vocabulaire | 11 sur 15 | **35 sur 43** |
+
+**Le résultat central est confirmé et renforcé** : **91 %** de l'écart avec lichess est *dans* notre
+dénominateur, et les trois quarts des désaccords sont des désaccords de **seuil**. Le containment
+tient à une exception près sur 54 coups.
+
+**Ce qu'un plancher rattraperait, sur 43 coups manqués** : **24 à 5 points**, 33 à 3, 36 à 2 — et
+**jamais les 4 de la zone morte**. La recommandation du plancher (arbitrage n° 6) ne bouge pas.
+
+### Ce qui s'affaiblit : le test de discrimination
+
+| Signal | manqués (43) | ni-ni (289) | enrichissement | 3 bilans |
+| --- | --- | --- | --- | --- |
+| chute en **centipions** | 8 (19 %) | 15 (5 %) | **× 3,6** | × 6,0 |
+| variation de **matériel** | 11 (26 %) | 39 (13 %) | × 1,9 | × 1,6 |
+| distance au **mat** | 0 | 4 (1 %) | × 0 | × 0 |
+| séquence **forcée** | 0 | 8 (3 %) | × 0 | × 0 |
+| écart à la **2ᵉ ligne** | 1 (2 %) | 27 (9 %) | **× 0,25** | × 0 |
+
+L'enrichissement de `cpDrop` a **fondu de moitié** avec dix fois la matière — ce qui est le sort
+ordinaire d'un effet mesuré sur peu de cas. Il reste le meilleur séparateur et reste **coïncident à
+91 %** avec notre propre sévérité.
+
+Et l'écart à la deuxième ligne devient **anti-corrélé** (× 0,25) : il tire *moins* sur les coups
+manqués que sur les coups ordinaires. Le `cp2` payé 2,1× n'est pas seulement inutile pour cette
+question — il pointe dans le mauvais sens.
+
+### Ce qui se renverse : le prédicat de la zone morte
+
+C'était la raison de demander ces sept bilans, et **le falsificateur que la tranche 05 avait nommé
+s'est déclenché**. Zone morte du corpus Metalyst : **48 coups, dont 4 que lichess signale**.
+
+| Prédicat candidat | désignés | rappel | précision | par partie |
+| --- | --- | --- | --- | --- |
+| `material ≥ 3` *(recommandé sur 3 bilans)* | 7 | 3/4 | **43 %** | 0,7 |
+| `material ≥ 4` | 6 | 3/4 | 50 % | 0,6 |
+| `cpDrop ≥ 200` | 7 | **4/4** | 57 % | 0,7 |
+| `cpDrop ≥ 240` | 6 | **4/4** | 67 % | 0,6 |
+| `material ≥ 3` **ou** `cpDrop ≥ 200` | 11 | 4/4 | 36 % | 1,1 |
+| **`material ≥ 1` et `cpDrop ≥ 200`** | **4** | **4/4** | **100 %** | **0,4** |
+
+`material ≥ 3` n'est plus « 3 sur 3 » : c'est **3 sur 7**. Le matériel seul attrape les échanges
+ordinaires d'une partie déjà finie — 622/48 `Reg8` (5 pions), 622/70 `Ke6` (3), 622/114 `Kb5` (8) :
+du matériel change de camp, et l'évaluation ne bouge pas parce qu'il n'y avait plus rien à perdre.
+
+Et la chute en centipions **seule** attrape l'inverse : des coups de roi dans une finale sans espoir
+où l'évaluation s'emballe sans que rien de tangible se passe — 622/94 `Kxf4`, 622/98 `Ke5`
+(**cp 6865**), 622/106 `Ka7`.
+
+**La conjonction élimine les deux familles d'erreur** et désigne exactement les quatre coups que
+lichess signale, et rien d'autre. Elle se dit d'ailleurs en une phrase que le Player peut vérifier :
+**du matériel a changé de camp *et* l'évaluation s'est effondrée**. Le signal affiché reste le
+matériel — vérifiable sur l'échiquier, ce qu'ADR-0023 exige ; la chute en centipions n'est pas une
+phrase montrée, c'est un **filtre**.
+
+### Trois réserves, et elles pèsent
+
+1. **Quatre vrais positifs.** Une précision de 100 % sur quatre coups ne distingue pas « le bon
+   prédicat » de « un ajustement heureux ». Aucune des lignes du tableau ci-dessus n'est établie.
+2. **Le prédicat s'évapore sur l'autre corpus.** Le même prédicat désigne **4 coups chez Metalyst**
+   (0,4/partie) et **un seul chez DudulSmash** (709/150 `Kc6`, 0,1/partie). Soit la zone morte de
+   DudulSmash ne contient presque rien à montrer, soit le prédicat est ajusté aux quatre cas
+   Metalyst — et **rien dans nos données ne permet de trancher**, puisque le corpus chess.com n'a
+   aucune référence extérieure.
+3. **L'oracle est aveugle là où nous l'interrogeons.** Lichess ne signale que **4 des 48** coups de
+   la zone morte (8 %) : leurs seuils saturent comme les nôtres. « Non confirmé par lichess » n'est
+   donc pas « faux » — pour les sept désignations du matériel, le fait mécanique est vrai dans les
+   sept cas. La précision mesurée ici est un accord avec un juge qui voit mal à cet endroit précis.

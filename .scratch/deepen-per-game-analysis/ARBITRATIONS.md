@@ -167,7 +167,8 @@ est un **amendement de glossaire**, pas un réglage, et c'est une raison légiti
 | 3. Le second bilan chess.com | | |
 | 4. Implications pour US-15c | | |
 | 5. Les demandes produit | | |
-| 6. Le plancher | **la piste du régime est évacuée** (voir ci-dessous) ; la valeur du plancher reste à trancher | 2026-09-03 |
+| 6. Le plancher | **la piste du régime est évacuée** (voir plus bas) ; la valeur du plancher reste à trancher | 2026-09-03 |
+| *(hors table)* | **dix bilans lichess demandés et obtenus** → recommandations 1, 2 et 3 **révisées** en fin de document | 2026-09-03 |
 
 ### 2026-09-03 — la piste « creuser plutôt que baisser la barre » est close
 
@@ -185,3 +186,73 @@ avec son prix, qui est d'élargir aussi le dénominateur. Détail dans
 [`DEPTH-20-PROBE.md`](DEPTH-20-PROBE.md).
 
 **Ce que cela ne tranche pas** : la valeur du plancher, ni les cinq autres points.
+
+---
+
+## Révision du 2026-09-03 — dix bilans lichess au lieu de trois
+
+Le demandeur a lancé l'analyse lichess sur les sept parties Metalyst qui n'en avaient pas. La revue a
+été **rejouée** sur les mêmes `Evaluation`s (aucun temps moteur) : section 10 de
+[`REVIEW.md`](REVIEW.md). Ce qui suit **remplace** les recommandations 1, 2 et 3 ci-dessus.
+
+### Ce qui n'a pas bougé, et se durcit
+
+Les points **4** (US-15c), **5** (les demandes produit) et **6** (le plancher) tiennent tels quels, et
+le résultat qui les fonde est renforcé : **91 %** de l'écart avec lichess (39 coups sur 43) est *dans*
+notre dénominateur, contre 80 % sur trois bilans, et **74 %** des désaccords sont des désaccords de
+seuil. Un plancher à 5 rattraperait **24** des 43 coups manqués.
+
+### 1 et 2 révisés — le falsificateur que j'avais nommé s'est déclenché
+
+J'avais recommandé `material ≥ 3` en écrivant que « une référence sur cinq ou six parties de plus où
+le matériel n'atteindrait qu'un cas sur trois » devrait le faire lâcher. La référence est arrivée :
+**`material ≥ 3` fait 3 sur 7**, pas 3 sur 3.
+
+**Nouvelle recommandation : `material ≥ 1` ET `cpDrop ≥ 200`.** Sur la zone morte du corpus Metalyst
+(48 coups, 4 signalés par lichess) elle désigne **exactement ces 4 coups et rien d'autre** — rappel
+4/4, précision 100 %, **0,4 coup par partie**.
+
+Pourquoi la conjonction et non l'un des deux :
+
+- le **matériel seul** attrape les échanges ordinaires d'une partie déjà finie (du matériel change de
+  camp, l'évaluation ne bouge pas : il n'y avait plus rien à perdre) ;
+- la **chute en centipions seule** attrape des coups de roi dans une finale sans espoir où
+  l'évaluation s'emballe sans que rien de tangible arrive (jusqu'à `cp 6865`) ;
+- **ensemble**, les deux familles d'erreur s'annulent.
+
+Et cela **préserve le contrat d'ADR-0023** : le signal *montré* reste « du matériel a changé de
+camp », vérifiable sur l'échiquier. La chute en centipions n'est pas une phrase affichée, c'est un
+**filtre**. C'est aussi ce qui la rend compatible avec le critère que le demandeur a posé hier en
+évacuant la profondeur 20 — ne pas s'éloigner de ce qu'un humain peut comprendre de sa partie.
+
+**Ce qui rendrait un autre choix meilleur — et c'est sérieux :** la précision de 100 % repose sur
+**quatre** coups. Et le même prédicat désigne 4 coups chez Metalyst mais **un seul chez DudulSmash**
+(0,1 par partie) : soit la zone morte de DudulSmash ne contient presque rien à montrer, soit le
+prédicat est **ajusté aux quatre cas Metalyst**. Rien dans nos données ne tranche, faute de référence
+côté chess.com. Enfin, lichess ne signale que 4 des 48 coups de la zone morte : **l'oracle voit mal
+là où nous l'interrogeons**, donc « non confirmé » n'est pas « faux ».
+
+**Option prudente, si le demandeur préfère ne pas livrer un prédicat sur quatre cas** : documenter
+l'angle mort (ADR-0023 l'admet, la tranche 06 change de nature) et re-décider après le bilan
+chess.com du point 3. C'est un choix défendable, pas un renoncement.
+
+### 3 révisé — le second bilan chess.com
+
+**Toujours la 708, et pour une raison désormais plus nette qu'hier.** Les dix parties Metalyst ont
+une référence ; le corpus chess.com n'en a **aucune**, et c'est exactement là que le prédicat est
+suspect de sur-ajustement. La 708 est le meilleur discriminant disponible :
+
+- `material ≥ 3` y désigne **deux** coups de la zone morte (ply 59 `Be2`, 5 pions, cp 25 ; ply 69
+  `Ke3`, 3 pions, évaluation de mat) ;
+- la **conjonction recommandée n'en désigne aucun** (les deux échouent le filtre `cpDrop ≥ 200`).
+
+Un seul bilan sur cette partie **sépare donc les deux candidats** : si chess.com signale ces deux
+coups, la conjonction est trop stricte ; s'il les ignore, elle est confirmée là où le matériel seul se
+trompait. C'est le meilleur rapport information/coût des vingt parties.
+
+### Un fait à consigner au passage
+
+**L'écart à la deuxième ligne est devenu anti-corrélé** (× 0,25 : il tire *moins* sur les coups
+manqués que sur les coups ordinaires). Le `cp2` payé **2,1×** en 15a n'est donc pas seulement inutile
+pour cette question — il pointe dans le mauvais sens. La `Best line` reste, elle, indispensable
+(c'est elle qui rend l'attribution seuil/moteur possible).
