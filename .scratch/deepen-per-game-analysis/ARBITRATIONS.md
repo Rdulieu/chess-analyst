@@ -145,9 +145,16 @@ moteur »*. La revue chiffre exactement ce que ça coûte.
 
 **Ce qui rendrait un autre choix meilleur** : `CONTEXT.md` publie la bande « 10–20 % » — la changer
 est un **amendement de glossaire**, pas un réglage, et c'est une raison légitime de ne rien toucher.
-Et si le demandeur préfère d'abord tester la **piste moteur** (un régime plus profond plutôt qu'un
-plancher plus bas), la revue ne l'a pas explorée : elle mesure le bruit **à** profondeur 16, pas ce
-qu'une profondeur 20 donnerait.
+
+> **La piste moteur, elle, est maintenant mesurée — et écartée.** C'était la seule autre raison
+> documentée de ne pas toucher au plancher. Sonde du 2026-09-03 sur les trois parties à bilan
+> lichess, trois bras (16 du corpus / 16 rejouée / 20) :
+> [`DEPTH-20-PROBE.md`](DEPTH-20-PROBE.md). La profondeur 20 coûte **8,2× le temps**, rattrape **un**
+> des quinze coups manqués là où un simple **rejeu à 16 en rattrape deux** — donc le gain est **sous
+> le bruit du moteur** — ne change aucun compte de coups signalés, **rétrécit** le dénominateur (une
+> position perdue est vue plus perdue, donc la zone morte grossit) et n'améliore pas l'accord avec
+> lichess. Les 12 coups manqués de la partie vivante sont donc un fait de **seuil**, et seule une
+> décision sur le plancher les fera apparaître.
 
 ## Décisions du demandeur
 
