@@ -1,7 +1,8 @@
-Status: ready-for-agent — **tranche HITL** : elle écrit dans la base locale, qui porte depuis
-ADR-0015 des données qu'aucun import ne rebâtit, et elle comporte un geste que seul un humain peut
-faire (le stockage du navigateur). L'agent prépare tout, montre l'avant, et **demande** avant
-d'écrire.
+Status: ready-for-agent — **repassée HITL -> AFK le 2026-09-04, sur décision explicite du
+demandeur** (run autonome de nuit). La raison du HITL tenait toujours : la tranche écrit dans une
+base qu'ADR-0015 déclare irremplaçable. Ce qui remplace la présence humaine est donc la sauvegarde
+`.backup` **avant** écriture, la portée bornée à un identifiant, et la re-jouabilité observée — ces
+trois critères ne sont plus des precautions, ils sont le gate.
 
 ## Parent
 
