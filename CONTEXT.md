@@ -354,9 +354,15 @@ choice, in three levels:
 - **Detailed**: also the reviewed Move's own record — its `Best line`, the refutation, what the Move
   cost, its `Phase`, and whether it is a `Counted Move`.
 
-The default is **Unaided**: a Game is opened to be read, and the engine's verdict is something the
-Player asks for rather than something the app volunteers. The choice is remembered, so it is made
-once and not on every Game. One exception, because it answers a question the Player actually asked:
+The default is **Unaided**, and it applies to **every** opening: a Game is opened to be read, and the
+engine's verdict is something the Player asks for rather than something the app volunteers. A Review
+mode is the level of **this** review and of no other — it is never carried over to the next Game, nor
+to the next session. The choice used to be remembered across Games, and that is withdrawn: a level
+inherited from what was read yesterday decides in the Player's place, and — because a level above
+Unaided on an analysed Game is what marks a reading as informed — it also **labels** a reading nobody
+asked to inform. The cost is named: a Player who wants Detailed on every Game asks for it on every
+Game. That price is paid by the one who summons the engine, never by the one reading unaided.
+One exception, because it answers a question the Player actually asked:
 completing an `Analysis pass` on the Game being reviewed moves that review to **Annotated** — the
 pass was requested to produce something to look at, and finishing it silently would leave the Player
 unable to tell a completed pass from one that did nothing.
@@ -481,6 +487,13 @@ by construction identical.
   fact about the reading.
 - **`Good` is kept but never scored**: the engine flags flawed Moves only and has no band for merit,
   so there is nothing to set it against. It exists because the Player needs it to read their Game.
+- **A verdict's colour belongs to its author, and follows that author everywhere it is shown.**
+  Wherever a Declared severity appears — the board's square, the buttons that set it, the move list —
+  it wears the Player's own colours, the same five, so a reading is recognisable at a glance from one
+  place to the next. The engine's measured severities keep their own, likewise everywhere. The two
+  sets are not required to match, and where they differ it is not a distinction anyone may rely on:
+  a view showing both authors still owes them a column or a heading (above). The colour is always
+  **additive** — the glyph and its spoken name carry the meaning on their own (ADR-0013).
 - **The Player may declare a severity on an opponent's Move too**, and it is kept and shown like any
   other. It is **never scored** — not for want of the means (the `Evaluation`s are there) but **by
   decision**: severities are computed for the Player's own Moves only, because this tool is about the
