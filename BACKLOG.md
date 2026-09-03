@@ -1185,6 +1185,12 @@
   >   ayant perdu 5 % — **n'existe pas dans la base locale** (le plus petit total analysé est 88,7 %) ;
   >   la tranche 03 en fournira.
   >
+  > **Les six tranches sont livrées, PR vers `develop` : [#103](https://github.com/Rdulieu/chess-analyst/pull/103)
+  > (2026-09-03, en attente du merge humain).** La suite HP a été **écartée sciemment** — une seule
+  > surface visible a bougé dans toute la branche (le tracé de dérive), sa FP l'a labourée deux fois,
+  > et la renonciation est motivée dans la PR avec le trou qu'elle laisse (le tracé n'a été jugé qu'à
+  > une largeur).
+  >
   > **Tranches 02, 03 et 04 livrées le 2026-09-02** — PR
   > [#98](https://github.com/Rdulieu/chess-analyst/pull/98),
   > [#99](https://github.com/Rdulieu/chess-analyst/pull/99),
