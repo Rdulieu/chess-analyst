@@ -345,3 +345,12 @@ chiffré.
 6. **L'attribution** : elle discrimine partie par partie et pas globalement. Restreinte à la partie
    disputée, elle ne flatte pas l'adversaire — ce que la comparaison avec la précision « toute
    partie » de lichess démontre.
+
+---
+
+**Suite donnée.** Les décisions du demandeur sont dans [`ARBITRATIONS.md`](ARBITRATIONS.md)
+(2026-09-03) : barème à **5 points**, plancher du dénominateur maintenu à 10 %, **aucun prédicat**
+pour le moment, aucun impact sur US-15c, et les demandes produit regroupées hors périmètre. L'angle
+mort est **documenté** plutôt qu'assumé — [`BLIND-SPOT.md`](BLIND-SPOT.md) — et ADR-0023 est amendé
+en conséquence.
+
