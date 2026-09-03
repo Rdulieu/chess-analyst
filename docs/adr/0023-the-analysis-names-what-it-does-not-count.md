@@ -78,7 +78,7 @@ true but marginal on this material: the dead-zone blind spot is **4 Moves of 43*
 **And the band at 5 fires this ADR's own mechanism without a predicate.** At 10 the tie was
 structural — a Position with under 10 % chances cannot drop 10 points, so **0 of the 81** dead-zone
 Moves in the corpus could ever be flagged. At 5 that ceases to hold, and **two of the four** dead-zone
-Moves lichess flags become flagged on their own (`587/59`, dropping 9,0 at 10,0 % of chances;
+Moves lichess flags become flagged on their own (`587/59`, dropping 9,0 at **9,96 %** of chances;
 `715/106`, dropping 5,5 at 5,8 %). They will therefore carry a glyph **and** their unchanged reason
 through the case US-15a's slice 04 built and nobody had ever reached — which is exactly what this ADR
 wanted, reached by a threshold rather than by a second axis.
@@ -90,8 +90,10 @@ short — hence the decision.
 
 **What the review established about the five signals**, and this part is not reversible by taste:
 
-- **Three of the five separate nothing at all**: mate distance, forced sequence, and the gap to the
-  second line fire on **none** of the 43 missed Moves.
+- **Two of the five separate nothing at all**: mate distance and forced sequence fire on **none** of
+  the 43 missed Moves. The gap to the second line fires on exactly **one** of them — which is *less*
+  often than on the ordinary Moves nobody flags, hence the × 0,25 below. Saying "none" of all three
+  would contradict that ratio, which needs a non-zero numerator.
 - The **gap to the second line is anti-correlated** (× 0,25 — it fires *less* on missed Moves than on
   ordinary ones), and the mechanism is understood: a large gap marks a **forcing** Position, which is
   precisely where a human finds the move (27 % → 66 % of Moves played as the engine would, as the gap
@@ -102,16 +104,19 @@ short — hence the decision.
   what makes the threshold/engine attribution possible.
 - The **raw centipawn drop** separates best (× 3,6, precision 35 %) but fires on **91 %** of the Moves
   the app already flags: it is largely severity in another unit, hence a poor second axis.
-- **Material swing** is the only signal whose claim is a fact the Player can check, and restricted to
-  the dead zone it reaches 3 of the 4 known cases at a bar of one piece — for a measured precision of
-  **43 %**, not the 3/3 that three reports had suggested.
+- **Material swing** is the only signal whose claim is a fact the Player can check. Restricted to
+  the dead zone at a bar of one piece it reaches **3 of the 4** known cases, and it designates
+  **7** Moves to do it — a precision of **43 %**. The reversal three reports had hidden is that
+  same bar's score going from **3 of 3 to 3 of 7**: what changed is its *precision*, not its reach,
+  and the two must not be read as one figure.
 
 **Consequences of this amendment:**
 
 - **`UncountedReason` still keeps its two values**, and no third was ever needed.
 - **The second axis is not built.** If it ever is, the review's own conclusion is that it should be
-  the **conjunction** `material ≥ 1` and `cpDrop ≥ 200` — which designated exactly the four known
-  cases and nothing else — and that the *displayed* signal must stay the material fact, the centipawn
+  the **conjunction** `material ≥ 1` and `cpDrop ≥ 200` — which, **on the Metalyst corpus**,
+  designated exactly the four known cases and nothing else, while designating one further Move on
+  DudulSmash that no outside reference can judge — and that the *displayed* signal must stay the material fact, the centipawn
   half being only a filter.
 - **The blind spot is documented rather than assumed**, which is the distinction this ADR insisted on:
   see `.scratch/deepen-per-game-analysis/BLIND-SPOT.md`. It is assumed **on data**, not on fatigue.

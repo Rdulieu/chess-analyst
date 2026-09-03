@@ -53,8 +53,12 @@ deviennent signalés **d'eux-mêmes** :
 
 | Coup | Chute | Chances avant |
 | --- | --- | --- |
-| 587/59 `Re8` | 9,0 | 10,0 % |
+| 587/59 `Re8` | 9,0 | **9,96 %** |
 | 715/106 `Rxc4` | 5,5 | 5,8 % |
+
+> Écrit **9,96 %** et non « 10,0 % » à dessein : dans un document dont tout l'argument est « sous
+> 10 % → zone morte », un arrondi à 10,0 inviterait à croire le coup **au** plancher, donc compté.
+> Mesuré : le maximum des chances-avant de toute la zone morte est **9,991 %**.
 
 Ils porteront un glyphe **et** leur motif inchangé, par le cas « montré par la partie, non retenu par
 l'analyse » que la tranche 04 d'US-15a avait construit et que personne n'avait jamais atteint. **Le
