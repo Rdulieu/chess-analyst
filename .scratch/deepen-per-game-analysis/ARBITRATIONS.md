@@ -199,12 +199,13 @@ est un **amendement de glossaire**, pas un réglage, et c'est une raison légiti
 
 | Point | Décision | Date |
 | --- | --- | --- |
-| 1. Le prédicat | | |
-| 2. Son seuil | | |
-| 3. Le second bilan chess.com | | |
-| 4. Implications pour US-15c | | |
-| 5. Les demandes produit | | |
-| 6. Le plancher | **la piste du régime est évacuée** (voir plus bas) ; la valeur du plancher reste à trancher | 2026-09-03 |
+| 1. Le prédicat | **aucun prédicat pour le moment.** La tranche 06 devient « documenter l'angle mort » et ADR-0023 est amendé — ce que l'ADR prévoyait explicitement | 2026-09-03 |
+| 2. Son seuil | **sans objet** (pas de prédicat) | 2026-09-03 |
+| 3. Le second bilan chess.com | *non tranché* — et sans prédicat à départager, la raison de le dépenser disparaît : **il reste en réserve** (lecture de l'agent, pas décision du demandeur) | — |
+| 4. Implications pour US-15c | **aucun impact.** « Les impacts sur US-15c sont calculables pour moi, il n'y en a pas » | 2026-09-03 |
+| 5. Les demandes produit | **regroupées dans une nouvelle US, hors de ce périmètre** → **US-34** | 2026-09-03 |
+| 6. Le barème | **fixé à 5 %**, le plancher du dénominateur **maintenu à 10 %**. Livré hors de cette story → **US-37** (voir la note de périmètre ci-dessous) | 2026-09-03 |
+| 6 bis. La piste du régime | **évacuée** (profondeur 20) | 2026-09-03 |
 | *(hors table)* | **dix bilans lichess demandés et obtenus** → recommandations 1, 2 et 3 **révisées** en fin de document | 2026-09-03 |
 | *(préférence)* | **garder le plancher du dénominateur à 10 %** — « j'aime bien son comportement aujourd'hui ». Impact mesuré : dissocier les deux usages de la constante laisse le dénominateur, les exclusions et les chances perdues **strictement inchangés** | 2026-09-03 |
 | *(ordre)* | recommandation révisée : **barème d'abord, prédicat ensuite** — le barème change l'ensemble-cible du prédicat (section D) | 2026-09-03 |
@@ -430,3 +431,44 @@ troisième, avec son `cp 5836`, est précisément le bruit de saturation décrit
 Après le barème, la question du prédicat cesse d'être « quel signal sépare » — la revue l'a répondu —
 pour devenir : **ces trois coups valent-ils un second axe dans le vocabulaire ?** C'est une question
 de produit, et elle se posera sur un écran qu'il sera possible de regarder.
+
+### 2026-09-03 — les quatre décisions, et une note de périmètre
+
+> « Je fixe le barème à 5 %. On n'ajoute pas de nouveau prédicat pour le moment. Les impacts sur
+> US-15c sont calculables pour moi, il n'y en a pas. Ajoute les demandes produits à une nouvelle US
+> hors de ce scope. »
+
+**Le barème est fixé à 5 %, le plancher du dénominateur reste à 10 %.** C'est l'arbitrage n° 6, et ses
+impacts sont chiffrés en section B ci-dessus : le dénominateur, les exclusions et les chances perdues
+ne bougent **pas d'un dixième** ; les coups signalés passent de 31 à 51 (DudulSmash) et de 54 à 92
+(Metalyst) ; l'accord avec lichess monte de **53 à 79** coups sur 96 ; et la dérive fond de moitié.
+
+> **⚠️ Note de périmètre — le barème ne peut pas être livré dans US-15a-bis.** La **User Story 5** du
+> [`PRD`](PRD.md) de cette story promet que *« le nombre de coups comptés, **la dérive** et le total
+> de chances perdues soient exactement les mêmes qu'avant cette story »*. Le barème à 5 fait fondre
+> la dérive de **32 %** (DudulSmash) et **50 %** (Metalyst) : le livrer ici casserait la promesse
+> centrale de la story qui l'a rendu décidable. Il part donc en story propre, **US-37**, avec toutes
+> ses mesures déjà faites — il ne lui reste que le code, le glossaire et les tests.
+
+**Aucun prédicat pour le moment.** ADR-0023 prévoyait ce résultat en toutes lettres : *« "aucun des
+cinq ne sépare" est une issue légitime qui renverrait à assumer l'angle mort sur des données plutôt
+que par lassitude »*. Ce n'est pas exactement ce qui s'est passé — un signal **sépare** (la chute en
+centipions), et la conjonction `material ≥ 1` et `cpDrop ≥ 200` attrape les quatre cas connus. Ce que
+les données ont montré, c'est que **l'angle mort est petit** (4 coups sur 43 manqués), que **le barème
+à 5 en couvre déjà la moitié gratuitement**, et qu'un prédicat n'ajouterait plus que **trois coups sur
+vingt parties** pour le prix d'un second axe dans le vocabulaire. La décision se prend donc sur un
+rapport valeur/complexité mesuré, pas sur un échec de la mesure.
+
+**La tranche 06 change de nature**, comme son issue le prévoyait : l'app reste **inchangée**, le
+dossier documente l'angle mort avec ses chiffres, et **ADR-0023 est amendé** pour dire ce que la revue
+a établi et ce qui a été décidé.
+
+**Aucun impact sur US-15c.** Le dénominateur retient ~88 % des coups des deux côtés, à deux points
+l'un de l'autre ; la frontière de finale est validée par une implémentation indépendante. Le seul
+point que 15c héritera est consigné en section 4 : la frontière début/milieu est un **compteur de
+coups** (le cap du 15ᵉ coup dans 16 parties sur 20), pas un critère de développement.
+
+**Les demandes produit partent en une seule US hors périmètre.** Regroupées dans **US-34** — les trois
+demandes issues de la lecture de la 715. Les deux autres entrées ne sont pas des demandes produit et
+gardent la leur : le **bug** « Analyser cette partie » (US-35) et la **provenance du moteur** dans
+`analysis_passes` (US-36).
