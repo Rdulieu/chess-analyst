@@ -1,28 +1,26 @@
-import { beforeEach, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
-  loadReviewMode,
-  saveReviewMode,
+  INITIAL_REVIEW_MODE,
   REVIEW_MODES,
   atLeastAnnotated,
 } from "../src/features/review/reviewMode";
 
-beforeEach(() => localStorage.clear());
-
-describe("Review mode — the remembered level", () => {
-  it("is Unaided when the Player has never chosen: a Game opens to be read", () => {
-    expect(loadReviewMode()).toBe("unaided");
-  });
-
-  it("remembers the chosen level, so it is chosen once and not on every Game", () => {
-    saveReviewMode("detailed");
-
-    expect(loadReviewMode()).toBe("detailed");
-  });
-
-  it("falls back to Unaided rather than trusting a stored value that names no level", () => {
-    localStorage.setItem("chess-analyst.review-mode", "verbose");
-
-    expect(loadReviewMode()).toBe("unaided");
+/*
+ * This module used to REMEMBER the chosen level, across Games and sessions —
+ * "chosen once and not on every Game" — and had the tests to say so. US-28
+ * withdrew that, and the reason is worth keeping next to the tests that replace
+ * them: a level above Unaided on an analysed Game is what records a reading as
+ * INFORMED, so a level inherited from yesterday stamped a reading nobody had
+ * asked to inform. Whether a level survives an opening is a question about the
+ * honesty of the archive, not about convenience.
+ *
+ * The withdrawn rule is asserted inverted where it is OBSERVABLE — on the
+ * Analyse screen, which opens Unaided whatever the browser still holds. Here
+ * there is only the constant it now starts from.
+ */
+describe("Review mode — the level of one review", () => {
+  it("starts every review at Unaided: a Game is opened to be read", () => {
+    expect(INITIAL_REVIEW_MODE).toBe("unaided");
   });
 
   it("offers exactly three levels, in order of what they reveal", () => {

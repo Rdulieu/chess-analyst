@@ -9,7 +9,7 @@ import { ReanalyseAction } from "../analysis/ReanalyseAction";
 import { GameHeader } from "./GameHeader";
 import { gameHeader } from "./gameHeader";
 import { ReviewModeControl } from "../review/ReviewModeControl";
-import { atLeastAnnotated, loadReviewMode, saveReviewMode } from "../review/reviewMode";
+import { atLeastAnnotated, INITIAL_REVIEW_MODE, type ReviewMode } from "../review/reviewMode";
 import { noteEngineShown, showsEngine } from "../personal/engineSeen";
 import type { Game, GameRecap, MoveAnnotation } from "../../types";
 
@@ -48,11 +48,12 @@ export function GameViewer({
    *  derivation the future aggregate folds (ADR-0017). */
   const [recap, setRecap] = useState<GameRecap | null>(null);
   /**
-   * The level for **this** review. Seeded from the remembered choice, and written
-   * back only when the Player themself picks one — the end-of-pass promotion below
-   * moves this review without speaking for the Player's other Games.
+   * The level for **this** review, and for no other. Every opening starts at
+   * Unaided (US-28): a level is never carried over from another Game, nor from
+   * another session. Neither this state nor the promotion below speaks for the
+   * Player's other Games, because there is nothing left that could.
    */
-  const [mode, setMode] = useState(loadReviewMode);
+  const [mode, setMode] = useState<ReviewMode>(INITIAL_REVIEW_MODE);
   const { status, nothingToDo, blocked, run, acknowledge, running } = useAnalysisPass(game.profileId);
   /** Positions a pass on this Game would search — one per half-move, plus the
    *  starting one. Read from the PGN so the cost can be quoted before any
@@ -74,10 +75,7 @@ export function GameViewer({
     // (ADR-0014), so the Profile is part of what the request asks for.
   }, [game.id, game.analyzed, game.profileId]);
 
-  const chooseMode = (next: typeof mode) => {
-    setMode(next);
-    saveReviewMode(next);
-  };
+  const chooseMode = (next: ReviewMode) => setMode(next);
 
   /**
    * The **provenance** of a future `Personal analysis` (US-16a): this Game had the
