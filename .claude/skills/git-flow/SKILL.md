@@ -106,7 +106,13 @@ git push origin --delete <branch>                      # delete remote (after ap
 
 ## Before coding — check your position
 
-On the 1st act of dev (code meant to be committed):
+**First, land in a worktree.** Several agents work on this repo at once, and the recipe — the
+`worktree add`, the upstream to unset, and the **three `node_modules` symlinks** a fresh worktree
+needs because `npm install` is not available — is in [WORKTREES.md](./WORKTREES.md). Read it before
+your first file change, not after: it also carries the `.gitignore` trailing-slash trap that put
+those symlinks on `develop` (PR #57).
+
+Then, on the 1st act of dev (code meant to be committed):
 
 ```bash
 git rev-parse --abbrev-ref HEAD   # where am I?

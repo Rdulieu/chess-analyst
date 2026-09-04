@@ -223,7 +223,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
     > counters), so this is where the pass sees the most.
 
 ## Checks
-### UI
+### Surface
 - Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **0** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers "Sélectionner". Every scoped screen afterwards carries the banner naming `DudulSmash`. Nothing on the list overflows its container — the pairing of those two states in one column is what used to.
 - Step 2: "Mes parties" carries its own heading, shows an invitation to import and **no import form** — the form is not on this screen since US-11, and the invitation leads to the Profile's page. With the restored empty history no Games are listed.
 - Step 3: the Profile's page (`/profiles/:id`) names the Profile and carries the import form: a first and a last month, category checkboxes and an Import button, and **no username field** at all. Both month fields default to the current month; each field is labelled above it (US-13's skeleton) and the Import button is the form's primary action, visibly distinguished from the secondary controls. The progress readout is visible during the run, is **determinate** (n/N, counted in months, N = 2 for this range), advances to N/N, and is gone once the Import completes.
@@ -269,7 +269,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   is imported and nothing is analysed by this step; a contrast failure outside the known-open list is
   **blocking**.
 
-### Backing store (optional)
+### Internals (optional)
 - The embedded SQLite database holds one row per imported Game with its chess.com URL, the Player's side, the Player-relative result and **the `Profile` it belongs to**; the same URL never appears twice **for that Profile** (dedup is per Profile since US-11 — two followed Profiles that played each other each hold their own copy, ADR-0014). The current-Profile selection is **not** in the database: it lives client-side (ADR-0014).
 
 ## Cleanup (best-effort)
