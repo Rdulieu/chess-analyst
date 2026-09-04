@@ -1074,8 +1074,13 @@
 
 ## In review
 
+## Done
+
 - **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
   niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.
+  > **Mergée dans `develop` le 2026-09-04** — PR [#104](https://github.com/Rdulieu/chess-analyst/pull/104)
+  > (`c272f9b`), avec US-29 (même branche d'intégration).
+  >
   > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur : une partie fraîchement
   > analysée s'est ouverte **en `Détaillé`**, alors que la lecture autonome suppose `Sans aide`.
   >
@@ -1172,6 +1177,9 @@
 - **US-29**: Colorer les glyphes de verdict dans la liste des coups — pour que la lecture du joueur
   se reconnaisse d'un coup d'œil dans la liste comme elle se reconnaît déjà sur les boutons et sur
   l'échiquier.
+  > **Mergée dans `develop` le 2026-09-04** — PR [#104](https://github.com/Rdulieu/chess-analyst/pull/104)
+  > (`c272f9b`), avec US-28 (même branche d'intégration).
+  >
   > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur, sur la page de lecture : *« les
   > glyphes de notation sont toujours blancs. J'aimerais qu'ils soient de la même couleur que la
   > lecture du joueur (couleur sur les boutons de sélection et dans le board). »*
@@ -1260,6 +1268,9 @@
 - **US-23**: Tenir la même route de revue partout — pour qu'un profil, la page `Analyse` et la lecture
   personnelle se conduisent de la même façon, avec le même clavier, la même liste des coups et les
   mêmes verdicts lisibles.
+  > **Mergée dans `develop` le 2026-09-02** — PR [#93](https://github.com/Rdulieu/chess-analyst/pull/93)
+  > (`1fcf9f3`), huit tranches, suite HP verte.
+  >
   > **Grillée le 2026-09-01** — neuf décisions et le relevé du code qui les fonde :
   > [`.scratch/review-route-consistency/GRILL-NOTES.md`](.scratch/review-route-consistency/GRILL-NOTES.md).
   > **ADR-0022 « Un échiquier, un auteur »** en sort ; `CONTEXT.md` rend `Evaluation` et `Annotation`
@@ -1361,8 +1372,6 @@
   > bloquants** que les tiers inférieurs ne pouvaient pas voir, tous corrigés dans leur tranche.
   > La hauteur du contrôle de verdict a été **arbitrée par le demandeur** (une ligne par rangée) ; le
   > relevé avant/après figure dans la PR. **L'agent n'a pas mergé.**
-
-## Done
 
 - **US-22**: Rendre la route de lecture agréable à tenir sur trente coups — pour qu'annoter une
   partie entière soit un exercice et non une corvée.
