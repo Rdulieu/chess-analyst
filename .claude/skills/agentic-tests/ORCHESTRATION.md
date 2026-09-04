@@ -407,6 +407,29 @@ for that edit:
 > minutes to re-check it.
 
 
+## O5b. A dispatched subagent cannot invoke a skill — inline what it needs
+
+Measured 2026-09-04, on the fresh-agent trial: a subagent given a real ticket found that
+`/verify-factory`, `/implement`, `/to-us`, `/to-spec`, `/to-tickets`, `/build-factory` and
+`/grill-with-docs` were **not in its available-skills list**. It could *read* `SKILL.md` and it did,
+executing the probes by hand — which worked **only because those probes are written as runnable
+shell**, verbatim, rather than described in prose.
+
+Two rules follow, and the second is the one that generalises:
+
+- **A dispatch that depends on a skill must inline what that skill would have done** — the commands,
+  the ports, the state, the report shape. That is why the dispatch checklist (the skill's §8) pins
+  facts rather than saying "follow the runner".
+- **Write a check as a command, not as an instruction.** A probe an agent can paste is a probe an
+  agent can run when the skill that owns it is out of reach. Every `L*` check in `verify-factory` is
+  written that way on purpose, and this run is the evidence that the choice pays.
+
+The same run also reproduced, on the first try, the failure the runner documents: a reviewer subagent
+finished, its transcript went quiet, and **no completion notification arrived**. The documented
+`SendMessage` recovery worked. §O1's "delivery works" therefore stands for the *scenario* fan-out and
+is **not** a promise about every nested dispatch — a subagent's own subagent is a case nothing here
+had observed before.
+
 ## O6. Costing a pass after the fact, from the transcripts
 
 **A pass is measured retroactively, and it is free.** Subagent transcripts carry **one timestamped
