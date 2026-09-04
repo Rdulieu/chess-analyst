@@ -58,12 +58,37 @@ Two corollaries follow, and both are decisions rather than consequences:
   counted a flagged Move's loss twice (once as an error, once inside its span), breaking the
   reconciliation this ADR is about, and its boundaries would have needed thresholds the Player cannot
   see — auditability defeated by the very object meant to serve it.
-- **Exclusion thresholds must be anchored to already-published numbers, not invented.** A Move is
-  excluded as *decided* when the Player's winning chances before it are under the `Inaccuracy` floor
-  (10%, `CONTEXT.md`), because the largest possible drop is then smaller than the smallest thing we
-  flag. Deliberately **asymmetric**: a symmetric band around equality would also exclude Moves played
-  while winning, deleting *failure to convert a won position* — a real and common weakness — from the
+- **An exclusion threshold is either anchored to an already-published number, or published with its
+  measured counterpart** — what it costs, counted on real Games. A Move is excluded as *decided* when
+  the Player's winning chances before it are under **10%** (`CONTEXT.md`, `Counted Move`).
+  Deliberately **asymmetric**: a symmetric band around equality would also exclude Moves played while
+  winning, deleting *failure to convert a won position* — a real and common weakness — from the
   tool's vocabulary. *Forced* means **one legal move**, which needs no engine.
+
+  > **Amended by US-37 (2026-09-04).** This consequence originally read "*anchored to
+  > already-published numbers, **not invented***", and justified the floor by arithmetic: the largest
+  > possible drop under it was smaller than the smallest thing we flag, so a Position there could not
+  > produce a flagged Move at all. That held only because the floor and the `Inaccuracy` band were the
+  > **same number** — one constant read in two places, measuring a *level* here and a *drop* there.
+  > The anchoring was a happy accident, and nobody had ever had to choose the 10.
+  >
+  > US-37 takes the band to **5** and keeps the floor at **10**, on measured grounds: agreement with
+  > lichess over the twenty-Game corpus goes from 53/96 to 79/96, while the counted Moves, the dead
+  > zone, the forced Moves and the total chances lost do not move at all. The two numbers therefore
+  > part, and the floor becomes exactly what the old wording forbade — an **invented** number.
+  >
+  > Rather than keep a principle the repository violates, the requirement is weakened to one that can
+  > be held: a threshold that cannot be derived must ship **with its price counted**. The floor's
+  > price is `81` Moves excluded against `2` shown-but-not-counted on that corpus. What is *not*
+  > weakened is the rest of this ADR: the exclusion reasons still travel by name, and the fold still
+  > sums recaps.
+  >
+  > **`Drift` survives this weakened, and that is worth saying plainly.** The band at 5 converts drift
+  > into named errors: 432 → 292 points on one corpus, 505 → 254 on the other. The argument that an
+  > aggregate must sum **recaps** rather than count faults was carried by drift being large; at 14% of
+  > Metalyst's losses it is no longer the headline. It is still a residual, still published, and still
+  > the thing no threshold reading can see — the reconciliation this ADR is about does not depend on
+  > its size.
 - **No error-nature label ships before it can be validated.** "Tactical error" / "positional error"
   is an inference of ours, not engine output, and the cheap criteria for it are wrong often enough to
   matter — which is the same objection that ruled out having a language model name motifs. Until a
