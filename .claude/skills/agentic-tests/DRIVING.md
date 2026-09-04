@@ -186,6 +186,11 @@ a helper is recognised as *this* returning, not as a new mystery.
 - **A `location.port` guard on every injected script.** Load-bearing, not belt-and-braces: it is
   what kept every action off the siblings' apps during those ~20 thefts. `theme-pass.mjs` puts
   one on everything it evaluates.
+- **`a[href$="/confrontation"]` also matches the navigation's own "Mes lectures" entry**, so a
+  naive count reports one confrontation link on the Analyse page *before* the reading is sealed —
+  a false red on the exact assertion that the entry appears only after the seal. The probe that
+  answers it is `[data-part="confrontation-entry"]` (measured 2026-09-04). General shape: **a
+  selector that matches the nav matches every page**.
 - **The review control and the curve are not named what a driver guesses.** Measured 2026-09-04,
   where a first probe reported `curve:false` at the `Annoté` level and it was a **false red**: the
   review control is `[data-part="review-mode"]` (not `review-level`), and the curve is
