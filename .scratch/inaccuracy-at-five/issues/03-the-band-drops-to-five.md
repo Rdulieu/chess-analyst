@@ -1,6 +1,6 @@
 # 03 — Le barème passe à 5
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
