@@ -1,6 +1,6 @@
 # 01 — Les deux constantes se séparent, à barème inchangé
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
