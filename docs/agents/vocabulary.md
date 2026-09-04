@@ -1,5 +1,12 @@
 # The factory's vocabulary
 
+> **How the files in this directory are written**, because nothing said so and a fresh agent had to
+> infer it from its siblings on 2026-09-04. They are in **English prose**, and strings quoted from
+> the repo's own corpus — `BACKLOG.md` markers, status fields, French UI labels — stay **verbatim**,
+> because an agent greps them byte for byte and the `L2` probe greps this directory. Lines wrap at
+> **~100 columns**. Wrap by hand: an automated reflow duplicated list and blockquote markers
+> (`- -`, `> >`) and corrupted a file on that same day.
+
 The words the **method** uses for its own artifacts — not the chess domain's words, which live in
 `CONTEXT.md` at the root. This file exists because the factory had no glossary of its own, and that
 absence is how `done` drifted into a status field unopposed (ADR-0026).

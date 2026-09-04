@@ -73,6 +73,18 @@ delivery coordinates were invented**.
 So: when asked whether an old ticket was delivered properly, **the absence is stated, not guessed**.
 That is a fact of the history, not a debt.
 
+## Finished but deliberately unmerged — stay `ready-for-agent`
+
+A third case, found by a fresh agent on 2026-09-04 and absent from the two above: **the work is
+done, the gate is green, and the merge was deliberately withheld** (a trial run, a ticket held for a
+human decision, a branch waiting on something else).
+
+**Leave the status at `ready-for-agent`.** There is no merge, so there is no sha and no PR, and a
+bare `done` is exactly what the rule above forbids — it would claim a record that does not exist.
+Say what happened in the ticket's `## Comments` instead: the gate result, the commit, and **why** it
+was not merged. The status field says *what should happen next*, and what should happen next is
+still a merge.
+
 ## A feature is closed when all its tickets are delivered
 
 One level up, and for free: a `.scratch/<feature>/` directory is **closed** when every ticket in it

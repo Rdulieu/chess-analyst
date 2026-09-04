@@ -219,8 +219,11 @@ not findings about the app, and a reviewer must not have to work out which is wh
 Before sending a scenario to a subagent, confirm its prompt carries all eight. The first is the
 one that silently loses runs.
 
-- [ ] **Deliver the report via `SendMessage`** on completion. Collect on the first copy; the second
-      is not a second report (§5.2)
+- [ ] **Deliver the report via `SendMessage`** on completion, **to `main`** — and say the target in
+      the prompt. A name the dispatcher invented is not reachable: on 2026-09-04 a scenario was told
+      to send to `orchestrator`, found no such agent, and fell back to `main` on its own initiative.
+      An agent that did not think of the fallback would have looked like a lost report. Collect on
+      the first copy; the second is not a second report (§5.2)
 - [ ] Its own server, client and CDP ports, its own `DB_FILE`, and **its own private browser** — not
       the shared one (`DRIVING.md §D1`, where the page thefts are)
 - [ ] **Concurrency derived from the machine**, `min(3, floor(nproc / 4))` — §5.1. Never carry a

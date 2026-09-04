@@ -55,8 +55,12 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 - `Profile` scoping (US-11, ADR-0014): a reading and its Confrontation belong to the Profile that
   owns the Game, and are unreachable under another.
 - The stylesheet and the dark theme (US-13): the final step walks all nine screens in both themes.
-  This scenario is the only pass whose state holds **analysed** Games, so it is where `/danger`,
-  the `Evaluation curve` and the advantage bar are audited **populated** rather than empty.
+  This scenario is the only pass whose state holds **analysed** Games, so it is where the
+  `Evaluation curve` and the advantage bar are audited **populated** rather than empty.
+  **Not `/danger`** — corrected 2026-09-04, and step 15's own note had already withdrawn it while
+  this bullet still asserted it. This scenario's two long lost Games share no recurring Position, so
+  `/danger` renders its empty state here. Two clauses of one scenario disagreed for a whole release
+  and nothing failed loudly, which is the failure mode the runner's §5.4 exists to catch.
 
 ## Preconditions
 - App started locally, on this scenario's own port and its own database file.
@@ -162,8 +166,9 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
   (3:1 for large text) against the ground actually painted behind it, nothing scrolls sideways, every
   meaning-bearing tint still carries its non-chromatic cue, and `--white-share`, `--black-share` and
   the board's square tokens are **identical** between the two themes. Full rule list, tooling and
-  known-open exceptions: [`theme-pass.md`](./theme-pass.md). Specific to this scenario: `/danger`,
-  the `Evaluation curve` and the advantage bar are audited **populated**; on the `Confrontation`, the
+  known-open exceptions: [`theme-pass.md`](./theme-pass.md). Specific to this scenario: the
+  `Evaluation curve` and the advantage bar are audited **populated** (`/danger` is not — see the
+  Drive-by note); on the `Confrontation`, the
   **matrix** is the table to watch — its diagonal must stay marked by its glyph and not by its tint,
   and it must scroll **inside its own box** in a narrow window while the page body does not scroll
   sideways. A contrast failure outside the known-open list is **blocking**.

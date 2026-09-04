@@ -26,10 +26,11 @@ git -C .claude/worktrees/<US>-<slug> branch --unset-upstream
 branch's upstream, so a bare `git push` would target `develop` — the one branch the agent must
 never push to.
 
-`.gitignore` declares `.claude/worktrees/`, which is why that is the declared home. Note that no
-live worktree has ever actually used it — the ones on this machine sit beside the repo as siblings.
-**US-39** is open for the worktree mechanism itself (declared location vs. real, dependencies,
-destruction); this annex documents what works today rather than settling that.
+`.gitignore` declares `.claude/worktrees/`, and on **2026-09-04** a worktree was created there for
+the first time and it works — the earlier ones on this machine all sat beside the repo as siblings,
+which is why the symlink depths below had never been exercised. **US-39** stays open for the rest of
+the mechanism (destruction, a stale worktree holding a merged branch, what happens when the sibling
+whose `node_modules` you borrowed is deleted); this annex documents what is known to work.
 
 **The story branch may already be checked out in the main checkout.** Then you are already isolated
 — that checkout *is* this story's workspace — and adding a worktree would mean moving the branch.
@@ -42,15 +43,29 @@ client (`@vitejs/plugin-react` and `sass` live in `client/node_modules`). `npm i
 by the permission classifier, so the way through is to borrow a sibling worktree's install — **three
 links, because each workspace has its own tree**:
 
+**The links are relative, so their depth depends on where the worktree sits.** Count it; do not
+copy a path. From the declared home `.claude/worktrees/<name>/`, the sibling checkouts beside the
+repo are **four** levels up (five from `client/` and `server/`):
+
 ```bash
-ln -s ../<sibling>/node_modules            node_modules
-ln -s ../../<sibling>/client/node_modules  client/node_modules
-ln -s ../../<sibling>/server/node_modules  server/node_modules
+# from .claude/worktrees/<name>/
+ln -s ../../../../<sibling>/node_modules             node_modules
+ln -s ../../../../../<sibling>/client/node_modules   client/node_modules
+ln -s ../../../../../<sibling>/server/node_modules   server/node_modules
 ```
 
-Check the manifests match the sibling first (`diff -q` on the three `package.json` files). Do this
-**as the first step**, before running any test: without it every client test and the client build
-fail at startup with `ERR_MODULE_NOT_FOUND`, which looks exactly like a code error and is not one.
+From a worktree that is itself a sibling of the repo, it is two levels less (`../<sibling>/…`,
+`../../<sibling>/…`) — which is the form this recipe carried until 2026-09-04, when the first
+worktree actually created at the declared location found it off by two. **Verify, don't trust**:
+
+```bash
+diff -q package.json ../<...>/package.json    # and the two workspace manifests
+node -e "require.resolve('vitest')"           # resolves ⇒ the links are right
+```
+
+Do this **as the first step**, before running any test: without it every client test and the client
+build fail at startup with `ERR_MODULE_NOT_FOUND`, which looks exactly like a code error and is not
+one.
 
 ## Never `git add -A` in a worktree with symlinked deps
 
@@ -78,6 +93,24 @@ at the base commit beside the feature one, run an app instance from each, and di
 costs one `git worktree add` and three symlinks, and it produced 12 recaps compared byte for byte
 and one Game's whole `<main>` character for character. The two instances need their own ports and
 databases: see `agentic-tests/DRIVING.md §D0`.
+
+## Retiring a worktree — remove the symlinks first
+
+`git worktree remove` refuses a worktree whose tree is dirty, and **the three `node_modules`
+symlinks are untracked files**, so they count as dirt. Remove them, then the worktree, then the
+branch — in that order (measured 2026-09-04, the first clean retirement at the declared location):
+
+```bash
+rm -f <wt>/node_modules <wt>/client/node_modules <wt>/server/node_modules
+git worktree remove <wt>
+git branch -d <branch>          # -d, never -D: it refuses if the branch is not merged
+```
+
+Keep `-d`. It is the check that the work actually landed somewhere, and it is the only thing
+standing between "tidying up" and losing a branch. And remember the other direction, from the
+`git-flow` *Cleanup* section: a **merged branch held by a worktree cannot be deleted**, and the fix
+is to retire the worktree — which is not yours to do if the worktree is someone else's live
+workspace.
 
 ## What you lose in a worktree, and what it is for
 

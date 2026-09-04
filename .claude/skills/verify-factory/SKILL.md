@@ -170,7 +170,12 @@ force it. Signpost the `git-flow` skill.
 Two probes, both about `docs/agents/us-format.md` (the update-safe project copy that `/build-factory`
 seeds and that `/to-us` reads):
 
-- **State** — absent → not seeded yet (**signpost `/build-factory`**). Present and byte-identical to
+- **State** — absent → not seeded yet. Upstream signposts `/build-factory` here; **that advice is
+  wrong in this repo**, which does not replay it (`CLAUDE.md`, ADR-0025) — and a check that hands
+  out advice the repo refuses is worse than a check that says nothing. **Signpost instead: infer the
+  layout from the User Stories already in the business backlog**, which is where the real form
+  lives. Found on 2026-09-04, with 43 User Stories already following a sharp and consistent form
+  that no file described. Present and byte-identical to
   the core default `skills/to-us/US-FORMAT.md` → **default (untailored)**. Present and diverged →
   **tailored** (the project shaped its own US layout — expected, report it as healthy).
 - **Layout drift** — sample a handful of existing User Stories from the business backlog (read them

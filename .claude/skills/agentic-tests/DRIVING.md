@@ -186,6 +186,68 @@ a helper is recognised as *this* returning, not as a new mystery.
 - **A `location.port` guard on every injected script.** Load-bearing, not belt-and-braces: it is
   what kept every action off the siblings' apps during those ~20 thefts. `theme-pass.mjs` puts
   one on everything it evaluates.
+- **`a[href$="/confrontation"]` also matches the navigation's own "Mes lectures" entry**, so a
+  naive count reports one confrontation link on the Analyse page *before* the reading is sealed —
+  a false red on the exact assertion that the entry appears only after the seal. The probe that
+  answers it is `[data-part="confrontation-entry"]` (measured 2026-09-04). General shape: **a
+  selector that matches the nav matches every page**.
+- **The review control and the curve are not named what a driver guesses.** Measured 2026-09-04,
+  where a first probe reported `curve:false` at the `Annoté` level and it was a **false red**: the
+  review control is `[data-part="review-mode"]` (not `review-level`), and the curve is
+  `[data-part="curve"]` with `[data-part="graph-label"]`, carrying `line[data-mark="cursor"]` and
+  `line[data-mark="equality"]` (not `evaluation-curve`). Read the attribute from the DOM, do not
+  infer it from the feature's name.
+- **`[data-square="a1"].closest("div").parentElement` is one square, not the board** — it measures
+  68×68. The board is the **union of all `[data-square]` rects** (544×544). Measured 2026-09-04;
+  same shape as the tint-on-a-child-div trap below: the square's box and the board's box are two
+  different questions.
+- **A re-attached session does not inherit the previous session's viewport override.** Set the
+  viewport in **every** phase: measured 2026-09-04, a phase that re-attached read "Mes parties" at
+  the headless default of 780 px while believing it was at 1280. No assertion suffered that day,
+  which is exactly why it is worth writing down — the next one may not be a width the layout
+  survives.
+- **Headless Chrome here defaults to `prefers-color-scheme: dark`.** The whole journey of a scenario
+  therefore renders in the dark palette unless something says otherwise (`matchMedia` true, body
+  `rgb(22,24,26)` — re-confirmed 2026-09-04). Harmless *because* the theme pass emulates both halves
+  explicitly and asserts the theme in-script; it would not be harmless for a hand-rolled screenshot
+  comparison.
+- **A Note reads as pending before it reads as saved.** Straight after typing and blurring, the panel
+  says `Enregistrée en quittant le champ.`; only after leaving the ply and coming back does it say
+  `Note enregistrée.`. It looks exactly like a lost Note — re-measure by navigating away and back
+  before reporting one (measured 2026-09-04). Same family as the `blur()`-on-an-unfocused-element
+  trap below.
+- **The board mounts a beat AFTER the page text settles.** A settle helper that waits on
+  network-quiet plus a stable `innerText` is satisfied while `[data-square]` count is still **0** —
+  measured 2026-09-04 on `/explorer`, which read 0 squares and 0 arrows on a screen that had 64 and
+  4. The generic wait is not wrong, it is early: **wait on the subject itself** (64 squares present,
+  the arrow `<svg>` carrying its `hsla` present). Same family as the in-page drill-down below: the
+  page is not the component.
+- **On `/stats`, a `tbody`'s accessible name comes from `aria-labelledby`, not `aria-label`.**
+  Reading the wrong attribute returns `null` on all three row groups and looks exactly like three
+  missing names (measured 2026-09-04; the groups resolve to "Total" / "Par cadence" / "Par côté").
+  Recorded because this is the **third** time a driver reading the wrong attribute has produced a
+  near-finding on this suite — resolve the accessible name, do not guess which attribute carries it.
+- **`setField` cannot drive a `<select>`.** It picks `HTMLTextAreaElement.prototype` or
+  `HTMLInputElement.prototype` for the native value setter, so on a select it calls the wrong
+  setter and nothing takes. Read from the code and hit on 2026-09-04, on the one control where it
+  matters: path 0 step 4 chooses the **Platform** there. Until the library grows a select branch,
+  hand-roll an `HTMLSelectElement.prototype` setter plus `input`/`change`, **and read the value
+  back** — every path-0 run currently re-derives those five lines, which is what ADR-0020 says the
+  library exists to stop.
+- **A *re-attached* session carries no `.stop()`.** `launchBrowser` attaches `stop` to the session it
+  returns; `attach()` does not. §D0 tells you to `process.exit(0)` and re-attach across shell calls,
+  and the teardown written by symmetry then throws `session.stop is not a function` — measured
+  2026-09-04, after every assertion had already been written, which is the good case. Tear the
+  browser down **by pid**, having proved it yours from `/proc/<pid>/cmdline` (your own
+  `--user-data-dir`, your own `--remote-debugging-port`).
+- **The app's detached children can die on their own between two shell calls**, and `stopApp` then
+  returns `{killed: [], spared: [], portsFree: true}`. Measured 2026-09-04 across a shell-call
+  boundary the app had already survived three times; the live database was left holding a 4.1 MB
+  `-wal`, the signature of a process that did not close cleanly. **`killed: []` with free ports is
+  the signal, not a broken helper** — and it matters because a death *mid-import* would leave a
+  partial shared state that three scenarios then restore. The library starts the app with
+  `stdio: ignore`, so there is no log to diagnose it further from; say so rather than inventing a
+  mechanism.
 - **Never trust a theme you merely requested.** Colour-scheme emulation has failed in **both**
   directions across four runs — set over a CDP session then detached, it silently reverted (two
   agents, 2026-08-24, each auditing the dark palette twice); on another run the same emulation
