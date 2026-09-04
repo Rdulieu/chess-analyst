@@ -42,6 +42,15 @@ git fetch upstream
 HTTPS on purpose: the repo is public and read-only for us, so it needs none of this repo's SSH
 identity.
 
+> **The name `upstream` has a side effect on `gh`, and it is not obvious.** The GitHub CLI treats a
+> remote called `upstream` as this repo's **parent**, and from then on resolves commands against it.
+> `gh pr create` then fails with a puzzling `No commits between develop and integration/… · Head ref
+> must be a branch` — it was looking for our branches in *Loulen's* repo, where they do not exist.
+> Measured 2026-09-04, opening PR #108. **Pass `--repo Rdulieu/chess-analyst` to every `gh` command
+> that acts on this repo**, or pin it once with `gh repo set-default Rdulieu/chess-analyst`. The
+> remote's name is kept — it is the conventional one and `.claude/UPSTREAM.md` is where the surprise
+> is recorded, which is cheaper than a convention nobody else uses.
+
 ## The two commands
 
 **What did upstream change since our base?**

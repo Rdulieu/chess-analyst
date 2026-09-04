@@ -36,6 +36,12 @@ We speak of MR/PR (depending on the technical backlog, see `docs/agents/issue-tr
 - **`integration/*` -> `develop`**: human decision. Before the PR, the agent **runs the HP suite** (`/agentic-tests HP`) and **pastes the result** into the PR (pass/fail + findings); if the feature warrants it, it **proposes co-creating an HP** — **at most 3 HP** (otherwise: merge two journeys, drop a non-critical one, or graft drive-by). The PR **lists the included tickets** for a readable batch review. The agent opens the PR and gives the link; never merges. Once a human merges it, the integration branch is done — clean it up (see *Cleanup*).
 - **`develop` -> `main`**: human decision. On request, the agent opens the PR and gives the link; never merges.
 
+> **`gh` needs `--repo` here.** This repo has a remote named `upstream` (the factory's source, see
+> `.claude/UPSTREAM.md`), and the GitHub CLI reads that name as "this repo's parent" and resolves
+> against it. `gh pr create` then fails with `No commits between … · Head ref must be a branch`,
+> which reads like a broken branch and is a wrong repo. Pass
+> `--repo Rdulieu/chess-analyst`. Measured 2026-09-04 on PR #108.
+
 ## After opening a PR — check it is still mergeable
 
 **Opening the PR is not the end of the job.** `develop` moves while you work, and a PR that was
