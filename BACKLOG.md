@@ -749,6 +749,25 @@
   > - Environ **1,7× plus de glyphes** à l'écran (mesuré : **85 → 143** coups signalés sur les vingt
   >   parties du corpus) : à re-regarder sur la page `Analyse`, c'est le seul
   >   point que la mesure ne peut pas trancher.
+  >
+  > **Grillée (léger) le 2026-09-04.** PRD et quatre sous-issues sur
+  > [`.scratch/inaccuracy-at-five/`](.scratch/inaccuracy-at-five/PRD.md), branche d'intégration
+  > `integration/US-37-inaccuracy-at-five` :
+  > `01-the-two-constants-part`, `02-the-recap-splits-the-gap`, `03-the-band-drops-to-five`,
+  > `04-hp-suite-and-the-pr` (HITL).
+  >
+  > Le grill a confirmé les quatre décisions déjà prises et **trouvé une régression que la story
+  > créait** : le récapitulatif d'une partie explique l'écart entre coups montrés et erreurs
+  > comptées par une phrase écrite en dur, « le coup était forcé ». À barème 5, l'écart peut venir
+  > d'une position déjà décidée, et la phrase ment. D'où la tranche 02, qui répare **avant** que 03
+  > ne casse. `CONTEXT.md` amendé, **ADR-0017 amendé sur place** (sa 2e conséquence posait un
+  > principe — « un seuil d'exclusion est adossé, jamais inventé » — que le plancher à 10 enfreint
+  > dès qu'il cesse d'être un corollaire du barème), note sur ADR-0023.
+  >
+  > **Deux constats enregistrés sans action**, par décision du demandeur : la densité de glyphes
+  > (×1,7, tous des `?!`) est un constat et non un problème — on regarde après ; et la
+  > `Confrontation` étant calculée à la lecture, les 3 lectures scellées et leurs 97 verdicts
+  > seront re-jugés contre un barème qui n'existait pas au scellement — constat seul.
 
 ## Doing
 
