@@ -11,13 +11,13 @@ export type MoveSeverity = "inaccuracy" | "mistake" | "blunder";
  * to) precisely so that retuning one cannot silently move the other: a drop and
  * a level answer different questions, and nothing says they must agree.
  */
-export const INACCURACY_DROP = 10;
+export const INACCURACY_DROP = 5;
 
 /**
  * The Player-relative winning-chances drop for one of their own Moves —
  * `winBefore` from the Position before it (best play), `winAfter` from the
  * Position after (Move actually played), both already Player-relative
- * (CONTEXT.md `Inaccuracy`/`Mistake`/`Blunder`). A drop under 10% is not
+ * (CONTEXT.md `Inaccuracy`/`Mistake`/`Blunder`). A drop under 5% is not
  * flagged — this also covers a weak Move played while already (near-)winning
  * or lost: winning chances saturate near the extremes, so the drop stays
  * small regardless of the underlying centipawn swing.
