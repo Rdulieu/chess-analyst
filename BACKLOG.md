@@ -777,7 +777,8 @@
 
   >
   > **Mergée dans `develop` le 2026-09-04** — PR
-  > [#106](https://github.com/Rdulieu/chess-analyst/pull/106) (`6f93c65`).** Quatre tranches, les trois premières auto-mergées sur gate local vert
+  > [#106](https://github.com/Rdulieu/chess-analyst/pull/106) (`6f93c65`). Quatre tranches, les trois
+  > premières auto-mergées sur gate local vert
   > (build + tests + lint + FP), la quatrième — suite HP et PR — étant la seule décision humaine.
   > **Suite HP 3/3 verte** plus son prérequis ; **aucun finding bloquant, et aucun finding sur
   > l'application** sur les quatre runs.
