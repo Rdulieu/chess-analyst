@@ -305,6 +305,11 @@ a helper is recognised as *this* returning, not as a new mystery.
   reports an unmarked board while the tint is right there. Measured 2026-09-01 on the FP of
   US-23-06: a false red, lifted only by re-reading the DOM. `squareTints()` in the page half
   now reads the right node; use it rather than writing the lookup again.
+- **The Analyse move list has MORE children than plies in `Détaillé`.** The phase ribbons are
+  `<li>`s of the same `<ol>` — 47 children for 45 plies, measured 2026-09-04 — so a driver mapping
+  `index + 1 → ply` reads the wrong Move, and HP-03 briefly recorded a flagged **opponent** Move that
+  way. **Asymmetric**, which is what makes it bite: the reading route's list carries no ribbons and
+  maps 1:1, so a helper verified there is wrong here. Key on the SAN text.
 - **After `open()`, `location.port` can still be empty on the first evaluate** — and the port
   guard then fires against a blank document ("port guard: this is , not 5232"), which looks exactly
   like the theft it exists to catch. Measured 2026-09-01: `Page.loadEventFired` had evidently been
@@ -386,6 +391,63 @@ Not as a chore at the end — as part of the run, because the run is the only ex
 settle any of it.
 
 Answer these, and write the answers down:
+
+> **Audit of 2026-09-04 (US-37, seven subagents: three FPs, then path 0, then the full HP suite).**
+> Delivery worked **7 of 7**, unprompted. §5.1 stays closed, now across seven consecutive suites, and
+> §5.2 stays **unexercised** an eighth time. §5.7's cap of **2** was respected and **the machine did
+> not freeze** — a second full suite under the rule. One deliberate scheduling choice worth keeping:
+> the two scenarios that spend engine time are HP-01 and HP-03, so they were **not** paired; HP-01
+> ran beside HP-02 (which analyses nothing), and HP-03 took the slot HP-02 freed. The cap says how
+> many, not which — pairing the two expensive ones wastes the cap's whole point.
+>
+> **The FPs used one worktree per STATE, not merely per agent** — a `-before` worktree at the
+> integration branch and the feature worktree beside it, so a single agent could drive two instances
+> of the app, one on each commit, and diff what the screen said. That is what turned three "identity"
+> Feature Paths into real evidence: 12 recaps compared byte-for-byte, and on one Game the whole
+> `<main>` character-for-character. It costs a `git worktree add` and three `node_modules` symlinks.
+>
+> **Two traps repaid, both new enough to record:**
+> - **A `nohup … &` launched from a Bash tool call dies with the shell at the tool's 2-minute
+>   timeout.** Hit by path 0 and by HP-01. What it launched (the app, the import) survives server-side,
+>   so the run is recoverable by re-reading the screen from a fresh CDP session — but a *polling loop*
+>   killed mid-flight hands back a partial reading that looks like a finished one. Detach with `setsid`,
+>   or split the drive across several calls.
+> - **In `Détaillé` the Analyse move list has MORE children than plies** — the phase ribbons
+>   ("DÉBUT DU MILIEU DE PARTIE", "DÉBUT DE LA FINALE") are `<li>`s, 47 for 45 plies. A driver mapping
+>   `index + 1 → ply` reads the wrong Move, and HP-03 briefly recorded a flagged **opponent** Move on
+>   that basis. The trap is **asymmetric**: the reading route's list has no ribbons and maps 1:1. Key
+>   on the SAN text, not the index. Same family as the `[data-square]` fact.
+>
+> Also observed, smaller: `attach()` returns a session carrying `close`, **not** `stop` (only
+> `launchBrowser`'s does) — a teardown written by symmetry throws; `selectProfile` leaves the browser
+> on `/profiles`, so a `gameRows()` straight after returns **0** and reads exactly like an empty list;
+> piping a driver script to `head` kills it by SIGPIPE **before** it writes its results, losing a whole
+> pass; and `restoreSnapshot` refuses a target whose leftover `-wal` still holds frames, so delete the
+> target's sidecars first.
+>
+> Driver-produced false findings: **five**, every one caught by re-measuring, none reaching a report as
+> a defect. The one worth naming is not a driver bug at all: an FP found the displayed Drift a tenth
+> below its own exact arithmetic on 4 Games of 12, and nearly filed it — the panel shows the Drift as
+> the **difference of the rounded parts** so that `flagged + drift = lost` holds *on screen*, and the
+> code says so. "Do not presume the app is wrong" earned its place again.
+>
+> **A finding about the SUITE, and it is the same lesson as the entry below, recurring.** HP-01's step
+> 10 still required the `Review mode` to persist across a reload and across Games — a rule **US-28
+> withdrew**, and which step 9 of the same scenario had already been updated to contradict. The
+> scenario disagreed with itself for a whole release and nothing failed loudly, because the stale
+> clause described a behaviour that had simply become impossible. Rewritten in this run, and the
+> assertion came out **stronger**: it now asserts the reset rather than the persistence. The rule
+> stands and deserves restating: **a story that withdraws a rule owes the permanent suite a pass** —
+> and grepping the suite for the withdrawn behaviour costs minutes, where finding it costs a release.
+>
+> A second-order consequence of the same withdrawal, for `theme-pass.md` rather than for a scenario:
+> since every review opens **Unaided**, the theme pass audits `/analyse` with no curve, no advantage
+> bar and no severity glyph unless its opener **raises the Game to a level and waits for the review
+> fieldset to render**. HP-01 hit it (its opener clicked Détaillé before the fieldset existed) and
+> closed the hole with four supplementary readings rather than reporting the cue as verified; HP-03
+> pinned its opener to a Game in `Détaillé` and asserted the curve was present **before** auditing.
+> That second shape is the one to copy. It is §5.8's "the pass does not choose the Game — you do",
+> one level deeper: since US-28 the right Game is no longer enough.
 
 > **Audit of 2026-09-04 (US-28/US-29, five subagents: three FPs then path 0 then HP-03).** Delivery
 > worked **5 of 5**, unprompted, each report arriving twice — §5.1 stays closed, now across six

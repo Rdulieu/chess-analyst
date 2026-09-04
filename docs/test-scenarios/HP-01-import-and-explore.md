@@ -176,8 +176,10 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    grosse erreur ??` — the category spelled out and the glyph repeated, so the tint is never the only
    cue). Ask it for the **detailed** level → the reviewed Move's own **titled** record appears below
    the board row, and a link beside the board leads to it; the board itself is **whole on arrival** at
-   all three levels. Reload → the level asked for is still the one shown, and opening **another** Game
-   opens it at that same level without asking again.
+   all three levels. Reload → the Game comes back **Unaided**, and opening
+   **another** Game opens it Unaided too: since US-28 the `Review mode` is not remembered, and a
+   review that started from the engine's verdict was never a blind one. Asking for a level is a
+   choice made per Game, per visit.
 
    > **Why here and not as a scenario of its own**: the curve needs a Game with real
    > `Evaluation`s, which this step has just produced — it costs one navigation and no engine
