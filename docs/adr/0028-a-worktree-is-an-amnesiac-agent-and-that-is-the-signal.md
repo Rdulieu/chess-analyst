@@ -32,6 +32,34 @@ dispatched into a new worktree, asked to run a real slice, either finds the work
 the driver, the ceiling and the gate on its own, or names the recipe that is still missing. That is
 the story's proof, and it costs one pass.
 
+## Addendum, 2026-09-04 — a *subagent* in a worktree is not an amnesiac agent
+
+The trial this ADR designed was run, and it **falsified its own instrument**. Memory is indexed by
+working path, as stated — but the path that indexes it is the **session's**, not the agent's. A
+subagent dispatched into a fresh worktree still belongs to the parent session, so it reads that
+session's memory in full. Measured the same day: the worktree at `.claude/worktrees/factory-health-01`
+produced **no memory directory at all**, while the subagent working there had the main checkout's
+**58** entries.
+
+The proof is in its own report. Asked which recipes it had to rediscover, it answered that the
+fan-out ceiling `min(3, floor(nproc / 4))` "lives in my memory, **not in the repo**". That is false —
+it is in `agentic-tests/SKILL.md` §5.1 and `ORCHESTRATION.md` §O4, put there hours earlier. It was
+wrong *because* it had the memory and therefore never looked. A better demonstration of the defect
+this ADR describes would be hard to design, and it arrived by accident.
+
+So: **only a new session opened in the worktree is a fresh agent.** The instrument survives, the
+dispatch does not — and the difference is a human gesture (starting a session there), not something
+an orchestrator can arrange for itself.
+
+**What the trial proved anyway, and it is not nothing.** Given only a ticket and the repo, the agent
+found in writing: the gate and its `lint` clause, `/implement` and the independent review role, the
+`L*` probes verbatim and runnable, that `/build-factory` is not replayed here, that a bare `done` is
+forbidden, the ticket conventions, and the vocabulary constraints on its own output. What it had to
+work out — the language and wrap of `docs/agents/`, "finished but deliberately unmerged", that a
+dispatched subagent cannot invoke a skill — is now written down. **The repo answered every question
+it was actually asked**; the open question is what a genuinely memoryless agent would have asked
+instead.
+
 ## Considered options
 
 - **Symlink the worktree's memory directory onto the main one.** Rejected. It is an environment
