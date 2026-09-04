@@ -186,6 +186,27 @@ a helper is recognised as *this* returning, not as a new mystery.
 - **A `location.port` guard on every injected script.** Load-bearing, not belt-and-braces: it is
   what kept every action off the siblings' apps during those ~20 thefts. `theme-pass.mjs` puts
   one on everything it evaluates.
+- **`setField` cannot drive a `<select>`.** It picks `HTMLTextAreaElement.prototype` or
+  `HTMLInputElement.prototype` for the native value setter, so on a select it calls the wrong
+  setter and nothing takes. Read from the code and hit on 2026-09-04, on the one control where it
+  matters: path 0 step 4 chooses the **Platform** there. Until the library grows a select branch,
+  hand-roll an `HTMLSelectElement.prototype` setter plus `input`/`change`, **and read the value
+  back** — every path-0 run currently re-derives those five lines, which is what ADR-0020 says the
+  library exists to stop.
+- **A *re-attached* session carries no `.stop()`.** `launchBrowser` attaches `stop` to the session it
+  returns; `attach()` does not. §D0 tells you to `process.exit(0)` and re-attach across shell calls,
+  and the teardown written by symmetry then throws `session.stop is not a function` — measured
+  2026-09-04, after every assertion had already been written, which is the good case. Tear the
+  browser down **by pid**, having proved it yours from `/proc/<pid>/cmdline` (your own
+  `--user-data-dir`, your own `--remote-debugging-port`).
+- **The app's detached children can die on their own between two shell calls**, and `stopApp` then
+  returns `{killed: [], spared: [], portsFree: true}`. Measured 2026-09-04 across a shell-call
+  boundary the app had already survived three times; the live database was left holding a 4.1 MB
+  `-wal`, the signature of a process that did not close cleanly. **`killed: []` with free ports is
+  the signal, not a broken helper** — and it matters because a death *mid-import* would leave a
+  partial shared state that three scenarios then restore. The library starts the app with
+  `stdio: ignore`, so there is no log to diagnose it further from; say so rather than inventing a
+  mechanism.
 - **Never trust a theme you merely requested.** Colour-scheme emulation has failed in **both**
   directions across four runs — set over a CDP session then detached, it silently reverted (two
   agents, 2026-08-24, each auditing the dark palette twice); on another run the same emulation
