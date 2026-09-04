@@ -774,7 +774,8 @@
   > seront re-jugés contre un barème qui n'existait pas au scellement — constat seul.
 
   >
-  > **Livrée le 2026-09-04.** Quatre tranches, les trois premières auto-mergées sur gate local vert
+  > **Livrée le 2026-09-04 — [PR #106](https://github.com/Rdulieu/chess-analyst/pull/106), en attente
+  > du merge humain.** Quatre tranches, les trois premières auto-mergées sur gate local vert
   > (build + tests + lint + FP), la quatrième — suite HP et PR — étant la seule décision humaine.
   > **Suite HP 3/3 verte** plus son prérequis ; **aucun finding bloquant, et aucun finding sur
   > l'application** sur les quatre runs.
