@@ -187,6 +187,13 @@ for (const side of ["white", "black"]) {
 }
 ```
 
+**c. Par les PGN, pour interroger « son N-ième coup ».** La table est indexée par position, donc
+elle **fusionne les transpositions** — ce qui est ce qu'on veut pour balayer, et ce qu'on ne veut
+pas pour dire « au quatrième coup il joue X dans n parties ». Pour cette question-là, construire
+l'arbre en **préfixes de coups** depuis les PGN (`g['_mine'][3]`, etc.) : chaque partie compte une
+fois et une seule, et les effectifs s'additionnent. Les deux lectures sont justes ; elles ne
+répondent pas à la même question.
+
 > **Un compte enfant peut dépasser son parent.** Les habitudes sont indexées par **position**, donc
 > les transpositions fusionnent : `4…Nd7` peut afficher 81 parties sous un `4.Nc3` qui n'en compte
 > que 59, parce que la même position est atteinte par d'autres ordres de coups. Ce n'est pas une
@@ -236,6 +243,30 @@ résultat. Un écart franc (7,8 s dans les victoires contre 1,2 s dans les défa
 **h. La trajectoire de classement.** Elo moyen par mois. Un solde nul sur mille parties est un
 résultat en soi : le volume entretient le niveau, il ne le déplace pas.
 
+**i. La trajectoire des chances aux demi-coups fixes** — la lecture qui répond à « *où* se
+trompe-t-il », et la seule. Quand les parties sont analysées, relever `whiteWinChances` (côté
+joueur : `100 −` s'il a les noirs) aux **mêmes plies** (10, 20, 30, 40) et comparer **deux
+sous-ensembles du même joueur** : le répertoire suspect contre un témoin. Sur DudulSmash, ses
+parties `1.b3` donnaient 54,0 → 45,7 → 38,9 → 29,5 quand ses parties noires donnaient
+46,6 → 44,7 → **53,3** → 43,5. Conclusion que rien d'autre ne pouvait produire : l'ouverture ne le
+met pas en retard, elle le met dans une position qu'il ne sait pas jouer — et sa courbe ne remonte
+jamais là où l'autre se redresse. **Sans le témoin, la courbe descendante ne prouve rien** : toutes
+les courbes de parties perdues descendent.
+
+**j. Le point de bifurcation, pas la moyenne de la ligne.** « Cette ouverture rend 44 % » ne se
+travaille pas. Descendre l'arbre coup par coup et chercher un **écart de 15 points ou plus entre
+deux choix également fréquents** : sur DudulSmash, `4.Bb5` (19 parties, 57,9 %) contre `4.Nf3`
+(17 parties, 35,3 %). C'est actionnable pour deux raisons — le joueur a **déjà** la bonne réponse
+dans ses propres parties, et il n'y a rien à apprendre, juste un choix à faire. Vérifier que le
+partage n'est pas un effet de calendrier (les deux bras doivent couvrir les mêmes mois).
+
+**k. Les six demi-coups autour de chaque bévue.** Le motif ne se lit pas dans les agrégats. Pour
+chaque coup flagué le plus cher, imprimer les trois coups avant et après en SAN : trois bévues de
+DudulSmash ont ainsi révélé **le même mécanisme** — la diagonale de son fou b2, ouverte contre
+lui-même (`8.cxd5?? Bxb2 9.dxe6 Bxa1`), puis l'autre diagonale (`6.h3 Bh5 7.Ne5?? Bxd1`), puis le
+roi resté au centre (`19.Kd1 … 22.Rxe1#`). Un motif nommé par des coups concrets vaut dix
+catégories.
+
 ## Étape 6 — les réserves, qui ne sont pas facultatives
 
 **L'écart de classement est un piège, et il est mortel.** Les `WhiteElo` / `BlackElo` des en-têtes
@@ -245,6 +276,31 @@ faibles » et ~0 % contre les « plus forts ». C'est circulaire, ça ressemble 
 spectaculaire, et **il faut le jeter**. Ne le publier sous aucune forme ; le mentionner comme
 réserve de méthode.
 
+> **Un usage reste légitime, et il est précieux : la moyenne par groupe, comme contrôle.** Comparer
+> l'Elo moyen du joueur *et* celui de ses adversaires entre deux sous-ensembles répond à « l'écart
+> que je viens de trouver ne serait-il qu'un écart de niveau d'opposition ». Sur DudulSmash, les
+> parties `1.d4` (76,9 %) ont été jouées à 1 041 contre des adversaires à 1 016, les parties `1.b3`
+> (44,3 %) à 1 021 contre 1 005 : l'opposition était **plus forte** du côté qui marche, ce qui
+> renforce le constat au lieu de l'expliquer. Le contrôle n'est valide qu'**agrégé sur des dizaines
+> de parties** et il faut redire qu'il porte sur des Elo post-partie.
+
+**Le taux de coups flagués n'est PAS une mesure de dégâts, et le confondre produit un rapport
+faux.** Sur DudulSmash, le taux par phase (21,1 % en ouverture, 16,3 % en milieu, 10,5 % en finale)
+a été lu comme « il part mal et redresse, il tient les fins de partie » — publié, puis démenti. Les
+**chances perdues par coup joué** sont plates : 3,85 / 4,19 / 3,72. Aucune phase n'était son point
+fort. Ce que le taux mesure, c'est la **fréquence des petits écarts**, et elle est mécaniquement
+plus haute en ouverture (beaucoup de coups, peu d'enjeu) et plus basse en finale (les coups
+`decided` sont exclus, il reste peu de matière). **Toujours sortir les deux colonnes côte à côte**,
+et conclure sur la seconde. Vérifier aussi le **coût moyen d'un coup flagué par tranche de coups**,
+qui lui monte : 13,0 sur les coups 1-10, 20,3 sur 11-20, 21,3 au-delà.
+
+**Le barème à 5 flague des premiers coups parfaitement jouables.** Depuis US-37, `INACCURACY_DROP`
+vaut 5 : un premier coup d'ouverture rare franchit le seuil sans être une faute. `1.b3` est flagué
+imprécision dans **5 des 6 parties** analysées de DudulSmash, à −5,3 à −6,2 — soit l'écart normal
+avec `1.e4` à profondeur 16. **Retirer ces coups du décompte avant de raisonner** (36 flagués
+devenaient 31) et le dire dans le rapport, sinon le premier coup du joueur apparaît comme sa faute
+la plus répétée.
+
 **Un plancher d'échantillon, annoncé.** Une ligne à 28 % sur 12 parties n'est pas un point faible.
 Fixer un seuil (35–40 parties a bien marché), le dire dans le rapport, et ne pas le franchir pour
 rendre une conclusion plus jolie.
@@ -253,6 +309,58 @@ rendre une conclusion plus jolie.
 
 **Le score est relatif au joueur** partout : `(gains + 0,5 × nuls) / parties`. Ne jamais mélanger
 avec un taux de victoires brut dans le même tableau.
+
+## Étape 6 bis — creuser un écart, et tuer les hypothèses
+
+Quand un écart franc est trouvé (un répertoire, une ligne, un choix), le demandeur voudra savoir
+*pourquoi*. La méthode qui a marché : formuler quatre ou cinq hypothèses **falsifiables**, les
+tester toutes, et **publier celles qui meurent**.
+
+Sur le `1.b3` de DudulSmash, quatre hypothèses sur cinq sont mortes :
+
+| Hypothèse | Test | Verdict |
+| --- | --- | --- |
+| C'est une réponse noire précise qui le réfute | score par réponse au 1er coup | **morte** — `1…e5` 42,3 %, `1…d5` 44,4 %, le schéma rend 44 % quoi qu'il arrive |
+| Il joue trop de coups d'aile plutôt que le centre | classer les 10 premiers coups | **morte** — aile > centre 50,0 %, centre > aile 51,6 %, aucun signal |
+| Il roque trop tard | score avec / sans roque | **morte** — 43,9 % en roquant contre 45,0 % sans |
+| L'opposition était plus faible en `1.d4` | Elo moyen par groupe | **morte** — l'opposition était plus forte |
+| Le partage est au 4<sup>e</sup> coup | score par 4<sup>e</sup> coup | **tenue** — 57,9 % contre 35,3 % |
+
+**Les morts ne sont pas des déchets, ce sont le rapport.** Elles rendent la survivante crédible,
+elles empêchent le demandeur de refaire le test, et elles disent ce qu'il ne sert à rien de
+travailler. Les écrire dans le terminal **et** dans le rapport, avec leur chiffre.
+
+Attention à la tentation inverse : une hypothèse qui « marche » sur 4 parties contre 2 n'est pas
+tenue. Sur le même dossier, « `4.Nf3` invite `…Bg4` » allait dans le bon sens (24 % contre 11 %)
+mais reposait sur six parties — publié **comme piste**, pas comme explication, tandis que les
+22 points d'écart entre les deux bras, eux, portent sur 19 et 17 parties.
+
+## Étape 6 ter — chiffrer le coût moteur avant de proposer une passe
+
+Le manque d'analyses est la limite la plus fréquente de ce skill, et « fais analyser plus de
+parties » n'est une recommandation utile que **chiffrée**. Le débit se mesure sur les passes déjà
+faites — et il ne se devine pas :
+
+```bash
+sqlite3 -column -header server/chess-analyst.db "
+select id, total, depth, lines,
+       round((julianday(ended_at)-julianday(started_at))*86400,1) sec,
+       round(((julianday(ended_at)-julianday(started_at))*86400)/total,2) sec_par_ply
+  from analysis_passes where ended_at is not null and depth > 0 order by id;"
+```
+
+- **`total` est un nombre de demi-coups**, pas de parties : une passe coûte proportionnellement à la
+  **longueur** des parties, et le blitz est long (72 demi-coups en médiane chez DudulSmash contre 61
+  en bullet chez Nonomoho). Estimer sur les plies, jamais sur le nombre de parties.
+- Le débit observé à **profondeur 16 / 2 lignes** sur cette machine : **1,24 s par demi-coup** en
+  moyenne pondérée, dans une fourchette de 0,70 à 1,52 selon la passe. Ignorer les passes de moins
+  de 100 demi-coups pour calibrer (une petite passe concurrencée a mesuré 4,35 s/ply) et **exclure
+  les passes `depth = 0`**, qui sont les analyses héritées d'avant le régime.
+- Annoncer une **fourchette**, jamais un chiffre unique, et proposer un **découpage en paliers**
+  (25 / 50 / 75 / 100 % d'un corpus ordonné par priorité) plutôt qu'une passe unique de trois
+  heures : le demandeur décide où il s'arrête, et les premiers paliers répondent souvent déjà.
+- **Ordonner le corpus, et mettre un témoin dedans.** Analyser 60 parties du répertoire suspect sans
+  analyser une seule partie de comparaison ne permet pas la lecture **i** de l'étape 5.
 
 ## Étape 7 — rendre
 
@@ -276,6 +384,12 @@ fonctionné sur le dossier Nonomoho :
   coup nommé** en notation algébrique ;
 - **des priorités numérotées** — la numérotation n'est légitime que là, parce que c'est un vrai
   classement par gain attendu.
+
+**Quand un chiffre publié se révèle faux, corriger la page, pas seulement le terminal.** Republier
+le **même chemin de fichier** garde l'URL, ce qui compte quand le lien a déjà été transmis ; poser
+un `label` sur la version (« Fond sur le `1.b3` ») et **dire dans le terminal ce qui a changé et
+pourquoi**. Une affirmation retirée d'un rapport doit être remplacée par ce que les données
+soutiennent, pas simplement effacée.
 
 Publier en Artifact et **dire que la page est privée** : la partager est un geste du demandeur, pas
 de l'agent — surtout quand le rapport juge quelqu'un d'autre.
@@ -306,5 +420,14 @@ joueur. « Le réflexe est calibré contre le pion e4 » se lit ; « il joue mal
   profil. Étape 3.
 - **Sommer les branches de l'explorateur** → les transpositions sont comptées plusieurs fois.
   Étape 4b.
+- **Le taux de coups flagués pris pour une mesure de dégâts** → « il tient les fins de partie »
+  publié puis démenti ; les chances perdues par coup sont plates. Étape 6.
+- **Le premier coup du joueur compté comme sa faute la plus répétée** → c'est le barème à 5. Étape 6.
+- **Une courbe de chances descendante lue sans témoin** → toutes les courbes de parties perdues
+  descendent. Étape 5i.
+- **Un « pourquoi » retenu sans avoir tué les autres hypothèses** → quatre sur cinq sont mortes sur
+  le dossier DudulSmash, et c'est ce qui rend la cinquième crédible. Étape 6 bis.
+- **Une passe moteur estimée en parties et non en demi-coups** → l'erreur va du simple au double
+  entre bullet et blitz. Étape 6 ter.
 - **Le script de descente lancé hors du dépôt** → `ERR_MODULE_NOT_FOUND` sur `cm-chess`. Le déposer
   dans `server/`.
