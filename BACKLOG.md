@@ -752,8 +752,204 @@
 
 ## Doing
 
+## In review
+
+## Done
+
+- **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
+  niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.
+  > **Mergée dans `develop` le 2026-09-04** — PR [#104](https://github.com/Rdulieu/chess-analyst/pull/104)
+  > (`c272f9b`), avec US-29 (même branche d'intégration).
+  >
+  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur : une partie fraîchement
+  > analysée s'est ouverte **en `Détaillé`**, alors que la lecture autonome suppose `Sans aide`.
+  >
+  > ### Ce n'est pas un bug : deux phrases de `CONTEXT.md` se contredisent
+  >
+  > À dire au grill d'emblée, pour qu'il sache qu'il **amende une décision** et ne répare pas un
+  > oubli. Le code fait exactement ce qui est écrit, et c'est écrit deux fois, en sens contraire :
+  >
+  > > *« The default is **Unaided**: a Game is opened to be read, and the engine's verdict is
+  > > something the Player asks for rather than something the app volunteers. **The choice is
+  > > remembered**, so it is made once and not on every Game. »*
+  >
+  > `loadReviewMode()` rend `unaided` **uniquement quand rien n'est stocké** ; dès que le joueur a
+  > choisi `Détaillé` une fois, `saveReviewMode` l'écrit dans `localStorage`
+  > (`chess-analyst.review-mode`) et **toutes les parties suivantes s'ouvrent là**, indéfiniment et
+  > sur toutes les sessions. Le comportement est **couvert par les tests**
+  > (`client/test/reviewMode.test.ts` : *« remembers the chosen level, so it is chosen once and not
+  > on every Game »*). Le « défaut par défaut » ne s'applique donc qu'au tout premier usage.
+  >
+  > Écarté après vérification : la promotion de fin de passe n'y est pour rien. `atLeastAnnotated`
+  > monte `unaided` à `annotated` et **jamais** à `detailed`, et elle n'est pas persistée. Le
+  > `Détaillé` observé vient bien du choix mémorisé.
+  >
+  > ### La vraie conséquence : la provenance est estampillée à l'ouverture
+  >
+  > C'est ce qui fait la gravité, et ce que la note ne dit pas. `GameViewer` porte un `useEffect` qui
+  > s'exécute **au montage** :
+  >
+  > ```
+  > if (showsEngine({ analyzed: game.analyzed, mode })) noteEngineShown(game.id);
+  > ```
+  >
+  > `showsEngine` est vrai dès que la partie est analysée **et** que le niveau dépasse `Sans aide`.
+  > Donc ouvrir une partie fraîchement analysée avec un `Détaillé` mémorisé **inscrit immédiatement**
+  > la partie dans `chess-analyst.engine-seen` — avant toute lecture, sans geste du joueur. Et
+  > `noteEngineShown` n'a **pas de contraire** : repasser en `Sans aide` dans la seconde ne l'efface
+  > pas.
+  >
+  > Or ce drapeau n'est pas décoratif. `CONTEXT.md` le désigne comme **la seule chose affichée qui
+  > devient persistante** — il est remis au serveur au sceau et **étiquette l'`Analyse personnelle`**
+  > (« lue à l'aveugle » vs « lue informée »), c'est-à-dire ce qui rend la `Confrontation`
+  > interprétable. Une lecture réellement autonome peut donc être archivée comme informée. Le
+  > commentaire d'`engineSeen.ts` prévient lui-même du sens de l'erreur : un drapeau faux *« serait
+  > pire qu'inutile, parce qu'il se tromperait dans la direction qui discrédite le travail du
+  > joueur »*. C'est exactement le cas ici, et la garantie qu'`engineSeen` protège explicitement est
+  > franchie par un simple `localStorage` de la veille.
+  >
+  > **Ce que la story ne prétend pas** : `Review mode` n'a jamais été une contrainte, seulement un
+  > libellé (le glossaire a refusé le nom *Blind mode* pour cette raison). Il ne s'agit pas
+  > d'empêcher de regarder, mais que **l'app ne montre pas d'elle-même** ce qu'on ne lui a pas
+  > demandé, et n'en tire pas une conclusion sur le joueur.
+  >
+  > ### Le levier existe déjà dans le code
+  >
+  > La distinction utile est **déjà faite** ailleurs, et bien commentée : à la fin d'une passe,
+  > `setMode(atLeastAnnotated)` bouge **cette revue-ci** sans écrire le niveau mémorisé — *« Only
+  > THIS review moves — the remembered level is left alone. »* Le défaut est que l'ouverture, elle,
+  > ne connaît qu'une seule portée. Séparer « le niveau de cette revue » de « le niveau mémorisé »
+  > est vraisemblablement tout le correctif.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Quelle phrase de `CONTEXT.md` survit** — la mémorisation disparaît, ou elle se réduit (à la
+  >   session, à la partie), ou le défaut redevient inconditionnel à chaque ouverture. La glose du
+  >   glossaire est à réécrire dans tous les cas, et c'est une décision de produit.
+  > - **Le drapeau doit-il rester posé au montage ?** Un niveau hérité n'est pas un geste. Une piste :
+  >   ne l'inscrire qu'après un choix explicite, ou qu'après un rendu réellement regardé — sans
+  >   retomber dans la promesse d'étanchéité que le projet a refusée.
+  > - **Que faire des drapeaux déjà posés à tort.** Ils vivent dans le `localStorage` du navigateur,
+  >   et pour les lectures déjà scellées ils sont **en base**. `CONTEXT.md` interdit de deviner (tout
+  >   repli vaut « non vu »), donc les corriger d'office est exclu ; les laisser fausse les
+  >   `Confrontation` passées. À nommer explicitement plutôt qu'à découvrir après coup.
+  >
+  > **Lien** : la `Confrontation` est le consommateur de ce drapeau, donc **US-26** a intérêt à ce que
+  > celle-ci soit tranchée d'abord — sans quoi elle bâtira un écran de détail sur une provenance
+  > dont on sait qu'elle peut mentir.
+  >
+  > **Livrée le 2026-09-04**, tranches 01 et 02. FP 9/9 et 5/5, HP-03 16/16. La provenance de la
+  > partie 715 est corrigée en base et sa `Confrontation` annonce désormais « Lue à l'aveugle ».
+  > **HP-03 a dû être réécrit** : son étape 12 ouvrait une partie « sur `Détaillé` sans le demander »,
+  > précondition que cette story supprime. L'assertion en sort plus forte — la lecture informée est
+  > gagnée par un geste au lieu d'être héritée.
+  >
+  > **Grillée le 2026-09-03** (avec US-29, même branche d'intégration
+  > `integration/US-28-29-reading-screen-fixes`). PRD :
+  > `.scratch/unaided-default-and-verdict-tint/PRD.md`. Deux tranches :
+  > `issues/01-every-opening-starts-unaided.md` (AFK),
+  > `issues/02-reset-the-wrongly-posed-provenance.md` (HITL, bloquée par la 01).
+  > Tranché : **aucune mémorisation** du niveau, ni de session ni par partie ; le drapeau garde son
+  > déclencheur, l'invariant devenant vrai par construction ; les provenances déjà posées sont remises
+  > à « non vu » **par identifiant**, sur le constat du demandeur que toutes ses lectures ont été
+  > faites à l'aveugle. Aucun ADR — la règle est écrite dans `CONTEXT.md` (`Review mode`).
+
+- **US-29**: Colorer les glyphes de verdict dans la liste des coups — pour que la lecture du joueur
+  se reconnaisse d'un coup d'œil dans la liste comme elle se reconnaît déjà sur les boutons et sur
+  l'échiquier.
+  > **Mergée dans `develop` le 2026-09-04** — PR [#104](https://github.com/Rdulieu/chess-analyst/pull/104)
+  > (`c272f9b`), avec US-28 (même branche d'intégration).
+  >
+  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur, sur la page de lecture : *« les
+  > glyphes de notation sont toujours blancs. J'aimerais qu'ils soient de la même couleur que la
+  > lecture du joueur (couleur sur les boutons de sélection et dans le board). »*
+  >
+  > ### Le constat est exact, et l'écart est net
+  >
+  > `MoveMarks` rend le glyphe du verdict dans un `<span>` **sans aucun attribut de couleur** : il
+  > hérite de `--ink`, donc blanc en thème sombre. Il est le seul des trois porteurs du
+  > `Declared severity` à ne rien porter :
+  >
+  > | Où | Couleur | Source |
+  > | --- | --- | --- |
+  > | Boutons de sélection | oui, les 5 valeurs | `label[data-verdict="…"]:has(input:checked)` → famille `--square-*` |
+  > | Case de l'échiquier | oui, les 5 valeurs | `DECLARED_SEVERITY_SQUARE_TINT` → famille `--square-*` |
+  > | **Liste des coups** | **aucune** | — |
+  >
+  > Et l'asymétrie est double : sur `Analyse`, le glyphe du moteur **est** teinté dans la liste
+  > (`[data-severity]` → `--tint-*` + `--tint-*-ink`). La liste sait donc teinter un glyphe ; elle ne
+  > le fait que pour un des deux auteurs.
+  >
+  > ### Pourquoi ce n'est pas une ligne de CSS : deux familles de couleurs, pas une
+  >
+  > ADR-0013 tient **deux** familles, et la demande tombe pile sur leur frontière.
+  >
+  > - `--tint-*` (chrome) **suit le thème**, et chaque teinte porte son `--tint-*-ink` pour que le
+  >   contraste ne dépende jamais de l'encre héritée.
+  > - `--square-*` (échiquier) est **délibérément constante entre thèmes**, parce que
+  >   `react-chessboard` peint la pièce par-dessus. Mesuré sur le pilote : la teinte de chrome
+  >   utilisée sur une case rendait sa pièce à **1,49:1** en sombre.
+  >
+  > Le demandeur demande la couleur **des boutons et du board**, c'est-à-dire la famille `--square-*`
+  > — sur un élément de **chrome**, la liste. C'est exactement le croisement que la séparation des
+  > deux familles existe pour éviter, dans l'autre sens. Trois issues, et le grill doit en choisir
+  > une plutôt que la découvrir :
+  > 1. porter `--square-*` dans la liste, en lui **donnant son encre** (les boutons le font déjà :
+  >    `color: var(--square-notation)`) ;
+  > 2. créer les paires de chrome manquantes et teinter avec `--tint-*` — cohérent avec la liste du
+  >    moteur, mais **une autre couleur que le board**, donc pas ce qui est demandé ;
+  > 3. rapprocher les deux familles, ce qui rouvre ADR-0013 et se paie cher.
+  >
+  > **Deux valeurs sur cinq n'ont pas de jeton de chrome du tout.** `sound` et `good` n'existent qu'en
+  > `--square-sound` / `--square-good` : *« la palette n'avait jamais eu à peindre un verdict
+  > favorable, le moteur ne rapportant que des fautes. »* L'option 2 demande donc **deux paires de
+  > jetons neuves, en clair et en sombre**, contrastées et validées.
+  >
+  > ### Le piège est déjà documenté — ne pas le repayer
+  >
+  > La correction naïve consiste à poser `data-severity` sur le `<span>` de `MoveMarks`. Elle est
+  > **déjà connue pour être fausse** : `DeclaredSeverityControl` a rencontré exactement ça et porte le
+  > commentaire qui l'explique — la feuille teinte **tout** `[data-severity]` avec la paire de chrome,
+  > ce qui n'a coloré que 3 des 5 valeurs et **a fait tomber `Bévue` à 2,75:1**. C'est pourquoi ce
+  > composant porte `data-verdict` et non `data-severity`. Le même choix s'impose ici.
+  >
+  > ### La contrainte qui vient d'US-26, et qui pourrait la contredire
+  >
+  > `declaredSeverity.ts` porte une règle explicite, attachée au fait que le joueur emprunte les
+  > glyphes du moteur : *« le jour où un écran montre les deux auteurs à la fois — la pente naturelle
+  > d'US-16b — des glyphes identiques ne suffiront plus, et ils devront être distingués par autre
+  > chose que la couleur. »* **US-26 est précisément cet écran**, et elle est maintenant en tête de
+  > `To do`. Colorer les glyphes du joueur comme ceux du moteur consommerait donc le seul canal qui
+  > restait pour les séparer. À trancher **avec** US-26, pas contre elle.
+  >
+  > ### Garde-fous
+  >
+  > Aucun indice ne peut être **uniquement chromatique** (ADR-0013) : le glyphe et son nom accessible
+  > portent déjà le sens, la teinte s'y ajoute — c'est bien le cas ici, la demande est additive.
+  > Les jetons se déclarent en toutes lettres, jamais par interpolation : l'audit de cohérence des
+  > jetons lit la feuille comme source et ne voit pas un nom assemblé dans une boucle.
+  >
+  > **Grillée le 2026-09-03** (avec US-28, même branche d'intégration). PRD :
+  > `.scratch/unaided-default-and-verdict-tint/PRD.md`. Une tranche :
+  > `issues/03-verdict-chip-in-the-move-list.md` (AFK, indépendante).
+  > Tranché : **option 1** — la famille de l'échiquier dans la liste, avec l'encre de notation, sur
+  > `data-verdict`. Aucun jeton neuf, contraste déjà éprouvé par les boutons. US-29 **ne bloque pas**
+  > sur US-26 : la couleur n'avait pas le droit de distinguer les deux auteurs, donc la teinter ici ne
+  > consomme aucun canal — US-26 apportera son écran et sa solution. Aucun ADR — la règle est écrite
+  > dans `CONTEXT.md` (`Declared severity`).
+  >
+  > **Livrée le 2026-09-04**, tranche 03. FP 8/8 : pour chacune des cinq valeurs, pastille de la liste
+  > == bouton == case, au rgb près. Contraste du glyphe sur sa pastille mesuré dans les deux thèmes et
+  > identique : bévue 6,32 · erreur 8,97 · imprécision 12,54 · correct 10,57 · bon 9,35. **Une décision
+  > produit reste ouverte** : en thème clair le fond de la pastille est proche de celui de la page
+  > (1,33:1 pour l'imprécision), donc elle se lit comme un texte teinté plutôt que comme une pastille.
+  > Le glyphe reste lisible et aucun seuil ne s'applique au bord ; c'est un choix, pas un défaut.
+
 - **US-15a-bis**: Approfondir l'analyse par partie avant de l'étendre — regarder de vraies parties,
   corriger ce que le premier jet a laissé approximatif, et seulement ensuite bâtir l'agrégat dessus.
+  > **Mergée dans `develop` le 2026-09-03** — PR [#103](https://github.com/Rdulieu/chess-analyst/pull/103)
+  > (`cea6eee`), six tranches.
+  >
   > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte, et
   > l'entrée dit elle-même qu'elle n'est pas grillée. **À vérifier par le demandeur** : il n'est pas
   > sûr de son état ni de ce qu'US-15a a réellement laissé approximatif. Ce relevé est le premier
@@ -1072,194 +1268,12 @@
   >   la crainte qui a ouvert la story : à l'aveugle, l'humain a déclaré `sound` trois fautes que
   >   l'app signale, dont un `blunder` à 31 points.
 
-## In review
-
-- **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
-  niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.
-  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur : une partie fraîchement
-  > analysée s'est ouverte **en `Détaillé`**, alors que la lecture autonome suppose `Sans aide`.
-  >
-  > ### Ce n'est pas un bug : deux phrases de `CONTEXT.md` se contredisent
-  >
-  > À dire au grill d'emblée, pour qu'il sache qu'il **amende une décision** et ne répare pas un
-  > oubli. Le code fait exactement ce qui est écrit, et c'est écrit deux fois, en sens contraire :
-  >
-  > > *« The default is **Unaided**: a Game is opened to be read, and the engine's verdict is
-  > > something the Player asks for rather than something the app volunteers. **The choice is
-  > > remembered**, so it is made once and not on every Game. »*
-  >
-  > `loadReviewMode()` rend `unaided` **uniquement quand rien n'est stocké** ; dès que le joueur a
-  > choisi `Détaillé` une fois, `saveReviewMode` l'écrit dans `localStorage`
-  > (`chess-analyst.review-mode`) et **toutes les parties suivantes s'ouvrent là**, indéfiniment et
-  > sur toutes les sessions. Le comportement est **couvert par les tests**
-  > (`client/test/reviewMode.test.ts` : *« remembers the chosen level, so it is chosen once and not
-  > on every Game »*). Le « défaut par défaut » ne s'applique donc qu'au tout premier usage.
-  >
-  > Écarté après vérification : la promotion de fin de passe n'y est pour rien. `atLeastAnnotated`
-  > monte `unaided` à `annotated` et **jamais** à `detailed`, et elle n'est pas persistée. Le
-  > `Détaillé` observé vient bien du choix mémorisé.
-  >
-  > ### La vraie conséquence : la provenance est estampillée à l'ouverture
-  >
-  > C'est ce qui fait la gravité, et ce que la note ne dit pas. `GameViewer` porte un `useEffect` qui
-  > s'exécute **au montage** :
-  >
-  > ```
-  > if (showsEngine({ analyzed: game.analyzed, mode })) noteEngineShown(game.id);
-  > ```
-  >
-  > `showsEngine` est vrai dès que la partie est analysée **et** que le niveau dépasse `Sans aide`.
-  > Donc ouvrir une partie fraîchement analysée avec un `Détaillé` mémorisé **inscrit immédiatement**
-  > la partie dans `chess-analyst.engine-seen` — avant toute lecture, sans geste du joueur. Et
-  > `noteEngineShown` n'a **pas de contraire** : repasser en `Sans aide` dans la seconde ne l'efface
-  > pas.
-  >
-  > Or ce drapeau n'est pas décoratif. `CONTEXT.md` le désigne comme **la seule chose affichée qui
-  > devient persistante** — il est remis au serveur au sceau et **étiquette l'`Analyse personnelle`**
-  > (« lue à l'aveugle » vs « lue informée »), c'est-à-dire ce qui rend la `Confrontation`
-  > interprétable. Une lecture réellement autonome peut donc être archivée comme informée. Le
-  > commentaire d'`engineSeen.ts` prévient lui-même du sens de l'erreur : un drapeau faux *« serait
-  > pire qu'inutile, parce qu'il se tromperait dans la direction qui discrédite le travail du
-  > joueur »*. C'est exactement le cas ici, et la garantie qu'`engineSeen` protège explicitement est
-  > franchie par un simple `localStorage` de la veille.
-  >
-  > **Ce que la story ne prétend pas** : `Review mode` n'a jamais été une contrainte, seulement un
-  > libellé (le glossaire a refusé le nom *Blind mode* pour cette raison). Il ne s'agit pas
-  > d'empêcher de regarder, mais que **l'app ne montre pas d'elle-même** ce qu'on ne lui a pas
-  > demandé, et n'en tire pas une conclusion sur le joueur.
-  >
-  > ### Le levier existe déjà dans le code
-  >
-  > La distinction utile est **déjà faite** ailleurs, et bien commentée : à la fin d'une passe,
-  > `setMode(atLeastAnnotated)` bouge **cette revue-ci** sans écrire le niveau mémorisé — *« Only
-  > THIS review moves — the remembered level is left alone. »* Le défaut est que l'ouverture, elle,
-  > ne connaît qu'une seule portée. Séparer « le niveau de cette revue » de « le niveau mémorisé »
-  > est vraisemblablement tout le correctif.
-  >
-  > ### Ce que le grill devra trancher
-  >
-  > - **Quelle phrase de `CONTEXT.md` survit** — la mémorisation disparaît, ou elle se réduit (à la
-  >   session, à la partie), ou le défaut redevient inconditionnel à chaque ouverture. La glose du
-  >   glossaire est à réécrire dans tous les cas, et c'est une décision de produit.
-  > - **Le drapeau doit-il rester posé au montage ?** Un niveau hérité n'est pas un geste. Une piste :
-  >   ne l'inscrire qu'après un choix explicite, ou qu'après un rendu réellement regardé — sans
-  >   retomber dans la promesse d'étanchéité que le projet a refusée.
-  > - **Que faire des drapeaux déjà posés à tort.** Ils vivent dans le `localStorage` du navigateur,
-  >   et pour les lectures déjà scellées ils sont **en base**. `CONTEXT.md` interdit de deviner (tout
-  >   repli vaut « non vu »), donc les corriger d'office est exclu ; les laisser fausse les
-  >   `Confrontation` passées. À nommer explicitement plutôt qu'à découvrir après coup.
-  >
-  > **Lien** : la `Confrontation` est le consommateur de ce drapeau, donc **US-26** a intérêt à ce que
-  > celle-ci soit tranchée d'abord — sans quoi elle bâtira un écran de détail sur une provenance
-  > dont on sait qu'elle peut mentir.
-  >
-  > **Livrée le 2026-09-04**, tranches 01 et 02. FP 9/9 et 5/5, HP-03 16/16. La provenance de la
-  > partie 715 est corrigée en base et sa `Confrontation` annonce désormais « Lue à l'aveugle ».
-  > **HP-03 a dû être réécrit** : son étape 12 ouvrait une partie « sur `Détaillé` sans le demander »,
-  > précondition que cette story supprime. L'assertion en sort plus forte — la lecture informée est
-  > gagnée par un geste au lieu d'être héritée.
-  >
-  > **Grillée le 2026-09-03** (avec US-29, même branche d'intégration
-  > `integration/US-28-29-reading-screen-fixes`). PRD :
-  > `.scratch/unaided-default-and-verdict-tint/PRD.md`. Deux tranches :
-  > `issues/01-every-opening-starts-unaided.md` (AFK),
-  > `issues/02-reset-the-wrongly-posed-provenance.md` (HITL, bloquée par la 01).
-  > Tranché : **aucune mémorisation** du niveau, ni de session ni par partie ; le drapeau garde son
-  > déclencheur, l'invariant devenant vrai par construction ; les provenances déjà posées sont remises
-  > à « non vu » **par identifiant**, sur le constat du demandeur que toutes ses lectures ont été
-  > faites à l'aveugle. Aucun ADR — la règle est écrite dans `CONTEXT.md` (`Review mode`).
-
-- **US-29**: Colorer les glyphes de verdict dans la liste des coups — pour que la lecture du joueur
-  se reconnaisse d'un coup d'œil dans la liste comme elle se reconnaît déjà sur les boutons et sur
-  l'échiquier.
-  > **Pas encore grillée.** Constatée le 2026-09-02 par le demandeur, sur la page de lecture : *« les
-  > glyphes de notation sont toujours blancs. J'aimerais qu'ils soient de la même couleur que la
-  > lecture du joueur (couleur sur les boutons de sélection et dans le board). »*
-  >
-  > ### Le constat est exact, et l'écart est net
-  >
-  > `MoveMarks` rend le glyphe du verdict dans un `<span>` **sans aucun attribut de couleur** : il
-  > hérite de `--ink`, donc blanc en thème sombre. Il est le seul des trois porteurs du
-  > `Declared severity` à ne rien porter :
-  >
-  > | Où | Couleur | Source |
-  > | --- | --- | --- |
-  > | Boutons de sélection | oui, les 5 valeurs | `label[data-verdict="…"]:has(input:checked)` → famille `--square-*` |
-  > | Case de l'échiquier | oui, les 5 valeurs | `DECLARED_SEVERITY_SQUARE_TINT` → famille `--square-*` |
-  > | **Liste des coups** | **aucune** | — |
-  >
-  > Et l'asymétrie est double : sur `Analyse`, le glyphe du moteur **est** teinté dans la liste
-  > (`[data-severity]` → `--tint-*` + `--tint-*-ink`). La liste sait donc teinter un glyphe ; elle ne
-  > le fait que pour un des deux auteurs.
-  >
-  > ### Pourquoi ce n'est pas une ligne de CSS : deux familles de couleurs, pas une
-  >
-  > ADR-0013 tient **deux** familles, et la demande tombe pile sur leur frontière.
-  >
-  > - `--tint-*` (chrome) **suit le thème**, et chaque teinte porte son `--tint-*-ink` pour que le
-  >   contraste ne dépende jamais de l'encre héritée.
-  > - `--square-*` (échiquier) est **délibérément constante entre thèmes**, parce que
-  >   `react-chessboard` peint la pièce par-dessus. Mesuré sur le pilote : la teinte de chrome
-  >   utilisée sur une case rendait sa pièce à **1,49:1** en sombre.
-  >
-  > Le demandeur demande la couleur **des boutons et du board**, c'est-à-dire la famille `--square-*`
-  > — sur un élément de **chrome**, la liste. C'est exactement le croisement que la séparation des
-  > deux familles existe pour éviter, dans l'autre sens. Trois issues, et le grill doit en choisir
-  > une plutôt que la découvrir :
-  > 1. porter `--square-*` dans la liste, en lui **donnant son encre** (les boutons le font déjà :
-  >    `color: var(--square-notation)`) ;
-  > 2. créer les paires de chrome manquantes et teinter avec `--tint-*` — cohérent avec la liste du
-  >    moteur, mais **une autre couleur que le board**, donc pas ce qui est demandé ;
-  > 3. rapprocher les deux familles, ce qui rouvre ADR-0013 et se paie cher.
-  >
-  > **Deux valeurs sur cinq n'ont pas de jeton de chrome du tout.** `sound` et `good` n'existent qu'en
-  > `--square-sound` / `--square-good` : *« la palette n'avait jamais eu à peindre un verdict
-  > favorable, le moteur ne rapportant que des fautes. »* L'option 2 demande donc **deux paires de
-  > jetons neuves, en clair et en sombre**, contrastées et validées.
-  >
-  > ### Le piège est déjà documenté — ne pas le repayer
-  >
-  > La correction naïve consiste à poser `data-severity` sur le `<span>` de `MoveMarks`. Elle est
-  > **déjà connue pour être fausse** : `DeclaredSeverityControl` a rencontré exactement ça et porte le
-  > commentaire qui l'explique — la feuille teinte **tout** `[data-severity]` avec la paire de chrome,
-  > ce qui n'a coloré que 3 des 5 valeurs et **a fait tomber `Bévue` à 2,75:1**. C'est pourquoi ce
-  > composant porte `data-verdict` et non `data-severity`. Le même choix s'impose ici.
-  >
-  > ### La contrainte qui vient d'US-26, et qui pourrait la contredire
-  >
-  > `declaredSeverity.ts` porte une règle explicite, attachée au fait que le joueur emprunte les
-  > glyphes du moteur : *« le jour où un écran montre les deux auteurs à la fois — la pente naturelle
-  > d'US-16b — des glyphes identiques ne suffiront plus, et ils devront être distingués par autre
-  > chose que la couleur. »* **US-26 est précisément cet écran**, et elle est maintenant en tête de
-  > `To do`. Colorer les glyphes du joueur comme ceux du moteur consommerait donc le seul canal qui
-  > restait pour les séparer. À trancher **avec** US-26, pas contre elle.
-  >
-  > ### Garde-fous
-  >
-  > Aucun indice ne peut être **uniquement chromatique** (ADR-0013) : le glyphe et son nom accessible
-  > portent déjà le sens, la teinte s'y ajoute — c'est bien le cas ici, la demande est additive.
-  > Les jetons se déclarent en toutes lettres, jamais par interpolation : l'audit de cohérence des
-  > jetons lit la feuille comme source et ne voit pas un nom assemblé dans une boucle.
-  >
-  > **Grillée le 2026-09-03** (avec US-28, même branche d'intégration). PRD :
-  > `.scratch/unaided-default-and-verdict-tint/PRD.md`. Une tranche :
-  > `issues/03-verdict-chip-in-the-move-list.md` (AFK, indépendante).
-  > Tranché : **option 1** — la famille de l'échiquier dans la liste, avec l'encre de notation, sur
-  > `data-verdict`. Aucun jeton neuf, contraste déjà éprouvé par les boutons. US-29 **ne bloque pas**
-  > sur US-26 : la couleur n'avait pas le droit de distinguer les deux auteurs, donc la teinter ici ne
-  > consomme aucun canal — US-26 apportera son écran et sa solution. Aucun ADR — la règle est écrite
-  > dans `CONTEXT.md` (`Declared severity`).
-  >
-  > **Livrée le 2026-09-04**, tranche 03. FP 8/8 : pour chacune des cinq valeurs, pastille de la liste
-  > == bouton == case, au rgb près. Contraste du glyphe sur sa pastille mesuré dans les deux thèmes et
-  > identique : bévue 6,32 · erreur 8,97 · imprécision 12,54 · correct 10,57 · bon 9,35. **Une décision
-  > produit reste ouverte** : en thème clair le fond de la pastille est proche de celui de la page
-  > (1,33:1 pour l'imprécision), donc elle se lit comme un texte teinté plutôt que comme une pastille.
-  > Le glyphe reste lisible et aucun seuil ne s'applique au bord ; c'est un choix, pas un défaut.
-
 - **US-23**: Tenir la même route de revue partout — pour qu'un profil, la page `Analyse` et la lecture
   personnelle se conduisent de la même façon, avec le même clavier, la même liste des coups et les
   mêmes verdicts lisibles.
+  > **Mergée dans `develop` le 2026-09-02** — PR [#93](https://github.com/Rdulieu/chess-analyst/pull/93)
+  > (`1fcf9f3`), huit tranches, suite HP verte.
+  >
   > **Grillée le 2026-09-01** — neuf décisions et le relevé du code qui les fonde :
   > [`.scratch/review-route-consistency/GRILL-NOTES.md`](.scratch/review-route-consistency/GRILL-NOTES.md).
   > **ADR-0022 « Un échiquier, un auteur »** en sort ; `CONTEXT.md` rend `Evaluation` et `Annotation`
@@ -1361,8 +1375,6 @@
   > bloquants** que les tiers inférieurs ne pouvaient pas voir, tous corrigés dans leur tranche.
   > La hauteur du contrôle de verdict a été **arbitrée par le demandeur** (une ligne par rangée) ; le
   > relevé avant/après figure dans la PR. **L'agent n'a pas mergé.**
-
-## Done
 
 - **US-22**: Rendre la route de lecture agréable à tenir sur trente coups — pour qu'annoter une
   partie entière soit un exercice et non une corvée.
