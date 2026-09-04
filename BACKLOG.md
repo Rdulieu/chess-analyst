@@ -486,7 +486,7 @@
   terrain ».
   > **Pas encore grillée.** Demandée le 2026-09-02. L'usine vient de
   > [`Loulen/prompt-driven-software-factory`](https://github.com/Loulen/prompt-driven-software-factory)
-  > (voir `skills-lock.json`), installée ici le **2026-07-20** (`bfe5c4a`). L'amont a poussé pour la
+  > (voir `.claude/UPSTREAM.md`), installée ici le **2026-07-20** (`bfe5c4a`). L'amont a poussé pour la
   > dernière fois le **2026-09-01**. **Contrainte posée par le demandeur : la reprise ne doit rien
   > écraser de ce qui a été modifié ici.**
   >
