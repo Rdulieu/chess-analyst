@@ -173,6 +173,34 @@
   > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
   > et c'est voulu.
 
+- **US-38**: Savoir ce que notre driver nous coûte, plutôt qu'en débattre — pour que le choix de
+  piloter l'app nous-mêmes se rejuge sur des chiffres, et pas sur l'ancienneté de la décision.
+  > **Pas encore grillée.** Ouverte le 2026-09-04 pendant le grill d'US-21/US-25, par décision du
+  > demandeur : la reprise de l'usine amont a été l'occasion de lire sa recommandation de driver, et
+  > de la refuser pour cette fois — voir la note du 2026-09-04 sur
+  > [ADR-0020](docs/adr/0020-the-driver-library-drives-the-scenario-judges.md).
+  >
+  > ### Le constat
+  >
+  > L'amont recommande le **Playwright CLI** (le CLI, explicitement pas le MCP) comme driver par
+  > défaut d'une app web. Nous pilotons par une **bibliothèque de driver** adossée à CDP + puppeteer,
+  > née d'US-7 quand aucun outil navigateur n'existait, et décidée par ADR-0020. Le refus de suivre
+  > la recommandation est **argumenté mais pas mesuré** : il repose sur les pièges que la
+  > bibliothèque encode, pas sur une comparaison.
+  >
+  > ### Ce que la story doit produire
+  >
+  > La **même suite**, pilotée des deux façons, comparée sur trois axes — le temps de bout en bout,
+  > les **findings attrapés**, et les **findings inventés** (un faux positif coûte une passe
+  > d'analyse). L'axe qui décidera n'est probablement pas la vitesse : c'est de savoir si Playwright
+  > retrouve seul les pièges que la bibliothèque encode — le navigateur privé sur le fan-out
+  > parallèle, l'émulation de thème qui échoue dans les deux sens, `tsx watch` qui ressuscite un
+  > serveur tué.
+  >
+  > **Ce n'est pas une story de migration.** Elle produit une mesure et une recommandation ; migrer,
+  > si migration il y a, sera une autre story. Et elle a une réponse acceptable qui est « on garde ce
+  > qu'on a, et maintenant on sait pourquoi ».
+
 - **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
   ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
   > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte.
