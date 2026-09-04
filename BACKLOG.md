@@ -173,6 +173,43 @@
   > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
   > et c'est voulu.
 
+- **US-39**: Un worktree qui marche, au même endroit, avec les mêmes règles — pour que « travailler
+  dans un worktree » cesse d'être une consigne que chacun applique à sa façon.
+  > **Pas encore grillée.** Ouverte le 2026-09-04 pendant le grill d'US-21/US-25, par décision du
+  > demandeur, après qu'ADR-0028 a choisi de **ne pas** réparer la mémoire vide d'un worktree.
+  >
+  > ### Trois incohérences constatées en regardant, pas en supposant
+  >
+  > 1. **L'emplacement déclaré n'est celui d'aucun worktree vivant.** `.gitignore` annonce
+  >    `.claude/worktrees/` (« one worktree per story, never shared ») et le répertoire existe ; les
+  >    worktrees réels sont des **frères du dépôt** — `chess-analyst-us37`,
+  >    `chess-analyst-profile-habits`. Les deux emplacements ont servi : les clés de mémoire gardent
+  >    la trace de `--claude-worktrees-US-22` et `--claude-worktrees-US-9-multi-month-import`.
+  > 2. **La règle ne dit pas à quoi elle s'applique.** « Worktree avant toute modification de
+  >    fichier » : est-ce que ça vaut pour une session de grill qui n'écrit que des ADR ? Pour une
+  >    correction de backlog ? La session du 2026-09-04 a écrit trois ADR dans le checkout principal
+  >    et a eu raison de le faire — mais rien ne l'autorisait.
+  > 3. **Un worktree frais ne peut pas installer ses dépendances**, d'où la recette des trois
+  >    symlinks `node_modules` — qui a déjà coûté une fois : `develop` a fini par **suivre** ces
+  >    symlinks à cause du slash de `.gitignore` (PR #57). La recette est load-bearing et ne vit
+  >    aujourd'hui que dans la mémoire de l'agent ; US-21 la rapatrie dans `git-flow/WORKTREES.md`,
+  >    mais **le rapatriement documente un mécanisme qu'on n'a jamais vérifié**.
+  >
+  > ### Ce que la story doit produire
+  >
+  > Un mécanisme **éprouvé**, pas décrit : créer un worktree, l'amener à un état où build + tests +
+  > lint tournent, y faire une tranche réelle, le détruire — et que chacun de ces gestes soit une
+  > commande écrite, pas une reconstitution. La question ouverte est l'emplacement (dans le dépôt,
+  > gitignoré, ou frère du dépôt) : les deux ont des conséquences différentes sur `git add -A`, sur
+  > la clé de mémoire et sur ce qu'un `rm -rf` malheureux emporte.
+  >
+  > ### Ce qui est explicitement hors périmètre
+  >
+  > **Réparer la mémoire vide d'un worktree** — [ADR-0028](docs/adr/0028-a-worktree-is-an-amnesiac-agent-and-that-is-the-signal.md)
+  > a décidé de ne pas le faire : l'amnésie est le signal qui a révélé que quinze recettes critiques
+  > vivaient hors du dépôt, et elle sert d'épreuve à US-21. Cette story vérifie le **mécanisme**, pas
+  > la mémoire.
+
 - **US-38**: Savoir ce que notre driver nous coûte, plutôt qu'en débattre — pour que le choix de
   piloter l'app nous-mêmes se rejuge sur des chiffres, et pas sur l'ancienneté de la décision.
   > **Pas encore grillée.** Ouverte le 2026-09-04 pendant le grill d'US-21/US-25, par décision du
@@ -276,15 +313,6 @@
   >
   > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
   > rien d'autre, ne prenne aucune décision que le dépôt contredit.
-  > **Les cinq tranches sont livrées et la suite HP est verte** (2026-08-31). PR `integration →
-  > develop` ouverte, en attente de votre décision — l'agent ne merge jamais vers `develop`.
-  >
-  > Quatre points restent **ouverts et vous appartiennent**, aucun n'étant bloquant :
-  > un rechargement le curseur encore dans le champ perd la `Note` (le fermer demande une route
-  > serveur, qu'US-22 s'interdit) ; la notice des raccourcis passe sous la ligne de flottaison à
-  > 380 px ; elle est vraie au tiers à la position de départ ; et les flèches ne fonctionnent pas
-  > sur `Analyse`, faute d'y être annoncées. Détail dans les issues 04 et 05.
-
 
 - **US-24**: Ne plus laisser un import réussir sans rien importer — pour qu'une demande qui ne peut
   rien rapporter soit refusée à l'entrée, et non conclue par un compte-rendu vert à zéro.
