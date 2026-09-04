@@ -25,6 +25,26 @@ tests, lint, a green Feature Path with no blocking finding, and a merge commit. 
 written in free prose when it is written at all. So the rule tightens **forward only**: a new `done`
 owes its coordinates in a fixed shape (date, PR or merge commit, gate result).
 
+## What the queue actually contains — measured, and corrected once
+
+The rule above was stated before the queue was counted. Counted, it does not hold on its own:
+**19 PRDs** carry `Status: ready-for-agent` and **34 tickets** do, against 72 tickets marked `done`.
+Every one of those 34 belongs to a feature whose business story is in `## Done` — so the queue the
+rule computes would hold **53 entries and not one real one**.
+
+Two distinct causes, and they do not cost the same:
+
+- **A PRD is a spec, not a work item.** It enters no queue and will never reach `done`, because it is
+  not the thing delivered. The definition gains a clause — *only tickets are queue items* — and 19
+  entries disappear with no file touched.
+- **34 delivered tickets still read `ready-for-agent`.** No definition rescues those: the file states
+  something false. They are corrected **once**, mechanically, to `done`.
+
+That correction is deliberately *not* the one rejected below. It rewrites **one stale word in a status
+field**, on files whose delivery is proven by the backlog; it reconstructs nothing, guesses nothing,
+and adds no delivery coordinates. Those stay absent, and "the retroactive gap is named, not repaid"
+keeps covering them.
+
 ## Considered options
 
 - **Add a sixth canonical role.** Rejected: it reopens, on the very file that is the contact point
@@ -42,6 +62,8 @@ owes its coordinates in a fixed shape (date, PR or merge commit, gate result).
   It is small and additive: upstream can add a terminal state tomorrow without breaking us.
 - **The retroactive gap is named, not repaid.** The oldest `done` tickets do not carry their delivery
   coordinates, and will not. That is a fact of the history, not a debt.
+- **The queue is `ready-for-agent`, minus `done`, counting tickets only** — PRDs excluded by
+  definition, and the 34 stale ones corrected once so the count starts from a true state.
 - **A feature is closed when all its tickets carry `done`** — which gives `.scratch/` the closure it
   never had (audit §2.6), one level up, for free.
 - **The factory has no glossary of its own**, and that is why `done` could drift unopposed:

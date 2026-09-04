@@ -1,5 +1,5 @@
 import { Chess } from "cm-chess";
-const P = 2;
+const P = 1;
 const pos = (sans) => { const c=new Chess(); for(const s of sans) c.move(s); return c.fen().split(" ").slice(0,4).join(" "); };
 const cand = async (sans, side) => {
   const r = await fetch(`http://localhost:3001/api/move-habits?profileId=${P}&side=${side}&fen=${encodeURIComponent(pos(sans))}`);
@@ -23,5 +23,5 @@ async function walk(side, sans, depth, minCount) {
 }
 for (const side of ["white","black"]) {
   console.log(`\n===== ${side.toUpperCase()} =====`);
-  await walk(side, [], 12, side==="white" ? 40 : 40);
+  await walk(side, [], 12, side==="white" ? 8 : 8);
 }
