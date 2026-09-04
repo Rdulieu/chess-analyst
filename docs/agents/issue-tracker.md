@@ -9,6 +9,9 @@ Tickets and specs for this repo live as markdown files in `.scratch/`.
 - Implementation tickets are `.scratch/<feature-slug>/tickets/<NN>-<slug>.md`, numbered from `01`
 - Triage state is recorded as a `Status:` line near the top of each ticket file (see
   `triage-labels.md` for the role strings)
+- A **delivered** ticket carries `done` in that same field — a **delivery state**, on a different
+  axis from the five triage roles, with its own required coordinates. See `delivery-state.md`, which
+  also gives the mechanical definition of the `ready-for-agent` queue
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
 
 > **Two layouts live here.** Features started before 2026-09-04 use the previous naming and keep

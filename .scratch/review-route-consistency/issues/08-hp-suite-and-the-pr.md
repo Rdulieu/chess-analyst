@@ -1,4 +1,4 @@
-Status: `ready-for-agent` — **HITL** : le merge `integration → develop` est une décision humaine.
+Status: `done` — **HITL** : le merge `integration → develop` est une décision humaine.
 
 ## Parent
 
