@@ -704,6 +704,8 @@
 
 ## In review
 
+## Done
+
 - **US-37**: Le barème d'`Inaccuracy` passe à **5 points** — pour que l'app cesse d'être muette sur
   les coups que le Player voit et qu'elle ne compte pas comme des fautes.
   > **Décidée le 2026-09-03 par le demandeur, et déjà entièrement mesurée** : *« je fixe le barème à
@@ -774,8 +776,8 @@
   > seront re-jugés contre un barème qui n'existait pas au scellement — constat seul.
 
   >
-  > **Livrée le 2026-09-04 — [PR #106](https://github.com/Rdulieu/chess-analyst/pull/106), en attente
-  > du merge humain.** Quatre tranches, les trois premières auto-mergées sur gate local vert
+  > **Mergée dans `develop` le 2026-09-04** — PR
+  > [#106](https://github.com/Rdulieu/chess-analyst/pull/106) (`6f93c65`).** Quatre tranches, les trois premières auto-mergées sur gate local vert
   > (build + tests + lint + FP), la quatrième — suite HP et PR — étant la seule décision humaine.
   > **Suite HP 3/3 verte** plus son prérequis ; **aucun finding bloquant, et aucun finding sur
   > l'application** sur les quatre runs.
@@ -784,9 +786,6 @@
   > « la perte est sur **9…Nf6 (5 points)** » — une perte de cinq points qui porte un glyphe, ce que
   > l'ancienne bande ne pouvait pas produire. Et sur les treize coups signalés des deux parties
   > analysées, **onze sont des `?!`** : aucun `?` ni `??` n'apparaît ni ne disparaît.
-
-
-## Done
 
 - **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
   niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.
