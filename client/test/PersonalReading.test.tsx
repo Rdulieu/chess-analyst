@@ -90,11 +90,12 @@ describe("the reading route", () => {
     expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("shows NOTHING of the engine, even on an analysed Game with Détaillé remembered", async () => {
-    // The trap this route exists to close: the remembered level is the highest
-    // one, and the Game has been analysed. A route that consulted the Review mode
-    // would light up here.
-    localStorage.setItem("chess-analyst.review-mode", "detailed");
+  it("shows NOTHING of the engine, even on an analysed Game a level could have lit up", async () => {
+    // The trap this route exists to close: the Game has been analysed, so there
+    // IS something to show. A route that consulted the Review mode would light up
+    // here. It used to be provoked with a remembered Détaillé; since US-28 no
+    // level survives an opening, so the provocation is now the analysed Game
+    // alone — the guarantee being asserted has not changed.
     stubReading();
 
     render(<PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />);
@@ -1535,10 +1536,9 @@ describe("PersonalReading — the Player's verdict on their own board (US-23, AD
     expect(squareOf(after.container, "e4")).toBe(sealed);
   });
 
-  it("shows NOTHING of the engine on this board, whatever the remembered Review mode", async () => {
+  it("shows NOTHING of the engine on this board, whatever the review is set to", async () => {
     // The guarantee this screen exists to make: no engine prop reaches the
     // diagram, so no measured severity can tint a square here.
-    localStorage.setItem("chess-analyst.review-mode", "detailed");
     const { container } = await readingWith([mark({ ply: 1, declaredSeverity: "sound" })]);
 
     // The Player's own tint is there...

@@ -101,7 +101,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 7. Open one imported Game the Player played **as White** (selecting it in the list navigates to its Analyse page, `/analyse/:gameId`) → a header names both players with their colour and marks which one is the Player, alongside the result, date, cadence and `Opening`; its Position renders on the board, White at the bottom; stepping forward/backward and jumping to a Move updates the Position accordingly. The Game is not analysed yet, so there is nothing of the engine to reveal and **no `Niveau de revue` control** is offered — only the invitation to analyse it.
 7b. Go back and open a Game the Player played **as Black** → the same header, now marking the Player on the Black side, and the board is read **Black at the bottom**.
 8. Start the same Import again from the Profile's page (same range + categories) → the summary reports the Games as already present, and the Game list gains no duplicate.
-9. Reopen the app (reload) → `DudulSmash` is **still the current Profile**: the banner names it without re-selecting, and the scoped screens show its history straight away. The `Review mode` is remembered the same way and has never been changed, so a Game still opens **Unaided** after a reload: the app does not start volunteering the engine's verdict.
+9. Reopen the app (reload) → `DudulSmash` is **still the current Profile**: the banner names it without re-selecting, and the scoped screens show its history straight away. A Game still opens **Unaided** after a reload — not because the level was remembered, but because since US-28 there is nothing to remember: every review starts there. The app does not start volunteering the engine's verdict.
 9b. **(US-16a) Write my own reading of a Game, and seal it.** Open any imported Game from "Mes
    parties" — its row says **`Aucune lecture`** — and, from its Analyse page, follow **« Écrire ma
    lecture de cette partie »** to the reading route → the board is oriented on the side the Player
@@ -117,7 +117,7 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    mark → it is accepted and marked **posterior to the seal**, while what was sealed stays readable
    beside it, unchanged. Return to "Mes parties" → that Game's row now reads **`Lecture scellée`**.
 
-   > **Why here.** Step 9 has just asserted that the remembered `Review mode` is Unaided and that
+   > **Why here.** Step 9 has just asserted that the `Review mode` is Unaided and that
    > "the app does not start volunteering the engine's verdict"; step 7 opened a Game that has
    > **not** been analysed. That is precisely the state US-16a is about, so the graft costs a few
    > navigations and **no engine time at all** — which is also why it sits *before* step 10 rather
@@ -231,11 +231,11 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 - Step 7: selecting a Game navigates to its Analyse page (`/analyse/:gameId`) and shows a board; the move indicator changes from the start position as you navigate, and castling/en passant/promotion resolve to the correct Position. The header names **both** players with their colour, marks the Player (in words, not by colour alone), and shows the result **stated from the Player's side** (Victoire / Défaite / Nulle — never `1-0`), the date, the cadence and the `Opening` as ECO + name. The header does not change while stepping through the Moves. On a White-side Game the board is White-at-bottom. The screen sits on a column wider than the app's reading column and the board is bounded, rather than sitting in the page's top-left corner (US-13). The pane beside the board holds the move list — a move list is not an annotation, and it is there for every Game — but on this unanalysed Game it holds **nothing of the engine** and offers no `Niveau de revue` control: there is nothing to reveal. The row proper is asserted at step 10.
 - Step 7b: on a Black-side Game the board is **Black-at-bottom** — the Player's own back rank is nearest them — and the Player mark has moved to the Black line of the header. The pieces have not moved: the board is turned, not rearranged.
 - Step 8: the replay's summary shows **0 imported / 82 already present**, both month lines saying so (28 and 54 already present); the listed Game count is unchanged.
-- Step 9: after reload, the `Review mode` is still Unaided — never chosen, never volunteered — and `DudulSmash` is still the current Profile — the banner names it with no re-selection, and the scoped screens render its history rather than sending the Player to `/profiles`. The selection is what survives a restart now; there is no remembered username field left to pre-fill.
+- Step 9: after reload, the `Review mode` is Unaided — where every review now starts (US-28), never volunteered — and `DudulSmash` is still the current Profile — the banner names it with no re-selection, and the scoped screens render its history rather than sending the Player to `/profiles`. The selection is what survives a restart now; there is no remembered username field left to pre-fill.
 - Step 9b: the reading route (`/analyse/:gameId/lecture`) renders **no engine information at all** —
   no `Evaluation`, no advantage bar, no `Evaluation curve`, no severity glyph, no `Best line`, no
   `Niveau de revue` control — on a Game that has not been analysed, and it neither reads nor writes
-  the remembered `Review mode` (still Unaided after the visit, per step 9). The board is oriented on
+  the `Review mode` (still Unaided after the visit, per step 9). The board is oriented on
   the side the Player played. A `Declared severity`, a `Note` and a `Key moment` are each accepted and
   each **flagged in the move list**, the three told apart by their own accessible names **and** by
   what is drawn — three marks the eye cannot separate would defeat the point of putting them there.
