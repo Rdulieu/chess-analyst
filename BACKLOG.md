@@ -617,7 +617,7 @@
 
 - **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
   ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
-  > **En revue depuis le 2026-09-04** — PR à créer, `integration/US-21-US-25-factory-update`
+  > **En revue depuis le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`
   > vers `develop`. **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
   > PRD, huit tranches, deux références gardées, parce que le renommage de vocabulaire de
   > l'amont *est* la passe de cohérence qu'US-21 demandait. La PR porte le filet de code, le
@@ -818,7 +818,7 @@
 - **US-25**: Reprendre les mises à jour de l'usine amont sans perdre les nôtres — pour que rejouer
   l'installation cesse d'être un choix entre « rester en arrière » et « écraser huit mois de
   terrain ».
-  > **En revue depuis le 2026-09-04** — PR à créer, `integration/US-21-US-25-factory-update`
+  > **En revue depuis le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`
   > vers `develop`. **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
   > PRD, huit tranches, deux références gardées, parce que le renommage de vocabulaire de
   > l'amont *est* la passe de cohérence qu'US-21 demandait. La PR porte le filet de code, le
