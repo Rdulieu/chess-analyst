@@ -406,6 +406,30 @@
   > l'amont fait disparaître les **9 branches** déjà mergées dans `develop`. **La reprise allège le
   > contexte et alourdit la boucle** ; l'échange se mesure sur les prochaines tranches, en même temps
   > qu'ADR-0027.
+  >
+  > #### PRD et tranches — publiés le 2026-09-04
+  >
+  > [`.scratch/factory-update/PRD.md`](.scratch/factory-update/PRD.md), huit sous-tickets sur la
+  > branche d'intégration `integration/US-21-US-25-factory-update` :
+  >
+  > | # | Tranche | Type | Bloquée par |
+  > | --- | --- | --- | --- |
+  > | 01 | `the-watch-post` — remote `upstream`, ref de reprise, mort du lock | AFK | — |
+  > | 02 | `the-front-of-the-pipeline` — grill recomposé, `to-spec`, `to-tickets`, `to-us` | AFK | 01 |
+  > | 03 | `the-two-hand-merged-skills` — la seule vraie fusion, plus les cinq skills neuves | AFK | 01 |
+  > | 04 | `the-vocabulary-pass` — la passe que git ne peut pas faire, et sa sonde | AFK | 02, 03 |
+  > | 05 | `claude-md-tells-the-truth` — `lint` gardé, `build-factory` retiré, `Cleanup` | AFK | 04 |
+  > | 06 | `the-knowledge-comes-home` — les trois annexes, le runner dégraissé | AFK | 04 |
+  > | 07 | `the-queue-becomes-a-queue-again` — 19 PRD exclus, 34 tickets corrigés | AFK | 04 |
+  > | 08 | `the-amnesiac-agent-and-the-pr` — l'épreuve, la suite HP, la PR | **HITL** | 05, 06, 07 |
+  >
+  > **Le risque est isolé dans la 03** : c'est la seule tranche où git doit arbitrer, et elle peut
+  > être refaite seule. La 02 passe tôt à la demande du demandeur, pour profiter tout de suite de la
+  > nouvelle chaîne — au prix d'une **double langue assumée** jusqu'à la 04.
+  >
+  > **Filet de code allégé, par décision du demandeur** : build + tests + lint ne tournent en fin de
+  > tranche que si `git diff --name-only` sort de `.claude/`, `docs/`, `.scratch/` et `BACKLOG.md`.
+  > Le filet passe **une fois, entier, à la tranche 08**.
 
 - **US-24**: Ne plus laisser un import réussir sans rien importer — pour qu'une demande qui ne peut
   rien rapporter soit refusée à l'entrée, et non conclue par un compte-rendu vert à zéro.
@@ -618,6 +642,30 @@
   > l'amont fait disparaître les **9 branches** déjà mergées dans `develop`. **La reprise allège le
   > contexte et alourdit la boucle** ; l'échange se mesure sur les prochaines tranches, en même temps
   > qu'ADR-0027.
+  >
+  > #### PRD et tranches — publiés le 2026-09-04
+  >
+  > [`.scratch/factory-update/PRD.md`](.scratch/factory-update/PRD.md), huit sous-tickets sur la
+  > branche d'intégration `integration/US-21-US-25-factory-update` :
+  >
+  > | # | Tranche | Type | Bloquée par |
+  > | --- | --- | --- | --- |
+  > | 01 | `the-watch-post` — remote `upstream`, ref de reprise, mort du lock | AFK | — |
+  > | 02 | `the-front-of-the-pipeline` — grill recomposé, `to-spec`, `to-tickets`, `to-us` | AFK | 01 |
+  > | 03 | `the-two-hand-merged-skills` — la seule vraie fusion, plus les cinq skills neuves | AFK | 01 |
+  > | 04 | `the-vocabulary-pass` — la passe que git ne peut pas faire, et sa sonde | AFK | 02, 03 |
+  > | 05 | `claude-md-tells-the-truth` — `lint` gardé, `build-factory` retiré, `Cleanup` | AFK | 04 |
+  > | 06 | `the-knowledge-comes-home` — les trois annexes, le runner dégraissé | AFK | 04 |
+  > | 07 | `the-queue-becomes-a-queue-again` — 19 PRD exclus, 34 tickets corrigés | AFK | 04 |
+  > | 08 | `the-amnesiac-agent-and-the-pr` — l'épreuve, la suite HP, la PR | **HITL** | 05, 06, 07 |
+  >
+  > **Le risque est isolé dans la 03** : c'est la seule tranche où git doit arbitrer, et elle peut
+  > être refaite seule. La 02 passe tôt à la demande du demandeur, pour profiter tout de suite de la
+  > nouvelle chaîne — au prix d'une **double langue assumée** jusqu'à la 04.
+  >
+  > **Filet de code allégé, par décision du demandeur** : build + tests + lint ne tournent en fin de
+  > tranche que si `git diff --name-only` sort de `.claude/`, `docs/`, `.scratch/` et `BACKLOG.md`.
+  > Le filet passe **une fois, entier, à la tranche 08**.
 
 - **US-27**: Retrouver une partie dans « Mes parties » sans faire défiler cent soixante-dix lignes —
   trier, filtrer, chercher, et savoir ce que compte un compteur.
