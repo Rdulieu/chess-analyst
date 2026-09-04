@@ -1,6 +1,7 @@
 # 01 — La veille : le remote `upstream`, le ref de reprise, et la mort du lock
 
-Status: ready-for-agent
+Status: done
+Delivered: 2026-09-04 · merge `1b44533` · gate: FP 4/4 ✓, no blocking finding · code net (build+tests+lint) deferred whole to slice 08 by requester decision, 2026-09-04
 Parent: [`.scratch/factory-update/PRD.md`](../PRD.md) — US-21 + US-25
 Branche : implémentée sur **`integration/US-21-US-25-factory-update`** — brancher depuis elle,
 fusionner vers elle, **jamais vers `develop`**.
