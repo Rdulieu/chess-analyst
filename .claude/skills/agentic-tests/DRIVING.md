@@ -186,6 +186,31 @@ a helper is recognised as *this* returning, not as a new mystery.
 - **A `location.port` guard on every injected script.** Load-bearing, not belt-and-braces: it is
   what kept every action off the siblings' apps during those ~20 thefts. `theme-pass.mjs` puts
   one on everything it evaluates.
+- **The review control and the curve are not named what a driver guesses.** Measured 2026-09-04,
+  where a first probe reported `curve:false` at the `Annoté` level and it was a **false red**: the
+  review control is `[data-part="review-mode"]` (not `review-level`), and the curve is
+  `[data-part="curve"]` with `[data-part="graph-label"]`, carrying `line[data-mark="cursor"]` and
+  `line[data-mark="equality"]` (not `evaluation-curve`). Read the attribute from the DOM, do not
+  infer it from the feature's name.
+- **`[data-square="a1"].closest("div").parentElement` is one square, not the board** — it measures
+  68×68. The board is the **union of all `[data-square]` rects** (544×544). Measured 2026-09-04;
+  same shape as the tint-on-a-child-div trap below: the square's box and the board's box are two
+  different questions.
+- **A re-attached session does not inherit the previous session's viewport override.** Set the
+  viewport in **every** phase: measured 2026-09-04, a phase that re-attached read "Mes parties" at
+  the headless default of 780 px while believing it was at 1280. No assertion suffered that day,
+  which is exactly why it is worth writing down — the next one may not be a width the layout
+  survives.
+- **Headless Chrome here defaults to `prefers-color-scheme: dark`.** The whole journey of a scenario
+  therefore renders in the dark palette unless something says otherwise (`matchMedia` true, body
+  `rgb(22,24,26)` — re-confirmed 2026-09-04). Harmless *because* the theme pass emulates both halves
+  explicitly and asserts the theme in-script; it would not be harmless for a hand-rolled screenshot
+  comparison.
+- **A Note reads as pending before it reads as saved.** Straight after typing and blurring, the panel
+  says `Enregistrée en quittant le champ.`; only after leaving the ply and coming back does it say
+  `Note enregistrée.`. It looks exactly like a lost Note — re-measure by navigating away and back
+  before reporting one (measured 2026-09-04). Same family as the `blur()`-on-an-unfocused-element
+  trap below.
 - **The board mounts a beat AFTER the page text settles.** A settle helper that waits on
   network-quiet plus a stable `innerText` is satisfied while `[data-square]` count is still **0** —
   measured 2026-09-04 on `/explorer`, which read 0 squares and 0 arrows on a screen that had 64 and

@@ -300,8 +300,11 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   time varies with the machine and its load by more than a factor of two, so install that observer
   before the click, and if a run still only sees the final figure, record it as *not exercised*
   rather than as a pass.
-  There is no analysis status endpoint to poll (`/api/import/status` exists, its analysis counterpart
-  does not): watch the DOM readout, which is what is under test anyway.
+  **Watch the DOM readout, which is what is under test anyway.** (Corrected 2026-09-04: this note
+  used to say no analysis status endpoint existed. `GET /api/analyze/status?profileId=<id>` does
+  exist and returns `{running, total, done, games, acknowledged, outcome, error}` — it is the right
+  thing to break a *wait* on, per the inventory's "poll the status endpoint and break on
+  `running:false`". It is **not** a substitute for reading the screen: the screen is the assertion.)
 - The Import is one fetch **per month**, run sequentially — expect the progress readout to sit on
   each month in turn rather than to advance smoothly.
 - The figures in the Preconditions table were read from the live chess.com API on 2026-08-12 and
