@@ -700,6 +700,10 @@
   > resserrage. Les passes existantes n'ont pas de provenance connue et devront le dire —
   > « inconnu » est une réponse honnête, « WASM » serait une supposition.
 
+## Doing
+
+## In review
+
 - **US-37**: Le barème d'`Inaccuracy` passe à **5 points** — pour que l'app cesse d'être muette sur
   les coups que le Player voit et qu'elle ne compte pas comme des fautes.
   > **Décidée le 2026-09-03 par le demandeur, et déjà entièrement mesurée** : *« je fixe le barème à
@@ -769,9 +773,17 @@
   > `Confrontation` étant calculée à la lecture, les 3 lectures scellées et leurs 97 verdicts
   > seront re-jugés contre un barème qui n'existait pas au scellement — constat seul.
 
-## Doing
+  >
+  > **Livrée le 2026-09-04.** Quatre tranches, les trois premières auto-mergées sur gate local vert
+  > (build + tests + lint + FP), la quatrième — suite HP et PR — étant la seule décision humaine.
+  > **Suite HP 3/3 verte** plus son prérequis ; **aucun finding bloquant, et aucun finding sur
+  > l'application** sur les quatre runs.
+  >
+  > La preuve que la story visait, dans les mots de l'app : la phrase du moment clé d'HP-03 lit
+  > « la perte est sur **9…Nf6 (5 points)** » — une perte de cinq points qui porte un glyphe, ce que
+  > l'ancienne bande ne pouvait pas produire. Et sur les treize coups signalés des deux parties
+  > analysées, **onze sont des `?!`** : aucun `?` ni `??` n'apparaît ni ne disparaît.
 
-## In review
 
 ## Done
 
