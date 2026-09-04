@@ -253,6 +253,34 @@ reason in `vocabulary.md`.
 On a fail, **offer to apply the table** to the named file, and nothing else: this probe finds a
 regression, it does not license a repo-wide rewrite. Signpost `docs/agents/vocabulary.md`.
 
+### L3. The `ready-for-agent` queue is exact
+
+The queue is what drives autonomy, so it is worth a command rather than a belief. Its definition is
+in `docs/agents/delivery-state.md`: **tickets carrying `ready-for-agent` and not the delivery state;
+specs are not queue items, by definition.**
+
+```bash
+grep -rlE '^Status: `?ready-for-agent`?' .scratch/*/issues/*.md .scratch/*/tickets/*.md 2>/dev/null
+```
+
+Report the **count and the list**, then the question that makes it a check rather than a readout:
+**is every one of those actually open?** A ticket whose feature's business story sits under `## Done`
+in `BACKLOG.md` is not open — it is a stale word in a status field, and that is `❌ fail`.
+
+Both status forms exist in the history (`ready-for-agent` and `` `ready-for-agent` ``), which is why
+the pattern carries the optional backticks; a probe that missed one form would have reported 11 of
+the 36 and looked green. Both directory layouts are searched too, for the same reason
+(`vocabulary.md` has the legacy one).
+
+**Specs are excluded by definition, not by a filter** — the glob names `issues/`/`tickets/`, never
+`PRD.md` or `SPEC.md`. On 2026-09-04 that clause alone removed **19** of 53 entries with no file
+touched, and it is the half of the definition that is easiest to lose when someone "simplifies" the
+pattern to `.scratch/**`.
+
+On a fail, **offer to correct the named tickets and nothing else** — one word in a status field, on
+files whose delivery is proven by the backlog. Never offer to fabricate delivery coordinates for an
+old one: `delivery-state.md` says why the retroactive gap is named rather than repaid.
+
 ### L4. How far upstream has moved
 
 The decision question, separate from L1's yes/no: *is a reprise worth taking now?*

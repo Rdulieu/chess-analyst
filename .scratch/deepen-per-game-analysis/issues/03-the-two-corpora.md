@@ -1,6 +1,6 @@
 # 03 — Les deux corpus blitz, et la double passe sur la 51
 
-Status: `ready-for-agent`
+Status: `done`
 Type: AFK
 Branche : depuis `integration/US-15a-bis-deepen-per-game-analysis`, PR **vers elle**.
 

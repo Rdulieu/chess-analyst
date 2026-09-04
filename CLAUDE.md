@@ -106,7 +106,14 @@ Tickets and specs live as markdown files under `.scratch/<feature-slug>/`. See
 upstream reprise retired — are in `docs/agents/vocabulary.md`.
 
 ### Triage labels
-Default canonical role names, no mapping (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+Default canonical role names, no mapping (`needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md` — **five roles, and the table is
+not to be extended**.
+
+`done` is **not** a sixth role: it is a **delivery state**, on a different axis, and it is what
+makes the queue computable — *tickets carrying `ready-for-agent` and not `done`; specs are not queue
+items*. A new `done` owes its date, its merge reference and its gate result, because that line is
+the only audit trail an auto-merge leaves. See `docs/agents/delivery-state.md` (ADR-0026).
 
 ### Domain docs
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

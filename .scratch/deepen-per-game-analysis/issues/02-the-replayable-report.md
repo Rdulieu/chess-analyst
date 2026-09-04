@@ -1,6 +1,6 @@
 # 02 — Le rapport re-jouable, une ligne par coup du Player
 
-Status: `ready-for-agent`
+Status: `done`
 Type: AFK
 Branche : depuis `integration/US-15a-bis-deepen-per-game-analysis`, PR **vers elle**.
 
