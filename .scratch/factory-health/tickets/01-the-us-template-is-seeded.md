@@ -1,6 +1,7 @@
 # 01 — Le gabarit d'User Story existe dans le dépôt
 
-Status: ready-for-agent
+Status: done
+Delivered: 2026-09-04 · merge `f6c5e10` · gate: build ✓ tests ✓ (1310) lint ✓ (306 fichiers lintés, 0 problème) FP 5/5 ✓ · no blocking finding
 Parent: aucun — ticket **isolé**, né d'un rouge du contrôle de santé de l'usine
 Branche : depuis **`integration/US-21-US-25-factory-update`** → `feature/<ticket-ref>-<slug>`,
 fusion vers cette branche d'intégration. C'est elle qui porte la méthode que ce ticket suppose
