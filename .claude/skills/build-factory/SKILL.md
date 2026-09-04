@@ -6,6 +6,32 @@ disable-model-invocation: true
 
 # /build-factory
 
+> # ⛔ Not replayed in this repo — 2026-09-04
+>
+> **Stop here.** `/build-factory` is a **bootstrap** tool; this repo was bootstrapped on
+> 2026-07-20 and has run 62 pull requests since. Replaying it is the one gesture known to
+> *destroy* method work: it lays down its own `CLAUDE.md` template, and that template has since
+> diverged from the real one — it states the gate as "build + tests", **losing the word `lint`**,
+> and it has no "Dev phase" section at all. Running it here would silently regress the two things
+> `CLAUDE.md` is most load-bearing for.
+>
+> The replayable role belongs to **`/verify-factory`** — a split upstream itself performed by
+> shipping that skill beside this one. Run it instead: it reports what is wired, what is missing,
+> and offers each fix, without writing a template over anything.
+>
+> **The seeds below flow one way only.** `build-factory/*.md` (`business-backlog.md`, `domain.md`,
+> `triage-labels.md`, the three `issue-tracker-*.md`, and `to-us/US-FORMAT.md`) are templates for
+> a **new** repo. Here, `docs/agents/*.md` is the source of truth and the seeds are **never read**.
+> Seed → repo, at bootstrap, never after. That is the direction the coherence audit asked for, and
+> the duplication stops being an ambiguity the moment it has one.
+>
+> Accepted consequence, named rather than discovered: **regenerating this factory from zero here
+> would take a manual gesture.** Judged cheaper than keeping a replayable gesture that can
+> regress the method. See ADR-0025 and `.claude/UPSTREAM.md`.
+>
+> Everything below is the skill as upstream ships it, kept for a *different* repo — and for
+> reading, not for running.
+
 Sets up the agentic software factory in this repo. It has **two modes**:
 
 - **Scaffold** — wire the ports (the two backlogs, the triage vocabulary, the domain docs) and lay

@@ -32,7 +32,7 @@ We speak of MR/PR (depending on the technical backlog, see `docs/agents/issue-tr
   > the gate ran it. Lint is green when the command **ran and exited 0**; a linter that cannot
   > parse the repo, or that reports zero problems because it linted zero files, is a **red**
   > gate. The same reading applies to the other three: an empty test run is not a green one.
-- **End of dev**: PR toward the branch the dev started from (`--base develop`, or `--base <integration/*>` for a sub-ticket), assigning the **responsible reviewer** (`<reviewer to define>`); comment the PR link on the business story (moved to "in review"). **The agent never merges into `develop`/`main`**: the responsible human validates and merges. *Only exception*: the auto-merge of a `ready-for-agent` sub-ticket into its `integration/*` (green local check).
+- **End of dev**: PR toward the branch the dev started from (`--base develop`, or `--base <integration/*>` for a sub-ticket), comment the PR link on the business story (moved to "in review"). **The agent never merges into `develop`/`main`**: the responsible human validates and merges. *Only exception*: the auto-merge of a `ready-for-agent` sub-ticket into its `integration/*` (green local check).
 - **`integration/*` -> `develop`**: human decision. Before the PR, the agent **runs the HP suite** (`/agentic-tests HP`) and **pastes the result** into the PR (pass/fail + findings); if the feature warrants it, it **proposes co-creating an HP** — **at most 3 HP** (otherwise: merge two journeys, drop a non-critical one, or graft drive-by). The PR **lists the included tickets** for a readable batch review. The agent opens the PR and gives the link; never merges. Once a human merges it, the integration branch is done — clean it up (see *Cleanup*).
 - **`develop` -> `main`**: human decision. On request, the agent opens the PR and gives the link; never merges.
 
@@ -91,6 +91,12 @@ git branch -r --merged develop | grep 'integration/'   # remote counterpart
 git branch -d <branch>                                 # delete local (after approval)
 git push origin --delete <branch>                      # delete remote (after approval)
 ```
+
+> **A branch checked out in a worktree cannot be deleted**, and `git branch -d` says so plainly
+> (`used by worktree at ...`). That is not a reason to force it: the fix is to retire the worktree
+> first, and a worktree may be another agent's live workspace. Report the branch as *held by a
+> worktree*, name the path, and leave it — never `git worktree remove` someone else's directory to
+> tidy a branch list. The 2026-09-04 cleanup hit exactly this on `integration/US-37-*`.
 
 > **Not wired here, and that is why the drift went unseen.** GitHub's auto-delete is off on this
 > repo and nothing offered the cleanup, so `git branch --merged develop` had grown to **9** live
