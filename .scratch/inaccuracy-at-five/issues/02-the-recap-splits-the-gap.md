@@ -1,6 +1,6 @@
 # 02 — Le récapitulatif ventile l'écart par motif
 
-Status: ready-for-agent
+Status: done
 
 ## Parent
 
