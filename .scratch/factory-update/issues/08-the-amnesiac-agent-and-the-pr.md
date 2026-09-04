@@ -1,6 +1,7 @@
 # 08 — L'épreuve de l'agent frais, la suite HP, la PR
 
-Status: ready-for-agent — **HITL** : la PR `integration → develop` est une décision humaine.
+Status: done — **HITL** : la PR `integration → develop` est une décision humaine.
+Delivered: 2026-09-04 · merge `57ce414` · gate: build ✓ tests ✓ (1415) test:tools ✓ lint ✓ (306 fichiers lintés, 0 problème) · HP 3/3 + prérequis ✓ · 4/4 sondes ✓ · no blocking finding · la PR integration→develop reste ouverte, décision humaine
 Parent: [`.scratch/factory-update/PRD.md`](../PRD.md) — US-21 + US-25
 Branche : implémentée sur **`integration/US-21-US-25-factory-update`** — brancher depuis elle,
 fusionner vers elle, **jamais vers `develop`**.
