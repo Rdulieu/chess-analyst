@@ -59,6 +59,13 @@ export interface GameRecap {
   flaggedMoves: number;
   /** Flawed Moves the **analysis** holds the Player to. */
   countedErrors: number;
+  /**
+   * The gap between the two above, **by the reason that excluded each Move** —
+   * the server's own breakdown, never recomputed here. A lump would let this
+   * screen say "shown but not counted" and stop: the two reasons say different
+   * things, and the Player has to be able to tell them apart.
+   */
+  flaggedUncounted: { forced: number; decided: number };
   chancesLost: number;
   flaggedLoss: number;
   /** The residual: `flaggedLoss + drift === chancesLost`, on every Game. */

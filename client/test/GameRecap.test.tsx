@@ -9,6 +9,7 @@ const RECAP: GameRecap = {
   excluded: { forced: 1, decided: 2 },
   flaggedMoves: 4,
   countedErrors: 3,
+  flaggedUncounted: { forced: 1, decided: 0 },
   chancesLost: 62.5,
   flaggedLoss: 48,
   drift: 14.5,
@@ -16,6 +17,13 @@ const RECAP: GameRecap = {
 };
 
 const text = () => screen.getByRole("region", { name: /ce que cette partie apporte/i }).textContent!;
+
+/** The sentence explaining the gap ALONE. The words "forcé" and "déjà décidée"
+ *  also appear in the exclusions line just above, so asserting over the whole
+ *  panel would pass whatever this sentence said. */
+const gap = () =>
+  screen.getByRole("region", { name: /ce que cette partie apporte/i }).querySelector('[data-part="gap"]')
+    ?.textContent ?? "";
 
 describe("The Game's recap — what it states", () => {
   it("states the counted Moves over the Player's total, so the denominator is visible", () => {
@@ -46,11 +54,49 @@ describe("The Game's recap — what it states", () => {
 
     // Four flagged, three counted: the difference is the forced one.
     expect(text()).toMatch(/4/);
-    expect(text()).toMatch(/forcé/i);
+    expect(gap()).toMatch(/1 parce que le coup était forcé/i);
+  });
+
+  it("names the DECIDED reason when that is what the gap is made of, rather than asserting 'forcé'", () => {
+    // The case this slice exists for. It cannot occur while the flagging band and
+    // the denominator floor are the same number, and it starts occurring the
+    // moment they part — at which point the hard-coded sentence would state, on
+    // screen, something that is simply untrue of the Game in front of the Player.
+    render(
+      <GameRecapReadout
+        recap={{ ...RECAP, flaggedUncounted: { forced: 0, decided: 2 } }}
+      />,
+    );
+
+    expect(gap()).toMatch(/2 parce que les positions étaient déjà décidées/i);
+    expect(gap()).not.toMatch(/forcé/i);
+  });
+
+  it("names BOTH reasons, each with its own count, when the gap is made of both", () => {
+    render(
+      <GameRecapReadout
+        recap={{ ...RECAP, flaggedMoves: 6, flaggedUncounted: { forced: 1, decided: 2 } }}
+      />,
+    );
+
+    // Never melted into one "non comptées": the two say different things, and a
+    // Player who cannot tell them apart can audit neither.
+    expect(gap()).toMatch(/1 parce que le coup était forcé/i);
+    expect(gap()).toMatch(/2 parce que les positions étaient déjà décidées/i);
   });
 
   it("says nothing about a gap when there is none", () => {
-    render(<GameRecapReadout recap={{ ...RECAP, flaggedMoves: 3, countedErrors: 3, excluded: { forced: 0, decided: 2 } }} />);
+    render(
+      <GameRecapReadout
+        recap={{
+          ...RECAP,
+          flaggedMoves: 3,
+          countedErrors: 3,
+          excluded: { forced: 0, decided: 2 },
+          flaggedUncounted: { forced: 0, decided: 0 },
+        }}
+      />,
+    );
 
     // No gap to explain, so no explanation — the sentence about a Move shown but
     // not counted is absent, not zeroed out.
@@ -78,6 +124,7 @@ describe("The Game's recap — what it states", () => {
           countedMoves: 12,
           excluded: { forced: 0, decided: 0 },
           flaggedMoves: 0,
+          flaggedUncounted: { forced: 0, decided: 0 },
           countedErrors: 0,
           chancesLost: 0,
           flaggedLoss: 0,

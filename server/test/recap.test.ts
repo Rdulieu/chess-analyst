@@ -32,10 +32,43 @@ describe("gameRecap — what this Game contributes", () => {
         "excluded",
         "flaggedLoss",
         "flaggedMoves",
+        "flaggedUncounted",
         "playerMoves",
         "regime",
       ].sort(),
     );
+  });
+
+  it("breaks the gap between shown and counted down BY REASON, never as one figure", () => {
+    // The one overlap the two sets have: a sole legal Move that is also a
+    // catastrophe. White is in check from the rook on g1 and boxed in by their
+    // own pawns, so `Kxg1` is the ONLY legal Move — and here it walks into a
+    // collapse. Flagged by the Game, held against nobody.
+    // Positions are written out rather than replayed from a PGN: the point is
+    // the Position's shape, and a PGN reaching it would only obscure that.
+    const SOLE_LEGAL = "7k/8/8/8/8/8/5PPP/6rK w - - 0 1";
+    const AFTER = "7k/8/8/8/8/8/5PPP/6K1 b - - 0 1";
+    const evals: StoredEvaluation[] = [
+      { ply: 0, fen: SOLE_LEGAL, cp: 120, mate: null, pv: "" },
+      { ply: 1, fen: AFTER, cp: 900, mate: null, pv: "" },
+    ];
+
+    const recap = gameRecap({ playerColor: "white" }, evals, REGIME);
+
+    // The Move is shown and not counted, and the panel is told WHY.
+    expect(recap.flaggedMoves).toBe(1);
+    expect(recap.countedErrors).toBe(0);
+    expect(recap.flaggedUncounted).toEqual({ forced: 1, decided: 0 });
+    // The invariant the recap owes its reader: the breakdown IS the gap.
+    const { forced, decided } = recap.flaggedUncounted;
+    expect(forced + decided).toBe(recap.flaggedMoves - recap.countedErrors);
+  });
+
+  it("leaves the breakdown at zero when every flagged Move is counted", () => {
+    const recap = gameRecap({ playerColor: "white" }, stored(PGN, [0, 0, 0, 0, 0, 0, 0, 0, 0]), REGIME);
+
+    expect(recap.flaggedUncounted).toEqual({ forced: 0, decided: 0 });
+    expect(recap.flaggedMoves).toBe(recap.countedErrors);
   });
 
   it("counts the Player's Moves, not the Game's half-moves", () => {
