@@ -10,8 +10,9 @@ import type { Ply } from "./derivation";
  *
  * **10 is empirical, and its counterpart is counted.** It was once a corollary:
  * flagging asked for a 10% drop, so it asked for 10% left to lose, and nothing
- * under the floor could be flagged. That derivation is gone the moment the two
- * numbers part. What justifies 10 now is the measurement — on the twenty-Game
+ * under the floor could be flagged. That derivation went the moment the two
+ * numbers parted — the band is 5 now, and a Move played at 5.8% of chances can
+ * drop 5.5 and be flagged while excluded. What justifies 10 now is the measurement — on the twenty-Game
  * reference corpus the dead zone holds **81** of the Player's Moves, against
  * which at most a handful can be flagged while excluded. The floor buys a
  * denominator that stays comparable between Games, at a price that is stated

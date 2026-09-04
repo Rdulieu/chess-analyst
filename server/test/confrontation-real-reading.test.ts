@@ -88,15 +88,27 @@ describe("Confrontation — a real reading of a real Game", () => {
     expect(declaredOnExcluded[0].notation).toBeTruthy();
   });
 
-  it("finds all the damage, and still reports the marker that found none", () => {
+  it("finds SOME of the damage, and still reports the marker that found none", () => {
     const { keyMoments } = confronted();
 
     // The combination no invented case produced: three markers, two on real
-    // faults and one on nothing. The score is whole **and** the miss is shown —
-    // which is what "additive, and no tolerance window" means. A marker that
-    // misses costs nothing; it also gains nothing.
+    // faults and one on nothing. The miss is shown — which is what "additive,
+    // and no tolerance window" means. A marker that misses costs nothing; it
+    // also gains nothing.
+    //
+    // **This reading used to find ALL the damage, and US-37 changed that** — not
+    // by touching the reading, which is sealed and untouched, but by lowering the
+    // band to 5: the analysis now names faults this Player did not mark, so their
+    // three markers cover 61.1 of 84.4 points instead of all of it. That is the
+    // retroactivity the story recorded as a constat rather than repaired: a
+    // `Confrontation` is computed at read time, against the **current** method,
+    // and a sealed reading is therefore re-judged by a scale that did not exist
+    // when it was sealed. Written here rather than softened away, because this
+    // fixture is the only place in the suite where a real reading meets a real
+    // Game and can say so.
     expect(keyMoments.marked).toBe(3);
-    expect(keyMoments.damageFound).toBeCloseTo(keyMoments.damageTotal, 10);
+    expect(keyMoments.damageFound).toBeGreaterThan(0);
+    expect(keyMoments.damageFound).toBeLessThan(keyMoments.damageTotal);
     expect(keyMoments.misses).toHaveLength(1);
     const [miss] = keyMoments.misses;
     expect(miss.lostThere).toBe(0);
@@ -110,9 +122,11 @@ describe("Confrontation — a real reading of a real Game", () => {
     const { keyMoments } = confronted();
     const { recap } = annotations();
 
-    // A third of what was lost answers to no flagged Move at all. Counting it
-    // would have put a full score out of this reading's reach — and the reading
-    // did name every fault there was.
+    // Part of what was lost answers to no flagged Move at all. Counting it into
+    // the division would put a full score out of any reading's reach, which is
+    // why the Drift is reported **beside** the score and never inside it. US-37
+    // shrank the Drift — the band at 5 converts some of it into named faults —
+    // without changing that rule.
     expect(keyMoments.drift).toBeGreaterThan(0);
     expect(keyMoments.damageTotal).toBe(recap!.flaggedLoss);
     expect(keyMoments.damageTotal + keyMoments.drift).toBeCloseTo(recap!.chancesLost, 10);
