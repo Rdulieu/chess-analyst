@@ -88,8 +88,10 @@ reprise arbitrates instead of guessing. Only these files carry local work; every
 | `build-factory/SKILL.md` | A ⛔ banner at the top: not replayed here, and why (its `CLAUDE.md` template regresses the gate). The rest is upstream verbatim. |
 | `implement/SKILL.md` | `lint` added to the green gate, in two places. Upstream states it as "build + tests"; here the gate is stated once in `CLAUDE.md` and includes lint. |
 
-`assess-reading` is this repo's own skill and was never the factory's — it is not part of any
-reprise.
+`assess-reading` and `profile-habits` are this repo's **own** skills and were never the factory's —
+they are not part of any reprise, and `diff -rq` reports them as `Only in .claude/skills`. They are
+still **our lines**, so the vocabulary probe searches them; add the next one to its path list when
+you write it.
 
 **`code-review` shadows Claude Code's built-in skill of the same name.** A project skill overrides
 the built-in one, so `/code-review` here is upstream's: bound to this repo's documented standards

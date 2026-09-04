@@ -67,7 +67,7 @@ has diverged — and states its exclusions rather than implying them:
 CLAUDE.md
 .claude/UPSTREAM.md
 .claude/skills/agentic-tests/   .claude/skills/git-flow/
-.claude/skills/assess-reading/
+.claude/skills/assess-reading/  .claude/skills/profile-habits/   (+ every skill of our own making)
 docs/agents/
 docs/adr/
 docs/test-scenarios/*.md

@@ -230,13 +230,13 @@ exclusions** live in `docs/agents/vocabulary.md` — read it before running this
 exclusion that is not written down is indistinguishable from an oversight.
 
 ```bash
-{ grep -rnE 'to-prd|to-issues|sub-issue|issue-ref|\bPRD\b|UI-first' \
+{ grep -rnE 'to-prd|to-issues|sub-issue|issue-ref|\bPRDs?\b|UI-first' \
     CLAUDE.md .claude/UPSTREAM.md \
     .claude/skills/agentic-tests/ .claude/skills/git-flow/ \
-    .claude/skills/assess-reading/ \
+    .claude/skills/assess-reading/ .claude/skills/profile-habits/ \
     docs/agents/ docs/adr/ docs/test-scenarios/*.md 2>/dev/null \
     | grep -vE '^docs/adr/0025-|^docs/adr/0026-|^docs/agents/vocabulary\.md'
-  grep -nE 'to-prd|to-issues|sub-issue|issue-ref|\bPRD\b|UI-first' BACKLOG.md \
+  grep -nE 'to-prd|to-issues|sub-issue|issue-ref|\bPRDs?\b|UI-first' BACKLOG.md \
     | grep -vE '^[0-9]+: *>'
 }
 ```
@@ -271,6 +271,13 @@ grep -rlE '^Status: `?ready-for-agent`?' .scratch/*/issues/*.md .scratch/*/ticke
 Report the **count and the list**, then the question that makes it a check rather than a readout:
 **is every one of those actually open?** A ticket whose feature's business story sits under `## Done`
 in `BACKLOG.md` is not open — it is a stale word in a status field, and that is `❌ fail`.
+
+**`PRDs?` carries its plural on purpose.** `\bPRD\b` misses `PRDs` — the `D`→`s` boundary is not a
+word boundary — and that is not hypothetical: it let "Issues and PRDs live as markdown files" sit in
+`CLAUDE.md` through the whole vocabulary pass, on the line an agent reads every session. **The
+searched list also grows with the repo**: every skill of *our own* making belongs in it
+(`assess-reading`, `profile-habits`, …), because those are our lines. A probe whose path list is
+stale is a probe that reports green about files it never opened.
 
 Both status forms exist in the history (`ready-for-agent` and `` `ready-for-agent` ``), which is why
 the pattern carries the optional backticks; a probe that missed one form would have reported 11 of
