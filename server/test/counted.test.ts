@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { countedMoves, type MoveCount } from "../src/analysis/counted";
+import { classifyMove } from "../src/danger/move-quality";
 import type { Ply } from "../src/analysis/derivation";
 
 /** A ply with only what this derivation reads: the Position and the winning
@@ -60,6 +61,17 @@ describe("Counted Move — already decided", () => {
     expect(counted[1]).toEqual({ counted: false, reason: "decided" });
   });
 
+  it("puts the floor exactly at 10, strictly under being the excluded side", () => {
+    // The boundary itself, written as a NUMBER and not as the imported constant:
+    // a test that imports the threshold still passes after a retune that changes
+    // what the threshold means, which is the whole trap this story closes.
+    const under = countedMoves([ply(OPEN, 9.9), ply(OPEN_BLACK, 50)], "white");
+    const at = countedMoves([ply(OPEN, 10), ply(OPEN_BLACK, 50)], "white");
+
+    expect(under[1]).toEqual({ counted: false, reason: "decided" });
+    expect(at[1]).toEqual({ counted: true, reason: null });
+  });
+
   it("counts a Move played while WINNING — the rule is asymmetric on purpose", () => {
     // 88%: a symmetric band around equality would delete the inability to
     // convert a won Position, which is one of the realest weaknesses there is.
@@ -90,15 +102,25 @@ describe("Counted Move — the two reasons do not behave alike", () => {
     expect(counted[1]).toEqual({ counted: false, reason: "forced" });
   });
 
-  it("can never exclude a FLAGGED Move as 'already decided' — the sets are disjoint by construction", () => {
-    // Flagging needs a 10% drop, hence 10% left to lose; under the floor there
-    // is not enough left. Asserted over the whole floor rather than on one case.
+  it("CAN exclude a flagged Move as 'already decided' — the sets stopped being disjoint at US-37", () => {
+    // This test used to assert the opposite, and the arithmetic backed it:
+    // flagging asked for a 10% drop, hence 10% left to lose, and nothing under
+    // the floor had that much. The band is 5 now and the floor is still 10, so a
+    // Position between the two can produce a flagged Move that does not count.
+    //
+    // What survives untouched is the exclusion itself: every Position under the
+    // floor is still excluded, and still says `decided`. Asserted over the whole
+    // floor rather than on one case, exactly as before.
     for (let before = 0; before < 10; before++) {
       const counted = countedMoves([ply(OPEN, before), ply(OPEN_BLACK, 0)], "white");
-      // The largest drop available from here is `before` itself, under the floor.
-      expect(before).toBeLessThan(10);
       expect(counted[1]).toEqual({ counted: false, reason: "decided" });
     }
+
+    // And the overlap is real rather than theoretical: from 5.8% of chances, a
+    // Move can drop 5.5 and be flagged — a Position the corpus actually contains.
+    expect(classifyMove(5.8, 0.3)).toBe("inaccuracy");
+    const counted = countedMoves([ply(OPEN, 5.8), ply(OPEN_BLACK, 99.7)], "white");
+    expect(counted[1]).toEqual({ counted: false, reason: "decided" });
   });
 });
 

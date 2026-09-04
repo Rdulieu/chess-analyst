@@ -55,6 +55,24 @@ describe("The replayable report — one line per Player Move", () => {
     expect(report.rows.slice(1).map((row) => row.severity)).toEqual([null, null, null]);
   });
 
+  it("reconciles the SHOWN-BUT-NOT-COUNTED breakdown too, on a Game that actually has one", () => {
+    // The fixture above has no flagged-and-excluded Move, so it reconciles the
+    // breakdown only in the sense that zero equals zero — which no mistake in the
+    // fold can disturb. This Game does have one: after `4. Qh5+`, `g6` is Black's
+    // ONLY legal Move, and here it walks into a collapse. Flagged by the Game,
+    // held against nobody, and therefore the one line the two sides can disagree
+    // about.
+    const forcedPgn = "1. c3 b5 2. e4 f5 3. h4 c5 4. Qh5+ g6";
+    const evals = stored(forcedPgn, [0, 10, -10, 20, -20, 30, -30, 220, 900]);
+
+    const report = gameReport({ playerColor: "black", pgn: forcedPgn }, evals, { regime: REGIME });
+
+    // The Game really does exercise the case — otherwise this test would pass
+    // while proving nothing, which is exactly what it exists to stop.
+    expect(report.recap.flaggedUncounted.forced).toBeGreaterThan(0);
+    expect(report.totals.flaggedUncounted).toEqual(report.recap.flaggedUncounted);
+  });
+
   it("reconciles itself: folding the lines gives back the recap the app shows, term by term", () => {
     // A Game with one real Blunder and a slow bleed around it — `recap.test.ts`'s
     // own fixture, so the two seams speak of the same Game.
@@ -73,6 +91,7 @@ describe("The replayable report — one line per Player Move", () => {
       excluded: report.recap.excluded,
       flaggedMoves: report.recap.flaggedMoves,
       countedErrors: report.recap.countedErrors,
+      flaggedUncounted: report.recap.flaggedUncounted,
       chancesLost: report.recap.chancesLost,
       flaggedLoss: report.recap.flaggedLoss,
       drift: report.recap.drift,

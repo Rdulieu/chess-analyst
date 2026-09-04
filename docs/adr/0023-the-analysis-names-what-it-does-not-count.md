@@ -125,3 +125,25 @@ short — hence the decision.
   Game 708, held in reserve, would test the predicate on the corpus that has no outside reference at
   all; if it flagged the two Moves material designates there and the conjunction misses, this decision
   should be revisited.
+
+## Note — US-37 (2026-09-04): the mechanism now fires without a predicate
+
+The `Inaccuracy` band drops to **5** while the `Counted Move` floor stays at **10** (see `CONTEXT.md`
+and ADR-0017's amended consequence). The two numbers, until now the same one, part — and a Move in
+the dead zone can therefore be **flagged while excluded** on the drop alone.
+
+That is the case this ADR was written for: *shown by the Game, not held by the analysis*. US-15a's
+slice 04 built the display path for it and no Game had ever reached it. **It now fires by itself**,
+with no predicate and no new threshold — on the twenty-Game corpus, `587/59` (a 9.0 drop at 9.96%
+chances) and `715/106` (5.5 at 5.8%).
+
+Two consequences for this ADR, neither of which reopens it:
+
+- **The predicate's remaining volume is smaller than measured here.** The band absorbs **2 of the 4**
+  known dead-zone cases for free; what the predicate would still add is **three** Moves over twenty
+  Games — 0.15 per Game. Two of those three are `Kc7`-shaped, which is exactly the family no
+  threshold will ever reach, so the argument for a second axis is unchanged in kind and much smaller
+  in size. `.scratch/deepen-per-game-analysis/ARBITRATIONS.md` §C/D carries the figures.
+- **The question the predicate answers has moved.** It is no longer "which signal separates" — the
+  review answered that — but "are these three Moves worth a second axis in the vocabulary". That is a
+  product question, and it can now be asked in front of a screen that actually shows the case.

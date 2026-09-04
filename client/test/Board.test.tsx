@@ -765,6 +765,7 @@ describe("Board — the Game's recap", () => {
     countedMoves: 8,
     excluded: { forced: 1, decided: 1 },
     flaggedMoves: 2,
+    flaggedUncounted: { forced: 0, decided: 0 },
     countedErrors: 1,
     chancesLost: 30,
     flaggedLoss: 20,

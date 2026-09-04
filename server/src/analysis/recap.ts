@@ -31,6 +31,20 @@ export interface GameRecap {
   flaggedMoves: number;
   /** Flawed Moves the **analysis** holds the Player to. */
   countedErrors: number;
+  /**
+   * The gap between the two above — flagged Moves the analysis does not count —
+   * **broken down by the reason that excluded them**, never as one figure.
+   *
+   * A lump would let the page say "shown but not counted" and stop there, which
+   * is exactly the wording `UncountedReason` exists to forbid: *forced* is a rule
+   * of chess and *already decided* is a limit of the metric, and a Player who
+   * cannot tell them apart can audit neither. ADR-0017 already requires a Game to
+   * carry **which** reason excluded a Move; this is that requirement met at the
+   * recap's altitude rather than only at the Move's.
+   *
+   * Summing this record gives `flaggedMoves - countedErrors` exactly.
+   */
+  flaggedUncounted: Record<UncountedReason, number>;
   /** Winning chances the Player lost across their counted Moves, in points. */
   chancesLost: number;
   /** The share of that the flagged counted Moves account for. */
@@ -74,6 +88,7 @@ export function gameRecap(
     excluded: { forced: 0, decided: 0 },
     flaggedMoves: 0,
     countedErrors: 0,
+    flaggedUncounted: { forced: 0, decided: 0 },
     chancesLost: 0,
     flaggedLoss: 0,
     drift: 0,
@@ -89,7 +104,12 @@ export function gameRecap(
     if (severity) recap.flaggedMoves += 1;
 
     if (!move.counted) {
-      if (move.reason) recap.excluded[move.reason] += 1;
+      if (move.reason) {
+        recap.excluded[move.reason] += 1;
+        // Shown by the Game and held against nobody: the surprising pair, and the
+        // only one the page has to explain rather than merely total.
+        if (severity) recap.flaggedUncounted[move.reason] += 1;
+      }
       continue;
     }
 

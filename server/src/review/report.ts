@@ -71,6 +71,7 @@ export interface ReportTotals {
   excluded: Record<UncountedReason, number>;
   flaggedMoves: number;
   countedErrors: number;
+  flaggedUncounted: Record<UncountedReason, number>;
   chancesLost: number;
   flaggedLoss: number;
   drift: number;
@@ -235,6 +236,8 @@ function reconciles(totals: ReportTotals, recap: GameRecap): boolean {
     totals.excluded.decided === recap.excluded.decided &&
     totals.flaggedMoves === recap.flaggedMoves &&
     totals.countedErrors === recap.countedErrors &&
+    totals.flaggedUncounted.forced === recap.flaggedUncounted.forced &&
+    totals.flaggedUncounted.decided === recap.flaggedUncounted.decided &&
     close(totals.chancesLost, recap.chancesLost) &&
     close(totals.flaggedLoss, recap.flaggedLoss) &&
     close(totals.drift, recap.drift)
@@ -274,6 +277,7 @@ function fold(rows: MoveReportRow[]): ReportTotals {
     excluded: { forced: 0, decided: 0 },
     flaggedMoves: 0,
     countedErrors: 0,
+    flaggedUncounted: { forced: 0, decided: 0 },
     chancesLost: 0,
     flaggedLoss: 0,
     drift: 0,
@@ -283,7 +287,10 @@ function fold(rows: MoveReportRow[]): ReportTotals {
     totals.playerMoves += 1;
     if (row.severity) totals.flaggedMoves += 1;
     if (!row.counted.counted) {
-      if (row.counted.reason) totals.excluded[row.counted.reason] += 1;
+      if (row.counted.reason) {
+        totals.excluded[row.counted.reason] += 1;
+        if (row.severity) totals.flaggedUncounted[row.counted.reason] += 1;
+      }
       continue;
     }
     totals.countedMoves += 1;

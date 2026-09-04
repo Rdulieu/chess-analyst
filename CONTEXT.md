@@ -144,11 +144,11 @@ lost), **not** by a raw centipawn threshold. Computed only for **the player's ow
 the opponent's — this tool is about the player's own improvement), by comparing the position
 *before* the Move (engine's best play) with the position *after* the Move actually played:
 
-- **Inaccuracy** (`?!`): winning-chances drop of **10–20%**.
+- **Inaccuracy** (`?!`): winning-chances drop of **5–20%**.
 - **Mistake** (`?`): drop of **20–30%**.
 - **Blunder** (`??`): drop of **30% or more**.
 
-A Move dropping the chances by less than 10% is not flagged. Because winning chances saturate near
+A Move dropping the chances by less than 5% is not flagged. Because winning chances saturate near
 the extremes, a weak Move played while **already completely winning (or already lost)** is not
 flagged either — it barely moves the chances (this is why the winning-chances method is used rather
 than raw centipawns). `Mistake` is also used as the **umbrella** for "a flaw worth counting" where a
@@ -311,9 +311,13 @@ nothing about the Player's play:
 - it was **forced** — there was no real alternative, so playing it earns neither credit nor blame.
 
 The two reasons behave differently, and the difference matters. **Already decided** can never hide a
-flawed Move: flagging one requires a 10% drop, so it requires 10% left to lose, and a Position under
-that floor cannot produce an `Inaccuracy` at all. That exclusion only ever shrinks the **denominator**
-— which is its purpose. **Forced**, on the other hand, can exclude a Move that *is* flagged: a sole
+flawed Move — and it is a **near**-guarantee, not the arithmetic one it used to be. The floor was
+once the `Inaccuracy` band itself, so a Position under it could not produce a flagged Move at all;
+the two numbers have since parted (flagging asks for **5**, the floor stands at **10**), and a Move
+played at 5.8% chances can drop 5.5 and be flagged while excluded. Measured on the twenty-Game
+corpus, that happens **twice** against **81** Moves excluded — the price of a denominator that stays
+comparable between Games, stated rather than hidden. The floor is now an **empirical** number with
+its counterpart counted, not a corollary of the band. **Forced**, on the other hand, can exclude a Move that *is* flagged: a sole
 legal move that happens to be a catastrophic recapture drops the chances like any `Blunder`, and is
 still nobody's mistake. That is the case where what a Game shows and what it contributes visibly
 disagree, so a reviewed Game states, for each of the Player's Moves, whether it is counted and —
@@ -326,8 +330,10 @@ everything lost, minus what the `Inaccuracy`/`Mistake`/`Blunder` Moves lost. A *
 object — there is no "drift Move" and no drift episode with a start and an end. The two parts add up
 to the total by construction, which is what lets a Game's figures be summed without counting the
 same lost chances twice.
-Drift is what a threshold-based reading of a Game is structurally blind to: bleeding 5% a Move for
-fifteen Moves never trips the `Inaccuracy` floor, yet loses the Game as surely as one `Blunder`. On
+Drift is what a threshold-based reading of a Game is structurally blind to: bleeding 3% a Move for
+fifteen Moves never trips the `Inaccuracy` floor, yet loses the Game as surely as one `Blunder`.
+Lowering the floor shrinks that blind spot without closing it — no floor above zero can — which is
+why Drift is published beside the flagged losses rather than assumed negligible. On
 a Game's `Evaluation curve` the flagged Moves are the cliffs and the Drift is the slope between
 them.
 _Avoid_: Slow loss, Positional error, Accumulation
@@ -422,7 +428,7 @@ coincidence with the `Best line` — same first Move? — would be free, and wou
 for losing 2% of the winning chances while declaring a copied Move right. It would teach imitation.
 So the Position a Candidate line reaches is evaluated and set against the one the Best line reaches,
 on the same winning-chances scale everything else here uses (see `Line check`). A Move that is not
-the best but drops less than 10% is not a fault — the glossary already says so of Moves *played*, and
+the best but drops less than the `Inaccuracy` floor is not a fault — the glossary already says so of Moves *played*, and
 an idea merely *proposed* cannot be judged more harshly than one played for real.
 _Avoid_: Variation (PGN's structural word for the same thing — kept for the storage format, not for
 the concept), My line, Alternative

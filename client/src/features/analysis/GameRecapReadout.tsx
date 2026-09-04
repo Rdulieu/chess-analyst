@@ -1,3 +1,4 @@
+import type { UncountedReason } from "../../chess/counted";
 import type { GameRecap } from "../../types";
 
 /** A chances figure, in points, always to one decimal — enough to add up on
@@ -21,11 +22,38 @@ const points = (value: number) => `${value.toFixed(1)} %`;
  * Game and held against nobody — and two correct summaries disagreeing side by
  * side read as a bug. So this states both, **and the reason for the gap**.
  */
+/**
+ * How the gap names each reason, **in that reason's own words**. The two are
+ * never melted into a bare "non comptées": *forced* is a rule of chess, *already
+ * decided* is a limit of the metric, and the Player audits neither if the screen
+ * will not tell them apart.
+ *
+ * The `decided` half was unreachable while the flagging band and the denominator
+ * floor were the same number — a Position with less than the band left to lose
+ * could not produce a flagged Move at all. It is written here **before** it can
+ * occur rather than after, because the alternative is a screen that keeps
+ * asserting "le coup était forcé" about a Move that was nothing of the kind.
+ */
+const GAP_REASON: Record<UncountedReason, (count: number) => string> = {
+  forced: (count) => (count > 1 ? "parce que les coups étaient forcés" : "parce que le coup était forcé"),
+  decided: (count) =>
+    count > 1 ? "parce que les positions étaient déjà décidées" : "parce que la position était déjà décidée",
+};
+
+/** The order the reasons are always listed in, so two Games read alike. */
+const UNCOUNTED_REASONS: UncountedReason[] = ["forced", "decided"];
+
 /** One decimal, as a number — so the parts can be added before being printed. */
 const round = (value: number) => Math.round(value * 10) / 10;
 
 export function GameRecapReadout({ recap }: { recap: GameRecap }) {
-  const gap = recap.flaggedMoves - recap.countedErrors;
+  // The gap, **as the server broke it down** — not recomputed from the two
+  // totals. A subtraction gives a number and no reason, and a number is exactly
+  // what this sentence must not be reduced to.
+  const shownNotCounted = UNCOUNTED_REASONS.filter(
+    (reason) => recap.flaggedUncounted[reason] > 0,
+  ).map((reason) => ({ reason, count: recap.flaggedUncounted[reason] }));
+  const gap = shownNotCounted.reduce((total, { count }) => total + count, 0);
   /**
    * The two parts are rounded, and the residual is then the **difference of the
    * rounded parts** — not a third independent rounding of the exact drift.
@@ -55,11 +83,15 @@ export function GameRecapReadout({ recap }: { recap: GameRecap }) {
       <p>
         Erreurs comptées : <strong>{recap.countedErrors}</strong>
         {gap > 0 && (
-          <>
+          <span data-part="gap">
             {" "}
             — la partie en montre <strong>{recap.flaggedMoves}</strong>, dont {gap} signalée
-            {gap > 1 ? "s" : ""} mais non comptée{gap > 1 ? "s" : ""} : le coup était forcé.
-          </>
+            {gap > 1 ? "s" : ""} mais non comptée{gap > 1 ? "s" : ""} :{" "}
+            {shownNotCounted
+              .map(({ reason, count }) => `${count} ${GAP_REASON[reason](count)}`)
+              .join(", ")}
+            .
+          </span>
         )}
       </p>
       <p>

@@ -5,6 +5,8 @@ import { getDangerPositions } from "../src/danger/repository";
 import { gamePositions } from "../src/chess/positions";
 import { fixtureBestLine } from "../src/engine/fixture";
 import { seedProfile } from "./fixtures";
+import { classifyMove } from "../src/danger/move-quality";
+import { winningChances } from "../src/danger/winning-chances";
 
 function tempDb() {
   return openDb(":memory:").db;
@@ -74,6 +76,40 @@ describe("getDangerPositions", () => {
 
     const afterE4 = dangers.find((d) => d.fen === AFTER_E4);
     expect(afterE4).toMatchObject({ reached: 2, seriousErrors: 0, proportion: 0 });
+  });
+
+  it("does NOT count an Inaccuracy as a serious error — US-37 lowered the band, not this bar", () => {
+    // A `Danger position` is about where the Player goes SERIOUSLY wrong: a drop
+    // of 20% or more, `Mistake` or `Blunder` (CONTEXT.md). US-37 took the
+    // `Inaccuracy` band from 10 to 5, which roughly doubles how many Moves carry
+    // a glyph — and none of the new ones may reach this page, or a screen built
+    // on "serious error" fills with Moves that are nothing of the kind.
+    //
+    // The flawed Move has to fall **after** the Position under test — the bar is
+    // about what the Player does in the ten half-moves that follow it, so seeding
+    // the Move that *leads to* the Position exercises nothing. White is to move at
+    // ply 2 on even terms (50%), and after their Move Black is +66 centipawns: a
+    // drop of about 6 points. Silent under the old band, an `Inaccuracy` now.
+    const db = tempDb();
+    for (let n = 0; n < 2; n++) {
+      const game = seedGame(db, { pgn: "1. e4 e5 2. Nf3" });
+      seedEvaluation(db, game, 0, { cp: 0 });
+      seedEvaluation(db, game, 1, { cp: 0 });
+      seedEvaluation(db, game, 2, { cp: 0 }); // the Position under test, White to move
+      seedEvaluation(db, game, 3, { cp: 66 }); // after White's Move: Black to move, better off
+    }
+
+    // The seeding really does produce a flagged Move, and really does produce an
+    // INACCURACY — without this the test would pass over a Move nothing flags,
+    // proving only that zero equals zero.
+    const before = winningChances({ cp: 0, mate: null });
+    const after = 100 - winningChances({ cp: 66, mate: null });
+    expect(classifyMove(before, after)).toBe("inaccuracy");
+
+    const dangers = getDangerPositions(db, PROFILE);
+
+    const afterE4E5 = dangers.find((d) => d.fen === AFTER_E4_E5);
+    expect(afterE4E5).toMatchObject({ reached: 2, seriousErrors: 0, proportion: 0 });
   });
 
   it("merges Positions reached via different move orders (transposition)", () => {

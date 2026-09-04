@@ -700,6 +700,10 @@
   > resserrage. Les passes existantes n'ont pas de provenance connue et devront le dire —
   > « inconnu » est une réponse honnête, « WASM » serait une supposition.
 
+## Doing
+
+## In review
+
 - **US-37**: Le barème d'`Inaccuracy` passe à **5 points** — pour que l'app cesse d'être muette sur
   les coups que le Player voit et qu'elle ne compte pas comme des fautes.
   > **Décidée le 2026-09-03 par le demandeur, et déjà entièrement mesurée** : *« je fixe le barème à
@@ -749,10 +753,38 @@
   > - Environ **1,7× plus de glyphes** à l'écran (mesuré : **85 → 143** coups signalés sur les vingt
   >   parties du corpus) : à re-regarder sur la page `Analyse`, c'est le seul
   >   point que la mesure ne peut pas trancher.
+  >
+  > **Grillée (léger) le 2026-09-04.** PRD et quatre sous-issues sur
+  > [`.scratch/inaccuracy-at-five/`](.scratch/inaccuracy-at-five/PRD.md), branche d'intégration
+  > `integration/US-37-inaccuracy-at-five` :
+  > `01-the-two-constants-part`, `02-the-recap-splits-the-gap`, `03-the-band-drops-to-five`,
+  > `04-hp-suite-and-the-pr` (HITL).
+  >
+  > Le grill a confirmé les quatre décisions déjà prises et **trouvé une régression que la story
+  > créait** : le récapitulatif d'une partie explique l'écart entre coups montrés et erreurs
+  > comptées par une phrase écrite en dur, « le coup était forcé ». À barème 5, l'écart peut venir
+  > d'une position déjà décidée, et la phrase ment. D'où la tranche 02, qui répare **avant** que 03
+  > ne casse. `CONTEXT.md` amendé, **ADR-0017 amendé sur place** (sa 2e conséquence posait un
+  > principe — « un seuil d'exclusion est adossé, jamais inventé » — que le plancher à 10 enfreint
+  > dès qu'il cesse d'être un corollaire du barème), note sur ADR-0023.
+  >
+  > **Deux constats enregistrés sans action**, par décision du demandeur : la densité de glyphes
+  > (×1,7, tous des `?!`) est un constat et non un problème — on regarde après ; et la
+  > `Confrontation` étant calculée à la lecture, les 3 lectures scellées et leurs 97 verdicts
+  > seront re-jugés contre un barème qui n'existait pas au scellement — constat seul.
 
-## Doing
+  >
+  > **Livrée le 2026-09-04 — [PR #106](https://github.com/Rdulieu/chess-analyst/pull/106), en attente
+  > du merge humain.** Quatre tranches, les trois premières auto-mergées sur gate local vert
+  > (build + tests + lint + FP), la quatrième — suite HP et PR — étant la seule décision humaine.
+  > **Suite HP 3/3 verte** plus son prérequis ; **aucun finding bloquant, et aucun finding sur
+  > l'application** sur les quatre runs.
+  >
+  > La preuve que la story visait, dans les mots de l'app : la phrase du moment clé d'HP-03 lit
+  > « la perte est sur **9…Nf6 (5 points)** » — une perte de cinq points qui porte un glyphe, ce que
+  > l'ancienne bande ne pouvait pas produire. Et sur les treize coups signalés des deux parties
+  > analysées, **onze sont des `?!`** : aucun `?` ni `??` n'apparaît ni ne disparaît.
 
-## In review
 
 ## Done
 
