@@ -1,6 +1,7 @@
 # 06 — Le savoir rentre dans le dépôt
 
-Status: ready-for-agent
+Status: done
+Delivered: 2026-09-04 · merge `b614aa8` · gate: FP 6/6 ✓, no blocking finding · runner at 237 l. against a ~150 l. target, deviation declared · code net (build+tests+lint) deferred whole to slice 08 by requester decision, 2026-09-04
 Parent: [`.scratch/factory-update/PRD.md`](../PRD.md) — US-21 + US-25
 Branche : implémentée sur **`integration/US-21-US-25-factory-update`** — brancher depuis elle,
 fusionner vers elle, **jamais vers `develop`**.
