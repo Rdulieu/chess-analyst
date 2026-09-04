@@ -180,11 +180,58 @@ seeds and that `/to-us` reads):
   runs never infer it. On a yes, propose the edited `docs/agents/us-format.md` and let the user
   approve before writing.
 
+## Local checks (`L*`) — this repo's own hygiene
+
+Four probes that exist only here. They are lettered rather than numbered so upstream's `1..11` can
+keep moving without a renumbering conflict at the next reprise (`.claude/UPSTREAM.md`).
+
+They are the mechanised half of US-21: the success criteria of the 2026-09-04 reprise stopped being
+a list in a spec and became a tool that outlives the story. Same shape as every check above —
+probe, report, offer, signpost — and the same rule: **guided, not gated**.
+
+### L2. Vocabulary — no retired term outside the archives
+
+The 2026-09-04 reprise retired a vocabulary (`to-prd`, `to-issues`, `sub-issue`, `issue-ref`, `PRD`,
+`UI-first`). The correspondence table and, more importantly, **the searched paths and the stated
+exclusions** live in `docs/agents/vocabulary.md` — read it before running this, because an
+exclusion that is not written down is indistinguishable from an oversight.
+
+```bash
+{ grep -rnE 'to-prd|to-issues|sub-issue|issue-ref|\bPRD\b|UI-first' \
+    CLAUDE.md .claude/UPSTREAM.md \
+    .claude/skills/agentic-tests/ .claude/skills/git-flow/ \
+    .claude/skills/assess-reading/ \
+    docs/agents/ docs/adr/ docs/test-scenarios/*.md 2>/dev/null \
+    | grep -vE '^docs/adr/0025-|^docs/adr/0026-|^docs/agents/vocabulary\.md'
+  grep -nE 'to-prd|to-issues|sub-issue|issue-ref|\bPRD\b|UI-first' BACKLOG.md \
+    | grep -vE '^[0-9]+: *>'
+}
+```
+
+**No output → `✅ pass`.** Any line printed is a retired term that came back, and the line **names
+the file and the line number** — that is the whole point: a probe that says "something is wrong"
+without saying where is a probe nobody runs twice.
+
+Four files are excluded because they must be able to *name* the retired terms in order to explain
+them: `docs/adr/0025-*` (the ADR that decides the renaming), `docs/adr/0026-*` (which reasons about
+"a PRD is not a work item"), `docs/agents/vocabulary.md`, and **this file** — the probe cannot search
+its own definition without matching it, which it did on the first run. The consequence is named
+rather than hidden: a retired term reintroduced *inside `verify-factory` itself* is the one place
+this probe is blind to. Everything else excluded — the
+`.scratch/` archives, the dated `docs/` records, upstream-verbatim skills, code comments pointing at
+a document named `PRD.md`, the blockquoted grilling notes of `BACKLOG.md` — is listed with its
+reason in `vocabulary.md`.
+
+On a fail, **offer to apply the table** to the named file, and nothing else: this probe finds a
+regression, it does not license a repo-wide rewrite. Signpost `docs/agents/vocabulary.md`.
+
 ## 11. Summary and next-step signpost
 
 Close with the whole picture:
 
-- A **tally** — one line per check (`✅`/`❌`/`➖`), so the state is legible at a glance.
+- A **tally** — one line per check (`✅`/`❌`/`➖`), so the state is legible at a glance. The
+  local `L*` checks are tallied with the rest, not in an appendix: a red is a red wherever it
+  comes from.
 - The **single most useful next step**, chosen from the repo state (guided, not gated):
   - scaffold missing → `/build-factory` (scaffold mode).
   - scaffold present, `CONTEXT.md` empty → `/build-factory` context mode (the bootstrap grilling).

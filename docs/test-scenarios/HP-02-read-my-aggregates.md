@@ -21,7 +21,7 @@ switching Profile takes them away and brings them back untouched.
 
 > Runs on **real chess.com data**, restored from the snapshot [path 0](./path-0-bootstrap.md) built
 > against the live API — not a fixture archive, and not a second import. The deterministic
-> frequency/rate/ECO assertions live in the sub-issues' fixture-based Feature Paths; here, on real
+> frequency/rate/ECO assertions live in the sub-tickets' fixture-based Feature Paths; here, on real
 > data, assert **shape and internal consistency**, never fixed numbers.
 
 ## Drive-by

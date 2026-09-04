@@ -1,6 +1,6 @@
 ---
 name: agentic-tests
-description: Runs the project's agentic tests — by default the current sub-issue's Feature Path (FP), or the full suite of Happy Paths (HP) when "HP"/"all" is requested or when on an integration branch with an open MR. In HP mode it orchestrates one subagent per scenario in parallel, and knows how their reports are delivered — and recovered when they are not. Use when running agentic tests, validating a sub-issue before auto-merge, or running the HP suite before an integration→develop PR.
+description: Runs the project's agentic tests — by default the current ticket's Feature Path (FP), or the full suite of Happy Paths (HP) when "HP"/"all" is requested or when on an integration branch with an open MR. In HP mode it orchestrates one subagent per scenario in parallel, and knows how their reports are delivered — and recovered when they are not. Use when running agentic tests, validating a ticket before auto-merge, or running the HP suite before an integration→develop PR.
 ---
 
 # /agentic-tests — runner
@@ -46,7 +46,7 @@ Assume no framework, no ports, no seeding tool: discover how to reach the surfac
 |---|---|
 | argument `HP` / `all` (or equivalent) | **HP** — the whole suite |
 | else, on an `integration/*` branch with an open integration→develop MR | **HP** |
-| else (on a `feature/*`) | **FP** — the current sub-issue |
+| else (on a `feature/*`) | **FP** — the current ticket |
 
 When ambiguous (on `develop`/`main`, no argument), ask which mode to run.
 
@@ -57,10 +57,10 @@ When ambiguous (on `develop`/`main`, no argument), ask which mode to run.
 - You can reach the **primary surface** with a driver — here, the CDP library of §5.8. No
   reachable surface = no execution.
 
-## 3. FP mode (sub-issue → integration auto-merge gate)
+## 3. FP mode (ticket → integration auto-merge gate)
 
-1. Derive the issue reference from the branch name `feature/<issue-ref>-<slug>` and fetch the
-   issue from the technical backlog (see `docs/agents/issue-tracker.md`).
+1. Derive the ticket reference from the branch name `feature/<ticket-ref>-<slug>` and fetch the
+   ticket from the technical backlog (see `docs/agents/issue-tracker.md`).
 2. Read the **"Acceptance criteria → Feature Path (FP)"** section. It's a *behavioral*
    journey: translate it into concrete actions at runtime.
 3. Run the journey against the system through its **primary surface** (probe internals only when
@@ -813,7 +813,7 @@ missing — read those before reading the readings.
 
 ## 7. Report format
 
-For each journey: `✅ / ❌ <id or issue> — <title>`, the failing steps, then:
+For each journey: `✅ / ❌ <id or ticket> — <title>`, the failing steps, then:
 
 ```
 ## Findings
