@@ -144,7 +144,7 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
     > `walkPlyStability` (`agentic-tests` skill, §5.8); it measures, this step passes the sentence.
 
 ## Checks
-### UI
+### Surface
 - Step 2: the pass reports progress in Positions evaluated (it does not sit at zero), ends with an explicit confirmation, and both Games read as analysed in the list afterwards. *(Start the polling **before** clicking: the in-flight readout is short, and a driver that clicks first has already missed it.)*
 - Step 3: the `Niveau de revue` reads `Sans aide` without having been set — the app does not start volunteering the engine's verdict — and nothing of the engine renders even though the Game is analysed.
 - Step 4: **nothing** of the engine renders on the reading route. Assert the *absence* of the advantage bar, the curve, severity glyphs and the `Best line`, and the absence of the `Niveau de revue` control.
@@ -168,7 +168,7 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
   and it must scroll **inside its own box** in a narrow window while the page body does not scroll
   sideways. A contrast failure outside the known-open list is **blocking**.
 
-### Backing store (optional)
+### Internals (optional)
 - The reading is stored relationally, keyed by (Game, ply) — the same key the engine's per-Move
   record uses (ADR-0019) — and carries its sealing instant and its provenance flag. A Move the Player
   said nothing about has **no row**, never a sentinel.
