@@ -6,7 +6,9 @@ disable-model-invocation: true
 
 # Implement
 
-Implement the work described in the spec or tickets, looping three roles until the work is **done**: the project **builds**, the **test suite** is green, and the ticket's **Feature Path (FP)** is green — with **no blocking finding** open.
+Implement the work described in the spec or tickets, looping three roles until the work is **done**: the project **builds**, the **test suite** is green, **`lint` ran and exited 0**, and the ticket's **Feature Path (FP)** is green — with **no blocking finding** open.
+
+> **Local: `lint` is part of the gate here, and it is not optional.** This repo states the gate once, in `CLAUDE.md`, and that statement wins over any shorter restatement. `npm run lint` once returned 1 349 parsing errors for four months because nothing in the gate ran it.
 
 Input: a spec (`/to-spec`) or one or more tickets (`/to-tickets`) on the technical backlog. Read `CONTEXT.md` for domain vocabulary and respect the ADRs in the area you're touching. Work on the branch `git-flow` puts you on for this ticket (a `feature/*` off the story's `integration/*`, or off `develop`).
 
@@ -25,7 +27,7 @@ Use **subagents if available** — each role gets its own context so they don't 
 3. **Repeat** slices until the spec/ticket is implemented, then run the **full test suite** once.
 4. **Review, independently.** Run `/code-review` on the diff since the branch point, with the spec/ticket as the Spec axis input. Fold non-blocking findings in or note them; a **blocking** finding sends you back to step 2.
 5. **Drive the Feature Path.** Run `/agentic-tests` to exercise the FP against the running system. A red FP or a blocking finding sends you back to step 2.
-6. **Green gate.** The work is done when, together: the project **builds**, the **test suite** is green, the **FP** is green, and **no blocking finding** is open. Anything red loops back to step 2.
+6. **Green gate.** The work is done when, together: the project **builds**, the **test suite** is green, **`lint` exited 0**, the **FP** is green, and **no blocking finding** is open. Anything red loops back to step 2.
 
 Refactoring belongs to the review stage, not the red → green cycle (see `/tdd`).
 

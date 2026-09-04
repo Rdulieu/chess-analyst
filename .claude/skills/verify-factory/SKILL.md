@@ -189,6 +189,34 @@ They are the mechanised half of US-21: the success criteria of the 2026-09-04 re
 a list in a spec and became a tool that outlives the story. Same shape as every check above —
 probe, report, offer, signpost — and the same rule: **guided, not gated**.
 
+### L1. The reprise is finished — no upstream change left unmerged
+
+`.claude/UPSTREAM.md` records the **reprise ref**: the upstream commit our skills were last merged
+onto. If upstream has changed nothing under `skills/` since that ref, the reprise is finished.
+
+```bash
+REF=$(grep -oP '(?<=\*\*`)[0-9a-f]{7,40}(?=`\*\*)' .claude/UPSTREAM.md | head -1)
+if git fetch upstream --quiet 2>/dev/null; then
+  git diff --name-only "$REF" upstream/main -- skills/   # empty = finished
+else
+  LAST=$(git log -1 --format=%cd --date=short upstream/main 2>/dev/null)
+  echo "not verified - no upstream reachable${LAST:+ (last fetch: $LAST)}"
+fi
+```
+
+**Empty output → `✅ pass`.** A list of files → `❌ fail`, and the list *is* the report: those are
+the upstream files that moved since our base.
+
+**Offline it reports `➖ not verified`, never `❌`** — the `else` branch above, not a judgement call.
+A check that cannot run has not passed, but it has not failed either, and reporting red for a
+missing network teaches people to ignore the colour. Note that a **stale local `upstream/main` is
+not a substitute**: without a successful fetch you cannot claim the reprise is finished, so the
+probe degrades even when it has an old ref lying around — it just names how old it is.
+
+On a fail, do **not** offer to merge: a reprise is a three-way merge in two passes with a
+hand-merge on the diverged files, and ADR-0025 says why an automatic one is never enough. Signpost
+`.claude/UPSTREAM.md` and offer to run **L4** for the size of the gap.
+
 ### L2. Vocabulary — no retired term outside the archives
 
 The 2026-09-04 reprise retired a vocabulary (`to-prd`, `to-issues`, `sub-issue`, `issue-ref`, `PRD`,
@@ -224,6 +252,27 @@ reason in `vocabulary.md`.
 
 On a fail, **offer to apply the table** to the named file, and nothing else: this probe finds a
 regression, it does not license a repo-wide rewrite. Signpost `docs/agents/vocabulary.md`.
+
+### L4. How far upstream has moved
+
+The decision question, separate from L1's yes/no: *is a reprise worth taking now?*
+
+```bash
+REF=$(grep -oP '(?<=\*\*`)[0-9a-f]{7,40}(?=`\*\*)' .claude/UPSTREAM.md | head -1)
+if git fetch upstream --quiet 2>/dev/null; then
+  git rev-list --count "$REF"..upstream/main
+  git log --oneline "$REF"..upstream/main | head -20
+else
+  echo "not verified - no upstream reachable"
+fi
+```
+
+Report it as a sentence, not a colour: **"upstream is N commits ahead of the recorded ref"**. Zero is
+`✅`; anything else is a **fact, not a fail** — deciding to take a reprise belongs to the requester,
+and this probe exists so the decision is informed instead of improvised. The 2026-09-04 reprise was
+taken at N = 12, eight months late, because nobody had a command for this.
+
+**Offline → `➖ not verified`**, same rule as L1.
 
 ## 11. Summary and next-step signpost
 

@@ -14,12 +14,15 @@ Read ADR-0025 for why the reprise is a three-way merge and never an install.
 | --- | --- |
 | Upstream repo | `https://github.com/Loulen/prompt-driven-software-factory` |
 | Upstream subdirectory | `skills/` — ours is `.claude/skills/` |
-| **Reprise ref (base of the next merge)** | **`ea7e4afe`** — `rename to Prompt Driven Software Factory (PDSF)`, 2026-06-29 |
-| Installed here on | 2026-07-20, commit `bfe5c4a` |
+| **Reprise ref (base of the next merge)** | **`dcad289e`** — `clean-context update`, 2026-09-02 |
+| Reprised here on | 2026-09-04, on `integration/US-21-US-25-factory-update` |
+| Previous base | `ea7e4afe`, 2026-06-29 — installed here 2026-07-20, commit `bfe5c4a` |
 
-The ref is **proven, not remembered**. Six of the eight installed skills are byte-for-byte upstream
-at `ea7e4afe`; only `agentic-tests` and `git-flow` carry local work. The check is the second command
-below, and it is the reason we can show line by line that the merge lost nothing local.
+The ref is **proven, not remembered**. At the previous base, six of the eight installed skills were
+byte-for-byte upstream at `ea7e4afe`; only `agentic-tests` and `git-flow` carried local work. That
+is what let the 2026-09-04 reprise show, line by line, that the merge lost nothing local — the
+proof is in `.scratch/factory-update/proof-03-nothing-local-lost.md`. Keep the habit: the second
+command below is what makes the next one as cheap.
 
 > When a reprise lands, **this ref moves** to the upstream commit that was merged. A stale ref here
 > makes both commands below lie, and makes `/verify-factory`'s "reprise is finished" probe lie with
@@ -45,14 +48,14 @@ identity.
 
 ```bash
 git fetch upstream
-git diff --name-only ea7e4afe upstream/main -- skills/
+git diff --name-only dcad289e upstream/main -- skills/
 ```
 
 Empty means the reprise is finished. A list of files means upstream has moved and a reprise is a
 decision to take. How far it has moved:
 
 ```bash
-git rev-list --count ea7e4afe..upstream/main
+git rev-list --count dcad289e..upstream/main
 ```
 
 **What did we change since our base?** — the one that protects our customisations. `git diff` cannot
@@ -60,7 +63,7 @@ answer it directly: upstream keeps its skills in `skills/` and we keep ours in `
 the paths never line up. Extract the base and compare directories:
 
 ```bash
-tmp=$(mktemp -d) && git archive ea7e4afe skills | tar -x -C "$tmp" --strip-components=1
+tmp=$(mktemp -d) && git archive dcad289e skills | tar -x -C "$tmp" --strip-components=1
 diff -rq "$tmp" .claude/skills; rm -rf "$tmp"
 ```
 
@@ -81,7 +84,9 @@ reprise arbitrates instead of guessing. Only these files carry local work; every
 | --- | --- |
 | `agentic-tests/SKILL.md` | The HP orchestrator (§5): the `min(3, floor(nproc/4))` fan-out ceiling, lost-report recovery, the isolation kit, the self-audit mechanism, the driver library and the run-costing method. 78 lines upstream, ~860 here. |
 | `git-flow/SKILL.md` | "After opening a PR — check it is still mergeable", the "A check that cannot run has not passed" box, and the local reading of `BACKLOG.md` conflicts. |
-| `verify-factory/SKILL.md` | The four local probes (reprise finished, vocabulary, exact queue, upstream ahead) and the §8 instantiation that refuses the Playwright row. |
+| `verify-factory/SKILL.md` | The four local `L*` probes (reprise finished, vocabulary, exact queue, upstream ahead) and the §8 instantiation that refuses the Playwright row. |
+| `build-factory/SKILL.md` | A ⛔ banner at the top: not replayed here, and why (its `CLAUDE.md` template regresses the gate). The rest is upstream verbatim. |
+| `implement/SKILL.md` | `lint` added to the green gate, in two places. Upstream states it as "build + tests"; here the gate is stated once in `CLAUDE.md` and includes lint. |
 
 `assess-reading` is this repo's own skill and was never the factory's — it is not part of any
 reprise.
