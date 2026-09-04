@@ -186,6 +186,17 @@ a helper is recognised as *this* returning, not as a new mystery.
 - **A `location.port` guard on every injected script.** Load-bearing, not belt-and-braces: it is
   what kept every action off the siblings' apps during those ~20 thefts. `theme-pass.mjs` puts
   one on everything it evaluates.
+- **The board mounts a beat AFTER the page text settles.** A settle helper that waits on
+  network-quiet plus a stable `innerText` is satisfied while `[data-square]` count is still **0** —
+  measured 2026-09-04 on `/explorer`, which read 0 squares and 0 arrows on a screen that had 64 and
+  4. The generic wait is not wrong, it is early: **wait on the subject itself** (64 squares present,
+  the arrow `<svg>` carrying its `hsla` present). Same family as the in-page drill-down below: the
+  page is not the component.
+- **On `/stats`, a `tbody`'s accessible name comes from `aria-labelledby`, not `aria-label`.**
+  Reading the wrong attribute returns `null` on all three row groups and looks exactly like three
+  missing names (measured 2026-09-04; the groups resolve to "Total" / "Par cadence" / "Par côté").
+  Recorded because this is the **third** time a driver reading the wrong attribute has produced a
+  near-finding on this suite — resolve the accessible name, do not guess which attribute carries it.
 - **`setField` cannot drive a `<select>`.** It picks `HTMLTextAreaElement.prototype` or
   `HTMLInputElement.prototype` for the native value setter, so on a select it calls the wrong
   setter and nothing takes. Read from the code and hit on 2026-09-04, on the one control where it
