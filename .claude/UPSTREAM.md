@@ -71,6 +71,28 @@ No `git subtree`. The directories do not line up, so it would need a filtered br
 replace two commands — and subtree *merges*, when the whole lesson of ADR-0025 is that a mechanical
 merge is never enough here.
 
+## What diverges locally, on purpose
+
+The two commands above answer "what did we change" mechanically. This is the *why*, so the next
+reprise arbitrates instead of guessing. Only these files carry local work; everything else under
+`.claude/skills/` is upstream verbatim and can be taken wholesale.
+
+| File | Local work it carries |
+| --- | --- |
+| `agentic-tests/SKILL.md` | The HP orchestrator (§5): the `min(3, floor(nproc/4))` fan-out ceiling, lost-report recovery, the isolation kit, the self-audit mechanism, the driver library and the run-costing method. 78 lines upstream, ~860 here. |
+| `git-flow/SKILL.md` | "After opening a PR — check it is still mergeable", the "A check that cannot run has not passed" box, and the local reading of `BACKLOG.md` conflicts. |
+| `verify-factory/SKILL.md` | The four local probes (reprise finished, vocabulary, exact queue, upstream ahead) and the §8 instantiation that refuses the Playwright row. |
+
+`assess-reading` is this repo's own skill and was never the factory's — it is not part of any
+reprise.
+
+**`code-review` shadows Claude Code's built-in skill of the same name.** A project skill overrides
+the built-in one, so `/code-review` here is upstream's: bound to this repo's documented standards
+and to the originating ticket, and it is the one `implement` calls. Claude Code's built-in
+`/code-review` is not reachable in this repo, and that is intended, not an accident — ADR-0025. The
+skill file itself is left **upstream-verbatim** so it needs no hand-merge next time; the note lives
+here and in `CLAUDE.md`, which every agent reads anyway.
+
 ## What is refused, and why
 
 Three upstream gestures are deliberately not taken. They are written here rather than left implicit,
