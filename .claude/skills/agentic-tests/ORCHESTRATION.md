@@ -199,6 +199,64 @@ settle any of it.
 
 Answer these, and write the answers down:
 
+> **Audit of 2026-09-04, second pass (US-21+US-25, six dispatches: a fresh-agent trial with a
+> nested reviewer of its own, then path 0, then the full HP suite).** The suite is **3/3 plus its
+> prerequisite**, and the run is worth reading for two things nothing here had observed before.
+>
+> **Delivery: 4 of 4 unprompted for my own dispatches, each arriving twice** — `SendMessage` then the
+> completion notification, identical content, exactly as §O1 says. §O1 stays closed, now across eight
+> consecutive suites, and §O2 stays **unexercised a ninth time**.
+>
+> **But a NESTED dispatch lost its report.** The fresh-agent trial spawned a reviewer of its own; the
+> reviewer finished, its transcript went quiet, and **no completion notification arrived**. The
+> documented `SendMessage` relance recovered it on the first try. So the relance is **no longer
+> unexercised** — it worked, once, in the one shape §O1's evidence never covered. Read §O1 as
+> "delivery works for the scenario fan-out", not as a promise about a subagent's own subagent.
+>
+> **A dispatched subagent cannot invoke a skill at all** — see §O5b, written this run. Seven of the
+> repo's skills were absent from the trial agent's list; it read the `SKILL.md` files and executed
+> the probes by hand, which worked **only because they are written as runnable shell**.
+>
+> **A subagent in a fresh worktree is NOT an amnesiac agent.** The trial's whole design rested on
+> that, and it is false: memory is indexed by the **session's** path, not the agent's, so the
+> subagent read the parent session's 58 entries and the worktree produced no memory directory at
+> all. Its own report is the proof — it stated that the fan-out ceiling "lives in my memory, not in
+> the repo", which had been false for several hours. See ADR-0028's addendum.
+>
+> **The cap of 2 was respected and the machine did not freeze** — a third full suite under the rule.
+> Same deliberate scheduling as the previous pass: the two engine-spending scenarios (HP-01, HP-03)
+> were **not** paired. HP-01 ran beside HP-02, which analyses nothing, and HP-03 took the slot HP-02
+> freed. **The cap says how many, not which.**
+>
+> **Isolation held completely.** Four agents, a private Chrome each with its own `--user-data-dir`
+> and CDP port: **zero page thefts, zero port guards tripped, no port had to be shifted**. The `npx`
+> grandchild listener held again on every teardown. The **WAL trap fired again** at path 0 — 4.1 MB
+> of `-wal` beside the `.db` at both snapshot points — so `.backup` is load-bearing, not ceremonial.
+> The theme emulation held on all 108 audits with one session kept alive and the theme asserted
+> in-script.
+>
+> **Driver-produced false findings: eight, every one caught by re-measuring, none reaching a report
+> as a defect.** They are all now in `DRIVING.md`: the `review-mode`/`curve` part names (a first
+> probe reported `curve:false` on a screen that had one), a square's box mistaken for the board's,
+> a re-attached session losing the viewport override, the board mounting after the text settles, a
+> `tbody` named by `aria-labelledby`, `setField` unable to drive a `<select>`, `a[href$=…]` matching
+> the nav on every page, and a Note reading "pending" before it reads "saved". **Eight false reds
+> and zero false greens is the shape to want** — and it is what "do not compress the agent's own
+> analysis" buys.
+>
+> **A finding about the SUITE, and it is the same lesson as the entry below, recurring a third
+> time.** `HP-03`'s `Drive-by` bullet claimed the scenario audits `/danger` **populated**, while step
+> 15 of the same file had already **withdrawn** exactly that. Two clauses of one scenario disagreed
+> for a whole release, silently, because the stale one described something that had merely become
+> untrue rather than impossible. Corrected in this run. **A story that withdraws a rule owes the
+> permanent suite a pass**, and the cost of grepping for the withdrawn behaviour is minutes.
+>
+> And a coverage hole found by reading the three passes together, which is what §O1 says to do: the
+> **danger card's ⚠ had no subject in any of the three states**, so the rule was dropped three times
+> rather than verified once. It is structural — HP-01 selects the two *shortest* Games sharing a
+> first Move, which makes a serious error unlikely — and it is now named in `theme-pass.md` instead
+> of being implied covered.
+
 > **Audit of 2026-09-04 (US-37, seven subagents: three FPs, then path 0, then the full HP suite).**
 > Delivery worked **7 of 7**, unprompted. §O1 stays closed, now across seven consecutive suites, and
 > §O2 stays **unexercised** an eighth time. §O4's cap of **2** was respected and **the machine did
