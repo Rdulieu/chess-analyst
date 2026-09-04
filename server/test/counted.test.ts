@@ -60,6 +60,17 @@ describe("Counted Move — already decided", () => {
     expect(counted[1]).toEqual({ counted: false, reason: "decided" });
   });
 
+  it("puts the floor exactly at 10, strictly under being the excluded side", () => {
+    // The boundary itself, written as a NUMBER and not as the imported constant:
+    // a test that imports the threshold still passes after a retune that changes
+    // what the threshold means, which is the whole trap this story closes.
+    const under = countedMoves([ply(OPEN, 9.9), ply(OPEN_BLACK, 50)], "white");
+    const at = countedMoves([ply(OPEN, 10), ply(OPEN_BLACK, 50)], "white");
+
+    expect(under[1]).toEqual({ counted: false, reason: "decided" });
+    expect(at[1]).toEqual({ counted: true, reason: null });
+  });
+
   it("counts a Move played while WINNING — the rule is asymmetric on purpose", () => {
     // 88%: a symmetric band around equality would delete the inability to
     // convert a won Position, which is one of the realest weaknesses there is.

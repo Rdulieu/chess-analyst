@@ -1,7 +1,26 @@
 import { Chess } from "cm-chess";
 import type { Game } from "../db/schema";
-import { INACCURACY_DROP } from "../danger/move-quality";
 import type { Ply } from "./derivation";
+
+/**
+ * The winning-chances **level** under which a Position is held to be already
+ * decided, so that a Move played there says nothing about the Player
+ * (CONTEXT.md, `Counted Move`). A level, not a drop — which is why it lives
+ * here, beside the denominator it defines, and not beside the severity bands.
+ *
+ * **10 is empirical, and its counterpart is counted.** It was once a corollary:
+ * flagging asked for a 10% drop, so it asked for 10% left to lose, and nothing
+ * under the floor could be flagged. That derivation is gone the moment the two
+ * numbers part. What justifies 10 now is the measurement — on the twenty-Game
+ * reference corpus the dead zone holds **81** of the Player's Moves, against
+ * which at most a handful can be flagged while excluded. The floor buys a
+ * denominator that stays comparable between Games, at a price that is stated
+ * rather than assumed away.
+ *
+ * Deliberately **asymmetric**: a band around equality would also drop Moves
+ * played while winning, deleting *failure to convert* from the vocabulary.
+ */
+export const DECIDED_FLOOR = 10;
 
 /**
  * Why one of the Player's Moves does not count. **Two reasons, named apart
@@ -28,9 +47,9 @@ export interface MoveCount {
  * invite the reading that it might have been.
  *
  * Neither reason costs an engine call. **Forced** is a rule of chess, read off
- * the Position already stored with the `Evaluation`; **already decided** is the
- * `Inaccuracy` floor that CONTEXT.md already publishes — no new threshold is
- * introduced here.
+ * the Position already stored with the `Evaluation`; **already decided** is
+ * `DECIDED_FLOOR`, which CONTEXT.md publishes — no new threshold is introduced
+ * here.
  */
 export function countedMoves(plies: Ply[], playerColor: Game["playerColor"]): (MoveCount | null)[] {
   return plies.map((_, i) => {
@@ -51,9 +70,9 @@ export function countedMoves(plies: Ply[], playerColor: Game["playerColor"]): (M
  */
 function classify(before: Ply): MoveCount {
   if (isForced(before.fen)) return { counted: false, reason: "forced" };
-  // Strictly **under** the floor: at the floor exactly, a Move can still drop
-  // the full 10% and be flagged, so it still has something to say.
-  if (before.winChances < INACCURACY_DROP) return { counted: false, reason: "decided" };
+  // Strictly **under** the floor: the floor itself is still a Position with
+  // something left to lose, so a Move played there is still the Player's to own.
+  if (before.winChances < DECIDED_FLOOR) return { counted: false, reason: "decided" };
   return { counted: true, reason: null };
 }
 
