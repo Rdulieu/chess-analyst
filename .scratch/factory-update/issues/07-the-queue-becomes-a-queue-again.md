@@ -1,6 +1,7 @@
 # 07 — La file redevient une file
 
-Status: ready-for-agent
+Status: done
+Delivered: 2026-09-04 · merge `5578909` · gate: FP 6/6 ✓, no blocking finding · code net (build+tests+lint) deferred whole to slice 08 by requester decision, 2026-09-04
 Parent: [`.scratch/factory-update/PRD.md`](../PRD.md) — US-21 + US-25
 Branche : implémentée sur **`integration/US-21-US-25-factory-update`** — brancher depuis elle,
 fusionner vers elle, **jamais vers `develop`**.
