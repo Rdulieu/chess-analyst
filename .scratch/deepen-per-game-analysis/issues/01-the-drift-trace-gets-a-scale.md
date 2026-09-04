@@ -1,6 +1,6 @@
 # 01 — Le tracé de dérive gagne une échelle et un repère
 
-Status: `ready-for-agent`
+Status: `done`
 Type: AFK
 Branche : depuis `integration/US-15a-bis-deepen-per-game-analysis`, PR **vers elle**, jamais vers `develop`.
 

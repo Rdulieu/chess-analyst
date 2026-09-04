@@ -175,8 +175,17 @@ one is ever proposed, starts from what is known rather than from a surprise.
 **A cue rule with no subject on the screen proves nothing.** The audit drops rules that find nothing,
 so its `cues` block reads as "what this state exercised", never as "all cues verified": in HP-02's
 state only the weak-opening ⚠, the current tab and the two `Profile` cues have subjects at
-all, and HP-01 is the scenario that carries the danger cards, the severity glyphs and the "analysée"
-badge. Read the three passes together, and read `subjects` before reading `failures`.
+all, and HP-01 is the scenario that carries the severity glyphs and the "analysée" badge. Read the
+three passes together, and read `subjects` before reading `failures`.
+
+> **The danger card's ⚠ was carried by nobody on 2026-09-04, and that is worth knowing.** HP-03's
+> `/danger` was empty (its two long lost Games share no recurring Position) and HP-01's held **one**
+> card reading `0 % d'erreur sérieuse`, so the ⚠ had no subject there either. The rule was
+> **dropped, not failed** — in all three passes. It is a real hole in the suite's cue coverage, and
+> it is structural rather than accidental: HP-01 selects the two *shortest* Games sharing a first
+> Move, which is what makes a recurring Position cheap and a serious error unlikely. Naming it here
+> rather than pretending the cue is covered; closing it means changing a selection rule, and a
+> selection rule tuned for cost is exactly what this suite warns about tuning.
 
 Assertions 1 to 5 are **measured, not eyeballed**: one browser-side function returns a report per
 screen, and the two themes are compared on the `constants` block for assertion 5. The theme itself is

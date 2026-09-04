@@ -21,7 +21,7 @@ switching Profile takes them away and brings them back untouched.
 
 > Runs on **real chess.com data**, restored from the snapshot [path 0](./path-0-bootstrap.md) built
 > against the live API — not a fixture archive, and not a second import. The deterministic
-> frequency/rate/ECO assertions live in the sub-issues' fixture-based Feature Paths; here, on real
+> frequency/rate/ECO assertions live in the sub-tickets' fixture-based Feature Paths; here, on real
 > data, assert **shape and internal consistency**, never fixed numbers.
 
 ## Drive-by
@@ -92,7 +92,7 @@ switching Profile takes them away and brings them back untouched.
     > and the weak-opening highlight. Neither is a token, and both were found broken at night once.
 
 ## Checks
-### UI
+### Surface
 - Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **82** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other two still offer "Sélectionner" — and nothing on the list overflows its container, and every scoped screen afterwards carries the banner naming `DudulSmash`. No screen is read before a Profile is current.
 - Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games). Since US-13 the board and the candidates sit side by side while there is room for both and **fold into one column** when there is not — in either case nothing is clipped and the page does not scroll sideways.
 - Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown; the win rate is consistent with standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; the per-cadence counts sum to the candidate's game count; no candidate is hidden for a small sample.
@@ -131,7 +131,7 @@ switching Profile takes them away and brings them back untouched.
   audited like any other screen. Nothing is imported and nothing is analysed by this step; a
   contrast failure outside the known-open list is **blocking**.
 
-### Backing store (optional)
+### Internals (optional)
 - The Move habit aggregate holds one entry per (`Profile`, Position FEN, side, Move) with counters
   whose win/draw/loss parts sum to the entry's total; each imported Game is flagged as computed
   exactly once (no double counting).

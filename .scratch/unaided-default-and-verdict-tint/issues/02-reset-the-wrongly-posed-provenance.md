@@ -1,4 +1,4 @@
-Status: ready-for-agent — **repassée HITL -> AFK le 2026-09-04, sur décision explicite du
+Status: done — **repassée HITL -> AFK le 2026-09-04, sur décision explicite du
 demandeur** (run autonome de nuit). La raison du HITL tenait toujours : la tranche écrit dans une
 base qu'ADR-0015 déclare irremplaçable. Ce qui remplace la présence humaine est donc la sauvegarde
 `.backup` **avant** écriture, la portée bornée à un identifiant, et la re-jouabilité observée — ces

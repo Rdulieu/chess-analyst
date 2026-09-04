@@ -1,6 +1,6 @@
 # 03 — The semantic tints move to tokens, non-chromatic cues intact
 
-Status: ready-for-agent
+Status: done
 
 Implemented on the business-story integration branch **`integration/US-13-stylesheet`**: branch from
 it and merge back into it, never into `develop`. Auto-merges into the integration branch once the
