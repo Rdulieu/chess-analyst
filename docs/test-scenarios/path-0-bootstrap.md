@@ -150,7 +150,7 @@ imported, 0 already present" against a database that already holds them.
     `Analysis pass` on top of it, which is why the snapshot carries no analysed Game.
 
 ## Checks
-### UI
+### Surface
 - Step 2: the Profile appears in the list under chess.com's canonical spelling of `DudulSmash`,
   with `0` Games imported and `0` analyzed, and is marked "Profil actuel" — the first Profile
   created becomes the current one. **Type the username in the wrong case on purpose** (`dudulsmash`):
@@ -279,7 +279,7 @@ corpus keeps, and only the latter is assertable on screen.
 > Filled from the run that builds the snapshot. Every month of the span is immutable, so these do
 > not drift; if they ever do, the account changed and the table is re-read, not patched.
 
-### Backing store
+### Internals
 - Both snapshots are copies of the SQLite file taken with the **server stopped**: SQLite keeps
   serving a deleted or replaced inode, so a copy taken under a running server can capture a state no
   scenario will actually see.

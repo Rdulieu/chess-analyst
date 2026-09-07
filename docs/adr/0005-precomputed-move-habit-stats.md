@@ -17,7 +17,7 @@ counters, rather than rescanning the whole history on every read.
 The counter-update logic lives in **one standalone function**, not inlined into whichever code path happens to add a Game. It is called at **both** points where a Game enters the database:
 
 - the real chess.com `Import` path (`importMonth`, US-2) — the data the HP suite exercises;
-- the `Move habit` **fixture seeding** path — the deterministic data the sub-issues' Feature Paths exercise.
+- the `Move habit` **fixture seeding** path — the deterministic data the sub-tickets' Feature Paths exercise.
 
 This keeps the aggregation logic identical across entry points and lets each feature be wired independently (see `[[feature-independent-functions]]` in the project memory) rather than duplicated.
 

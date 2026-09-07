@@ -1,6 +1,6 @@
 # 04 — La revue : quel signal sépare, et ce que les taux disent
 
-Status: `ready-for-agent`
+Status: `done`
 Type: AFK
 Branche : depuis `integration/US-15a-bis-deepen-per-game-analysis`, PR **vers elle**.
 

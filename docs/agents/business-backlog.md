@@ -2,11 +2,11 @@
 
 The **business** backlog carries the project's **user stories**. It is managed by humans
 (PO / team); agents **read** it to start a design session and **post back** a traceability link
-once the technical issues are created. It is the upstream source of the pipeline ("Understand
+once the technical tickets are created. It is the upstream source of the pipeline ("Understand
 the need").
 
 > Distinct from the **technical backlog** (`docs/agents/issue-tracker.md`), which is by and for
-> agents. N business issues ≠ N technical issues: one story can yield several technical issues,
+> agents. N business stories ≠ N technical tickets: one story can yield several technical tickets,
 > or several stories can collapse into one.
 
 ## Tool
@@ -31,17 +31,17 @@ moving their entry under a dedicated heading. The agent only picks from there.
 
 ```
 # READ a story:        read BACKLOG.md, find the story by id/title
-# COMMENT on a story:   append a line under the story's entry (e.g. "> linked: <PRD/issue link>")
+# COMMENT on a story:   append a line under the story's entry (e.g. "> linked: <spec/ticket link>")
 # MOVE / change state:  cut the story's list item and paste it under the target heading
 ```
 
 ## Link to the technical backlog
 
-Keep the **business reference** (story id or heading anchor) in the PRD / technical issues, for
+Keep the **business reference** (story id or heading anchor) in the spec / technical tickets, for
 two-way traceability.
 
     business backlog (story selected by a human)
       └─ /grill-with-docs   → CONTEXT.md + ADRs   (on integration/<business-ref>-<slug>)
-          └─ /to-prd        → PRD on the technical backlog
-              └─ /to-issues → technical issues + back-comment on the business story
+          └─ /to-spec       → spec on the technical backlog
+              └─ /to-tickets → technical tickets + back-comment on the business story
                   └─ implementation (see git-flow)

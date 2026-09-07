@@ -1,6 +1,6 @@
 # 06 — Le prédicat livré : nommer sans compter
 
-Status: `ready-for-agent`
+Status: `done`
 Type: AFK
 Branche : depuis `integration/US-15a-bis-deepen-per-game-analysis`, PR **vers elle**.
 

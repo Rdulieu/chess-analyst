@@ -1,14 +1,22 @@
 # Issue tracker: Local Markdown
 
-Issues and PRDs for this repo live as markdown files in `.scratch/`.
+Tickets and specs for this repo live as markdown files in `.scratch/`.
 
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`
-- The PRD is `.scratch/<feature-slug>/PRD.md`
-- Implementation issues are `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`
-- Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
+- The spec is `.scratch/<feature-slug>/SPEC.md`
+- Implementation tickets are `.scratch/<feature-slug>/tickets/<NN>-<slug>.md`, numbered from `01`
+- Triage state is recorded as a `Status:` line near the top of each ticket file (see
+  `triage-labels.md` for the role strings)
+- A **delivered** ticket carries `done` in that same field — a **delivery state**, on a different
+  axis from the five triage roles, with its own required coordinates. See `delivery-state.md`, which
+  also gives the mechanical definition of the `ready-for-agent` queue
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
+
+> **Two layouts live here.** Features started before 2026-09-04 use the previous naming and keep
+> it — archives keep their period words. `vocabulary.md` says what the old names were and why they
+> are not "fixed".
 
 ## When a skill says "publish to the issue tracker"
 
@@ -16,4 +24,5 @@ Create a new file under `.scratch/<feature-slug>/` (creating the directory if ne
 
 ## When a skill says "fetch the relevant ticket"
 
-Read the file at the referenced path. The user will normally pass the path or the issue number directly.
+Read the file at the referenced path. The user will normally pass the path or the ticket number
+directly.

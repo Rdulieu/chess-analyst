@@ -1,6 +1,6 @@
 # 06 — Revise the HP suite: a theme pass, and every screen visited
 
-Status: ready-for-agent
+Status: done
 
 Implemented on the business-story integration branch **`integration/US-13-stylesheet`**: branch from
 it and merge back into it, never into `develop`. Auto-merges into the integration branch once the

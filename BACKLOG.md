@@ -173,90 +173,70 @@
   > Attention livraison : le titre d'origine d'US-16 promettait les variations. **US-16a n'en a pas**,
   > et c'est voulu.
 
-- **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
-  ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
-  > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte.
-  > **Elle doit être grillée** avant toute implémentation.
+- **US-39**: Un worktree qui marche, au même endroit, avec les mêmes règles — pour que « travailler
+  dans un worktree » cesse d'être une consigne que chacun applique à sa façon.
+  > **Pas encore grillée.** Ouverte le 2026-09-04 pendant le grill d'US-21/US-25, par décision du
+  > demandeur, après qu'ADR-0028 a choisi de **ne pas** réparer la mémoire vide d'un worktree.
   >
-  > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
-  > réel du dépôt. **Relevé complet, avec les commandes de vérification :**
-  > [`docs/factory-coherence-audit-2026-08-24.md`](docs/factory-coherence-audit-2026-08-24.md) —
-  > 11 incohérences, 6 points d'incomplétude, et ce qu'il ne faut pas casser.
+  > ### Trois incohérences constatées en regardant, pas en supposant
   >
-  > ### Le constat : l'usine a évolué plus vite que sa propre documentation
+  > 1. **L'emplacement déclaré n'est celui d'aucun worktree vivant.** `.gitignore` annonce
+  >    `.claude/worktrees/` (« one worktree per story, never shared ») et le répertoire existe ; les
+  >    worktrees réels sont des **frères du dépôt** — `chess-analyst-us37`,
+  >    `chess-analyst-profile-habits`. Les deux emplacements ont servi : les clés de mémoire gardent
+  >    la trace de `--claude-worktrees-US-22` et `--claude-worktrees-US-9-multi-month-import`.
+  > 2. **La règle ne dit pas à quoi elle s'applique.** « Worktree avant toute modification de
+  >    fichier » : est-ce que ça vaut pour une session de grill qui n'écrit que des ADR ? Pour une
+  >    correction de backlog ? La session du 2026-09-04 a écrit trois ADR dans le checkout principal
+  >    et a eu raison de le faire — mais rien ne l'autorisait.
+  > 3. **Un worktree frais ne peut pas installer ses dépendances**, d'où la recette des trois
+  >    symlinks `node_modules` — qui a déjà coûté une fois : `develop` a fini par **suivre** ces
+  >    symlinks à cause du slash de `.gitignore` (PR #57). La recette est load-bearing et ne vit
+  >    aujourd'hui que dans la mémoire de l'agent ; US-21 la rapatrie dans `git-flow/WORKTREES.md`,
+  >    mais **le rapatriement documente un mécanisme qu'on n'a jamais vérifié**.
   >
-  > Rien de cassé au sens d'une panne. Le problème est plus insidieux : **la méthode décrit un
-  > projet qui n'est plus tout à fait celui-ci**, et un agent obéit à ce qu'il lit. Trois exemples,
-  > du plus grave au plus visible :
+  > ### Ce que la story doit produire
   >
-  > | Constat | Ce que ça coûte |
-  > | --- | --- |
-  > | Le gabarit `CLAUDE.md` de `build-factory` a divergé du vrai (il ignore « Dev phase » et tout l'orchestrateur HP) | rejouer `/build-factory` **régresse** la méthode — c'est la seule incohérence qui détruit du travail |
-  > | `agentic-tests` §4 dit « limite de 20 sous-agents », §5.7 dit `min(3, floor(nproc/4))` = **2** | un agent qui s'arrête à la §4 refige le poste (cf. US-20) |
-  > | 17 PRD livrés lisent encore `ready-for-agent`, et `done` (55 fichiers) n'existe pas dans les cinq rôles canoniques | la file censée piloter l'autonomie est **majoritairement du bruit** |
+  > Un mécanisme **éprouvé**, pas décrit : créer un worktree, l'amener à un état où build + tests +
+  > lint tournent, y faire une tranche réelle, le détruire — et que chacun de ces gestes soit une
+  > commande écrite, pas une reconstitution. La question ouverte est l'emplacement (dans le dépôt,
+  > gitignoré, ou frère du dépôt) : les deux ont des conséquences différentes sur `git add -A`, sur
+  > la clé de mémoire et sur ce qu'un `rm -rf` malheureux emporte.
   >
-  > Le cas de `done` n'est pas un oubli de mise à jour mais **un manque dans le modèle** : la machine
-  > à états du triage n'a jamais eu d'état terminal, donc la pratique en a inventé un hors
-  > vocabulaire, et la glose de merge s'est logée dans le champ de statut faute d'un endroit pour
-  > elle. Le grill devra trancher : ajouter un sixième rôle, ou séparer l'état du triage de l'état
-  > de livraison.
+  > ### Ce qui est explicitement hors périmètre
   >
-  > ### La lacune la plus coûteuse n'est pas une incohérence
-  >
-  > Quatre recettes **load-bearing** ne vivent que dans la mémoire personnelle de l'agent, pas dans
-  > le dépôt : le worktree obligatoire avant toute modification, les trois symlinks `node_modules`
-  > d'un worktree frais, la recette de migration `NOT NULL` SQLite (`foreign_keys OFF`,
-  > `defer_foreign_keys` inopérant), et le throttle Lichess **par IP**. Un agent frais — ou tout
-  > autre contributeur — **repaie chaque piège**. C'est la seule dette de l'audit que l'usine ne peut
-  > pas découvrir seule.
-  >
-  > ### Pistes, à trancher au grill
-  >
-  > 1. **Faire de l'hygiène ce qu'on peut mécaniser.** Les `_Avoid_` de `CONTEXT.md` sont une liste
-  >    explicite : un grep sur le code, les issues et les scénarios en ferait un test. Même logique
-  >    pour la colonne `Covers` du README HP, qui se régénère depuis les frontmatters `covers:` ou
-  >    disparaît — aujourd'hui elle est **conservée avec un avertissement disant qu'elle est fausse**.
-  > 2. **Séparer les règles des preuves dans `agentic-tests`** (550 lignes, dont cinq paragraphes
-  >    datés qui disent la même chose). Les règles impératives dans la skill, le journal daté à côté.
-  >    **Attention** : le mécanisme d'auto-audit de la §5.6 est la meilleure invention de l'usine —
-  >    ses défauts sont d'**application**, pas de conception. L'alléger sans le casser.
-  > 3. **Rapatrier les quatre recettes** dans le dépôt, à l'endroit où un agent les lit sans les
-  >    chercher.
-  > 4. **Supprimer l'outillage mort** : tout le triage vise GitHub (`gh issue list --label`, « posté
-  >    sur une issue GitHub », le disclaimer IA sur chaque commentaire) alors que le tracker est
-  >    markdown local et que `gh issue list` renvoie zéro. Ces instructions occupent du contexte à
-  >    chaque session et désignent le mauvais endroit.
-  >
-  > ### Deux tensions à nommer plutôt qu'à trancher ici
-  >
-  > - **`/tdd` exige « get user approval on the plan »** alors que `ready-for-agent` signifie « an
-  >   agent can pick this up with no human context ». Les deux ne tiennent pas ensemble ; en pratique
-  >   c'est le TDD qui plie, mais rien ne l'écrit, donc chaque agent tranche seul et différemment.
-  >   C'est une **décision de méthode**, pas un nettoyage.
-  > - **Le plafond de concurrence appartient aussi à US-18 et US-20.** Corriger la contradiction
-  >   documentaire (20 vs 2) est de l'hygiène et revient ici. Décider de la **valeur** du plafond est
-  >   un arbitrage commun aux deux autres stories et **n'appartient pas à celle-ci**.
-  >
-  > ### Réserves consignées
-  >
-  > Que `/build-factory` régresse effectivement le `CLAUDE.md` est un constat de **divergence
-  > textuelle** — ce n'est pas testé, et ça ne devrait l'être que sur une branche jetable. Les HP
-  > (47 Ko) et les 76 issues n'ont pas été relus ligne à ligne : l'audit compte des statuts et des
-  > tailles, il ne juge pas leur contenu. Enfin, une partie du chantier est de la suppression, donc
-  > **le risque est de jeter un garde-fou qu'on croyait mort** : l'audit liste explicitement ce qui
-  > tient bien, à lire avant de couper.
-  >
-  > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
-  > rien d'autre, ne prenne aucune décision que le dépôt contredit.
-  > **Les cinq tranches sont livrées et la suite HP est verte** (2026-08-31). PR `integration →
-  > develop` ouverte, en attente de votre décision — l'agent ne merge jamais vers `develop`.
-  >
-  > Quatre points restent **ouverts et vous appartiennent**, aucun n'étant bloquant :
-  > un rechargement le curseur encore dans le champ perd la `Note` (le fermer demande une route
-  > serveur, qu'US-22 s'interdit) ; la notice des raccourcis passe sous la ligne de flottaison à
-  > 380 px ; elle est vraie au tiers à la position de départ ; et les flèches ne fonctionnent pas
-  > sur `Analyse`, faute d'y être annoncées. Détail dans les issues 04 et 05.
+  > **Réparer la mémoire vide d'un worktree** — [ADR-0028](docs/adr/0028-a-worktree-is-an-amnesiac-agent-and-that-is-the-signal.md)
+  > a décidé de ne pas le faire : l'amnésie est le signal qui a révélé que quinze recettes critiques
+  > vivaient hors du dépôt, et elle sert d'épreuve à US-21. Cette story vérifie le **mécanisme**, pas
+  > la mémoire.
 
+- **US-38**: Savoir ce que notre driver nous coûte, plutôt qu'en débattre — pour que le choix de
+  piloter l'app nous-mêmes se rejuge sur des chiffres, et pas sur l'ancienneté de la décision.
+  > **Pas encore grillée.** Ouverte le 2026-09-04 pendant le grill d'US-21/US-25, par décision du
+  > demandeur : la reprise de l'usine amont a été l'occasion de lire sa recommandation de driver, et
+  > de la refuser pour cette fois — voir la note du 2026-09-04 sur
+  > [ADR-0020](docs/adr/0020-the-driver-library-drives-the-scenario-judges.md).
+  >
+  > ### Le constat
+  >
+  > L'amont recommande le **Playwright CLI** (le CLI, explicitement pas le MCP) comme driver par
+  > défaut d'une app web. Nous pilotons par une **bibliothèque de driver** adossée à CDP + puppeteer,
+  > née d'US-7 quand aucun outil navigateur n'existait, et décidée par ADR-0020. Le refus de suivre
+  > la recommandation est **argumenté mais pas mesuré** : il repose sur les pièges que la
+  > bibliothèque encode, pas sur une comparaison.
+  >
+  > ### Ce que la story doit produire
+  >
+  > La **même suite**, pilotée des deux façons, comparée sur trois axes — le temps de bout en bout,
+  > les **findings attrapés**, et les **findings inventés** (un faux positif coûte une passe
+  > d'analyse). L'axe qui décidera n'est probablement pas la vitesse : c'est de savoir si Playwright
+  > retrouve seul les pièges que la bibliothèque encode — le navigateur privé sur le fan-out
+  > parallèle, l'émulation de thème qui échoue dans les deux sens, `tsx watch` qui ressuscite un
+  > serveur tué.
+  >
+  > **Ce n'est pas une story de migration.** Elle produit une mesure et une recommandation ; migrer,
+  > si migration il y a, sera une autre story. Et elle a une réponse acceptable qui est « on garde ce
+  > qu'on a, et maintenant on sait pourquoi ».
 
 - **US-24**: Ne plus laisser un import réussir sans rien importer — pour qu'une demande qui ne peut
   rien rapporter soit refusée à l'entrée, et non conclue par un compte-rendu vert à zéro.
@@ -307,75 +287,6 @@
   > Aucun de ces deux défauts n'a corrompu de données : rien n'a été écrit de travers, il n'y a
   > donc **pas de migration ni de reprise** à prévoir — seulement des imports qui n'ont pas eu
   > lieu, et un compte-rendu qui ne le disait pas.
-
-- **US-25**: Reprendre les mises à jour de l'usine amont sans perdre les nôtres — pour que rejouer
-  l'installation cesse d'être un choix entre « rester en arrière » et « écraser huit mois de
-  terrain ».
-  > **Pas encore grillée.** Demandée le 2026-09-02. L'usine vient de
-  > [`Loulen/prompt-driven-software-factory`](https://github.com/Loulen/prompt-driven-software-factory)
-  > (voir `skills-lock.json`), installée ici le **2026-07-20** (`bfe5c4a`). L'amont a poussé pour la
-  > dernière fois le **2026-09-01**. **Contrainte posée par le demandeur : la reprise ne doit rien
-  > écraser de ce qui a été modifié ici.**
-  >
-  > ### Pourquoi ce n'est pas un « git pull » de skills
-  >
-  > Les deux côtés ont bougé, et **pas de la même façon** :
-  >
-  > | | Depuis l'installation |
-  > | --- | --- |
-  > | **Amont** | 11 commits ; `agentic-tests` 1, `build-factory` 3, `git-flow` 1, `grill-with-docs` 2, `tdd` 1, `triage` 1 |
-  > | **Ici** | `agentic-tests/SKILL.md` : **78 → 740 lignes**, 37 commits ; `git-flow/SKILL.md` : +45/-12, 2 commits |
-  >
-  > Notre `agentic-tests` n'est pas une version modifiée de celle de l'amont : c'est **dix fois son
-  > volume**, et ce volume est du terrain payé cher — l'orchestrateur HP, le plafond
-  > `min(3, floor(nproc/4))` arraché à trois jours de gels, les pièges de course de la suite du
-  > 31/08, la récupération des rapports perdus par `SendMessage`. C'est très exactement ce que la
-  > contrainte protège.
-  >
-  > ### Trois constats vérifiés, à ne pas redécouvrir au grill
-  >
-  > 1. **L'installateur amont écrase, franchement.** `install.sh` procède par
-  >    `cp -R "$_src/skills/$_s" "$_dest/$_s"` — répertoire entier, aucune comparaison, aucune
-  >    fusion. Seuls les blocs `CLAUDE.md`/`AGENTS.md` sont traités avec ménagement
-  >    (`write_block`, qui ne mange jamais le contenu de l'utilisateur). Les skills, non.
-  > 2. **`skills-lock.json` ne protège rien — et ne dit pas la vérité.** `install.sh` ne le
-  >    mentionne nulle part : ni écrit, ni lu. Pire, ses `computedHash` ne sont pas reproductibles
-  >    ici : `tdd/SKILL.md` **n'a jamais été touché localement** et son sha256 (`85ac12…`) diffère
-  >    du `computedHash` du lock (`8986a0…`). Le fichier a donc l'apparence d'un garde-fou sans en
-  >    être un ; **on ne peut pas s'en servir pour décider ce qui a divergé**. Le grill devra dire
-  >    s'il est réparé ou retiré.
-  > 3. **L'amont a renommé son vocabulaire, ce n'est plus le nôtre.** Ses skills sont aujourd'hui :
-  >    `to-spec`, `to-tickets`, `to-us`, `implement`, `grilling`, `codebase-design`,
-  >    `domain-modeling`, `clean-context`, `code-review`, `verify-factory` — quand nous tenons
-  >    `to-prd` et `to-issues`, **qui n'existent plus là-bas**. Reprendre l'amont n'est donc pas une
-  >    mise à jour de fichiers mais une **migration de vocabulaire**, qui traverse `CLAUDE.md`,
-  >    `docs/agents/`, et les PRD déjà livrés.
-  >
-  > ### Ce que le grill devra trancher
-  >
-  > - **Reprendre quoi ?** Tout n'est pas également désirable. Une skill jamais touchée ici
-  >   (`tdd`, `triage`, `to-prd`…) peut se reprendre presque telle quelle ; `agentic-tests` et
-  >   `git-flow` demandent une fusion à la main, dans ce sens-là : **l'amont vient enrichir le
-  >   nôtre**, jamais l'inverse.
-  > - **Adopter ou refuser les renommages.** Suivre `to-spec`/`to-tickets` coûte une migration à
-  >   travers tout le dépôt ; ne pas les suivre nous coupe des mises à jour futures de ces skills.
-  >   C'est le vrai arbitrage de la story, et il n'est pas technique.
-  > - **Comment on saura, la prochaine fois.** Le besoin réel derrière la demande n'est pas cette
-  >   reprise-ci mais **la suivante** : il faut sortir d'ici avec un moyen de dire, sans relire 800
-  >   lignes, ce que l'amont a changé et ce que nous avons changé. Un lock qui marche est une piste ;
-  >   un remote `upstream` avec une branche de vendoring en est une autre.
-  > - **Le sort des seeds `build-factory/*.md`**, déjà signalé comme deuxième source de vérité par
-  >   l'audit du 24/08 (§1.5).
-  >
-  > ### Frontière avec US-21
-  >
-  > **Elles ne font pas le même travail et l'ordre compte.** US-21 remet l'usine d'accord **avec
-  > elle-même** (ce que le dépôt dit vs ce qu'il fait) ; celle-ci la remet d'accord **avec son
-  > amont**. Le recouvrement est réel sur un point unique : le gabarit `CLAUDE.md` de
-  > `build-factory`, dont l'audit du 24/08 (§1.4) dit qu'il **régresse la méthode** si on rejoue la
-  > skill — c'est la seule incohérence connue qui *détruit* du travail. Reprendre l'amont **sans**
-  > avoir traité ce point rejouerait précisément la régression que la contrainte du demandeur
-  > interdit. **US-21 devrait donc passer d'abord**, ou au minimum ce point-là.
 
 - **US-27**: Retrouver une partie dans « Mes parties » sans faire défiler cent soixante-dix lignes —
   trier, filtrer, chercher, et savoir ce que compte un compteur.
@@ -704,6 +615,402 @@
 
 ## In review
 
+- **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
+  ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
+  > **En revue depuis le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`
+  > vers `develop`. **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
+  > PRD, huit tranches, deux références gardées, parce que le renommage de vocabulaire de
+  > l'amont *est* la passe de cohérence qu'US-21 demandait. La PR porte le filet de code, le
+  > rapport du contrôle de santé, celui de la suite HP et celui de l'épreuve de l'agent frais.
+  > **Le merge vers `develop` est une décision humaine.**
+  >
+  > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte.
+  > **Elle doit être grillée** avant toute implémentation.
+  >
+  > **Pas encore grillée.** Demandée le 2026-08-24, après un audit de l'usine confrontée à l'état
+  > réel du dépôt. **Relevé complet, avec les commandes de vérification :**
+  > [`docs/factory-coherence-audit-2026-08-24.md`](docs/factory-coherence-audit-2026-08-24.md) —
+  > 11 incohérences, 6 points d'incomplétude, et ce qu'il ne faut pas casser.
+  >
+  > ### Le constat : l'usine a évolué plus vite que sa propre documentation
+  >
+  > Rien de cassé au sens d'une panne. Le problème est plus insidieux : **la méthode décrit un
+  > projet qui n'est plus tout à fait celui-ci**, et un agent obéit à ce qu'il lit. Trois exemples,
+  > du plus grave au plus visible :
+  >
+  > | Constat | Ce que ça coûte |
+  > | --- | --- |
+  > | Le gabarit `CLAUDE.md` de `build-factory` a divergé du vrai (il ignore « Dev phase » et tout l'orchestrateur HP) | rejouer `/build-factory` **régresse** la méthode — c'est la seule incohérence qui détruit du travail |
+  > | `agentic-tests` §4 dit « limite de 20 sous-agents », §5.7 dit `min(3, floor(nproc/4))` = **2** | un agent qui s'arrête à la §4 refige le poste (cf. US-20) |
+  > | 17 PRD livrés lisent encore `ready-for-agent`, et `done` (55 fichiers) n'existe pas dans les cinq rôles canoniques | la file censée piloter l'autonomie est **majoritairement du bruit** |
+  >
+  > Le cas de `done` n'est pas un oubli de mise à jour mais **un manque dans le modèle** : la machine
+  > à états du triage n'a jamais eu d'état terminal, donc la pratique en a inventé un hors
+  > vocabulaire, et la glose de merge s'est logée dans le champ de statut faute d'un endroit pour
+  > elle. Le grill devra trancher : ajouter un sixième rôle, ou séparer l'état du triage de l'état
+  > de livraison.
+  >
+  > ### La lacune la plus coûteuse n'est pas une incohérence
+  >
+  > Quatre recettes **load-bearing** ne vivent que dans la mémoire personnelle de l'agent, pas dans
+  > le dépôt : le worktree obligatoire avant toute modification, les trois symlinks `node_modules`
+  > d'un worktree frais, la recette de migration `NOT NULL` SQLite (`foreign_keys OFF`,
+  > `defer_foreign_keys` inopérant), et le throttle Lichess **par IP**. Un agent frais — ou tout
+  > autre contributeur — **repaie chaque piège**. C'est la seule dette de l'audit que l'usine ne peut
+  > pas découvrir seule.
+  >
+  > ### Pistes, à trancher au grill
+  >
+  > 1. **Faire de l'hygiène ce qu'on peut mécaniser.** Les `_Avoid_` de `CONTEXT.md` sont une liste
+  >    explicite : un grep sur le code, les issues et les scénarios en ferait un test. Même logique
+  >    pour la colonne `Covers` du README HP, qui se régénère depuis les frontmatters `covers:` ou
+  >    disparaît — aujourd'hui elle est **conservée avec un avertissement disant qu'elle est fausse**.
+  > 2. **Séparer les règles des preuves dans `agentic-tests`** (550 lignes, dont cinq paragraphes
+  >    datés qui disent la même chose). Les règles impératives dans la skill, le journal daté à côté.
+  >    **Attention** : le mécanisme d'auto-audit de la §5.6 est la meilleure invention de l'usine —
+  >    ses défauts sont d'**application**, pas de conception. L'alléger sans le casser.
+  > 3. **Rapatrier les quatre recettes** dans le dépôt, à l'endroit où un agent les lit sans les
+  >    chercher.
+  > 4. **Supprimer l'outillage mort** : tout le triage vise GitHub (`gh issue list --label`, « posté
+  >    sur une issue GitHub », le disclaimer IA sur chaque commentaire) alors que le tracker est
+  >    markdown local et que `gh issue list` renvoie zéro. Ces instructions occupent du contexte à
+  >    chaque session et désignent le mauvais endroit.
+  >
+  > ### Deux tensions à nommer plutôt qu'à trancher ici
+  >
+  > - **`/tdd` exige « get user approval on the plan »** alors que `ready-for-agent` signifie « an
+  >   agent can pick this up with no human context ». Les deux ne tiennent pas ensemble ; en pratique
+  >   c'est le TDD qui plie, mais rien ne l'écrit, donc chaque agent tranche seul et différemment.
+  >   C'est une **décision de méthode**, pas un nettoyage.
+  > - **Le plafond de concurrence appartient aussi à US-18 et US-20.** Corriger la contradiction
+  >   documentaire (20 vs 2) est de l'hygiène et revient ici. Décider de la **valeur** du plafond est
+  >   un arbitrage commun aux deux autres stories et **n'appartient pas à celle-ci**.
+  >
+  > ### Réserves consignées
+  >
+  > Que `/build-factory` régresse effectivement le `CLAUDE.md` est un constat de **divergence
+  > textuelle** — ce n'est pas testé, et ça ne devrait l'être que sur une branche jetable. Les HP
+  > (47 Ko) et les 76 issues n'ont pas été relus ligne à ligne : l'audit compte des statuts et des
+  > tailles, il ne juge pas leur contenu. Enfin, une partie du chantier est de la suppression, donc
+  > **le risque est de jeter un garde-fou qu'on croyait mort** : l'audit liste explicitement ce qui
+  > tient bien, à lire avant de couper.
+  >
+  > **Critère de succès à définir au grill.** Piste : qu'un agent frais, en lisant la méthode et
+  > rien d'autre, ne prenne aucune décision que le dépôt contredit.
+  >
+  > ### Grillée le 2026-09-04, avec US-25 — une seule étape de mise à jour de l'usine
+  >
+  > Branche d'intégration commune `integration/US-21-US-25-factory-update`. **Les deux références
+  > sont gardées** : ce sont deux promesses distinctes — l'usine d'accord avec elle-même, l'usine
+  > d'accord avec son amont — mais un seul PRD et des sous-tickets communs, fermés par la même PR.
+  >
+  > **Décision d'ouverture, par le demandeur** : *« on suit le renommage de l'amont, je l'ai utilisé
+  > sur un autre projet et j'aime bien cette nouvelle philosophie »*. Ce qui soude les deux stories :
+  > le renommage de l'amont **est** la passe de cohérence d'US-21, avec un vocabulaire imposé de
+  > l'extérieur plutôt qu'inventé.
+  >
+  > #### Ce que le grill a mesuré, et qui corrige les deux stories
+  >
+  > | Constat des stories | Ce que la mesure dit |
+  > | --- | --- |
+  > | « fusion à la main de l'amont » | **Six skills sur huit sont octet pour octet la base d'installation** (`ea7e4afe`). Seules `agentic-tests` (78→833) et `git-flow` (43→82) portent du travail local. |
+  > | `skills-lock.json` ne dit pas la vérité | **Confirmé, et pire** : notre `tdd` est *exactement* l'amont à `ea7e4afe`, quand le lock annonce un hash qui ne correspond ni à l'installation ni à l'amont d'aujourd'hui. Git était le lock depuis le début. |
+  > | « l'amont vient enrichir le nôtre » | **Faux par endroits** : l'amont *recompose* — `tdd` 111→42, `grill-with-docs` 97→**20** (une coquille appelant `grilling` + `domain-modeling`). |
+  > | `agentic-tests` §4 dit 20, §5.7 dit 2 | **Rétréci** : plus de règle concurrente, mais une caution périmée ligne 71. §5 fait **686 des 833 lignes**. |
+  > | quatre recettes hors du dépôt | **Une quinzaine**, et la preuve est sur le disque : un worktree a **0 mémoire** — voir ADR-0028. |
+  > | 17 PRD lisent `ready-for-agent` | **19 PRD et 34 tickets**, tous de features livrées : la file calculée contiendrait **53 entrées, dont zéro vraie**. |
+  > | §1.3 (20 vs 2), §1.10 (colonne `Covers`) | **Périmés en partie** — l'audit du 24/08 a lui-même vieilli. |
+  >
+  > #### Les décisions
+  >
+  > - **ADR-0025** — la reprise est une **fusion à trois points**, jamais `install.sh` (qui fait
+  >   `cp -R` et est la cause du problème). Deux passes **jamais mélangées** : *structure* (git
+  >   fusionne les hunks, la base étant prouvée, on montre ligne à ligne que rien de local n'est
+  >   perdu) puis *vocabulaire* (table de correspondance appliquée à tout le dépôt, **y compris nos
+  >   propres lignes** — git fusionne des hunks, il ne renommera jamais notre texte à nous).
+  > - **On adopte les six skills neuves** — `implement`, `verify-factory`, `code-review`,
+  >   `codebase-design`, `clean-context`, `to-us` : la nouvelle usine est *composée*, une adoption
+  >   partielle laisse des appels dans le vide. Deux d'entre elles **encaissent US-21** :
+  >   `implement` codifie le paragraphe « Dev workflow » écrit à la main dans `CLAUDE.md`, et
+  >   `verify-factory` **est** la piste 1 (l'hygiène mécanisée) et son critère de succès.
+  > - **`code-review` de l'amont ombrage l'intégrée de Claude Code**, sciemment et documenté ; le
+  >   demandeur n'utilisera pas la standard.
+  > - **ADR-0026** — **`done` est gardé et requalifié** en *état de livraison*, pas sixième rôle de
+  >   triage : les cinq rôles restent intacts (donc `triage-labels.md` ne diverge pas), la file
+  >   devient `ready-for-agent` moins `done`, **tickets seulement** (un PRD est une spec, pas un
+  >   élément de travail). Les **34 tickets périmés sont corrigés une fois** — un mot dans un champ,
+  >   sur des fichiers dont la livraison est prouvée par le backlog ; on ne **fabrique** aucune
+  >   coordonnée de livraison, et le rétroactif reste nommé plutôt que repayé.
+  > - **ADR-0027** — **en AFK, l'agent choisit ses seams et les déclare** (décision du demandeur,
+  >   contre la recommandation « c'est le ticket qui les porte »). Le garde-fou est affaibli, ce qui
+  >   le remplace est l'axe *Spec* de la revue indépendante. **À mesurer.**
+  > - **ADR-0028** — la **mémoire vide d'un worktree n'est pas réparée** : c'est le signal qui a
+  >   révélé la dette, et il devient l'**épreuve** d'US-21. US-39 est ouverte pour le mécanisme.
+  > - **Note sur ADR-0020** — on garde notre driver CDP contre le **Playwright CLI** que l'amont
+  >   recommande ; **US-38** est ouverte pour *mesurer* l'échange au lieu d'en débattre.
+  > - **`/build-factory` ne se rejoue plus ici.** §1.4 ne se répare pas, il se dissout : le gabarit
+  >   n'est plus pour nous. `docs/agents/*.md` est la source de vérité du dépôt, les seeds sont des
+  >   gabarits pour un dépôt neuf, jamais lus ici — le sens d'écoulement est déclaré une fois.
+  >   `/verify-factory` prend le rôle rejouable, comme l'amont l'a lui-même séparé.
+  >   **Garde-fou** : `CLAUDE.md` garde `lint` dans le gate (le gabarit amont l'a perdu) et garde sa
+  >   section « Dev phase ».
+  > - **Rapatriement du savoir** : `git-flow/WORKTREES.md`, `agentic-tests/DRIVING.md`,
+  >   `agentic-tests/ORCHESTRATION.md` — rangés **par la skill qui en a besoin**, jamais dans un
+  >   fichier « astuces » central. Une recette rapatriée **quitte la mémoire** (sinon : troisième
+  >   source de vérité). Le rangement d'`ORCHESTRATION.md` **est** la piste 2 d'US-21 ; le mécanisme
+  >   d'auto-audit §5.6 part **intact**.
+  > - **La veille** : remote `upstream` (`-t main --no-tags`), ref de reprise enregistré en clair
+  >   dans `.claude/UPSTREAM.md`, **`skills-lock.json` supprimé** (un lock qui ment est pire qu'un
+  >   lock absent), et `verify-factory` porte la sonde « l'amont a N commits d'avance » — qui
+  >   dégrade en « non vérifié » hors ligne, jamais en rouge.
+  > - **Restes de l'audit** : `<reviewer to define>` **supprimé** plutôt que rempli (62 PR sans
+  >   objet) ; §2.3 déjà couvert par ADR-0026 ; §1.10 périmé, on laisse ; `SCENARIO-FORMAT.md`
+  >   resynchronisé (une tranche) ; le disclaimer IA de `triage` laissé intact (diverger coûte plus
+  >   que l'inconvénient).
+  >
+  > #### Critère de succès — quatre contrôles mécaniques et une épreuve
+  >
+  > 1. `/verify-factory` sort vert, ou ses rouges sont déclarés et datés.
+  > 2. La file est exacte : tickets `ready-for-agent` sans `done` = les tickets réellement ouverts.
+  > 3. `grep -E 'to-prd|to-issues|sub-issue|PRD|UI-first'` hors `.scratch/` et hors l'audit du 24/08
+  >    renvoie **zéro** — la passe de vocabulaire devient un test, pas une intention.
+  > 4. `git diff <ref-de-reprise> upstream/main -- skills/` est **vide**.
+  > 5. **L'épreuve** : un sous-agent dans un **worktree neuf** — donc sans mémoire, donc un agent
+  >    frais — fait une tranche réelle. S'il trouve le worktree, les symlinks, le driver, le plafond
+  >    et le gate sans qu'on lui dise rien, la méthode se suffit. **Prérequis de la PR
+  >    `integration → develop`**, à côté de la suite HP ; pas un quatrième HP (le plafond est à 3, et
+  >    ce n'est pas un parcours utilisateur).
+  >
+  > #### Coûts assumés, à mesurer
+  >
+  > `/implement` insère un **rôle de revue indépendant** dans chaque boucle : on paie **au ticket**,
+  > là où le reste de la reprise se paie une fois. En face, `agentic-tests` passe de 833 lignes à
+  > ~150 + annexes — du contexte économisé à **chaque** invocation, FP comprise —, `verify-factory`
+  > remplace des vérifications faites à la main une fois sur trois, et la section `Cleanup` de
+  > l'amont fait disparaître les **9 branches** déjà mergées dans `develop`. **La reprise allège le
+  > contexte et alourdit la boucle** ; l'échange se mesure sur les prochaines tranches, en même temps
+  > qu'ADR-0027.
+  >
+  > #### PRD et tranches — publiés le 2026-09-04
+  >
+  > [`.scratch/factory-update/PRD.md`](.scratch/factory-update/PRD.md), huit sous-tickets sur la
+  > branche d'intégration `integration/US-21-US-25-factory-update` :
+  >
+  > | # | Tranche | Type | Bloquée par |
+  > | --- | --- | --- | --- |
+  > | 01 | `the-watch-post` — remote `upstream`, ref de reprise, mort du lock | AFK | — |
+  > | 02 | `the-front-of-the-pipeline` — grill recomposé, `to-spec`, `to-tickets`, `to-us` | AFK | 01 |
+  > | 03 | `the-two-hand-merged-skills` — la seule vraie fusion, plus les cinq skills neuves | AFK | 01 |
+  > | 04 | `the-vocabulary-pass` — la passe que git ne peut pas faire, et sa sonde | AFK | 02, 03 |
+  > | 05 | `claude-md-tells-the-truth` — `lint` gardé, `build-factory` retiré, `Cleanup` | AFK | 04 |
+  > | 06 | `the-knowledge-comes-home` — les trois annexes, le runner dégraissé | AFK | 04 |
+  > | 07 | `the-queue-becomes-a-queue-again` — 19 PRD exclus, 34 tickets corrigés | AFK | 04 |
+  > | 08 | `the-amnesiac-agent-and-the-pr` — l'épreuve, la suite HP, la PR | **HITL** | 05, 06, 07 |
+  >
+  > **Le risque est isolé dans la 03** : c'est la seule tranche où git doit arbitrer, et elle peut
+  > être refaite seule. La 02 passe tôt à la demande du demandeur, pour profiter tout de suite de la
+  > nouvelle chaîne — au prix d'une **double langue assumée** jusqu'à la 04.
+  >
+  > **Filet de code allégé, par décision du demandeur** : build + tests + lint ne tournent en fin de
+  > tranche que si `git diff --name-only` sort de `.claude/`, `docs/`, `.scratch/` et `BACKLOG.md`.
+  > Le filet passe **une fois, entier, à la tranche 08**.
+
+- **US-25**: Reprendre les mises à jour de l'usine amont sans perdre les nôtres — pour que rejouer
+  l'installation cesse d'être un choix entre « rester en arrière » et « écraser huit mois de
+  terrain ».
+  > **En revue depuis le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`
+  > vers `develop`. **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
+  > PRD, huit tranches, deux références gardées, parce que le renommage de vocabulaire de
+  > l'amont *est* la passe de cohérence qu'US-21 demandait. La PR porte le filet de code, le
+  > rapport du contrôle de santé, celui de la suite HP et celui de l'épreuve de l'agent frais.
+  > **Le merge vers `develop` est une décision humaine.**
+  >
+  > **Pas encore grillée.** Demandée le 2026-09-02. L'usine vient de
+  > [`Loulen/prompt-driven-software-factory`](https://github.com/Loulen/prompt-driven-software-factory)
+  > (voir `.claude/UPSTREAM.md`), installée ici le **2026-07-20** (`bfe5c4a`). L'amont a poussé pour la
+  > dernière fois le **2026-09-01**. **Contrainte posée par le demandeur : la reprise ne doit rien
+  > écraser de ce qui a été modifié ici.**
+  >
+  > ### Pourquoi ce n'est pas un « git pull » de skills
+  >
+  > Les deux côtés ont bougé, et **pas de la même façon** :
+  >
+  > | | Depuis l'installation |
+  > | --- | --- |
+  > | **Amont** | 11 commits ; `agentic-tests` 1, `build-factory` 3, `git-flow` 1, `grill-with-docs` 2, `tdd` 1, `triage` 1 |
+  > | **Ici** | `agentic-tests/SKILL.md` : **78 → 740 lignes**, 37 commits ; `git-flow/SKILL.md` : +45/-12, 2 commits |
+  >
+  > Notre `agentic-tests` n'est pas une version modifiée de celle de l'amont : c'est **dix fois son
+  > volume**, et ce volume est du terrain payé cher — l'orchestrateur HP, le plafond
+  > `min(3, floor(nproc/4))` arraché à trois jours de gels, les pièges de course de la suite du
+  > 31/08, la récupération des rapports perdus par `SendMessage`. C'est très exactement ce que la
+  > contrainte protège.
+  >
+  > ### Trois constats vérifiés, à ne pas redécouvrir au grill
+  >
+  > 1. **L'installateur amont écrase, franchement.** `install.sh` procède par
+  >    `cp -R "$_src/skills/$_s" "$_dest/$_s"` — répertoire entier, aucune comparaison, aucune
+  >    fusion. Seuls les blocs `CLAUDE.md`/`AGENTS.md` sont traités avec ménagement
+  >    (`write_block`, qui ne mange jamais le contenu de l'utilisateur). Les skills, non.
+  > 2. **`skills-lock.json` ne protège rien — et ne dit pas la vérité.** `install.sh` ne le
+  >    mentionne nulle part : ni écrit, ni lu. Pire, ses `computedHash` ne sont pas reproductibles
+  >    ici : `tdd/SKILL.md` **n'a jamais été touché localement** et son sha256 (`85ac12…`) diffère
+  >    du `computedHash` du lock (`8986a0…`). Le fichier a donc l'apparence d'un garde-fou sans en
+  >    être un ; **on ne peut pas s'en servir pour décider ce qui a divergé**. Le grill devra dire
+  >    s'il est réparé ou retiré.
+  > 3. **L'amont a renommé son vocabulaire, ce n'est plus le nôtre.** Ses skills sont aujourd'hui :
+  >    `to-spec`, `to-tickets`, `to-us`, `implement`, `grilling`, `codebase-design`,
+  >    `domain-modeling`, `clean-context`, `code-review`, `verify-factory` — quand nous tenons
+  >    `to-prd` et `to-issues`, **qui n'existent plus là-bas**. Reprendre l'amont n'est donc pas une
+  >    mise à jour de fichiers mais une **migration de vocabulaire**, qui traverse `CLAUDE.md`,
+  >    `docs/agents/`, et les PRD déjà livrés.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Reprendre quoi ?** Tout n'est pas également désirable. Une skill jamais touchée ici
+  >   (`tdd`, `triage`, `to-prd`…) peut se reprendre presque telle quelle ; `agentic-tests` et
+  >   `git-flow` demandent une fusion à la main, dans ce sens-là : **l'amont vient enrichir le
+  >   nôtre**, jamais l'inverse.
+  > - **Adopter ou refuser les renommages.** Suivre `to-spec`/`to-tickets` coûte une migration à
+  >   travers tout le dépôt ; ne pas les suivre nous coupe des mises à jour futures de ces skills.
+  >   C'est le vrai arbitrage de la story, et il n'est pas technique.
+  > - **Comment on saura, la prochaine fois.** Le besoin réel derrière la demande n'est pas cette
+  >   reprise-ci mais **la suivante** : il faut sortir d'ici avec un moyen de dire, sans relire 800
+  >   lignes, ce que l'amont a changé et ce que nous avons changé. Un lock qui marche est une piste ;
+  >   un remote `upstream` avec une branche de vendoring en est une autre.
+  > - **Le sort des seeds `build-factory/*.md`**, déjà signalé comme deuxième source de vérité par
+  >   l'audit du 24/08 (§1.5).
+  >
+  > ### Frontière avec US-21
+  >
+  > **Elles ne font pas le même travail et l'ordre compte.** US-21 remet l'usine d'accord **avec
+  > elle-même** (ce que le dépôt dit vs ce qu'il fait) ; celle-ci la remet d'accord **avec son
+  > amont**. Le recouvrement est réel sur un point unique : le gabarit `CLAUDE.md` de
+  > `build-factory`, dont l'audit du 24/08 (§1.4) dit qu'il **régresse la méthode** si on rejoue la
+  > skill — c'est la seule incohérence connue qui *détruit* du travail. Reprendre l'amont **sans**
+  > avoir traité ce point rejouerait précisément la régression que la contrainte du demandeur
+  > interdit. **US-21 devrait donc passer d'abord**, ou au minimum ce point-là.
+  >
+  > ### Grillée le 2026-09-04, avec US-21 — une seule étape de mise à jour de l'usine
+  >
+  > Branche d'intégration commune `integration/US-21-US-25-factory-update`. **Les deux références
+  > sont gardées** : ce sont deux promesses distinctes — l'usine d'accord avec elle-même, l'usine
+  > d'accord avec son amont — mais un seul PRD et des sous-tickets communs, fermés par la même PR.
+  >
+  > **Décision d'ouverture, par le demandeur** : *« on suit le renommage de l'amont, je l'ai utilisé
+  > sur un autre projet et j'aime bien cette nouvelle philosophie »*. Ce qui soude les deux stories :
+  > le renommage de l'amont **est** la passe de cohérence d'US-21, avec un vocabulaire imposé de
+  > l'extérieur plutôt qu'inventé.
+  >
+  > #### Ce que le grill a mesuré, et qui corrige les deux stories
+  >
+  > | Constat des stories | Ce que la mesure dit |
+  > | --- | --- |
+  > | « fusion à la main de l'amont » | **Six skills sur huit sont octet pour octet la base d'installation** (`ea7e4afe`). Seules `agentic-tests` (78→833) et `git-flow` (43→82) portent du travail local. |
+  > | `skills-lock.json` ne dit pas la vérité | **Confirmé, et pire** : notre `tdd` est *exactement* l'amont à `ea7e4afe`, quand le lock annonce un hash qui ne correspond ni à l'installation ni à l'amont d'aujourd'hui. Git était le lock depuis le début. |
+  > | « l'amont vient enrichir le nôtre » | **Faux par endroits** : l'amont *recompose* — `tdd` 111→42, `grill-with-docs` 97→**20** (une coquille appelant `grilling` + `domain-modeling`). |
+  > | `agentic-tests` §4 dit 20, §5.7 dit 2 | **Rétréci** : plus de règle concurrente, mais une caution périmée ligne 71. §5 fait **686 des 833 lignes**. |
+  > | quatre recettes hors du dépôt | **Une quinzaine**, et la preuve est sur le disque : un worktree a **0 mémoire** — voir ADR-0028. |
+  > | 17 PRD lisent `ready-for-agent` | **19 PRD et 34 tickets**, tous de features livrées : la file calculée contiendrait **53 entrées, dont zéro vraie**. |
+  > | §1.3 (20 vs 2), §1.10 (colonne `Covers`) | **Périmés en partie** — l'audit du 24/08 a lui-même vieilli. |
+  >
+  > #### Les décisions
+  >
+  > - **ADR-0025** — la reprise est une **fusion à trois points**, jamais `install.sh` (qui fait
+  >   `cp -R` et est la cause du problème). Deux passes **jamais mélangées** : *structure* (git
+  >   fusionne les hunks, la base étant prouvée, on montre ligne à ligne que rien de local n'est
+  >   perdu) puis *vocabulaire* (table de correspondance appliquée à tout le dépôt, **y compris nos
+  >   propres lignes** — git fusionne des hunks, il ne renommera jamais notre texte à nous).
+  > - **On adopte les six skills neuves** — `implement`, `verify-factory`, `code-review`,
+  >   `codebase-design`, `clean-context`, `to-us` : la nouvelle usine est *composée*, une adoption
+  >   partielle laisse des appels dans le vide. Deux d'entre elles **encaissent US-21** :
+  >   `implement` codifie le paragraphe « Dev workflow » écrit à la main dans `CLAUDE.md`, et
+  >   `verify-factory` **est** la piste 1 (l'hygiène mécanisée) et son critère de succès.
+  > - **`code-review` de l'amont ombrage l'intégrée de Claude Code**, sciemment et documenté ; le
+  >   demandeur n'utilisera pas la standard.
+  > - **ADR-0026** — **`done` est gardé et requalifié** en *état de livraison*, pas sixième rôle de
+  >   triage : les cinq rôles restent intacts (donc `triage-labels.md` ne diverge pas), la file
+  >   devient `ready-for-agent` moins `done`, **tickets seulement** (un PRD est une spec, pas un
+  >   élément de travail). Les **34 tickets périmés sont corrigés une fois** — un mot dans un champ,
+  >   sur des fichiers dont la livraison est prouvée par le backlog ; on ne **fabrique** aucune
+  >   coordonnée de livraison, et le rétroactif reste nommé plutôt que repayé.
+  > - **ADR-0027** — **en AFK, l'agent choisit ses seams et les déclare** (décision du demandeur,
+  >   contre la recommandation « c'est le ticket qui les porte »). Le garde-fou est affaibli, ce qui
+  >   le remplace est l'axe *Spec* de la revue indépendante. **À mesurer.**
+  > - **ADR-0028** — la **mémoire vide d'un worktree n'est pas réparée** : c'est le signal qui a
+  >   révélé la dette, et il devient l'**épreuve** d'US-21. US-39 est ouverte pour le mécanisme.
+  > - **Note sur ADR-0020** — on garde notre driver CDP contre le **Playwright CLI** que l'amont
+  >   recommande ; **US-38** est ouverte pour *mesurer* l'échange au lieu d'en débattre.
+  > - **`/build-factory` ne se rejoue plus ici.** §1.4 ne se répare pas, il se dissout : le gabarit
+  >   n'est plus pour nous. `docs/agents/*.md` est la source de vérité du dépôt, les seeds sont des
+  >   gabarits pour un dépôt neuf, jamais lus ici — le sens d'écoulement est déclaré une fois.
+  >   `/verify-factory` prend le rôle rejouable, comme l'amont l'a lui-même séparé.
+  >   **Garde-fou** : `CLAUDE.md` garde `lint` dans le gate (le gabarit amont l'a perdu) et garde sa
+  >   section « Dev phase ».
+  > - **Rapatriement du savoir** : `git-flow/WORKTREES.md`, `agentic-tests/DRIVING.md`,
+  >   `agentic-tests/ORCHESTRATION.md` — rangés **par la skill qui en a besoin**, jamais dans un
+  >   fichier « astuces » central. Une recette rapatriée **quitte la mémoire** (sinon : troisième
+  >   source de vérité). Le rangement d'`ORCHESTRATION.md` **est** la piste 2 d'US-21 ; le mécanisme
+  >   d'auto-audit §5.6 part **intact**.
+  > - **La veille** : remote `upstream` (`-t main --no-tags`), ref de reprise enregistré en clair
+  >   dans `.claude/UPSTREAM.md`, **`skills-lock.json` supprimé** (un lock qui ment est pire qu'un
+  >   lock absent), et `verify-factory` porte la sonde « l'amont a N commits d'avance » — qui
+  >   dégrade en « non vérifié » hors ligne, jamais en rouge.
+  > - **Restes de l'audit** : `<reviewer to define>` **supprimé** plutôt que rempli (62 PR sans
+  >   objet) ; §2.3 déjà couvert par ADR-0026 ; §1.10 périmé, on laisse ; `SCENARIO-FORMAT.md`
+  >   resynchronisé (une tranche) ; le disclaimer IA de `triage` laissé intact (diverger coûte plus
+  >   que l'inconvénient).
+  >
+  > #### Critère de succès — quatre contrôles mécaniques et une épreuve
+  >
+  > 1. `/verify-factory` sort vert, ou ses rouges sont déclarés et datés.
+  > 2. La file est exacte : tickets `ready-for-agent` sans `done` = les tickets réellement ouverts.
+  > 3. `grep -E 'to-prd|to-issues|sub-issue|PRD|UI-first'` hors `.scratch/` et hors l'audit du 24/08
+  >    renvoie **zéro** — la passe de vocabulaire devient un test, pas une intention.
+  > 4. `git diff <ref-de-reprise> upstream/main -- skills/` est **vide**.
+  > 5. **L'épreuve** : un sous-agent dans un **worktree neuf** — donc sans mémoire, donc un agent
+  >    frais — fait une tranche réelle. S'il trouve le worktree, les symlinks, le driver, le plafond
+  >    et le gate sans qu'on lui dise rien, la méthode se suffit. **Prérequis de la PR
+  >    `integration → develop`**, à côté de la suite HP ; pas un quatrième HP (le plafond est à 3, et
+  >    ce n'est pas un parcours utilisateur).
+  >
+  > #### Coûts assumés, à mesurer
+  >
+  > `/implement` insère un **rôle de revue indépendant** dans chaque boucle : on paie **au ticket**,
+  > là où le reste de la reprise se paie une fois. En face, `agentic-tests` passe de 833 lignes à
+  > ~150 + annexes — du contexte économisé à **chaque** invocation, FP comprise —, `verify-factory`
+  > remplace des vérifications faites à la main une fois sur trois, et la section `Cleanup` de
+  > l'amont fait disparaître les **9 branches** déjà mergées dans `develop`. **La reprise allège le
+  > contexte et alourdit la boucle** ; l'échange se mesure sur les prochaines tranches, en même temps
+  > qu'ADR-0027.
+  >
+  > #### PRD et tranches — publiés le 2026-09-04
+  >
+  > [`.scratch/factory-update/PRD.md`](.scratch/factory-update/PRD.md), huit sous-tickets sur la
+  > branche d'intégration `integration/US-21-US-25-factory-update` :
+  >
+  > | # | Tranche | Type | Bloquée par |
+  > | --- | --- | --- | --- |
+  > | 01 | `the-watch-post` — remote `upstream`, ref de reprise, mort du lock | AFK | — |
+  > | 02 | `the-front-of-the-pipeline` — grill recomposé, `to-spec`, `to-tickets`, `to-us` | AFK | 01 |
+  > | 03 | `the-two-hand-merged-skills` — la seule vraie fusion, plus les cinq skills neuves | AFK | 01 |
+  > | 04 | `the-vocabulary-pass` — la passe que git ne peut pas faire, et sa sonde | AFK | 02, 03 |
+  > | 05 | `claude-md-tells-the-truth` — `lint` gardé, `build-factory` retiré, `Cleanup` | AFK | 04 |
+  > | 06 | `the-knowledge-comes-home` — les trois annexes, le runner dégraissé | AFK | 04 |
+  > | 07 | `the-queue-becomes-a-queue-again` — 19 PRD exclus, 34 tickets corrigés | AFK | 04 |
+  > | 08 | `the-amnesiac-agent-and-the-pr` — l'épreuve, la suite HP, la PR | **HITL** | 05, 06, 07 |
+  >
+  > **Le risque est isolé dans la 03** : c'est la seule tranche où git doit arbitrer, et elle peut
+  > être refaite seule. La 02 passe tôt à la demande du demandeur, pour profiter tout de suite de la
+  > nouvelle chaîne — au prix d'une **double langue assumée** jusqu'à la 04.
+  >
+  > **Filet de code allégé, par décision du demandeur** : build + tests + lint ne tournent en fin de
+  > tranche que si `git diff --name-only` sort de `.claude/`, `docs/`, `.scratch/` et `BACKLOG.md`.
+  > Le filet passe **une fois, entier, à la tranche 08**.
+
+
+## Done
+
 - **US-37**: Le barème d'`Inaccuracy` passe à **5 points** — pour que l'app cesse d'être muette sur
   les coups que le Player voit et qu'elle ne compte pas comme des fautes.
   > **Décidée le 2026-09-03 par le demandeur, et déjà entièrement mesurée** : *« je fixe le barème à
@@ -774,8 +1081,9 @@
   > seront re-jugés contre un barème qui n'existait pas au scellement — constat seul.
 
   >
-  > **Livrée le 2026-09-04 — [PR #106](https://github.com/Rdulieu/chess-analyst/pull/106), en attente
-  > du merge humain.** Quatre tranches, les trois premières auto-mergées sur gate local vert
+  > **Mergée dans `develop` le 2026-09-04** — PR
+  > [#106](https://github.com/Rdulieu/chess-analyst/pull/106) (`6f93c65`). Quatre tranches, les trois
+  > premières auto-mergées sur gate local vert
   > (build + tests + lint + FP), la quatrième — suite HP et PR — étant la seule décision humaine.
   > **Suite HP 3/3 verte** plus son prérequis ; **aucun finding bloquant, et aucun finding sur
   > l'application** sur les quatre runs.
@@ -784,9 +1092,6 @@
   > « la perte est sur **9…Nf6 (5 points)** » — une perte de cinq points qui porte un glyphe, ce que
   > l'ancienne bande ne pouvait pas produire. Et sur les treize coups signalés des deux parties
   > analysées, **onze sont des `?!`** : aucun `?` ni `??` n'apparaît ni ne disparaît.
-
-
-## Done
 
 - **US-28**: Rouvrir une partie en **Sans aide**, quoi qu'on ait regardé la veille — pour qu'un
   niveau choisi une fois cesse de décider à la place du joueur, et surtout d'estampiller sa lecture.

@@ -1,6 +1,6 @@
 # 07 — Path 0 and the cross-platform switch (HITL)
 
-Status: `ready-for-agent` — **HITL**: touches the real Lichess API and changes the HP suite, both of
+Status: `done` — **HITL**: touches the real Lichess API and changes the HP suite, both of
 which need the requester's arbitration.
 
 > **Implemented on the business-story integration branch `integration/US-12-lichess-import`.**

@@ -57,3 +57,25 @@ run. Fixed once, in the mechanics, they stop being findings.
 - **The suite's inventory of what not to trim gains an entry: the agent's analysis.** Depth, the real
   chess.com contract, the Lichess span, the second `Profile`, a clean start per scenario and the full
   theme pass were already on it (`docs/test-scenarios/README.md`).
+
+## Note — 2026-09-04: upstream recommends Playwright CLI; we keep the library
+
+Reprising the upstream factory (ADR-0025) brings a genuinely new idea into `agentic-tests`: the apex
+drives the system's **primary surface**, not "the UI" — a generalisation we adopt, along with the
+sentence that finally places the tier ("above end-to-end tests: the QA pass, performed by an agent
+instead of a human"). Upstream's table also **recommends a driver per system type**, and for a web
+app it names the **Playwright CLI**.
+
+We keep this library, and adopt the concept without the tool. Upstream itself frames the table as a
+sensible default — "pick it from the current stack" — and our stack has eight months of measured
+traps encoded in the library: the private browser as the default on a parallel fan-out, theme
+emulation that fails in *both* directions, the thirty-six-reading audit pass clocked at 44.4 s,
+`tsx watch` resurrecting a killed server, and app behaviour the library encodes (US-23 had to fix a
+helper still looking for a `<button>` in the row). A fresh Playwright knows none of it, and the
+library is exactly what stops each agent rediscovering them.
+
+The price is named rather than denied: we forgo a more standard, better-tooled driver, and an outside
+contributor has to learn ours instead of Playwright. **US-38 is opened to measure the trade rather
+than argue it** — the same suite, driven both ways, compared on wall-clock, findings caught and
+findings invented. This note records the decision as *taken with the recommendation read*, not taken
+before it existed.
