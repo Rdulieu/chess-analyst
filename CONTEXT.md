@@ -227,6 +227,10 @@ Game list, or for a single Game while reviewing it) and **never automatic**, lik
 one deliberate exception: a Game whose stored Evaluations came from a different `Search regime` is
 re-evaluated **whole** rather than resumed, since mixing regimes inside one Game would corrupt its
 figures (see `Search regime`).
+**One at a time**: there is one engine, so a pass asked for while another is still running is
+**refused out loud** — never queued, and never silently dropped. A refused request is *answered*,
+and the answer says which pass is in the way; a request the Player cannot tell from a started one
+is the same defect as no answer at all.
 A pass advances in **Positions evaluated**, and always ends in one of three **outcomes**, which
 the Player is told explicitly rather than left to infer: **completed** (every Position of every
 Game in the pass was evaluated), **interrupted** (the pass stopped before the end without

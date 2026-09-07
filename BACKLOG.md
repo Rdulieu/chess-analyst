@@ -323,11 +323,16 @@
   > **L'incident était un fantôme, le défaut ne l'est pas** : rien dans le libellé ne permet de savoir
   > de quelle partie il parle ni d'où vient la passe. Petit, mais il appartient à cet écran ; le
   > traiter ici évite une story d'une ligne.
+
   >
   > ### Frontière
   >
   > Du confort de liste, **pas** de l'analyse : rien ici ne touche au modèle, aux `Evaluation`s ni à la
   > `Confrontation`. À prendre **après US-26**, qui elle touche une garantie documentée.
+  >
+  > **Frontière posée par le grill d'US-35 (2026-09-07)** : « de quelle partie la bannière parle »
+  > est **pris par US-35**, parce que sans ça son refus est incompréhensible et son bug non réparé.
+  > US-27 garde **ce que compte le compteur** et **qui a lancé la passe**. Ne pas le regriller.
 
 - **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
   invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
@@ -585,14 +590,70 @@
 
 - **US-35**: « Analyser cette partie » ne doit pas être avalé en silence — pour qu'une demande
   d'analyse refusée le dise, au lieu de montrer la progression d'une autre partie.
-  > **Pas encore grillée.** Relevée au grill d'US-15a-bis et explicitement mise hors de son
-  > périmètre. **C'est un bug, et il coûte du temps moteur en silence** : la demande est avalée sous
-  > une bannière de passe non acquittée, et l'écran montre pendant ce temps la progression d'une
-  > **autre** partie — donc le Player croit que sa partie s'analyse alors que rien ne se passe.
+  > **Grillée le 2026-09-07**, sur `integration/US-35-analysis-request-answered`. Relevée au grill
+  > d'US-15a-bis et explicitement mise hors de son périmètre. **C'est un bug, et il coûte du temps
+  > moteur en silence** : l'écran montre la progression d'une **autre** partie, donc le Player croit
+  > que sa partie s'analyse alors que rien ne se passe.
   >
   > **Prioritaire sur US-34** : celle-là ajoute, celui-ci **répare une promesse déjà faite**. Le
   > chemin de réanalyse de la tranche 07 d'US-15a n'est **pas** en cause (re-testé) ; c'est l'entrée
   > par la page `Analyse` qui échoue.
+  >
+  > ### Le diagnostic d'ouverture était faux, et le vrai est plus simple
+  >
+  > ~~« la demande est avalée sous une bannière de passe non acquittée »~~ — **faux, vérifié** :
+  > `job.start` ne lit **jamais** `acknowledgedAt` ; sa seule garde est `if (runningPassId !== null)`
+  > (`server/src/analysis/job.ts:196`). Une passe non acquittée ne bloque rien.
+  >
+  > Le vrai mécanisme tient en deux faits, et **aucun** n'est un manque de message :
+  >
+  > 1. **Le relevé est scopé au `Profile`, pas à la partie.** `GET /api/analyze/status` ne prend
+  >    aucun `gameId` (`server/src/routes/analyze.ts:49`), `snapshot(profileId)` rend `lastPass(profileId)`
+  >    quelles que soient ses parties (`job.ts:150-190`), et le type `AnalysisStatus` **n'a pas de
+  >    champ `gameId`** (`client/src/types/analysis.ts:6-19`). Ouvrir `/analyse/:gameId` sur une
+  >    partie jamais touchée affiche donc la passe d'une autre partie du même profil, **sans libellé**.
+  > 2. **Le clic ne part jamais.** `GameViewer.tsx:163` fait `disabled={running}` avec ce `running`
+  >    profile-wide. Le message de refus **existe déjà** (`AnalysisPassStatus.tsx:40` : « Une analyse
+  >    est déjà en cours ; relancez celle-ci quand elle sera terminée. ») et n'est jamais atteint.
+  >
+  > **Aucune migration due** : `analysis_passes.game_ids` existe déjà (`server/src/db/schema.ts:143-169`).
+  > La donnée qui manque à l'écran est en base.
+  >
+  > ### Ce que le grill a tranché
+  >
+  > 1. **Refuser à voix haute, pas de file d'attente.** Une file est la notion permanente qu'ADR-0011
+  >    a déjà refusée pour les résumés ; et le refus est déjà écrit, il suffit de le laisser arriver.
+  > 2. **Le bouton reste cliquable pendant une passe.** `disabled={running}` disparaît : un contrôle
+  >    désactivé sans motif *est* le bug. Le Player apprend l'état en agissant, et le serveur répond
+  >    `started: false` sur le chemin `blocked` qui fonctionne déjà. Rien à changer côté garde serveur.
+  > 3. **La bannière nomme sa partie.** Sur l'écran de Y, la passe de X s'affiche **nommée**, pas
+  >    supprimée : la taire rendrait le refus incompréhensible.
+  > 4. **Frontière avec US-27** : US-35 prend « la bannière nomme sa partie » (c'est le mensonge),
+  >    US-27 garde « ce que compte le compteur » et « qui l'a lancé » (c'est le confort).
+  > 5. **Le résumé d'une passe terminée non acquittée est traité pareil** — même fuite, même
+  >    correctif, aucune décision de plus.
+  > 6. **Pas de nouvel ADR.** ADR-0011 est **réécrit** : sa justification « starting another analysis
+  >    is an action taken with the page in view » est **retirée** (elle supposait que la passe à
+  >    l'écran est celle qu'on a lancée — vrai sur la liste, faux sur la page de revue), sa
+  >    conséquence sur `/status` gagne « the Games the pass covers », et sa clause de révision est
+  >    corrigée : elle guettait une passe démarrant là où le Player ne regarde pas, la panne est
+  >    l'inverse. La décision de fond (une seule passe reportée, pas de file) est **gardée**.
+  > 7. **Le libellé répond d'abord à l'appartenance** (« dont cette partie » / « sur d'autres
+  >    parties »), ce qui marche pour un lot de quarante parties, et **nomme** la partie en plus
+  >    quand la passe n'en couvre qu'une — le cas de l'incident.
+  >
+  > ### Deux phrases du dépôt à corriger dans la tranche (code, hors grill)
+  >
+  > - `client/src/features/analysis/AnalysisPassStatus.tsx:17-19` : *« The message stays until
+  >   dismissed, so a Player… cannot miss it »* — contredit par ADR-0011 (une nouvelle passe
+  >   supersède un résumé non acquitté). Contradiction antérieure à US-35.
+  > - `client/test/GameViewer.test.tsx:206` : le titre *« scopes "Analyser cette partie" to only this
+  >   Game »* est **ambigu, pas faux** — le test assère bien que le `POST` porte `{ gameIds: [id] }`.
+  >   Ce qui est scopé est la **demande**, pas le **relevé**. À réécrire, et le test manquant (passe
+  >   sur X, écran sur Y) est le rouge de la tranche : il n'existe nulle part.
+  >
+  > **La FP couvre les deux chemins** — la bannière au montage de la page *et* le refus après clic —
+  > parce que le code confirme que les deux existent.
 
 - **US-36**: Enregistrer le moteur avec la passe — pour qu'un corpus ne puisse pas mélanger deux
   forces de moteur sans que rien ne le dise.

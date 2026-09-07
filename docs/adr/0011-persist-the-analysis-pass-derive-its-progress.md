@@ -38,14 +38,22 @@ instead of sitting at `0/1` for its whole ~75 s.
 - `acknowledged_at` is a **display** concern only: acknowledging a summary hides it, and changes
   neither the pass's outcome nor the Evaluations it retained. A `failed` pass stays failed.
 - `GET /api/analyze/status` reports the **last** pass, running or not, so the summary survives a
-  reload; its response gains the outcome and the acknowledgement, and its progress unit changes
-  from Games to Positions.
-- **Only the last pass is ever reported, so starting a new pass supersedes an unacknowledged
+  reload; its response gains the outcome, the acknowledgement and **the Games the pass covers**,
+  and its progress unit changes from Games to Positions.
+- **Only the last pass is ever reported, and starting a new pass supersedes an unacknowledged
   summary — accepted deliberately.** Raised as a finding during US-8's agentic runs: a Player who
-  runs two passes without reading the first never sees the first's confirmation. We keep it. US-8's
-  promise is that a confirmation cannot be missed *without acting*, and starting another analysis
-  is an action taken with the page in view. The alternatives — reporting the oldest unacknowledged
-  pass, or aggregating the unread ones — each buy that edge case at the price of a permanent
-  notion (a queue of summaries to dismiss one by one, or an "unread since" aggregate) in a
-  single-Player local tool. Revisit if a pass can ever start somewhere the Player is not looking
-  (a schedule, another device).
+  runs two passes without reading the first never sees the first's confirmation. We keep it: the
+  alternatives — reporting the oldest unacknowledged pass, or aggregating the unread ones — each
+  buy that edge case at the price of a permanent notion (a queue of summaries to dismiss one by
+  one, or an "unread since" aggregate) in a single-Player local tool.
+- **That is a choice about *which* pass is reported, never a licence to leave it unattributed**
+  (rewritten for US-35). The clause above used to rest on a second argument — that a confirmation
+  cannot be missed *without acting*, "and starting another analysis is an action taken with the
+  page in view". **That argument is withdrawn**: it assumed the pass on screen is the pass the
+  Player started, which holds on the Game list and **fails on a Game's review page**, where a
+  Profile-wide status showed another Game's live progress under no label at all — so the Player
+  read someone else's work as their own. The row already records the Games it covers, so the status
+  response **names them** and the readout says whether the pass it reports covers the Game in view.
+  The revisit condition this ADR set for itself was also too narrow — it watched for a pass
+  starting "somewhere the Player is not looking", and the failure was the reverse: the Player
+  looking at a place the pass was not about.
