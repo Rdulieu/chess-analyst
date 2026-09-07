@@ -654,6 +654,26 @@
   >
   > **La FP couvre les deux chemins** — la bannière au montage de la page *et* le refus après clic —
   > parce que le code confirme que les deux existent.
+  >
+  > ### Découpage technique — 1 spec, 1 ticket (2026-09-07)
+  >
+  > Spec : [`.scratch/analysis-request-answered/SPEC.md`](.scratch/analysis-request-answered/SPEC.md)
+  > (pas de `Status:` — un spec n'entre dans aucune file, ADR-0026).
+  >
+  > | Ticket | État | Bloqué par |
+  > | --- | --- | --- |
+  > | [`01` — Le relevé de passe dit de quelle partie il parle, et la demande reçoit une réponse](.scratch/analysis-request-answered/tickets/01-the-readout-says-whose-pass-it-is.md) | `ready-for-agent` | rien |
+  >
+  > **Un seul ticket, sur décision du demandeur.** La coupe en deux (*le relevé s'attribue* / *le
+  > bouton et le refus*) était légitime — les deux moitiés sont démontrables séparément — mais elle
+  > doublait la porte : deux FP, donc **deux passes agentiques**, pour un correctif dont le
+  > changement serveur est un ajout de contrat et le changement client un retrait de `disabled`. Le
+  > coût de la porte aurait dépassé celui du code.
+  >
+  > **Trois seams, tous existants ; un seul test nouveau**, sur consigne du demandeur (« éviter de
+  > créer de nouveaux tests si c'est juste du libellé »). Cinq tests existants sont amendés, dont
+  > deux qui devaient changer de toute façon — l'un compare la payload au champ près, l'autre sème
+  > **déjà** deux parties et lance une passe sur chacune, donc le scénario croisé y était déjà.
 
 - **US-36**: Enregistrer le moteur avec la passe — pour qu'un corpus ne puisse pas mélanger deux
   forces de moteur sans que rien ne le dise.
