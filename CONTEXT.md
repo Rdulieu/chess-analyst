@@ -60,7 +60,8 @@ _Avoid_: Match, Party
 
 **Time control category**:
 The pace a `Game` was played at, in **our own** five-value vocabulary — `bullet`, `blitz`,
-`rapid`, `classical`, `correspondence` — not a `Platform`'s. Each Platform's own classification is
+`rapid`, `classical`, `correspondence` — not a `Platform`'s, and not the exact `Time control`:
+`180+2` is the setting, `blitz` the class it falls in. Each Platform's own classification is
 **translated into it at import**, and the translation is deliberately not one-to-one:
 - Lichess's `ultraBullet` becomes `bullet`: sub-30-second chess is the same thing we study under
   bullet — reflexes — and no Platform-neutral question distinguishes them.
@@ -80,7 +81,26 @@ incomparable. That is the line: a pace we lack a word for is worth a new word; a
 the game is worth nothing. A game that *was* the game but ended before it began — aborted, no
 moves — **is** imported, from either Platform alike, and lands in the `Other` opening bucket;
 dropping it on one Platform only would make two Profiles silently incomparable.
-_Avoid_: Time class (chess.com's field name), Perf / perfType (Lichess's), Cadence, Speed, Daily
+_Avoid_: Time class (chess.com's field name), Perf / perfType (Lichess's), Cadence, Speed, Daily, Time control (the setting, not the class)
+
+**Time control**:
+The exact clock setting a `Game` was played under: the initial budget and the increment (`180+2`),
+or the days per move for a `correspondence` one. Each `Platform` spells it its own way, and the
+translation into this one shape is the `Import`'s.
+_Avoid_: Cadence, Time class, Time control category (the class, not the setting), Clock setting
+
+**Clock**:
+What a side had left after playing a `Move` — plus, when a `Game` ended **without the side to move
+playing** (resignation, agreement, abandonment), one last reading belonging to no `Move`.
+Real-time play only: a `correspondence` Game has a `Time control` and **no** Clock, and that absence
+means *not applicable*, never *not yet fetched*.
+_Avoid_: Timer, Remaining time, Clk
+
+**Time spent**:
+How long a side took over a `Move`, derived from the `Clock`s around it and the `Time control`'s
+increment. It is the pace the Player actually played at, and it is **not comparable across
+`Time control category`s** — the pressure they were under is the `Clock`, not this.
+_Avoid_: Move time, Duration, Elapsed, Think time
 
 **Opening**:
 The named sequence of initial moves a game follows, **identified by its ECO code** and carrying
