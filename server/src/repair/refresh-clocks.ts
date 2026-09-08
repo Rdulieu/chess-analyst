@@ -20,11 +20,17 @@ export interface RefreshedGame {
 
 /** What a refresh did, for the CLI to show its work. */
 export interface RefreshOutcome {
-  /** Games whose PGN was replaced. */
+  /**
+   * **Rows** written, not Games. A Game played between two tracked accounts is
+   * two rows (ADR-0014) and both are refreshed, so this can exceed the number of
+   * Games the export answered with — which is the honest figure, since it is
+   * rows that were stale.
+   */
   changed: number;
-  /** Games that already carried their clocks — a second run finds only these. */
+  /** Rows already carrying their clocks AND their three columns — a second run
+   *  finds only these. */
   alreadyDone: number;
-  /** Games the export answered for that this database never imported. */
+  /** Games the export answered for that this database never imported at all. */
   notImported: number;
 }
 
@@ -86,42 +92,55 @@ export function refreshClocks(db: Db, incoming: RefreshedGame[]): RefreshOutcome
     const outcome: RefreshOutcome = { changed: 0, alreadyDone: 0, notImported: 0 };
 
     for (const game of incoming) {
-      const stored = tx.select().from(games).where(eq(games.gameUrl, game.gameUrl)).get();
-      if (stored === undefined) {
+      // **Every** row of this Game, not the first one. Uniqueness is
+      // `(profile_id, game_url)`, not the URL alone (ADR-0014): a Game played
+      // between two tracked accounts is **two rows**, each recorded from its own
+      // Player's point of view — by design, not a dedup fault.
+      //
+      // Selecting one with `.get()` refreshed a single row and left the other
+      // carrying its clock-less PGN; the second account's pass then re-selected
+      // the row already done and reported the pair `alreadyDone`. On the
+      // reference corpus that silently stranded **21 Games** — one of them
+      // analysed — in a state no re-run could repair, with the two Profiles
+      // disagreeing about the same Game for ever. Found by the Feature Path, on
+      // the real corpus; invisible to every single-Profile test.
+      const stored = tx.select().from(games).where(eq(games.gameUrl, game.gameUrl)).all();
+      if (stored.length === 0) {
         // Not an error: the export answers for the whole account and may name a
         // Game this database never kept (a variant, a game from a position).
         outcome.notImported += 1;
         continue;
       }
 
-      // **The assertion, before any write.** Throwing here aborts the
-      // transaction, so nothing lands — for this Game or any other.
-      if (movesOf(stored.pgn) !== movesOf(game.pgn)) throw new MovetextChanged(game.gameUrl);
+      for (const row of stored) {
+        // **The assertion, before any write.** Throwing here aborts the
+        // transaction, so nothing lands — for this row, this Game, or any other.
+        if (movesOf(row.pgn) !== movesOf(game.pgn)) throw new MovetextChanged(game.gameUrl);
 
-      // The PGN is already what we would write — but the three stored columns
-      // are NOT in the PGN (ADR-0029's single exception), so "the movetext is
-      // current" does not mean "the row is". The one `rapid` Game in 231 that
-      // already carries clocks, and every Game imported after slice 04, would
-      // otherwise never receive them.
-      const columnsCurrent =
-        stored.lastClockCs === game.lastClockCs &&
-        stored.divisionMiddlePly === game.divisionMiddlePly &&
-        stored.divisionEndPly === game.divisionEndPly;
-      if (stored.pgn === game.pgn && columnsCurrent) {
-        outcome.alreadyDone += 1;
-        continue;
+        // The PGN may already be what we would write — but the three stored
+        // columns are NOT in the PGN (ADR-0029's single exception), so "the
+        // movetext is current" does not mean "the row is".
+        const current =
+          row.pgn === game.pgn &&
+          row.lastClockCs === game.lastClockCs &&
+          row.divisionMiddlePly === game.divisionMiddlePly &&
+          row.divisionEndPly === game.divisionEndPly;
+        if (current) {
+          outcome.alreadyDone += 1;
+          continue;
+        }
+
+        tx.update(games)
+          .set({
+            pgn: game.pgn,
+            lastClockCs: game.lastClockCs,
+            divisionMiddlePly: game.divisionMiddlePly,
+            divisionEndPly: game.divisionEndPly,
+          })
+          .where(eq(games.id, row.id))
+          .run();
+        outcome.changed += 1;
       }
-
-      tx.update(games)
-        .set({
-          pgn: game.pgn,
-          lastClockCs: game.lastClockCs,
-          divisionMiddlePly: game.divisionMiddlePly,
-          divisionEndPly: game.divisionEndPly,
-        })
-        .where(eq(games.id, stored.id))
-        .run();
-      outcome.changed += 1;
     }
 
     return outcome;

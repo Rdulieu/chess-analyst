@@ -114,6 +114,80 @@ describe("refreshClocks", () => {
     expect(stored.moveHabitsComputed).toBe(true);
   });
 
+  it("refreshes EVERY Profile's copy of a Game two tracked accounts played together", () => {
+    // **The bug the real corpus found and every single-Profile test missed.**
+    // Uniqueness is `(profile_id, game_url)`, not the URL alone (ADR-0014): a
+    // Game played between two tracked accounts is **two rows**, each recorded
+    // from its own Player's point of view — by design, not a dedup fault.
+    //
+    // Matching on the URL with `.get()` refreshed one row and left the other
+    // carrying its clock-less PGN, then reported it `alreadyDone` on the second
+    // account's pass. On the reference corpus that silently stranded 21 Games —
+    // one of them analysed — and left the two Profiles disagreeing about the
+    // same Game for ever, since a re-run could not repair it either.
+    const { db, game } = dbWithLichessGame();
+    const other = db
+      .insert(profiles)
+      .values({ platform: "lichess", username: "Monado_Boy", createdAt: "2026-01-01" })
+      .returning()
+      .get();
+    const twin = db
+      .insert(games)
+      .values({
+        profileId: other.id,
+        // The SAME Game, from the opponent's side.
+        gameUrl: "https://lichess.org/abcd1234",
+        pgn: "1. e4 e5 2. Nf3 Nc6 1/2-1/2",
+        opponent: "Metalyst",
+        playerColor: "black",
+        result: "draw",
+        date: "2026-01-01",
+        timeControlCategory: "blitz",
+      })
+      .returning()
+      .get();
+
+    const result = refreshClocks(db, [withClocks]);
+
+    // Both rows, in one pass — the PGN is a property of the Game, not of the
+    // Profile that filed it.
+    expect(result.changed).toBe(2);
+    for (const id of [game.id, twin.id]) {
+      const stored = db.select().from(games).where(eq(games.id, id)).get()!;
+      expect(stored.pgn).toContain("[%clk");
+      expect(stored.lastClockCs).toBe(4_653);
+    }
+  });
+
+  it("counts a twin pair as done once both copies are current, not before", () => {
+    const { db } = dbWithLichessGame();
+    const other = db
+      .insert(profiles)
+      .values({ platform: "lichess", username: "Monado_Boy", createdAt: "2026-01-01" })
+      .returning()
+      .get();
+    db.insert(games)
+      .values({
+        profileId: other.id,
+        gameUrl: "https://lichess.org/abcd1234",
+        pgn: "1. e4 e5 2. Nf3 Nc6 1/2-1/2",
+        opponent: "Metalyst",
+        playerColor: "black",
+        result: "draw",
+        date: "2026-01-01",
+        timeControlCategory: "blitz",
+      })
+      .run();
+
+    refreshClocks(db, [withClocks]);
+    const second = refreshClocks(db, [withClocks]);
+
+    // `alreadyDone` must mean "every copy is current". Reporting it while one
+    // row was still clock-less is what made the miss invisible.
+    expect(second.changed).toBe(0);
+    expect(second.alreadyDone).toBe(2);
+  });
+
   describe("when the movetext differs", () => {
     const differentMoves: RefreshedGame = {
       ...withClocks,

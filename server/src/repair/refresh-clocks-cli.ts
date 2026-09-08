@@ -42,7 +42,13 @@ function counts(file: string) {
       .prepare(
         `SELECT p.username,
                 COUNT(*) AS games,
-                SUM(CASE WHEN g.pgn LIKE '%[%clk%' THEN 1 ELSE 0 END) AS with_clocks,
+                -- The trailing space is load-bearing. Without it this matched any
+                -- PGN containing "[" … "clk" — including the header
+                -- [Black "Omer_clkc"] — and that single false positive IS the
+                -- "rapid has 1 Game in 231 with a clock" of the grill notes. The
+                -- true figure was 0. The one number shown to prove the work was
+                -- the one number that was wrong (found by the slice-05 FP).
+                SUM(CASE WHEN g.pgn LIKE '%[%clk %' THEN 1 ELSE 0 END) AS with_clocks,
                 SUM(g.analyzed) AS analyzed,
                 SUM(CASE WHEN g.last_clock_cs IS NOT NULL THEN 1 ELSE 0 END) AS last_clocks,
                 SUM(CASE WHEN g.division_middle_ply IS NOT NULL THEN 1 ELSE 0 END) AS divisions
@@ -108,6 +114,17 @@ async function main() {
   if (!file || usernames.length === 0) {
     throw new Error("usage: refresh-clocks-cli <db-file> <lichess-username> [lichess-username…]");
   }
+
+  // **Migrate first.** `counts()` reads `last_clock_cs`, a column migration 0015
+  // adds — and the database this CLI exists to repair does not have it yet. Read
+  // before the upgrade, the very first statement died with
+  // `no such column: g.last_clock_cs`, before the backup and before any write:
+  // safe, but a dead stop on the one gesture this slice ships, naming neither
+  // the cause nor the remedy. Found by the slice-05 Feature Path.
+  //
+  // `openDb` runs the committed migrations and is idempotent, so this is also
+  // what makes the CLI runnable twice.
+  openDb(file).sqlite.close();
 
   console.log("Parties lichess AVANT :");
   console.table(counts(file));
