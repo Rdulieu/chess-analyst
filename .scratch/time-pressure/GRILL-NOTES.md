@@ -1,12 +1,13 @@
 # US-15b — La pression du temps — notes de grilling
 
-**Statut : grilling EN COURS**, round 2 tranché le 2026-09-08 ; reste **Q8-bis** et **Q16** sur la
-frontière. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
+**Statut : grilling EN COURS**, rounds 2 et 3 tranchés le 2026-09-08 ; reste **Q21** et **Q22** sur
+la frontière. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
 merge de la PR #108).
 
 **`CONTEXT.md` porte désormais les trois termes** (`Time control`, `Clock`, `Time spent`) tranchés en
-Q15, et `Time control category` la clause qui les discrimine. **Rien dans `docs/adr/` encore** : deux
-ADR sont dues et leurs contrefactuels sont nommés en fin de fichier, en attente d'accord.
+Q15, et `Time control category` la clause qui les discrimine. **`docs/adr/` porte ADR-0029** (l'horloge
+est dérivée du PGN) **et ADR-0030** (le rafraîchissement remplace le PGN et refuse un mouvement
+différent).
 
 > **Périmètre arrêté (Q1)** : on grille **US-15b entière** — récupérer la donnée de temps **et**
 > l'exploiter. L'option d'une story amont dédiée à la seule récupération a été proposée puis
@@ -255,45 +256,101 @@ Q8-bis ci-dessous. Le sort de `division` n'est pas tranché.
 
 ---
 
+## Décisions prises — round 3 (2026-09-08)
+
+### Le focus du demandeur : **blitz et rapide**
+Énoncé à la réponse de Q16, et il **retourne** l'inquiétude que je portais. Je m'alarmais que le
+corpus soit à 75 % du bullet ; le bullet est justement la cadence dont le demandeur ne se sert pas,
+et c'est la seule qui soit couverte.
+
+| cadence | parties | avec horloge | analysées | dont lichess |
+|---|---|---|---|---|
+| bullet | 1825 | **1817** (99,6 %) | 5 | 8 |
+| **blitz** | 249 | **161** (65 %) | 71 | 88 |
+| **rapid** | 231 | **1** (0,4 %) | **0** | 230 |
+| correspondance | 56 | 4 | 1 | 52 |
+| classical | 56 | 0 | 0 | 56 |
+
+Les deux cadences du focus sont à **34 % de couverture** ensemble, et `rapid` est vide à une partie
+près parce que 230 de ses 231 parties sont lichess. **Le rafraîchissement ne « complète » donc pas un
+corpus : c'est ce qui fait exister l'axe rapid.** À porter dans le PRD comme motif de priorité.
+
+### Q16 — **(a)** L'axe se lit **à l'intérieur d'une `Time control category`**
+Jamais toutes cadences confondues. C'est la règle qui gouverne déjà `Weak opening` et la raison
+d'être de la catégorie. Écarté : normaliser le `Time spent` par le budget (invente une unité que le
+joueur ne reconnaît pas, alors que Q6 exige du lisible) et l'assumer brut (le biais qu'on ne verrait
+qu'en 15c, noyé dans une moyenne).
+
+### Q17 — Le rafraîchissement couvre **les 434 parties lichess**
+Pas seulement les 318 de blitz + rapid. Un rafraîchissement partiel ferait dire **deux choses** à
+« pas d'horloge » — *sans objet* pour une correspondance, *pas demandé* pour une classical — soit la
+confusion exacte que Q5 et Q14 interdisent. Le risque qu'on croirait éviter est illusoire : les 10
+parties analysées sont toutes en blitz, donc dans le périmètre des deux façons.
+
+### Q18 — La lecture par partie **rejoint le récapitulatif** d'US-15a
+Pas un bloc séparé, pas l'en-tête. Le récapitulatif est déjà « ce que cette partie dit d'elle-même »
+et déjà le grain qu'ADR-0017 fait sommer vers l'agrégat — c'est là que 15c viendra la chercher. Un
+bloc à part dirait que le temps est d'une autre nature, alors que l'EPIC veut qu'il soit **un axe
+parmi les autres**.
+
+### Q19 — **Greffe sur l'étape 9 de HP-01**, pas de 4ᵉ HP
+Au plus 3 HP ; même arbitrage qu'US-14 et US-15a. La FP (Q7) porte les assertions dures du
+rafraîchissement ; le HP constate que la colonne temps est là et lisible sur une vraie partie.
+
+### Q20 — **Aucune passe moteur due**, et c'est nommé
+La lecture par partie de Q13 est purement horlogère et marche sans moteur, donc 15b livre de la
+valeur sur rapid dès la sortie. L'appariement « temps × erreur » appartient à 15c/15d, et une passe
+sur les 231 parties de rapid coûterait ~**2 h** au tarif mesuré (0,56 s/position). **Ce qui est dû**,
+c'est que la story écrive que l'axe rapid sort avec de la donnée de temps et **zéro `Evaluation`** en
+face — sinon quelqu'un ouvrira 15c en croyant rapid prêt.
+
+### Une simplification que Q2 permet
+En Q14 j'avais cité « le premier coup, si on n'a pas le budget initial » comme cas d'absence. **Il
+disparaît** : `Time control` est en périmètre (Q2a), donc le budget est toujours connu et le temps du
+premier coup se calcule (`initial + incrément − Clock₁`). **Le seul vrai cas d'absence est la
+correspondance.**
+
+---
+
 ## Frontière ouverte — reprendre ici
+### Q8-bis — tranchée « on prend `division` maintenant », mais l'argument ne survit pas
+**Décision du demandeur : oui, on le prend.** Le motif réseau tient (une seule requête, ne pas
+repayer un geste risqué). **Ce qui ne tient pas, c'est ma justification**, et c'est moi qui l'ai mal
+posée : j'ai exclu `evals`/`accuracy` au motif que ce sont des **oracles extérieurs** — l'opinion de
+lichess, pas notre donnée — puis retenu `division` au seul motif qu'il est **toujours présent**. La
+disponibilité n'est pas ce qui discrimine. `division` est l'opinion de lichess sur l'endroit où
+commence le milieu de jeu, **exactement au même titre** qu'`evals`.
 
-### Q8-bis — `division` monte-t-il dans le train, oui ou non ?
-**Correction de prémisse, due au demandeur** : « `evals` et `accuracy` n'ont pas de raison d'avoir
-bougé » suppose que le rafraîchissement rattrape une donnée qui a changé. **Rien n'a changé** — les
-parties lichess sont immuables. Le rafraîchissement existe parce que **nous n'avons jamais demandé
-l'horloge** : `clocks` n'a pas « bougé » non plus. Tout paramètre supplémentaire est donc dans la
-même position que `clocks` — une donnée qu'on n'a jamais demandée, obtenable dans la **même unique
-requête**.
+Et cela a une conséquence dure : **chess.com n'expose aucun équivalent**. Un axe Phase qui lit
+`division` là où il existe et dérive le reste ailleurs répondrait **différemment selon la
+`Platform`** — soit « deux `Profile`s silencieusement incomparables », l'argument que `CONTEXT.md`
+invoque déjà trois fois (parties contre l'ordinateur, parties abandonnées, catégorie `classical`).
+D'où **Q21**.
 
-Le vrai motif d'exclure `evals`/`accuracy` est autre, et il tient : ils n'existent **que là où un
-humain a cliqué « analyser »** sur lichess, donc leur présence est une loterie ; et c'est un
-**oracle extérieur**, que la revue d'US-15a-bis a utilisé comme référence ponctuelle dans
-`.scratch/` — pas comme donnée stockée.
+### Q21 — `division` sert de **référence** ou d'**axe** ? Et où vit-il ?
+- **En axe** : US-32 le lit là où il est, dérive ailleurs. Rejeté par l'argument ci-dessus.
+- **En référence** : US-32 dérive la `Phase` de la **même façon pour les deux plateformes**, et
+  l'opinion de lichess sur 434 parties devient un **oracle de test gratuit** pour cette dérivation —
+  précisément l'usage que la revue d'US-15a-bis a fait des `evals` lichess.
 
-`division`, lui, arrive sur **toutes** les parties et c'est la matière de l'axe **Phase** d'US-32,
-que la roadmap place **avant US-15c**. La question est donc : le prendre maintenant, ou laisser
-US-32 repayer le rafraîchissement ?
+Reste alors *où* : **deux colonnes nullables sur `games`**, ou **un fichier de référence** dans
+`.scratch/`.
 
-➡️ **Le prendre maintenant.** Le rafraîchissement est le geste coûteux **et risqué** de la story —
-il remplace le PGN de 10 parties analysées ; le refaire une seconde fois pour US-32 double ce risque
-pour rien. Le coût est un **élargissement du périmètre vers US-32**, à écrire dans la story et non à
-y glisser. Si le demandeur préfère un périmètre strict (« on ne rafraîchit que le temps »), c'est
-tenable — mais alors US-32 hérite explicitement d'un second rafraîchissement, et cela doit être noté
-dans son entrée de backlog.
+➡️ **Référence, et dans un fichier — donc zéro colonne pour `division`.** Une colonne
+`division_middle` sur `games` **sera** lue comme la vérité par le prochain agent, et un commentaire
+ne l'en empêchera pas ; un fichier nommé `lichess-phase-reference.json` ne peut pas être confondu
+avec notre propre dérivation. Bénéfice non prévu : le périmètre de 15b **cesse** de s'élargir vers
+US-32 (l'inquiétude de Q8), et le schéma ne gagne qu'**une** colonne, celle de Q10. Capturer
+maintenant reste justifié : par partie il faudrait 434 requêtes, que le throttle refuserait ; la
+plage les donne toutes en une.
 
-### Q16 — Comment le `Time spent` devient-il comparable, l'axe principal étant sur lui ?
-Créée par Q12. Le corpus est à **75 % du bullet** (1817 parties sur 2417), et une seconde ne veut
-pas dire la même chose en bullet et en classique. Trois sorties : **(a)** l'axe se lit **toujours à
-l'intérieur d'une `Time control category`**, jamais toutes cadences confondues ; **(b)** le
-`Time spent` est **normalisé** par le `Time control` (part du budget initial, ou multiple du temps
-moyen par coup de la cadence) ; **(c)** on l'assume brut et on documente le biais.
+### Q22 — En quelle unité vit une horloge ?
+Le tableau lichess est en centisecondes, le PGN chess.com en dixièmes, le PGN lichess en secondes.
 
-➡️ **(a).** C'est la même règle qui gouverne déjà `Weak opening` (`CONTEXT.md` : porté par
-`Opening` × côté × catégorie) et c'est la raison pour laquelle la catégorie existe — elle est là
-pour rendre un agrégat comparable. **(b)** invente une unité que le joueur ne reconnaît pas (« tu as
-joué à 0,4 budget » ne veut rien dire à l'écran) alors que Q6 exige quelque chose de lisible. **(c)**
-est le bug qu'on ne verrait qu'en 15c, noyé dans une moyenne — exactement la faute que Q14 refuse
-par ailleurs.
+➡️ **Des entiers en centisecondes.** C'est l'unité de lichess, c'est la plus fine que la matière
+porte, et un entier ne dérive pas : des secondes en flottant feraient boiter les sommes et rendraient
+les comparaisons instables — sur un axe dont toute la valeur est de comparer des écarts de quelques
+dixièmes. À l'écran c'est reformaté, jamais affiché brut.
 
 ### Downstream, pas encore sur la frontière
 - **L'interaction avec le coup forcé** : un coup joué en 0,3 s parce qu'il était forcé n'est pas de
@@ -305,33 +362,13 @@ par ailleurs.
 
 ---
 
-## Deux ADR dues — contrefactuels nommés, en attente d'accord
+## Les ADR écrites
 
-Rien n'est écrit dans `docs/adr/`. Les deux décisions ci-dessous en méritent une parce qu'on peut
-nommer, pour chacune, ce qu'un agent compétent ferait **sans** le texte — et que ni le compilateur,
-ni les tests, ni une lecture du code ne l'arrêteraient.
-
-### ADR A — L'horloge est **dérivée du PGN**, jamais stockée traduite
-**Sans ce texte** : un agent ajoute une colonne `clocks` remplie par l'adaptateur. C'est ce
-qu'ADR-0018 recommande mot pour mot (« l'adaptateur traduit, personne au-dessus ne voit le
-payload »), c'est ce que la précision du tableau JSON récompense, et c'est ce que j'ai moi-même
-recommandé avant que la décision tranche l'inverse. Rien dans le dépôt ne l'arrête.
-
-Le texte doit porter la **tension avec ADR-0018** (la traduction des quatre orthographes de
-`TimeControl` vit dans un module de dérivation, pas dans l'adaptateur), la **perte de précision
-acceptée** (±1 s sur lichess contre ±0,2 s sur chess.com — sans quoi le prochain qui la découvre la
-traitera comme un bug), et l'**exception de Q10** : la dernière lecture, qui n'appartient à aucun
-`Move`, est la seule valeur d'horloge stockée.
-
-### ADR B — Le rafraîchissement **remplace** le PGN et **refuse** si le mouvement diffère
-**Sans ce texte** : un agent supprime puis réinsère la partie — le chemin le plus court, et celui
-que la forme actuelle d'`insert()` suggère — ce qui casse la clé étrangère des `evaluations` et
-recompte les `Move habit`s ; ou il fait un `UPDATE` du PGN sans comparer le mouvement, ce qui
-invaliderait en silence les FEN des `Evaluation`s des **10 parties lichess analysées**. ADR-0015 ne
-l'attrape pas : il parle des changements de **schéma**, et ceci est un changement de **donnée**.
-
-Le texte doit dire que l'assertion « même mouvement » **est** la protection — et que c'est pour ça
-qu'elle échoue bruyamment plutôt que de sauter la partie.
+- **ADR-0029** — l'horloge est dérivée du PGN, jamais stockée traduite. Porte la tension avec
+  ADR-0018, la perte de précision acceptée (±1 s sur lichess contre ±0,2 s sur chess.com) et
+  l'exception de Q10.
+- **ADR-0030** — le rafraîchissement remplace le PGN et **refuse** quand le mouvement diffère.
+  Porte le fait qu'ADR-0015 ne couvre pas ce cas (il parle de schéma, ceci est de la donnée).
 
 ## Reproduire les mesures
 
