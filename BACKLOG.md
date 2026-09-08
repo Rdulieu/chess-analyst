@@ -91,14 +91,21 @@
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
   > - **US-15a** — Comprendre l'analyse sur **une** partie. Sortie de l'EPIC en story autonome, sur
   >   sa propre branche d'intégration : **livrée et mergée** (PR #58, 2026-08-23), voir `## Done`.
-  > - **US-15b** — La pression du temps (parser `[%clk]`, aucun coût moteur). **Prémisse corrigée le
-  >   2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.** `clocks=true` n'est pas envoyé
-  >   à l'export (`platform/lichess/client.ts` n'envoie que `since`, `until`, `pgnInJson`, `opening`,
-  >   `sort`), donc le PGN arrive **sans** `[%clk]`. Mesuré en base : **282 parties chess.com sur 282
-  >   portent l'horloge, 1 sur 434 côté lichess.** La story n'est donc pas « un parseur, zéro coût
+  > - **US-15b** — La pression du temps. **Grilling en cours** (2026-09-08), branche
+  >   `integration/US-15b-time-pressure` ; état complet, faits mesurés et frontière ouverte :
+  >   `.scratch/time-pressure/GRILL-NOTES.md`. Se grille **entière** — récupérer la donnée de temps
+  >   *et* l'exploiter (décision du demandeur ; une story amont dédiée à la seule récupération a été
+  >   proposée puis écartée).
+  >   **Prémisse corrigée le 2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.**
+  >   `clocks=true` n'est pas envoyé à l'export (`platform/lichess/client.ts` n'envoie que `since`,
+  >   `until`, `pgnInJson`, `opening`, `sort`), donc le PGN arrive **sans** `[%clk]`. **Chiffres
+  >   re-mesurés le 2026-09-08** — les précédents (« 282 sur 282 », « 1 sur 434 ») avaient vieilli :
+  >   **1983 parties chess.com sur 1983 portent l'horloge, 0 sur 434 côté lichess** (zéro, pas une),
+  >   dont **10 parties lichess déjà analysées**. La story n'est donc pas « un parseur, zéro coût
   >   moteur » : c'est un paramètre d'export, **plus une reprise d'import** des parties lichess déjà
-  >   là — et le PGN stocké devra être remplacé, pas complété. Tant que ce n'est pas fait, tout axe
-  >   « pression du temps » ne vaudrait que pour un compte sur deux, en silence.
+  >   là — et le PGN stocké devra être remplacé, pas complété, ce qui est dû à ADR-0015 une assertion
+  >   « même mouvement » pour que les `Evaluation`s de ces 10 parties survivent. Tant que ce n'est pas
+  >   fait, tout axe « pression du temps » ne vaudrait que pour un compte sur deux, en silence.
   > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
   >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
   >   du récapitulatif par partie (ADR-0017), tout approximatif se propage.
