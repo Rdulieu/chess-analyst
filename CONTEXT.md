@@ -314,6 +314,14 @@ claim: a Game can leave its `Opening` at move 6 and still be in the Early game a
 - **Middlegame** is everything in between, defined by exclusion on purpose (same discipline as
   `Drift`).
 
+**Lichess division**:
+Lichess's own opinion of where a Game's middlegame and endgame begin, two ply numbers stored exactly
+as that Platform gave them. It is **not** our `Phase` and is never read as one: `Phase` is derived by
+our own rules for every `Platform` alike, while this exists for Lichess Games only — so using it
+where it exists and deriving elsewhere would make two `Profile`s silently incomparable. It is kept as
+an **outside oracle**, to test our own derivation against (ADR-0031).
+_Avoid_: Division, Phase, Game phase, Middlegame start
+
 A Phase is a property of a Position **in its Game's sequence**, not of the Position alone: it
 **latches**, so a Game that has reached the Endgame stays there. Without latching a promotion —
 the one thing that *adds* material — would flip a Game out of the Endgame and back in. These

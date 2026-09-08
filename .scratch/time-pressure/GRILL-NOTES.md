@@ -1,13 +1,14 @@
 # US-15b — La pression du temps — notes de grilling
 
-**Statut : grilling EN COURS**, rounds 2 et 3 tranchés le 2026-09-08 ; reste **Q21** et **Q22** sur
-la frontière. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
+**Statut : grilling EN COURS**, rounds 2, 3 et 4 tranchés le 2026-09-08 ; reste **Q23** sur la
+frontière — la dernière à ma connaissance. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
 merge de la PR #108).
 
 **`CONTEXT.md` porte désormais les trois termes** (`Time control`, `Clock`, `Time spent`) tranchés en
-Q15, et `Time control category` la clause qui les discrimine. **`docs/adr/` porte ADR-0029** (l'horloge
-est dérivée du PGN) **et ADR-0030** (le rafraîchissement remplace le PGN et refuse un mouvement
-différent).
+Q15, et `Time control category` la clause qui les discrimine. `CONTEXT.md` porte aussi `Lichess division`.
+**`docs/adr/` porte ADR-0029** (l'horloge est dérivée du PGN), **ADR-0030** (le rafraîchissement
+remplace le PGN et refuse un mouvement différent) **et ADR-0031** (la division lichess est un oracle,
+jamais la `Phase`).
 
 > **Périmètre arrêté (Q1)** : on grille **US-15b entière** — récupérer la donnée de temps **et**
 > l'exploiter. L'option d'une story amont dédiée à la seule récupération a été proposée puis
@@ -313,44 +314,51 @@ correspondance.**
 ---
 
 ## Frontière ouverte — reprendre ici
-### Q8-bis — tranchée « on prend `division` maintenant », mais l'argument ne survit pas
-**Décision du demandeur : oui, on le prend.** Le motif réseau tient (une seule requête, ne pas
-repayer un geste risqué). **Ce qui ne tient pas, c'est ma justification**, et c'est moi qui l'ai mal
-posée : j'ai exclu `evals`/`accuracy` au motif que ce sont des **oracles extérieurs** — l'opinion de
-lichess, pas notre donnée — puis retenu `division` au seul motif qu'il est **toujours présent**. La
-disponibilité n'est pas ce qui discrimine. `division` est l'opinion de lichess sur l'endroit où
-commence le milieu de jeu, **exactement au même titre** qu'`evals`.
+### Q21 — `division` est **stocké en base**, et le glossaire dit ce qu'il n'est pas
+**Décision du demandeur, contre ma recommandation** : deux colonnes nullables sur `games` plutôt
+qu'un fichier de référence — « on le note dans la bdd même si on en fait rien » — **avec** la
+consigne d'être clair dans le contexte que ce n'est **pas la `Phase`** mais la division faite par
+lichess.
 
-Et cela a une conséquence dure : **chess.com n'expose aucun équivalent**. Un axe Phase qui lit
-`division` là où il existe et dérive le reste ailleurs répondrait **différemment selon la
-`Platform`** — soit « deux `Profile`s silencieusement incomparables », l'argument que `CONTEXT.md`
-invoque déjà trois fois (parties contre l'ordinateur, parties abandonnées, catégorie `classical`).
-D'où **Q21**.
+Ma crainte était qu'une colonne `division_middle` soit lue comme la vérité par le prochain agent.
+Elle est traitée autrement que par l'absence : par le **nom** et par l'écrit. `CONTEXT.md` porte
+`Lichess division`, un terme qui **nomme sa source** pour ne pas pouvoir passer pour la nôtre, et
+**ADR-0031** porte le motif — chess.com n'a aucun équivalent, donc lire la division là où elle existe
+et dériver ailleurs rendrait deux `Profile`s silencieusement incomparables.
 
-### Q21 — `division` sert de **référence** ou d'**axe** ? Et où vit-il ?
-- **En axe** : US-32 le lit là où il est, dérive ailleurs. Rejeté par l'argument ci-dessus.
-- **En référence** : US-32 dérive la `Phase` de la **même façon pour les deux plateformes**, et
-  l'opinion de lichess sur 434 parties devient un **oracle de test gratuit** pour cette dérivation —
-  précisément l'usage que la revue d'US-15a-bis a fait des `evals` lichess.
+**Conséquence sur le schéma** : la migration porte **trois** colonnes nullables sur `games` — la
+dernière horloge (Q10) et les deux plies de la division. Aucune ne se resserre jamais en `NOT NULL` :
+leur nullité est **légitime et permanente** (chess.com n'a ni l'une ni les autres, et un mat n'a pas
+de dernière horloge). La discipline « nullable → backfill → `NOT NULL` » de `CLAUDE.md` **ne
+s'applique pas ici**, et c'est écrit pour que personne ne tente de la resserrer.
 
-Reste alors *où* : **deux colonnes nullables sur `games`**, ou **un fichier de référence** dans
-`.scratch/`.
+**Réservation assumée** : ces colonnes n'ont **aucun lecteur** à la sortie de 15b. Une colonne sans
+lecteur est normalement une odeur ; celle-ci est une réservation délibérée, d'où l'ADR.
 
-➡️ **Référence, et dans un fichier — donc zéro colonne pour `division`.** Une colonne
-`division_middle` sur `games` **sera** lue comme la vérité par le prochain agent, et un commentaire
-ne l'en empêchera pas ; un fichier nommé `lichess-phase-reference.json` ne peut pas être confondu
-avec notre propre dérivation. Bénéfice non prévu : le périmètre de 15b **cesse** de s'élargir vers
-US-32 (l'inquiétude de Q8), et le schéma ne gagne qu'**une** colonne, celle de Q10. Capturer
-maintenant reste justifié : par partie il faudrait 434 requêtes, que le throttle refuserait ; la
-plage les donne toutes en une.
+### Q22 — **Centisecondes en base, secondes à une décimale à l'écran**
+Entiers en centisecondes pour tout ce qui est stocké et calculé : c'est l'unité de lichess, la plus
+fine que la matière porte, et un entier ne dérive pas — des secondes en flottant feraient boiter les
+sommes sur un axe dont toute la valeur porte sur des écarts de quelques dixièmes. Le rendu est en
+secondes à **une décimale**.
 
-### Q22 — En quelle unité vit une horloge ?
-Le tableau lichess est en centisecondes, le PGN chess.com en dixièmes, le PGN lichess en secondes.
+### Q23 — Une décimale sur lichess affiche une précision qu'on n'a pas
+Créée par Q22 croisée avec la mesure d'ADR-0029, et c'est **le premier endroit où le coût de cette
+ADR devient visible à l'écran**. Le PGN lichess étant arrondi à la seconde, un `Time spent` lichess
+est une différence de deux entiers de secondes : il finira **toujours** par `,0` — et sa vraie marge
+est de ±1 s. Afficher `2,0 s` là où la valeur vit dans ~[1,0 ; 3,0] revendique une précision absente,
+pendant que la même colonne affiche `1,8 s` sur chess.com, où le chiffre est réel.
 
-➡️ **Des entiers en centisecondes.** C'est l'unité de lichess, c'est la plus fine que la matière
-porte, et un entier ne dérive pas : des secondes en flottant feraient boiter les sommes et rendraient
-les comparaisons instables — sur un axe dont toute la valeur est de comparer des écarts de quelques
-dixièmes. À l'écran c'est reformaté, jamais affiché brut.
+- **(a)** une décimale partout, comme tranché : la colonne est homogène, les valeurs lichess sont
+  toutes en `,0` et fausses d'un cran.
+- **(b)** une décimale là où la source a des dixièmes, **seconde entière sur lichess** : la colonne
+  dit la vérité sur sa propre précision, au prix de deux formats dans une colonne.
+- **(c)** une décimale partout, plus une mention de la précision lichess quelque part à l'écran.
+
+➡️ **(b).** Le projet a déjà tranché ce genre d'arbitrage dans ce sens : Q14 refuse d'inventer un
+zéro, ADR-0023 refuse d'affirmer une catégorie qu'on classerait mal, et `CONTEXT.md` refuse de dire
+« pas d'horloge » quand la vraie phrase est « sans objet ». Un `,0` systématique est de la même
+famille — une décimale qui affirme quelque chose que la donnée ne porte pas. **(c)** met la nuance
+loin de l'endroit où on lit le chiffre, ce qui est la façon la plus sûre de ne pas la lire.
 
 ### Downstream, pas encore sur la frontière
 - **L'interaction avec le coup forcé** : un coup joué en 0,3 s parce qu'il était forcé n'est pas de
@@ -369,6 +377,9 @@ dixièmes. À l'écran c'est reformaté, jamais affiché brut.
   l'exception de Q10.
 - **ADR-0030** — le rafraîchissement remplace le PGN et **refuse** quand le mouvement diffère.
   Porte le fait qu'ADR-0015 ne couvre pas ce cas (il parle de schéma, ceci est de la donnée).
+- **ADR-0031** — la division lichess est stockée comme **oracle**, jamais lue comme la `Phase`.
+  Porte le motif d'incomparabilité entre `Platform`s et la réservation assumée de deux colonnes sans
+  lecteur.
 
 ## Reproduire les mesures
 
