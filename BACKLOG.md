@@ -91,11 +91,18 @@
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
   > - **US-15a** — Comprendre l'analyse sur **une** partie. Sortie de l'EPIC en story autonome, sur
   >   sa propre branche d'intégration : **livrée et mergée** (PR #58, 2026-08-23), voir `## Done`.
-  > - **US-15b** — La pression du temps. **Grilling en cours** (2026-09-08), branche
-  >   `integration/US-15b-time-pressure` ; état complet, faits mesurés et frontière ouverte :
-  >   `.scratch/time-pressure/GRILL-NOTES.md`. Se grille **entière** — récupérer la donnée de temps
-  >   *et* l'exploiter (décision du demandeur ; une story amont dédiée à la seule récupération a été
-  >   proposée puis écartée).
+  > - **US-15b** — La pression du temps. **Grillée le 2026-09-08** — 24 décisions, frontière vide ;
+  >   état complet et faits mesurés : `.scratch/time-pressure/GRILL-NOTES.md` (+ le relevé
+  >   `clock-probe.md`). Branche `integration/US-15b-time-pressure`. `CONTEXT.md` : quatre termes
+  >   ajoutés (**Time control**, **Clock**, **Time spent**, **Lichess division**), `Time control
+  >   category` amendée ; **ADR-0029** (l'horloge est dérivée du PGN), **ADR-0030** (le
+  >   rafraîchissement remplace le PGN et refuse un mouvement différent), **ADR-0031** (la division
+  >   lichess est un oracle, jamais la `Phase`). Prochaine étape : **`/to-spec`**.
+  >   Se grille **entière** — récupérer la donnée de temps *et* l'exploiter (décision du demandeur ;
+  >   une story amont dédiée à la seule récupération a été proposée puis écartée).
+  >   **Priorité relevée par une mesure** : le focus du demandeur est **blitz + rapide**, or `rapid`
+  >   n'a **1 partie sur 231** qui porte l'horloge (230 sont lichess) et **aucune analysée**. Le
+  >   rafraîchissement ne complète pas un corpus, **il fait exister l'axe rapid**.
   >   **Prémisse corrigée le 2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.**
   >   `clocks=true` n'est pas envoyé à l'export (`platform/lichess/client.ts` n'envoie que `since`,
   >   `until`, `pgnInJson`, `opening`, `sort`), donc le PGN arrive **sans** `[%clk]`. **Chiffres

@@ -1,7 +1,7 @@
 # US-15b — La pression du temps — notes de grilling
 
-**Statut : grilling EN COURS**, rounds 2 à 5 tranchés le 2026-09-08 ; reste **Q24** sur la
-frontière. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
+**Statut : grilling TERMINÉ** le 2026-09-08 — **frontière vide**, 24 questions tranchées. Étape
+suivante : **`/to-spec`**, pour synthétiser le PRD depuis ce fichier. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
 merge de la PR #108).
 
 **`CONTEXT.md` porte désormais les trois termes** (`Time control`, `Clock`, `Time spent`) tranchés en
@@ -313,7 +313,8 @@ correspondance.**
 
 ---
 
-## Frontière ouverte — reprendre ici
+## Décisions prises — round 4 (2026-09-08)
+
 ### Q21 — `division` est **stocké en base**, et le glossaire dit ce qu'il n'est pas
 **Décision du demandeur, contre ma recommandation** : deux colonnes nullables sur `games` plutôt
 qu'un fichier de référence — « on le note dans la bdd même si on en fait rien » — **avec** la
@@ -335,6 +336,12 @@ s'applique pas ici**, et c'est écrit pour que personne ne tente de la resserrer
 **Réservation assumée** : ces colonnes n'ont **aucun lecteur** à la sortie de 15b. Une colonne sans
 lecteur est normalement une odeur ; celle-ci est une réservation délibérée, d'où l'ADR.
 
+### Q22 — **Centisecondes en base**, secondes à l'écran
+Entiers en centisecondes pour tout ce qui est stocké et calculé : c'est l'unité de lichess, la plus
+fine que la matière porte, et un entier ne dérive pas — des secondes en flottant feraient boiter les
+sommes sur un axe dont toute la valeur porte sur des écarts de quelques dixièmes. Le **format
+d'affichage** est tranché juste en dessous, par Q23.
+
 ### Q23 — **(b)** Une décimale là où la source en a, **seconde entière sur lichess**
 Le PGN lichess étant arrondi à la seconde, un `Time spent` lichess est une différence de deux
 entiers de secondes : il finirait **toujours** par `,0` pour une valeur juste à ±1 s. La colonne dit
@@ -343,38 +350,40 @@ d'arbitrage que Q14 (ne pas inventer un zéro), ADR-0023 (ne pas affirmer une ca
 classerait mal) et `CONTEXT.md` (« sans objet » n'est pas « pas d'horloge »). **C'est le premier
 endroit où le coût d'ADR-0029 devient visible à l'écran.**
 
-### Q22 — **Centisecondes en base, secondes à une décimale à l'écran**
-Entiers en centisecondes pour tout ce qui est stocké et calculé : c'est l'unité de lichess, la plus
-fine que la matière porte, et un entier ne dérive pas — des secondes en flottant feraient boiter les
-sommes sur un axe dont toute la valeur porte sur des écarts de quelques dixièmes. Le rendu est en
-secondes à **une décimale**.
+---
 
-### Q24 — Par quoi le rafraîchissement est-il **déclenché** ?
-Trou repéré après avoir annoncé la frontière vide : les 434 PGN ne se remplacent pas tout seuls, et
+## Décisions prises — round 5 (2026-09-08)
+
+### Q24 — **(i)** Un CLI de réparation à usage unique
+`npm run repair:clocks -w server -- <db-file>`, sur le modèle exact de `repair:provenance`. Trou
+repéré **après que j'aie annoncé la frontière vide** : les 434 PGN ne se remplacent pas tout seuls, et
 rien ne disait par quel geste.
 
-- **(i) un CLI de réparation à usage unique** — `npm run repair:clocks -w server -- <db-file>`, sur
-  le modèle exact de `repair:provenance` ;
-- **(ii) un bouton / une route dans l'app**, sur l'écran d'import ;
-- **(iii) replié dans l'import ordinaire** : un import de la plage rafraîchirait au passage les
-  parties sans horloge.
+C'est une correction **unique** de 434 lignes : une fois passée elle ne retourne jamais, puisque les
+imports suivants envoient `clocks=true` dès le départ. Un bouton dans l'app serait une surface
+**permanente** pour un besoin **temporaire**. Et replier le rafraîchissement dans l'import ordinaire
+est à rejeter fermement : il ferait de « déjà présente » une écriture, et l'assertion d'ADR-0030 se
+mettrait à échouer **pendant un import de routine** — un geste correctif mélangé à un geste ordinaire.
 
-➡️ **(i).** C'est une correction **unique** de 434 lignes : une fois passée elle ne retourne jamais,
-puisque les imports suivants envoient `clocks=true` dès le départ. Un bouton serait une surface
-**permanente** pour un besoin **temporaire**. Et **(iii)** est à rejeter fermement : il ferait de
-« déjà présente » une écriture, et l'assertion d'ADR-0030 se mettrait à échouer **pendant un import
-de routine** — un geste correctif mélangé à un geste ordinaire.
+**Ce que ce choix apporte gratuitement, et qui est dû de toute façon :** le précédent
+`server/src/repair/reset-provenance-cli.ts` prend une **`.backup`** avant d'écrire et *montre son
+travail* (lectures avant, sauvegarde, lignes changées, lectures après). ADR-0015 l'exige ici autant
+que pour US-28. **Le piège à ne pas repayer** : `.backup`, **jamais `cp`** — mesuré sur ce projet le
+2026-08-27, un `cp` d'une base avec un `-wal` vivant a produit une copie qui **se relisait propre en
+ayant perdu une table entière**.
 
-**Ce que (i) apporte gratuitement, et qui est dû :** le précédent
-`server/src/repair/reset-provenance-cli.ts` prend une **`.backup`** avant d'écrire, et *montre son
-travail* (lectures avant, sauvegarde, lignes changées, lectures après). ADR-0015 l'exige ici aussi.
-**Le piège à ne pas repayer** : `.backup`, **jamais `cp`** — mesuré sur ce projet le 2026-08-27,
-un `cp` d'une base avec un `-wal` vivant a produit une copie qui **se relisait propre en ayant perdu
-une table entière**.
+**Conséquence sur la FP (Q7)** : l'étape de rafraîchissement s'exerce au niveau **CLI** contre la
+fixture, et la partie **visible** (la colonne temps, la lecture par partie) s'exerce dans l'**UI** —
+même partage qu'aux tranches serveur d'US-15a.
 
-**Conséquence sur la FP (Q7)** : l'étape de rafraîchissement s'exerce au niveau CLI contre la
-fixture, et la partie **visible** (la colonne temps, la lecture par partie) s'exerce dans l'UI. Même
-partage qu'aux tranches serveur d'US-15a.
+---
+
+## Frontière
+
+**Vide.** Les 24 questions couvrent la donnée (quoi, où, en quelle unité, comment elle arrive,
+comment l'existant la rattrape, ce qui la déclenche), la lecture (les deux chiffres, l'axe, sa
+comparabilité, où elle vit à l'écran, comment une absence se dit) et la vérification (FP sur
+fixture, greffe sur HP-01). Ce qui reste identifié mais **hors** de cette story est juste en dessous.
 
 ### Downstream, pas encore sur la frontière
 - **L'interaction avec le coup forcé** : un coup joué en 0,3 s parce qu'il était forcé n'est pas de
