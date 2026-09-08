@@ -53,6 +53,11 @@ export function importedGame(over: Partial<ImportedGame> = {}): ImportedGame {
     playerColor: "white",
     result: "win",
     date: "2024-01-01",
+    // The default is the chess.com shape: no last Clock, no division. A Lichess
+    // case that wants them says so.
+    lastClockCs: null,
+    divisionMiddlePly: null,
+    divisionEndPly: null,
     timeControlCategory: "blitz",
     eco: "other",
     openingName: "Autre / non classée",

@@ -270,6 +270,27 @@ describe("the Lichess adapter's month fetch", () => {
     expect(query.pgnInJson).toBe("true");
     expect(query.opening).toBe("true");
   });
+
+  it("asks for the clocks and the division, and for neither oracle Lichess offers", async () => {
+    exportCalls.length = 0;
+    const client = createHttpLichessClient(baseUrl);
+
+    await collectMonth(client, "Metalyst", 2024, 2);
+
+    const { query } = exportCalls[0];
+    // Without `clocks` the PGN carries no `[%clk]` at all — which is exactly why
+    // 434 already-imported Lichess Games are mute on time, and `rapid` has one
+    // Game in 231 with a clock. Asking now is what stops that being repaid.
+    expect(query.clocks).toBe("true");
+    // The `Lichess division`, captured with no consumer (ADR-0031): the occasion
+    // is now, because one range request answers for the whole span.
+    expect(query.division).toBe("true");
+    // `evals` and `accuracy` stay OUT. They exist only where somebody happened to
+    // click "analyse" on Lichess, so their presence is a lottery — and they are
+    // an outside oracle, which is not what this app's figures are made of.
+    expect(query.evals).toBeUndefined();
+    expect(query.accuracy).toBeUndefined();
+  });
 });
 
 describe("a month Lichess answered, of which we keep nothing", () => {

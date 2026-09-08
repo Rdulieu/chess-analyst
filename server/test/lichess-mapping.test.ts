@@ -165,3 +165,80 @@ describe("what we do not keep", () => {
     });
   });
 });
+
+/**
+ * The two facts US-15b stores rather than derives (slice 04): the **last
+ * `Clock`** — the one reading no `Move` owns — and the **`Lichess division`**.
+ *
+ * Measured on eight real Games, four terminations, 2026-09-08: the `clocks`
+ * array holds **one entry more** than there are half-moves whenever the Game
+ * ended without the side to move playing (resignation, agreed draw, abandonment)
+ * and **exactly as many** on a mate. That surplus entry appears in no `[%clk]`,
+ * which is why it is the single clock value stored at all (ADR-0029).
+ */
+describe("the last Clock", () => {
+  it("keeps the surplus reading when the Game ended without the side to move playing", () => {
+    // 3 half-moves, 4 readings: the fourth is what the side to move had left
+    // when their opponent resigned. It belongs to no Move.
+    const g = toImportedGame(
+      lichessGame({ pgn: "1. e4 c5 2. c3", clocks: [18_000, 17_900, 17_800, 4_653] }),
+      "metalyst",
+    );
+
+    expect(g.lastClockCs).toBe(4_653);
+  });
+
+  it("has none on a mate, where the last Move ends the Game and nobody is left to read", () => {
+    const g = toImportedGame(
+      lichessGame({ pgn: "1. e4 c5 2. c3", clocks: [18_000, 17_900, 17_800] }),
+      "metalyst",
+    );
+
+    // Null, not the last Move's own clock: that reading already belongs to a
+    // Move, and copying it here would invent a second meaning for it.
+    expect(g.lastClockCs).toBeNull();
+  });
+
+  it("has none when Lichess sent no clocks at all", () => {
+    // A correspondence Game: Lichess sends neither `clock` nor `clocks`, only
+    // `daysPerTurn`. The absence means *not applicable*.
+    expect(toImportedGame(lichessGame({ speed: "correspondence" }), "metalyst").lastClockCs).toBeNull();
+  });
+
+  it("refuses to guess when the array length matches neither contract", () => {
+    // Nothing zips this array against the Moves. If Lichess ever sends a length
+    // the measured contract does not cover, the honest answer is "no last Clock",
+    // not an entry picked because it happened to be last.
+    const g = toImportedGame(
+      lichessGame({ pgn: "1. e4 c5 2. c3", clocks: [18_000, 17_900] }),
+      "metalyst",
+    );
+
+    expect(g.lastClockCs).toBeNull();
+  });
+});
+
+describe("the Lichess division", () => {
+  it("keeps both plies exactly as Lichess gave them", () => {
+    const g = toImportedGame(lichessGame({ division: { middle: 20, end: 54 } }), "metalyst");
+
+    expect(g.divisionMiddlePly).toBe(20);
+    expect(g.divisionEndPly).toBe(54);
+  });
+
+  it("keeps whichever half Lichess named, and invents neither", () => {
+    // A Game that never left the opening has no middle and no end; a Game that
+    // reached a middlegame and no endgame has one and not the other.
+    const g = toImportedGame(lichessGame({ division: { middle: 20 } }), "metalyst");
+
+    expect(g.divisionMiddlePly).toBe(20);
+    expect(g.divisionEndPly).toBeNull();
+  });
+
+  it("has neither when Lichess sent no division", () => {
+    const g = toImportedGame(lichessGame(), "metalyst");
+
+    expect(g.divisionMiddlePly).toBeNull();
+    expect(g.divisionEndPly).toBeNull();
+  });
+});

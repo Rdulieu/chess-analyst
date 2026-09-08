@@ -66,6 +66,53 @@ describe("importing one month", () => {
     });
   });
 
+  it("stores the last Clock and the Lichess division the port hands over", async () => {
+    const { db, profileId } = testDb();
+    const client = januaryOf([
+      importedGame({
+        gameUrl: "https://lichess.org/withclocks",
+        // What a Lichess Game that ended in a resignation carries (US-15b): the
+        // one Clock reading no Move owns, and that Platform's own division.
+        lastClockCs: 4_653,
+        divisionMiddlePly: 20,
+        divisionEndPly: 54,
+      }),
+    ]);
+
+    await importOneMonth(db, client, {
+      profileId,
+      username: "Metalyst",
+      year: 2024,
+      month: 1,
+      categories: ["blitz"],
+    });
+
+    const [stored] = listGames(db, profileId);
+    expect(stored.lastClockCs).toBe(4_653);
+    expect(stored.divisionMiddlePly).toBe(20);
+    expect(stored.divisionEndPly).toBe(54);
+  });
+
+  it("leaves all three null for a Platform that has none of them", async () => {
+    const { db, profileId } = testDb();
+    const client = januaryOf([importedGame({ gameUrl: "https://www.chess.com/game/live/plain" })]);
+
+    await importOneMonth(db, client, {
+      profileId,
+      username: "DudulSmash",
+      year: 2024,
+      month: 1,
+      categories: ["blitz"],
+    });
+
+    const [stored] = listGames(db, profileId);
+    // Null, never `0`: chess.com has no equivalent of either fact, and a zero
+    // would read as "no time left" and as "the middlegame began at ply 0".
+    expect(stored.lastClockCs).toBeNull();
+    expect(stored.divisionMiddlePly).toBeNull();
+    expect(stored.divisionEndPly).toBeNull();
+  });
+
   it("records the Player's side and result whether they played White or Black, won, lost or drew", async () => {
     const { db, profileId } = testDb();
     const client = januaryOf([

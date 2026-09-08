@@ -1,3 +1,4 @@
+import { loadGame } from "../../chess/positions";
 import type { ImportedGame, TimeControlCategory } from "../types";
 import { OTHER_OPENING } from "../chesscom/opening";
 import type { LichessGame } from "./payload";
@@ -107,5 +108,35 @@ export function toImportedGame(game: LichessGame, username: string): ImportedGam
     // (ADR-0007's amendment: the Platform is the classification authority).
     eco: game.opening?.eco ?? OTHER_OPENING.eco,
     openingName: game.opening?.name ?? OTHER_OPENING.openingName,
+    lastClockCs: lastClockOf(game),
+    // Kept exactly as Lichess gave them, each half independently: a Game that
+    // never left the opening has neither, and one that reached a middlegame and
+    // no endgame has one. Neither is invented (ADR-0031).
+    divisionMiddlePly: game.division?.middle ?? null,
+    divisionEndPly: game.division?.end ?? null,
   };
+}
+
+/**
+ * The one `Clock` reading that belongs to no `Move`, or `null` when there is
+ * none.
+ *
+ * **Decided by comparing lengths, not by trusting the last element.** The
+ * `clocks` array holds one entry more than there are half-moves exactly when the
+ * Game ended without the side to move playing; on a mate it holds as many, and
+ * its last entry is then a `Move`'s own reading, which the PGN already carries.
+ * Taking `clocks.at(-1)` unconditionally would give that Move's clock a second
+ * meaning (measured 2026-09-08, eight Games, four terminations).
+ *
+ * A length matching neither contract is answered `null` rather than guessed at:
+ * "no last Clock" is honest, and an entry picked because it happened to be last
+ * is not.
+ */
+function lastClockOf(game: LichessGame): number | null {
+  const clocks = game.clocks;
+  if (clocks === undefined || clocks.length === 0) return null;
+  // The half-moves as the PGN records them — the same count the readings are
+  // compared against.
+  const halfMoves = loadGame(game.pgn ?? "").history().length;
+  return clocks.length === halfMoves + 1 ? clocks[clocks.length - 1] : null;
 }

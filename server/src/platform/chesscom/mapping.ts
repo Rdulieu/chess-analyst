@@ -67,6 +67,13 @@ export function toImportedGame(game: ChessComGame, username: string): ImportedGa
     timeControlCategory: PACES[game.time_class],
     eco,
     openingName,
+    // **Null for every chess.com Game, for ever.** The Platform exposes neither
+    // the last Clock (it has no equivalent of Lichess's surplus reading) nor any
+    // division of its own — and deriving a division here where Lichess's is read
+    // there would make two `Profile`s silently incomparable (ADR-0031).
+    lastClockCs: null,
+    divisionMiddlePly: null,
+    divisionEndPly: null,
   };
 }
 
