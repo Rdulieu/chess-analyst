@@ -134,6 +134,15 @@ export interface TimeReading {
   /** The cadence this reading is read **within** — carried so it can never be
    *  compared across two `Time control category`s. */
   timeControl: TimeControl;
+  /** How many of `moves` actually carry a figure. Equal to `moves` on a Game
+   *  whose clocks are complete; when it is not, the total is over these and the
+   *  panel says so rather than counting an absence as a zero. */
+  measuredMoves: number;
+  /** What the side to move had left when the Game ended **without them playing**
+   *  (resignation, agreement, abandonment) — a fact about the Game, belonging to
+   *  no Move. `null` on a mate and on every chess.com Game: read as *sans
+   *  objet*, never as a gap. */
+  lastClockCs: number | null;
 }
 
 /**

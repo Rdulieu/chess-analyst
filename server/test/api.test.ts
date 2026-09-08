@@ -174,6 +174,48 @@ describe("games API", () => {
     );
   });
 
+  it("GET /api/games/:id/annotations carries a NOT-ANALYZED Game's actual times", async () => {
+    // **The named anti-regression of this feature**, and the assertion the first
+    // version of it missed: the Game above declares no cadence and carries no
+    // `[%clk]`, so it proved the block travelled — never that any figure in it
+    // did. `rapid` has ZERO analysed Games, so if real times only reached the
+    // payload on analysed ones, the cadence this whole story exists for would
+    // show nothing at all.
+    const { db } = openDb(":memory:");
+    const profileId = seedProfile(db);
+    const game = db
+      .insert(games)
+      .values({
+        profileId,
+        gameUrl: "https://lichess.org/unanalysed",
+        pgn: '[TimeControl "180+2"]\n\n1. e4 {[%clk 0:03:00]} 1... e5 {[%clk 0:02:58]} 1/2-1/2',
+        opponent: "opp",
+        playerColor: "white",
+        result: "draw",
+        date: "2026-01-01",
+        timeControlCategory: "rapid",
+        analyzed: false,
+      })
+      .returning()
+      .get();
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get(`/api/games/${game.id}/annotations?profileId=${profileId}`);
+
+    expect(res.status).toBe(200);
+    // No engine record at all…
+    expect(res.body.analyzed).toBe(false);
+    expect(res.body.recap).toBeNull();
+    // …and the time is all there anyway.
+    expect(res.body.time.timeControl).toEqual({
+      kind: "realtime",
+      initialCs: 18_000,
+      incrementCs: 200,
+    });
+    expect(res.body.time.plies[1]).toEqual({ ply: 1, clockCs: 18_000, spentCs: 200 });
+    expect(res.body.time.reading).toMatchObject({ moves: 1, measuredMoves: 1 });
+  });
+
   it("GET /api/games/:id/annotations returns the per-ply annotations for an analyzed Game", async () => {
     const { db } = openDb(":memory:");
     const game = db

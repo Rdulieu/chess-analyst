@@ -145,3 +145,35 @@ describe("gameTime", () => {
     });
   });
 });
+
+/**
+ * A `Time spent` cannot be negative, and what a negative MEANS depends on the
+ * material — so the two are deliberately not treated alike (found in review).
+ */
+describe("a Clock that goes the wrong way", () => {
+  it("floors it at zero where the source rounds to the second", () => {
+    // Lichess rounds, so a difference is only good to ±1 s (ADR-0029): a small
+    // negative is an artefact of that rounding, and "about none" is the honest
+    // reading. The Move WAS played.
+    const time = gameTime(
+      '[TimeControl "180+0"]\n\n1. e4 {[%clk 0:03:00]} 1... e5 {[%clk 0:03:00]} 2. Nf3 {[%clk 0:03:01]} 1/2-1/2',
+      "white",
+    );
+
+    expect(time.precision).toBe("seconds");
+    expect(time.plies[3].spentCs).toBe(0);
+  });
+
+  it("says NO figure where the source carries tenths, because rounding cannot explain it", () => {
+    // chess.com writes tenths, so a negative here is an inconsistency in the
+    // data, not a rounding artefact. Flooring it would hand a fabricated zero to
+    // the aggregate US-15c will build.
+    const time = gameTime(
+      '[TimeControl "180+0"]\n\n1. e4 {[%clk 0:03:00.0]} 1... e5 {[%clk 0:02:59.0]} 2. Nf3 {[%clk 0:03:05.0]} 1/2-1/2',
+      "white",
+    );
+
+    expect(time.precision).toBe("tenths");
+    expect(time.plies[3].spentCs).toBeNull();
+  });
+});

@@ -71,6 +71,17 @@ describe("timeControlOf", () => {
     expect(timeControlOf(pgnWith("something else"))).toBeNull();
   });
 
+  it("refuses a divisor that is not a whole number of days, rather than a fraction", () => {
+    // `1/43200` is half a day. Answered as `0.5` it renders "0.5 jour par coup"
+    // — a decimal point where this app writes a comma, and a plural that reads
+    // the wrong way round. Saying nothing is honest; saying that is not.
+    expect(timeControlOf(pgnWith("1/43200"))).toBeNull();
+    // And the whole-day cases still answer, which is what makes this a refusal
+    // of the fraction rather than of the form.
+    expect(timeControlOf(pgnWith("1/86400"))).toEqual({ kind: "correspondence", daysPerMove: 1 });
+    expect(timeControlOf(pgnWith("1/604800"))).toEqual({ kind: "correspondence", daysPerMove: 7 });
+  });
+
   it("reads a Game whose movetext is empty, which an aborted Game has", () => {
     expect(timeControlOf('[TimeControl "60+1"]\n\n*')).toEqual({
       kind: "realtime",

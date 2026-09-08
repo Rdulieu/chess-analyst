@@ -154,8 +154,12 @@ describe("refreshClocks", () => {
     expect(() => refreshClocks(db, [withClocks])).not.toThrow();
   });
 
-  it("is idempotent: a Game that already carries its clocks is left alone", () => {
+  it("is idempotent: a Game already carrying its clocks AND its columns is left alone", () => {
     const { db, game } = dbWithLichessGame({ pgn: withClocks.pgn });
+    db.update(games)
+      .set({ lastClockCs: 4_653, divisionMiddlePly: 20, divisionEndPly: 54 })
+      .where(eq(games.id, game.id))
+      .run();
 
     const result = refreshClocks(db, [withClocks]);
 
@@ -163,6 +167,21 @@ describe("refreshClocks", () => {
     expect(result.alreadyDone).toBe(1);
     const stored = db.select().from(games).where(eq(games.id, game.id)).get()!;
     expect(stored.pgn).toBe(withClocks.pgn);
+  });
+
+  it("still writes the three columns when only they are missing", () => {
+    // The three columns are NOT in the PGN (ADR-0029's single exception), so
+    // "the movetext is current" does not mean "the row is". The one `rapid` Game
+    // in 231 that already carries clocks — and every Game imported after slice
+    // 04 — would otherwise never receive them.
+    const { db, game } = dbWithLichessGame({ pgn: withClocks.pgn });
+
+    const result = refreshClocks(db, [withClocks]);
+
+    expect(result.changed).toBe(1);
+    const stored = db.select().from(games).where(eq(games.id, game.id)).get()!;
+    expect(stored.lastClockCs).toBe(4_653);
+    expect(stored.divisionMiddlePly).toBe(20);
   });
 
   it("refreshes a Game the engine has never seen, like any other", () => {

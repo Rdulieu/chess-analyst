@@ -274,7 +274,7 @@ export type ConfrontableAnnotations = Pick<
 export function confrontGame(
   analysis: PersonalAnalysis,
   /**
-   * The engine side, exactly as the API serves it. Narrowed to the three fields
+   * The engine side, exactly as the API serves it. Narrowed to the four fields
    * a `Confrontation` actually joins on: it is a join, not a second derivation
    * (ADR-0019), so what it does not read it does not ask for — and a caller
    * holding an engine verdict from anywhere else can still be confronted.

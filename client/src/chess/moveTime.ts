@@ -28,19 +28,20 @@ export function formatDuration(
 }
 
 /**
- * A remaining `Clock`, said the same way — one function apart from
- * `formatDuration` only because the two answer different questions and a caller
- * should have to name which it is asking.
+ * A remaining `Clock`, said the same way a duration is.
  *
- * `0` is printed here, and is the one legitimate zero in this feature: a side
- * whose flag fell genuinely had no time left. That is a measurement, not a gap.
+ * **A deliberate alias, and nothing more.** It exists so a call site names which
+ * question it is asking — "how long did this take" and "how much was left" are
+ * different facts about a Move — while the formatting stays one implementation.
+ * If the two ever need to read differently, this is where that happens; until
+ * then it must not pretend to a behaviour it does not have.
+ *
+ * A `0` reaching here is the one legitimate zero in the feature — a side whose
+ * flag fell genuinely had no time left, which is a measurement — but that is
+ * true of `formatDuration` too, and is a property of the caller's data rather
+ * than of this function.
  */
-export function formatClock(
-  centiseconds: number | null,
-  precision: ClockPrecision | null,
-): string | null {
-  return formatDuration(centiseconds, precision);
-}
+export const formatClock = formatDuration;
 
 /** A figure at the precision the source actually carries — a tenth where there
  *  is one, a whole second where there is not, and the French decimal comma. */

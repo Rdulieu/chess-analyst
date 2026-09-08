@@ -517,8 +517,24 @@ export function Board({
         engine said, and `rapid` — the cadence this feature exists for — has no
         analysed Game to carry a recap at all.
       */}
-      {time?.reading && (
-        <TimeReadingReadout reading={time.reading} precision={time.precision} />
+      {time?.reading ? (
+        <TimeReadingReadout reading={time.reading} precision={time.precision} start={start} />
+      ) : (
+        time?.absence && (
+          // The reading ANSWERS, rather than going quiet. A panel that simply
+          // vanishes leaves the Player unable to tell "this Game has nothing to
+          // say about time" from "this screen is broken" — and the two absences
+          // are still said in their own words, because a correspondence Game
+          // never had a clock while a real-time one merely has none recorded.
+          <section
+            aria-labelledby="time-reading-heading"
+            className="card"
+            data-part="time-reading-absent"
+          >
+            <h3 id="time-reading-heading">Votre temps sur cette partie</h3>
+            <p>{READING_ABSENCE[time.absence]}</p>
+          </section>
+        )
       )}
       {annotations && detailed && recap && <GameRecapReadout recap={recap} />}
       {annotations && detailed && (
@@ -552,6 +568,16 @@ function arrowFor(ply: LinePly | undefined, color: string): BoardArrow | null {
  * never asked for would be false — and would make the refresh of slice 05 look
  * like it had nothing to fix.
  */
+/** The same two facts, said at the scale of the whole Game. Kept apart here for
+ *  the same reason as in the column: melting them would let a later aggregate
+ *  average an absence that is a fact together with one that is a gap. */
+const READING_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
+  "not-applicable":
+    "Sans objet : une partie en correspondance a une cadence, et aucune horloge.",
+  "not-recorded":
+    "Aucune horloge n'a été enregistrée pour cette partie : il n'y a pas de lecture du temps à en faire.",
+};
+
 const CLOCK_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
   "not-applicable": "Temps par coup : sans objet (partie en correspondance).",
   "not-recorded": "Temps par coup : pas d'horloge enregistrée pour cette partie.",
@@ -571,8 +597,9 @@ const CLOCK_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
  * placeholder: a fabricated zero is what a future aggregate would average.
  */
 function MoveTime({ time, ply }: { time: GameTime | null; ply: number }) {
-  const entry = time?.plies[ply];
-  if (!entry || time === null) return null;
+  if (time === null) return null;
+  const entry = time.plies[ply];
+  if (!entry) return null;
   const spent = formatDuration(entry.spentCs, time.precision);
   const left = formatClock(entry.clockCs, time.precision);
   if (spent === null && left === null) return null;

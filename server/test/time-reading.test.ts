@@ -16,6 +16,29 @@ import { REAL_READING_PGN } from "./fixtures/real-reading";
  * and ADR-0023 records what choosing a threshold on paper costs. What this owes
  * 15c is a number per Move and a rule for the denominator.
  */
+/**
+ * White's total `Time spent` over `REAL_READING_PGN`, in centiseconds, computed
+ * **by hand** from the PGN's own `[%clk]` readings rather than from the code
+ * under test. See the test that uses it for why an independent figure is needed.
+ */
+const HAND_COMPUTED_WHITE_SPENT = 8_270;
+
+/**
+ * The derivation, so the constant above is an **oracle** and not an echo.
+ *
+ * The Game is 60+1 and White played 38 Moves. Summing White's `Time spent`
+ * telescopes: every intermediate reading appears once positively and once
+ * negatively, leaving only the budget, the increments and the final reading.
+ *
+ *   total = (initial + inc − c₁) + Σ(cᵢ₋₁ − cᵢ + inc)   for i = 2…38
+ *         = initial + 38 × inc − c₃₈
+ *         = 60 s + 38 × 1 s − 15.3 s
+ *         = 82.7 s = 8 270 cs
+ *
+ * `c₃₈` is White's last `[%clk]` in the fixture — `38. Ka3 {[%clk 0:00:15.3]}`.
+ * Nothing in this computation reads the code under test.
+ */
+
 describe("the Game's time reading", () => {
   const time = gameTime(REAL_READING_PGN, "white");
   // The Player is White in this Game (a 60+1 blitz loss of theirs).
@@ -29,6 +52,42 @@ describe("the Game's time reading", () => {
     // 76 half-moves, White to move on the odd plies.
     const playerPlies = time.plies.filter((ply) => ply.ply > 0 && ply.ply % 2 === 1);
     expect(reading.moves).toBe(playerPlies.length);
+  });
+
+  it("totals a HAND-COMPUTED figure on the real Game, not one echoed from the code", () => {
+    /**
+     * The independent oracle. Every other case here recomputes its expectation
+     * from `time.plies`, which is the right discipline for proving the panel and
+     * the column agree — but it means those cases mirror the implementation and
+     * could not see it summing an absence as zero (found in review).
+     *
+     * So this one is arithmetic done **by hand** off the fixture's own `[%clk]`
+     * values. `REAL_READING_PGN` is a 60+1 chess.com blitz Game; the Player is
+     * White and played 38 Moves. Summing White's `Time spent` over the whole
+     * Game gives the figure below, in centiseconds.
+     *
+     * If this ever disagrees with the recomputed total beside it, the fold is
+     * wrong — and that is exactly what a mirror-image expectation cannot tell you.
+     */
+    expect(reading.moves).toBe(38);
+    expect(reading.measuredMoves).toBe(38);
+    expect(reading.totalSpentCs).toBe(HAND_COMPUTED_WHITE_SPENT);
+  });
+
+  it("counts an underivable Time spent in `moves` but NOT in the total", () => {
+    // A Game whose first Move carries no clock: the Move was played and counts,
+    // and its time is unknown. Folding it in as `0` would put a measurement the
+    // app never took into the very figure US-15c will consume (SPEC US-18).
+    const partial = gameTime(
+      '[TimeControl "180+2"]\n\n1. e4 1... e5 {[%clk 0:02:58]} 2. Nf3 {[%clk 0:02:55]} 1/2-1/2',
+      "white",
+    );
+
+    const partialReading = partial.reading!;
+    expect(partialReading.moves).toBe(2);
+    // Only the Move that carries a figure.
+    expect(partialReading.measuredMoves).toBe(1);
+    expect(partialReading.totalSpentCs).toBe(partial.plies[3].spentCs);
   });
 
   it("totals exactly the Time spent of the Player's Moves in the column", () => {

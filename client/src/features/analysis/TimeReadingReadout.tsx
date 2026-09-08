@@ -1,4 +1,5 @@
 import { formatDuration } from "../../chess/moveTime";
+import { plyNumber, type StartingPoint } from "../confrontation/moveName";
 import type { GameTime, TimeReading } from "../../types";
 
 /**
@@ -24,9 +25,13 @@ import type { GameTime, TimeReading } from "../../types";
 export function TimeReadingReadout({
   reading,
   precision,
+  start,
 }: {
   reading: TimeReading;
   precision: GameTime["precision"];
+  /** Where the Move numbering counts from — the same one the move list uses, so
+   *  the two cannot name the same Move differently on one screen. */
+  start: StartingPoint;
 }) {
   const total = formatDuration(reading.totalSpentCs, precision);
   /**
@@ -36,13 +41,38 @@ export function TimeReadingReadout({
    * tenth where there is nothing measured at all.
    */
   const mark = formatDuration(reading.lowClockCs, "seconds");
+  /**
+   * The one `Clock` reading that belongs to no `Move` — what the side to move
+   * had left when the Game ended without them playing. `null` is said **"sans
+   * objet"**, not left blank: on a mate there was nobody to read, and chess.com
+   * exposes no equivalent at all. Neither is a gap in what we fetched.
+   */
+  const lastClock = formatDuration(reading.lastClockCs, precision);
 
   return (
     <section aria-labelledby="time-reading-heading" className="card" data-part="time-reading">
       <h3 id="time-reading-heading">Votre temps sur cette partie</h3>
       <p>
         Vous avez joué <strong>{reading.moves}</strong> coup{reading.moves > 1 ? "s" : ""}, en{" "}
-        <strong>{total}</strong> au total.
+        <strong>{total}</strong> au total
+        {/* Only when the two differ, and then said plainly. A total that quietly
+            covered fewer Moves than the count beside it would be a figure the
+            Player could not check — and an absence folded in as a zero is what
+            a later aggregate would average. */}
+        {reading.measuredMoves < reading.moves && (
+          <span data-part="partial">
+            {" "}
+            — sur les <strong>{reading.measuredMoves}</strong> dont l'horloge est connue
+          </span>
+        )}
+        .
+      </p>
+      <p data-part="last-clock">
+        {/* A fact about the GAME, not about any Move — which is why it is stated
+            here and appears nowhere in the column. */}
+        Temps restant au camp qui n'a pas joué le dernier coup :{" "}
+        <strong>{lastClock ?? "sans objet"}</strong>
+        {lastClock === null && " (partie matée, ou partie chess.com)"}.
       </p>
       <p data-part="low-clock">
         {/* The mark is named, so the Player can count the same Moves themselves
@@ -54,7 +84,7 @@ export function TimeReadingReadout({
         <p data-part="longest">
           Vos coups les plus longs :{" "}
           {reading.longest
-            .map((move) => `${moveNumber(move.ply)} (${formatDuration(move.spentCs, precision)})`)
+            .map((move) => `${plyNumber(move.ply, start)} (${formatDuration(move.spentCs, precision)})`)
             .join(", ")}
           .
         </p>
@@ -67,13 +97,4 @@ export function TimeReadingReadout({
       </p>
     </section>
   );
-}
-
-/**
- * How a ply is named to the Player — the Move number they can find on their own
- * board, `12.` on White's half and `12…` on Black's. A bare ply index is a
- * number; a Move number is a place in the Game.
- */
-function moveNumber(ply: number): string {
-  return `${Math.ceil(ply / 2)}${ply % 2 === 1 ? "." : "…"}`;
 }

@@ -98,7 +98,16 @@ export function refreshClocks(db: Db, incoming: RefreshedGame[]): RefreshOutcome
       // transaction, so nothing lands — for this Game or any other.
       if (movesOf(stored.pgn) !== movesOf(game.pgn)) throw new MovetextChanged(game.gameUrl);
 
-      if (stored.pgn === game.pgn) {
+      // The PGN is already what we would write — but the three stored columns
+      // are NOT in the PGN (ADR-0029's single exception), so "the movetext is
+      // current" does not mean "the row is". The one `rapid` Game in 231 that
+      // already carries clocks, and every Game imported after slice 04, would
+      // otherwise never receive them.
+      const columnsCurrent =
+        stored.lastClockCs === game.lastClockCs &&
+        stored.divisionMiddlePly === game.divisionMiddlePly &&
+        stored.divisionEndPly === game.divisionEndPly;
+      if (stored.pgn === game.pgn && columnsCurrent) {
         outcome.alreadyDone += 1;
         continue;
       }

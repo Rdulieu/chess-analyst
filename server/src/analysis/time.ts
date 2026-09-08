@@ -60,7 +60,16 @@ export function timeControlOf(pgn: string): TimeControl | null {
   // The seconds are counted back into days rather than matched against a table
   // of known values: `1/259200` is three days, and a table would have to grow a
   // row for every allowance a Player happens to pick.
-  if (daily) return { kind: "correspondence", daysPerMove: Number(daily[1]) / SECONDS_PER_DAY };
+  //
+  // A divisor that is **not** a whole number of days is answered `null` rather
+  // than as a fraction. `1/43200` would otherwise give `0.5`, which renders as
+  // "0.5 jour par coup" — a decimal point where this app writes a comma, and a
+  // plural that reads the wrong way round. Saying nothing is honest; saying
+  // that is not.
+  if (daily) {
+    const days = Number(daily[1]) / SECONDS_PER_DAY;
+    return Number.isInteger(days) ? { kind: "correspondence", daysPerMove: days } : null;
+  }
 
   const words = LICHESS_DAILY.exec(declared);
   if (words) return { kind: "correspondence", daysPerMove: Number(words[1]) };
@@ -159,7 +168,20 @@ export interface LongMove {
 export interface TimeReading {
   /** How many Moves the Player played — the denominator of everything here. */
   moves: number;
-  /** Everything the Player spent, the sum of the column's own figures. */
+  /**
+   * How many of those Moves actually **carry** a `Time spent`. Equal to `moves`
+   * on a Game whose clocks are complete, which is the ordinary case.
+   *
+   * It exists because the alternative is a fake zero. Folding an underivable
+   * Move into the total as `0` would let `totalSpentCs` exclude Moves that
+   * `moves` still counts, with nothing on screen naming the gap — and a `0` the
+   * app never measured is precisely what a future aggregate would average
+   * (SPEC US-18). When the two differ, the panel says the total is over the
+   * measured Moves rather than over all of them.
+   */
+  measuredMoves: number;
+  /** Everything the Player spent, the sum of the column's own figures — over
+   *  `measuredMoves`, never with an absence counted as zero. */
   totalSpentCs: number;
   /**
    * The mark "a low clock" is counted against, **stated** rather than hidden, so
@@ -181,6 +203,18 @@ export interface TimeReading {
    * already governs `Weak opening`, and the reason the category exists.
    */
   timeControl: TimeControl;
+  /**
+   * What the side to move had left when the Game ended **without them playing**
+   * — a resignation, an agreed draw, an abandonment (CONTEXT.md, `Clock`).
+   *
+   * It belongs to no `Move`, so it has no place in the column and is stated
+   * here instead: it is a fact about the **Game**. It is also the one clock
+   * value that is stored rather than derived (ADR-0029's single exception).
+   * `null` — read as *sans objet*, never as a gap — on every **mate**, where the
+   * last Move ends the Game and there is nobody left to read, and on every
+   * chess.com Game, that Platform exposing no equivalent.
+   */
+  lastClockCs: number | null;
 }
 
 /** How many of the Player's longest Moves the reading names. Enough to show a
@@ -225,7 +259,14 @@ function precisionOf(comments: (string | undefined)[]): ClockPrecision {
  * than a second pass over the PGN (ADR-0017: two implementations of one method
  * agree only by luck).
  */
-export function gameTime(pgn: string, playerColor: Game["playerColor"]): GameTime {
+export function gameTime(
+  pgn: string,
+  playerColor: Game["playerColor"],
+  /** The stored last `Clock` — the one reading no `Move` owns. It is a column
+   *  rather than something the PGN carries (ADR-0029's single exception), so it
+   *  is handed in rather than derived here. */
+  lastClockCs: Game["lastClockCs"] = null,
+): GameTime {
   const timeControl = timeControlOf(pgn);
   const history = loadGame(pgn).history();
   const comments = history.map((move) => move.commentAfter);
@@ -237,6 +278,7 @@ export function gameTime(pgn: string, playerColor: Game["playerColor"]): GameTim
   const daily = timeControl?.kind === "correspondence";
   const readings = daily ? [] : comments.map(clockIn);
   const recorded = readings.some((reading) => reading !== null);
+  const precision = precisionOf(comments);
 
   const plies: PlyTime[] = [
     // Ply 0 is the starting Position: no side has played to it, so it carries
@@ -246,7 +288,7 @@ export function gameTime(pgn: string, playerColor: Game["playerColor"]): GameTim
     ...readings.map((clockCs, index) => ({
       ply: index + 1,
       clockCs,
-      spentCs: spentAt(readings, index, timeControl),
+      spentCs: spentAt(readings, index, timeControl, precision),
     })),
   ];
 
@@ -254,10 +296,10 @@ export function gameTime(pgn: string, playerColor: Game["playerColor"]): GameTim
     timeControl,
     plies,
     absence: recorded ? null : daily ? "not-applicable" : "not-recorded",
-    precision: recorded ? precisionOf(comments) : null,
+    precision: recorded ? precision : null,
     // Folded from the very array above — the panel and the column cannot
     // disagree, because there is only one set of numbers (ADR-0017).
-    reading: recorded ? readingOf(plies, playerColor, timeControl) : null,
+    reading: recorded ? readingOf(plies, playerColor, timeControl, lastClockCs) : null,
   };
 }
 
@@ -278,22 +320,28 @@ function readingOf(
   plies: PlyTime[],
   playerColor: Game["playerColor"],
   timeControl: TimeControl | null,
+  lastClockCs: number | null,
 ): TimeReading | null {
   if (timeControl === null || timeControl.kind !== "realtime") return null;
   const mine = plies.filter((ply) => isPlayers(ply.ply, playerColor));
   const lowClockCs = Math.round(timeControl.initialCs / LOW_CLOCK_FRACTION);
+  // The Moves that actually carry a figure. Summed with `?? 0` instead, an
+  // absence would enter the total as a measurement of zero — the one thing this
+  // whole feature refuses (SPEC US-18).
+  const measured = mine.filter((ply): ply is PlyTime & { spentCs: number } => ply.spentCs !== null);
 
   return {
     moves: mine.length,
-    totalSpentCs: mine.reduce((total, ply) => total + (ply.spentCs ?? 0), 0),
+    measuredMoves: measured.length,
+    totalSpentCs: measured.reduce((total, ply) => total + ply.spentCs, 0),
     lowClockCs,
     underLowClock: mine.filter((ply) => ply.clockCs !== null && ply.clockCs < lowClockCs).length,
-    longest: mine
-      .filter((ply): ply is PlyTime & { spentCs: number } => ply.spentCs !== null)
+    longest: [...measured]
       .sort((a, b) => b.spentCs - a.spentCs)
       .slice(0, LONGEST_SHOWN)
       .map((ply) => ({ ply: ply.ply, spentCs: ply.spentCs })),
     timeControl,
+    lastClockCs,
   };
 }
 
@@ -315,6 +363,7 @@ function spentAt(
   readings: (number | null)[],
   index: number,
   timeControl: TimeControl | null,
+  precision: ClockPrecision,
 ): number | null {
   const clock = readings[index];
   if (clock === null || clock === undefined) return null;
@@ -329,10 +378,16 @@ function spentAt(
         timeControl.initialCs + timeControl.incrementCs - clock
       : previous + timeControl.incrementCs - clock;
 
-  // A Move cannot take less than no time. A small negative here is an artefact
-  // of the PGN's rounding — Lichess rounds to the second, so a difference is
-  // only good to ±1 s (ADR-0029) — and printing "−0,4 s of thought" would be a
-  // reading of the app, not of the Game. Floored rather than dropped, because
-  // the Move WAS played and its time is genuinely near zero.
-  return Math.max(0, spent);
+  if (spent >= 0) return spent;
+  // A Move cannot take less than no time, and what a negative MEANS depends on
+  // the material — so the two are not treated alike.
+  //
+  // At whole-second precision the difference is only good to ±1 s (Lichess
+  // rounds; ADR-0029), so a small negative is an artefact of that rounding and
+  // the honest reading is "about none": floored, because the Move WAS played.
+  // At tenth precision the source is exact enough that a negative cannot be
+  // rounding — it is an inconsistency in the data, and flooring it would
+  // silently pass a fabricated zero to a future aggregate. That one is answered
+  // `null`: no figure, said as no figure.
+  return precision === "seconds" ? 0 : null;
 }

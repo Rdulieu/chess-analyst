@@ -724,7 +724,10 @@ describe("GameViewer — the time per Move", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
 
-    await screen.findByText(/sans objet/i);
+    // Said twice on purpose since the review of this story: once for the column
+    // and once for the Game's reading, each answering where a Player would look.
+    const said = await screen.findAllByText(/sans objet/i);
+    expect(said.length).toBeGreaterThan(0);
     // Never a `0` standing in for a figure the app does not have.
     expect(screen.queryByLabelText(/temps pris/i)).toBeNull();
   });
@@ -786,6 +789,8 @@ describe("GameViewer — the Game's time reading", () => {
     precision: "tenths",
     reading: {
       moves: 1,
+      measuredMoves: 1,
+      lastClockCs: 4_653,
       totalSpentCs: 200,
       lowClockCs: 1_800,
       underLowClock: 0,
@@ -836,7 +841,96 @@ describe("GameViewer — the Game's time reading", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
 
-    await screen.findByText(/sans objet/i);
-    expect(screen.queryByRole("region", { name: /temps/i })).toBeNull();
+    // **Reversed by this story's code review.** The panel used to vanish, which
+    // left the Player unable to tell "this Game has nothing to say about time"
+    // from "this screen is broken". It now ANSWERS — with "sans objet", and
+    // still with no reading at zero anywhere.
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    expect(panel.textContent).toMatch(/sans objet/i);
+    expect(panel.textContent).not.toMatch(/0 s/);
+  });
+});
+
+/**
+ * The two facts the review found stored-but-unread and summed-as-zero. Both are
+ * about the same discipline: the app never prints a figure it does not have.
+ */
+describe("GameViewer — what the reading refuses to invent", () => {
+  const base: GameTime = {
+    timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
+    plies: [
+      { ply: 0, clockCs: null, spentCs: null },
+      { ply: 1, clockCs: 18_000, spentCs: 200 },
+    ],
+    absence: null,
+    precision: "tenths",
+    reading: {
+      moves: 4,
+      measuredMoves: 4,
+      lastClockCs: null,
+      totalSpentCs: 200,
+      lowClockCs: 1_800,
+      underLowClock: 0,
+      longest: [],
+      timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
+    },
+  };
+
+  it("says the total covers fewer Moves when some carry no figure", async () => {
+    stubUnanalyzed({ ...base, reading: { ...base.reading!, moves: 4, measuredMoves: 3 } });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    // A total quietly covering fewer Moves than the count beside it is a figure
+    // the Player cannot check — and an absence folded in as `0` is what a later
+    // aggregate would average.
+    await waitFor(() => expect(panel.textContent).toMatch(/dont l'horloge est connue/));
+  });
+
+  it("says nothing about a gap when there is none", async () => {
+    stubUnanalyzed(base);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    expect(panel.textContent).not.toMatch(/dont l'horloge est connue/);
+  });
+
+  it("states the Clock of the side that never played the last Move", async () => {
+    stubUnanalyzed({ ...base, reading: { ...base.reading!, lastClockCs: 4_653 } });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    // A fact about the Game, belonging to no Move — which is why it appears here
+    // and nowhere in the column.
+    await waitFor(() => expect(panel.textContent).toContain("46,5 s"));
+  });
+
+  it("says « sans objet » for it on a mate or a chess.com Game, never a blank", async () => {
+    stubUnanalyzed(base);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    await waitFor(() => expect(panel.textContent).toMatch(/sans objet/));
+  });
+
+  it("answers with a panel on a correspondence Game rather than going silent", async () => {
+    stubUnanalyzed({
+      timeControl: { kind: "correspondence", daysPerMove: 2 },
+      plies: [],
+      absence: "not-applicable",
+      precision: null,
+      reading: null,
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
+
+    // A panel that simply vanishes leaves the Player unable to tell "nothing to
+    // say about time" from "this screen is broken".
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    expect(panel.textContent).toMatch(/sans objet/i);
   });
 });

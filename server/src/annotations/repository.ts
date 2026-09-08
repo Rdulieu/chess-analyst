@@ -47,7 +47,7 @@ export interface GameAnnotations {
 export function getGameAnnotations(db: Db, gameId: number): GameAnnotations | undefined {
   const game = db.select().from(games).where(eq(games.id, gameId)).get();
   if (!game) return undefined;
-  const time = gameTime(game.pgn, game.playerColor);
+  const time = gameTime(game.pgn, game.playerColor, game.lastClockCs);
   if (!game.analyzed) return { analyzed: false, plies: [], regime: null, recap: null, time };
 
   const evals = db.select().from(evaluations).where(eq(evaluations.gameId, gameId)).all();
