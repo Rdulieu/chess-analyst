@@ -109,6 +109,19 @@
   >   - `05-the-cli-brings-back-the-434` — le CLI rapatrie les 434 parties *(bloqué par 03, 04)* ;
   >     c'est **cette** tranche qui fait exister l'axe `rapid`
   >   - `06-graft-onto-hp-01-and-the-pr` — greffe sur HP-01 et la PR *(bloqué par 01-05)*
+  >
+  >   **LIVRÉE le 2026-09-09 — [PR #109](https://github.com/Rdulieu/chess-analyst/pull/109), en
+  >   attente du merge humain** (`integration → develop` reste une décision humaine). Les six
+  >   tranches sont sur la branche d'intégration. Gate : build OK, **515 tests serveur + 898
+  >   client**, `lint` a **tourné et rendu 0**, **FP 01→05 vertes**, **suite HP 3/3 verte**
+  >   (+ path 0), **aucun finding bloquant**.
+  >   **Reste à faire par le demandeur** : passer `npm run repair:clocks -w server -- <db>` sur la
+  >   vraie base — geste destructeur sur 434 PGN dont 10 parties analysées, vérifié à l'octet sur
+  >   des copies mais jamais joué sur l'original.
+  >   **Trois décisions ouvertes** : le repère « horloge basse » à 10 % du budget initial (choix de
+  >   l'agent, dans aucune ADR — déclaré au titre d'ADR-0027) ; la catégorie affichée en anglais
+  >   brut à côté de libellés français ; les coups les plus longs désignés par leur numéro sans le
+  >   SAN.
   >   Se grille **entière** — récupérer la donnée de temps *et* l'exploiter (décision du demandeur ;
   >   une story amont dédiée à la seule récupération a été proposée puis écartée).
   >   **Priorité relevée par une mesure** : le focus du demandeur est **blitz + rapide**, or `rapid`
