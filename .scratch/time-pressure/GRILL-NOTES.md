@@ -1,7 +1,7 @@
 # US-15b — La pression du temps — notes de grilling
 
-**Statut : grilling EN COURS**, rounds 2, 3 et 4 tranchés le 2026-09-08 ; reste **Q23** sur la
-frontière — la dernière à ma connaissance. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
+**Statut : grilling EN COURS**, rounds 2 à 5 tranchés le 2026-09-08 ; reste **Q24** sur la
+frontière. Branche `integration/US-15b-time-pressure`, depuis `develop` @ `cd9e392` (juste après le
 merge de la PR #108).
 
 **`CONTEXT.md` porte désormais les trois termes** (`Time control`, `Clock`, `Time spent`) tranchés en
@@ -335,30 +335,46 @@ s'applique pas ici**, et c'est écrit pour que personne ne tente de la resserrer
 **Réservation assumée** : ces colonnes n'ont **aucun lecteur** à la sortie de 15b. Une colonne sans
 lecteur est normalement une odeur ; celle-ci est une réservation délibérée, d'où l'ADR.
 
+### Q23 — **(b)** Une décimale là où la source en a, **seconde entière sur lichess**
+Le PGN lichess étant arrondi à la seconde, un `Time spent` lichess est une différence de deux
+entiers de secondes : il finirait **toujours** par `,0` pour une valeur juste à ±1 s. La colonne dit
+donc la vérité sur sa propre précision, au prix de deux formats dans une colonne. Même famille
+d'arbitrage que Q14 (ne pas inventer un zéro), ADR-0023 (ne pas affirmer une catégorie qu'on
+classerait mal) et `CONTEXT.md` (« sans objet » n'est pas « pas d'horloge »). **C'est le premier
+endroit où le coût d'ADR-0029 devient visible à l'écran.**
+
 ### Q22 — **Centisecondes en base, secondes à une décimale à l'écran**
 Entiers en centisecondes pour tout ce qui est stocké et calculé : c'est l'unité de lichess, la plus
 fine que la matière porte, et un entier ne dérive pas — des secondes en flottant feraient boiter les
 sommes sur un axe dont toute la valeur porte sur des écarts de quelques dixièmes. Le rendu est en
 secondes à **une décimale**.
 
-### Q23 — Une décimale sur lichess affiche une précision qu'on n'a pas
-Créée par Q22 croisée avec la mesure d'ADR-0029, et c'est **le premier endroit où le coût de cette
-ADR devient visible à l'écran**. Le PGN lichess étant arrondi à la seconde, un `Time spent` lichess
-est une différence de deux entiers de secondes : il finira **toujours** par `,0` — et sa vraie marge
-est de ±1 s. Afficher `2,0 s` là où la valeur vit dans ~[1,0 ; 3,0] revendique une précision absente,
-pendant que la même colonne affiche `1,8 s` sur chess.com, où le chiffre est réel.
+### Q24 — Par quoi le rafraîchissement est-il **déclenché** ?
+Trou repéré après avoir annoncé la frontière vide : les 434 PGN ne se remplacent pas tout seuls, et
+rien ne disait par quel geste.
 
-- **(a)** une décimale partout, comme tranché : la colonne est homogène, les valeurs lichess sont
-  toutes en `,0` et fausses d'un cran.
-- **(b)** une décimale là où la source a des dixièmes, **seconde entière sur lichess** : la colonne
-  dit la vérité sur sa propre précision, au prix de deux formats dans une colonne.
-- **(c)** une décimale partout, plus une mention de la précision lichess quelque part à l'écran.
+- **(i) un CLI de réparation à usage unique** — `npm run repair:clocks -w server -- <db-file>`, sur
+  le modèle exact de `repair:provenance` ;
+- **(ii) un bouton / une route dans l'app**, sur l'écran d'import ;
+- **(iii) replié dans l'import ordinaire** : un import de la plage rafraîchirait au passage les
+  parties sans horloge.
 
-➡️ **(b).** Le projet a déjà tranché ce genre d'arbitrage dans ce sens : Q14 refuse d'inventer un
-zéro, ADR-0023 refuse d'affirmer une catégorie qu'on classerait mal, et `CONTEXT.md` refuse de dire
-« pas d'horloge » quand la vraie phrase est « sans objet ». Un `,0` systématique est de la même
-famille — une décimale qui affirme quelque chose que la donnée ne porte pas. **(c)** met la nuance
-loin de l'endroit où on lit le chiffre, ce qui est la façon la plus sûre de ne pas la lire.
+➡️ **(i).** C'est une correction **unique** de 434 lignes : une fois passée elle ne retourne jamais,
+puisque les imports suivants envoient `clocks=true` dès le départ. Un bouton serait une surface
+**permanente** pour un besoin **temporaire**. Et **(iii)** est à rejeter fermement : il ferait de
+« déjà présente » une écriture, et l'assertion d'ADR-0030 se mettrait à échouer **pendant un import
+de routine** — un geste correctif mélangé à un geste ordinaire.
+
+**Ce que (i) apporte gratuitement, et qui est dû :** le précédent
+`server/src/repair/reset-provenance-cli.ts` prend une **`.backup`** avant d'écrire, et *montre son
+travail* (lectures avant, sauvegarde, lignes changées, lectures après). ADR-0015 l'exige ici aussi.
+**Le piège à ne pas repayer** : `.backup`, **jamais `cp`** — mesuré sur ce projet le 2026-08-27,
+un `cp` d'une base avec un `-wal` vivant a produit une copie qui **se relisait propre en ayant perdu
+une table entière**.
+
+**Conséquence sur la FP (Q7)** : l'étape de rafraîchissement s'exerce au niveau CLI contre la
+fixture, et la partie **visible** (la colonne temps, la lecture par partie) s'exerce dans l'UI. Même
+partage qu'aux tranches serveur d'US-15a.
 
 ### Downstream, pas encore sur la frontière
 - **L'interaction avec le coup forcé** : un coup joué en 0,3 s parce qu'il était forcé n'est pas de
