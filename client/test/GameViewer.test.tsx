@@ -42,6 +42,7 @@ const NO_TIME: GameTime = {
   plies: [],
   absence: "not-recorded",
   precision: null,
+  reading: null,
 };
 
 /** The annotations payload of a Game the engine has never seen: no ply, no
@@ -664,6 +665,7 @@ describe("GameViewer — the time per Move", () => {
     ],
     absence: null,
     precision: "tenths",
+    reading: null,
   };
 
   const moveItems = () =>
@@ -717,6 +719,7 @@ describe("GameViewer — the time per Move", () => {
       plies: [],
       absence: "not-applicable",
       precision: null,
+      reading: null,
     });
 
     render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
@@ -732,6 +735,7 @@ describe("GameViewer — the time per Move", () => {
       plies: [],
       absence: "not-recorded",
       precision: null,
+      reading: null,
     });
 
     render(<GameViewer game={{ ...OPERA_GAME }} />);
@@ -762,5 +766,77 @@ describe("GameViewer — the time per Move", () => {
 
     const header = await screen.findByRole("region", { name: "partie" });
     expect(header.textContent).not.toContain("cadence inconnue");
+  });
+});
+
+/**
+ * The Game's own reading of the time (US-15b, slice 03), in the recap panel.
+ * Every figure is a fold over the column beside it (ADR-0017) — the Player must
+ * be able to recoup the panel by hand, which is the EPIC's audit requirement.
+ */
+describe("GameViewer — the Game's time reading", () => {
+  const READ: GameTime = {
+    timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
+    plies: [
+      { ply: 0, clockCs: null, spentCs: null },
+      { ply: 1, clockCs: 18_000, spentCs: 200 },
+      { ply: 2, clockCs: 17_850, spentCs: 350 },
+    ],
+    absence: null,
+    precision: "tenths",
+    reading: {
+      moves: 1,
+      totalSpentCs: 200,
+      lowClockCs: 1_800,
+      underLowClock: 0,
+      longest: [{ ply: 1, spentCs: 200 }],
+      timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
+    },
+  };
+
+  it("states the total spent, the low-clock count and the longest Moves", async () => {
+    stubUnanalyzed(READ);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    expect(panel.textContent).toContain("2,0 s");
+    expect(panel.textContent).toMatch(/1 coup/);
+  });
+
+  it("names the low-clock mark it counted against, so the Player can count the same Moves", async () => {
+    stubUnanalyzed(READ);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    // 18 s here — a tenth of the 3-minute budget. Stated, never hidden: a figure
+    // the Player cannot recount is a figure they have to believe.
+    expect(panel.textContent).toContain("18 s");
+  });
+
+  it("is there on a Game the engine has never seen, where the analysis recap is not", async () => {
+    stubUnanalyzed(READ);
+
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    await screen.findByRole("region", { name: /temps/i });
+    // The analysis recap is a different panel and is genuinely absent here.
+    expect(screen.queryByRole("region", { name: /apporte à l'analyse/i })).toBeNull();
+  });
+
+  it("says « sans objet » on a correspondence Game rather than a reading at zero", async () => {
+    stubUnanalyzed({
+      timeControl: { kind: "correspondence", daysPerMove: 2 },
+      plies: [],
+      absence: "not-applicable",
+      precision: null,
+      reading: null,
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
+
+    await screen.findByText(/sans objet/i);
+    expect(screen.queryByRole("region", { name: /temps/i })).toBeNull();
   });
 });

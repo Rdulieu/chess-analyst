@@ -30,6 +30,8 @@ export type {
   PlyTime,
   ClockPrecision,
   NoClockReason,
+  TimeReading,
+  LongMove,
 } from "./annotation";
 export type { DeclaredSeverity, PersonalMark, PersonalAnalysis } from "./personal";
 export { DECLARED_SEVERITIES } from "./personal";

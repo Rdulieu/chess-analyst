@@ -11,6 +11,7 @@ import { phaseBands } from "../chess/phaseBands";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
+import { TimeReadingReadout } from "../features/analysis/TimeReadingReadout";
 import { formatClock, formatDuration } from "../chess/moveTime";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
@@ -509,6 +510,16 @@ export function Board({
         (CONTEXT.md): Annotated is exactly what US-7 and US-14 delivered, and the
         record is what Detailed adds to it.
       */}
+      {/*
+        The Game's reading of the time, beside the analysis recap — one axis
+        among the others, which is why it is not visually set apart. It follows
+        NO Review mode and is not gated on `recap`: the time is not something the
+        engine said, and `rapid` — the cadence this feature exists for — has no
+        analysed Game to carry a recap at all.
+      */}
+      {time?.reading && (
+        <TimeReadingReadout reading={time.reading} precision={time.precision} />
+      )}
       {annotations && detailed && recap && <GameRecapReadout recap={recap} />}
       {annotations && detailed && (
         <MoveRecord

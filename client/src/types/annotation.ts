@@ -102,6 +102,38 @@ export interface GameTime {
   absence: NoClockReason | null;
   /** The precision the source carries; `null` when no Clock is recorded. */
   precision: ClockPrecision | null;
+  /** The Game's own reading of the time; `null` when it has no Clock to read. */
+  reading: TimeReading | null;
+}
+
+/** One of the Player's Moves, named by its ply and how long it took. */
+export interface LongMove {
+  ply: number;
+  spentCs: number;
+}
+
+/**
+ * What the whole Game says about the Player's time (US-15b).
+ *
+ * **Every figure is a fold over `GameTime.plies`**, never a parallel
+ * calculation (ADR-0017) — the Player must be able to recoup the panel against
+ * the column by hand, and a figure that could only be believed is the thing this
+ * app refuses. No threshold, no ranking, no "what to work on": those are US-15c
+ * and US-15d.
+ */
+export interface TimeReading {
+  moves: number;
+  totalSpentCs: number;
+  /** The mark "a low clock" was counted against — **stated**, so the Player can
+   *  count the same Moves. A tenth of the initial budget: a scale tied to the
+   *  cadence, not a number chosen on paper for every Game alike. */
+  lowClockCs: number;
+  underLowClock: number;
+  /** The Player's longest Moves, longest first. */
+  longest: LongMove[];
+  /** The cadence this reading is read **within** — carried so it can never be
+   *  compared across two `Time control category`s. */
+  timeControl: TimeControl;
 }
 
 /**

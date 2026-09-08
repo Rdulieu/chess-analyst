@@ -85,6 +85,9 @@ describe("getGameAnnotations", () => {
         ],
         absence: "not-recorded",
         precision: null,
+        // No Clock recorded, so there is nothing to fold — and a reading at zero
+        // would be a fabrication, not a summary.
+        reading: null,
       },
     });
   });

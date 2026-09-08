@@ -1,3 +1,4 @@
+import type { Game } from "../db/schema";
 import { loadGame } from "../chess/positions";
 
 /**
@@ -129,7 +130,67 @@ export interface GameTime {
   absence: NoClockReason | null;
   /** The precision the source carries; `null` when no Clock is recorded. */
   precision: ClockPrecision | null;
+  /** The Game's own reading of the time; `null` when it has no Clock to read. */
+  reading: TimeReading | null;
 }
+
+/** One of the Player's Moves, named by its ply and how long it took. */
+export interface LongMove {
+  ply: number;
+  spentCs: number;
+}
+
+/**
+ * What the whole Game says about the Player's time (US-15b, slice 03) — so the
+ * Player gets a readable verdict without counting thirty lines themselves.
+ *
+ * **Every figure here is a fold over `GameTime.plies`, never a parallel walk of
+ * the PGN.** That is ADR-0017's discipline: two implementations of one method
+ * agree only by luck, and the EPIC requires the Player be able to recoup the
+ * panel against the column **by hand**. A figure that could not be checked that
+ * way would have to be believed instead, which is the thing this app refuses.
+ *
+ * The Player's Moves only, like the rest of the recap.
+ *
+ * **No severity threshold, no ranking, no "what to work on".** Those are US-15c
+ * and US-15d, and ADR-0023 records what choosing a threshold on paper costs.
+ * What this owes 15c is a number per Move and a rule for the denominator.
+ */
+export interface TimeReading {
+  /** How many Moves the Player played — the denominator of everything here. */
+  moves: number;
+  /** Everything the Player spent, the sum of the column's own figures. */
+  totalSpentCs: number;
+  /**
+   * The mark "a low clock" is counted against, **stated** rather than hidden, so
+   * the Player can count the same Moves themselves. Derived from the cadence
+   * (a tenth of the initial budget), because a second in bullet and a second in
+   * classical are not the same second.
+   *
+   * It is a **scale**, not a severity threshold: it says what counts as little
+   * time on THIS cadence, and it classifies nothing.
+   */
+  lowClockCs: number;
+  /** How many of the Player's Moves were played under that mark. */
+  underLowClock: number;
+  /** The Player's longest Moves, longest first. */
+  longest: LongMove[];
+  /**
+   * The cadence this reading is to be read **within** — carried, so the reading
+   * can never be compared across two `Time control category`s. The rule that
+   * already governs `Weak opening`, and the reason the category exists.
+   */
+  timeControl: TimeControl;
+}
+
+/** How many of the Player's longest Moves the reading names. Enough to show a
+ *  pattern, few enough to stay a reading rather than a second column. */
+const LONGEST_SHOWN = 3;
+
+/** What counts as a low clock, as a fraction of the initial budget — a tenth:
+ *  6 s on a 60 s bullet Game, 30 s on a 5-minute blitz one. A SCALE tied to the
+ *  cadence, never a number chosen on paper for every Game alike. */
+const LOW_CLOCK_FRACTION = 10;
 
 /** `[%clk 0:03:00.8]` — the token, wherever it sits in the comment. A Lichess
  *  comment holds several (`"[%eval 0.18] [%clk 0:03:00]"`), so this matches the
@@ -164,7 +225,7 @@ function precisionOf(comments: (string | undefined)[]): ClockPrecision {
  * than a second pass over the PGN (ADR-0017: two implementations of one method
  * agree only by luck).
  */
-export function gameTime(pgn: string): GameTime {
+export function gameTime(pgn: string, playerColor: Game["playerColor"]): GameTime {
   const timeControl = timeControlOf(pgn);
   const history = loadGame(pgn).history();
   const comments = history.map((move) => move.commentAfter);
@@ -194,6 +255,45 @@ export function gameTime(pgn: string): GameTime {
     plies,
     absence: recorded ? null : daily ? "not-applicable" : "not-recorded",
     precision: recorded ? precisionOf(comments) : null,
+    // Folded from the very array above — the panel and the column cannot
+    // disagree, because there is only one set of numbers (ADR-0017).
+    reading: recorded ? readingOf(plies, playerColor, timeControl) : null,
+  };
+}
+
+/** Whether the half-move at this ply was played by the Player. Ply 1 is White's
+ *  first, so odd plies are White's. */
+function isPlayers(ply: number, playerColor: Game["playerColor"]): boolean {
+  return ply > 0 && (ply % 2 === 1) === (playerColor === "white");
+}
+
+/**
+ * The Game's reading, folded over the Moves' own figures.
+ *
+ * `null` when there is no real-time cadence to read it within: without one there
+ * is no scale for "a low clock", and inventing one would be exactly the
+ * paper-chosen threshold this story refuses.
+ */
+function readingOf(
+  plies: PlyTime[],
+  playerColor: Game["playerColor"],
+  timeControl: TimeControl | null,
+): TimeReading | null {
+  if (timeControl === null || timeControl.kind !== "realtime") return null;
+  const mine = plies.filter((ply) => isPlayers(ply.ply, playerColor));
+  const lowClockCs = Math.round(timeControl.initialCs / LOW_CLOCK_FRACTION);
+
+  return {
+    moves: mine.length,
+    totalSpentCs: mine.reduce((total, ply) => total + (ply.spentCs ?? 0), 0),
+    lowClockCs,
+    underLowClock: mine.filter((ply) => ply.clockCs !== null && ply.clockCs < lowClockCs).length,
+    longest: mine
+      .filter((ply): ply is PlyTime & { spentCs: number } => ply.spentCs !== null)
+      .sort((a, b) => b.spentCs - a.spentCs)
+      .slice(0, LONGEST_SHOWN)
+      .map((ply) => ({ ply: ply.ply, spentCs: ply.spentCs })),
+    timeControl,
   };
 }
 
