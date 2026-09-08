@@ -97,7 +97,18 @@
   >   ajoutés (**Time control**, **Clock**, **Time spent**, **Lichess division**), `Time control
   >   category` amendée ; **ADR-0029** (l'horloge est dérivée du PGN), **ADR-0030** (le
   >   rafraîchissement remplace le PGN et refuse un mouvement différent), **ADR-0031** (la division
-  >   lichess est un oracle, jamais la `Phase`). Prochaine étape : **`/to-spec`**.
+  >   lichess est un oracle, jamais la `Phase`).
+  >   **Spec** : `.scratch/time-pressure/SPEC.md` (`ready-for-agent`). **Découpée en 6 tickets**
+  >   sous `.scratch/time-pressure/tickets/`, tous `ready-for-agent`, implémentés sur la branche
+  >   d'intégration :
+  >   - `01-the-exact-time-control` — la cadence exacte de bout en bout *(aucun bloqueur)*
+  >   - `02-time-per-move` — le temps par coup dans le relevé *(bloqué par 01)* ; **livre les 1983
+  >     parties chess.com sans aucun rafraîchissement**
+  >   - `03-the-game-s-time-reading` — la lecture du temps sur la partie *(bloqué par 02)*
+  >   - `04-the-lichess-export-asks-for-clocks` — `clocks`/`division` + la migration *(bloqué par 02)*
+  >   - `05-the-cli-brings-back-the-434` — le CLI rapatrie les 434 parties *(bloqué par 03, 04)* ;
+  >     c'est **cette** tranche qui fait exister l'axe `rapid`
+  >   - `06-graft-onto-hp-01-and-the-pr` — greffe sur HP-01 et la PR *(bloqué par 01-05)*
   >   Se grille **entière** — récupérer la donnée de temps *et* l'exploiter (décision du demandeur ;
   >   une story amont dédiée à la seule récupération a été proposée puis écartée).
   >   **Priorité relevée par une mesure** : le focus du demandeur est **blitz + rapide**, or `rapid`
