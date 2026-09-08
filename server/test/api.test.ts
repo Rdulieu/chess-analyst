@@ -156,15 +156,22 @@ describe("games API", () => {
     const res = await request(app).get(`/api/games/${id}/annotations?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(200);
-    // The time block travels even here: it is read from the PGN, not from the
-    // engine (ADR-0029), and this Game declares no `[TimeControl]`.
-    expect(res.body).toEqual({
-      analyzed: false,
-      plies: [],
-      regime: null,
-      recap: null,
-      time: { timeControl: null },
+    expect(res.body).toMatchObject({ analyzed: false, plies: [], regime: null, recap: null });
+    // The time block travels even here — it is read from the PGN, not from the
+    // engine (ADR-0029). This 1858 Game declares no cadence and carries no
+    // `[%clk]`, so it is a real-time Game whose clock was never recorded, which
+    // is NOT the same fact as a correspondence Game having none to record.
+    expect(res.body.time).toMatchObject({
+      timeControl: null,
+      absence: "not-recorded",
+      precision: null,
     });
+    // One entry per half-move, plus the starting Position — index-aligned with
+    // every other per-Move array the payload serves.
+    expect(res.body.time.plies[0]).toEqual({ ply: 0, clockCs: null, spentCs: null });
+    expect(res.body.time.plies.every((ply: { clockCs: number | null }) => ply.clockCs === null)).toBe(
+      true,
+    );
   });
 
   it("GET /api/games/:id/annotations returns the per-ply annotations for an analyzed Game", async () => {

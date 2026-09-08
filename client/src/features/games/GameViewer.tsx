@@ -145,6 +145,11 @@ export function GameViewer({
         }}
         detailed={mode === "detailed"}
         recap={recap}
+        // The time follows NO Review mode: it is not something the engine said
+        // (ADR-0022 governs the engine's screen), it is what the Player did with
+        // their clock. Gating it on Unaided would hide it on every unanalysed
+        // Game, which is every `rapid` Game there is.
+        time={time}
         // Handed to the board as controls rather than stacked above it: they
         // belong with the readout they govern, and every line above the diagram is
         // height the diagram does not get — which is why BOTH states go through

@@ -27,6 +27,9 @@ export type {
   SearchRegime,
   TimeControl,
   GameTime,
+  PlyTime,
+  ClockPrecision,
+  NoClockReason,
 } from "./annotation";
 export type { DeclaredSeverity, PersonalMark, PersonalAnalysis } from "./personal";
 export { DECLARED_SEVERITIES } from "./personal";

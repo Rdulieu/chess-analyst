@@ -11,13 +11,14 @@ import { phaseBands } from "../chess/phaseBands";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
+import { formatClock, formatDuration } from "../chess/moveTime";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { moveName, plyNumber, startingPoint } from "../features/confrontation/moveName";
 import { BOARD_SQUARES } from "../chess/boardTheme";
-import type { GameRecap, MoveAnnotation } from "../types";
+import type { GameRecap, GameTime, MoveAnnotation } from "../types";
 
 /**
  * Interactive board for a Game: renders a Position, steps through the Game's
@@ -42,6 +43,7 @@ export function Board({
   annotations,
   detailed = false,
   recap = null,
+  time = null,
   orientation = "white",
   controls,
   keyboardStepping = false,
@@ -62,6 +64,13 @@ export function Board({
    * the Detailed panel. `null` on a Game with no recap to state.
    */
   recap?: GameRecap | null;
+  /**
+   * What this Game says about **time** (US-15b), or `null` while it is still
+   * loading. Read from the PGN, so it is present on a Game the engine has never
+   * seen — which is why it is not gated on `annotations` the way every engine
+   * readout here is. `rapid` has no analysed Game at all.
+   */
+  time?: GameTime | null;
   /**
    * A caller's own controls, read beside the board. Taken as a slot rather than
    * left above the board, because everything stacked above the diagram is height
@@ -418,6 +427,17 @@ export function Board({
               {!detailed && <ErrorTallyReadout annotations={annotations} />}
             </>
           )}
+          {/*
+            What the Game has to say about time, when it has nothing per-Move to
+            say. Stated once, above the list, rather than repeated as a blank on
+            thirty lines — and the two absences are NOT the same sentence
+            (CONTEXT.md → Clock): a correspondence Game has no clock to have,
+            where a real-time Game whose PGN carries none is a gap in what we
+            hold. Melting them would let a future aggregate average a fiction.
+          */}
+          {time?.absence && (
+            <p data-part="time-absence">{CLOCK_ABSENCE[time.absence]}</p>
+          )}
           <ol aria-label="moves">
             {plies.flatMap((ply, i) => {
               const annotation = annotations?.[i + 1];
@@ -474,6 +494,7 @@ export function Board({
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
+                  <MoveTime time={time} ply={i + 1} />
                 </li>,
               ].filter(Boolean);
             })}
@@ -511,4 +532,45 @@ interface BoardArrow {
 /** The arrow for a line's first ply, or `null` for a line with no ply to draw. */
 function arrowFor(ply: LinePly | undefined, color: string): BoardArrow | null {
   return ply ? { startSquare: ply.from, endSquare: ply.to, color } : null;
+}
+
+/**
+ * How each absence of a `Clock` is said — **in that absence's own words**
+ * (CONTEXT.md → `Clock`). Kept apart on purpose: "sans objet" asserts the Game
+ * never had a clock, and saying it of a Lichess Game whose clocks we simply
+ * never asked for would be false — and would make the refresh of slice 05 look
+ * like it had nothing to fix.
+ */
+const CLOCK_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
+  "not-applicable": "Temps par coup : sans objet (partie en correspondance).",
+  "not-recorded": "Temps par coup : pas d'horloge enregistrée pour cette partie.",
+};
+
+/**
+ * One half-move's time, in the record the Player already reads: **how long they
+ * took**, and **how much they had left**.
+ *
+ * The time spent leads, because that is what the Player *did*; the clock left is
+ * the pressure they did it under, and the two are different questions (the
+ * glossary keeps them apart for that reason). Both are named in **words** — a
+ * bare pair of numbers, or a tint, could not say which was which, and no cue
+ * here is chromatic only.
+ *
+ * Renders nothing at all when there is no figure. Never a `0` and never a blank
+ * placeholder: a fabricated zero is what a future aggregate would average.
+ */
+function MoveTime({ time, ply }: { time: GameTime | null; ply: number }) {
+  const entry = time?.plies[ply];
+  if (!entry || time === null) return null;
+  const spent = formatDuration(entry.spentCs, time.precision);
+  const left = formatClock(entry.clockCs, time.precision);
+  if (spent === null && left === null) return null;
+
+  return (
+    <span data-part="move-time">
+      {spent !== null && <span aria-label={`temps pris ${spent}`}>{spent}</span>}
+      {spent !== null && left !== null && " · "}
+      {left !== null && <span aria-label={`temps restant ${left}`}>{left}</span>}
+    </span>
+  );
 }

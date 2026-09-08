@@ -24,11 +24,14 @@ export function GameHeader({ game, time = null }: { game: Game; time?: GameTime 
    * category answers "what pace of game is this", the cadence answers "what were
    * the clocks set to", and `blitz` puts a 3+2 and a 5+0 in the same bucket.
    *
-   * `null` while the block is still loading and when the PGN declares none —
-   * said in words either way, because a blank or a `0` would read as a cadence
-   * of zero rather than as one we do not have.
+   * Three states, not two, and the third is why this is not a `??` chain.
+   * "Cadence inconnue" is a **claim about the Game**, and it is false while the
+   * answer is still in flight: `time === null` means *not answered yet* and says
+   * nothing at all, where a loaded block with no `timeControl` means the PGN
+   * genuinely declares none. Found by slice 01's Feature Path, which read the
+   * header mid-fetch and was told a falsehood.
    */
-  const cadence = timeControlLabel(time?.timeControl ?? null);
+  const cadence = time === null ? null : (timeControlLabel(time.timeControl) ?? "cadence inconnue");
 
   return (
     <section aria-label="partie">
@@ -49,7 +52,11 @@ export function GameHeader({ game, time = null }: { game: Game; time?: GameTime 
       ))}
       <p>
         {date} · {timeControlCategory} ·{" "}
-        <span data-part="time-control">{cadence ?? "cadence inconnue"}</span> ·{" "}
+        {cadence !== null && (
+          <>
+            <span data-part="time-control">{cadence}</span> ·{" "}
+          </>
+        )}
         {opening ? `${opening.eco} — ${opening.name}` : "ouverture non classée"}
       </p>
     </section>

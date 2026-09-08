@@ -74,7 +74,18 @@ describe("getGameAnnotations", () => {
       plies: [],
       regime: null,
       recap: null,
-      time: { timeControl: null },
+      time: {
+        timeControl: null,
+        // "1. e4" — one half-move, and no `[%clk]` on it. A real-time Game with
+        // no clock recorded, which is a different fact from a correspondence
+        // Game having none to record.
+        plies: [
+          { ply: 0, clockCs: null, spentCs: null },
+          { ply: 1, clockCs: null, spentCs: null },
+        ],
+        absence: "not-recorded",
+        precision: null,
+      },
     });
   });
 

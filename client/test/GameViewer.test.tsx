@@ -37,7 +37,12 @@ function stubAnnotations(plies: MoveAnnotation[], time: GameTime = NO_TIME) {
 
 /** A Game whose PGN declares no `[TimeControl]` — absent, which is what most of
  *  these fixtures are, and never a zero. */
-const NO_TIME: GameTime = { timeControl: null };
+const NO_TIME: GameTime = {
+  timeControl: null,
+  plies: [],
+  absence: "not-recorded",
+  precision: null,
+};
 
 /** The annotations payload of a Game the engine has never seen: no ply, no
  *  recap — and a time block all the same (ADR-0029). */
@@ -600,7 +605,7 @@ describe("GameViewer — one board, one author (US-23, ADR-0022)", () => {
  */
 describe("GameViewer — the exact Time control", () => {
   it("names the cadence beside the category, not instead of it", async () => {
-    stubUnanalyzed({ timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 } });
+    stubUnanalyzed({ ...NO_TIME, timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 } });
 
     render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "blitz" }} />);
 
@@ -611,7 +616,7 @@ describe("GameViewer — the exact Time control", () => {
   });
 
   it("names the days per move of a correspondence Game", async () => {
-    stubUnanalyzed({ timeControl: { kind: "correspondence", daysPerMove: 2 } });
+    stubUnanalyzed({ ...NO_TIME, timeControl: { kind: "correspondence", daysPerMove: 2 }, absence: "not-applicable" });
 
     render(
       <GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />,
@@ -634,11 +639,128 @@ describe("GameViewer — the exact Time control", () => {
   it("asks for the annotations even on a Game the engine has never seen", async () => {
     // The structural assertion of the story: `rapid` has no analysed Game at
     // all, so a fetch gated on `analyzed` would leave that cadence blank.
-    stubUnanalyzed({ timeControl: { kind: "realtime", initialCs: 60_000, incrementCs: 0 } });
+    stubUnanalyzed({ ...NO_TIME, timeControl: { kind: "realtime", initialCs: 60_000, incrementCs: 0 } });
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
     const header = await screen.findByRole("region", { name: "partie" });
     await waitFor(() => expect(header.textContent).toContain("10+0"));
+  });
+});
+
+/**
+ * The time per Move, in the record the Player already reads (US-15b, slice 02).
+ * The 1983 chess.com Games carry a `[%clk]` on every half-move and nothing read
+ * them before this slice.
+ */
+describe("GameViewer — the time per Move", () => {
+  /** "1. e4 e5" on a 3+2, at the tenth precision chess.com writes. */
+  const TIMED: GameTime = {
+    timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
+    plies: [
+      { ply: 0, clockCs: null, spentCs: null },
+      { ply: 1, clockCs: 18_000, spentCs: 200 },
+      { ply: 2, clockCs: 17_850, spentCs: 350 },
+    ],
+    absence: null,
+    precision: "tenths",
+  };
+
+  const moveItems = () =>
+    within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
+
+  it("gives every half-move the time spent and the time left, the Player's and the opponent's", async () => {
+    stubUnanalyzed(TIMED);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    await waitFor(() => {
+      const first = moveItems()[0].textContent ?? "";
+      // 2 s of thought, 3 min left. Both figures, on the Player's own Move.
+      expect(first).toContain("2,0 s");
+      expect(first).toContain("3 min 0,0 s");
+    });
+    // And on the opponent's — who suffered the pressure and who inflicted it is
+    // the question, so both sides are measured.
+    const second = moveItems()[1].textContent ?? "";
+    expect(second).toContain("3,5 s");
+  });
+
+  it("names both figures, so the Player knows which is which", async () => {
+    stubUnanalyzed(TIMED);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    // Text, not a bare pair of numbers, and not a colour: the guard-rail is that
+    // no cue is chromatic only.
+    const spent = await screen.findAllByLabelText(/temps pris/i);
+    expect(spent.length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/temps restant/i).length).toBeGreaterThan(0);
+  });
+
+  it("prints a whole second, with no decimal, where the source rounds to the second", async () => {
+    stubUnanalyzed({ ...TIMED, precision: "seconds" });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    await waitFor(() => {
+      const first = moveItems()[0].textContent ?? "";
+      expect(first).toContain("2 s");
+      // A tenth here would claim a precision the PGN never carried (±1 s).
+      expect(first).not.toContain("2,0 s");
+    });
+  });
+
+  it("says « sans objet » on a correspondence Game, and shows no zero", async () => {
+    stubUnanalyzed({
+      timeControl: { kind: "correspondence", daysPerMove: 2 },
+      plies: [],
+      absence: "not-applicable",
+      precision: null,
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
+
+    await screen.findByText(/sans objet/i);
+    // Never a `0` standing in for a figure the app does not have.
+    expect(screen.queryByLabelText(/temps pris/i)).toBeNull();
+  });
+
+  it("distinguishes a clock never recorded from one that does not apply", async () => {
+    stubUnanalyzed({
+      timeControl: { kind: "realtime", initialCs: 60_000, incrementCs: 0 },
+      plies: [],
+      absence: "not-recorded",
+      precision: null,
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    // A real-time Game whose clock we simply do not hold. Saying "sans objet"
+    // here would claim the Game had no clock, which is false.
+    await screen.findByText(/pas d'horloge enregistrée/i);
+    expect(screen.queryByText(/sans objet/i)).toBeNull();
+  });
+
+  it("shows the times on a Game the engine has never seen", async () => {
+    // The structural assertion: `rapid` has zero analysed Games.
+    stubUnanalyzed(TIMED);
+
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    await waitFor(() => expect(moveItems()[0].textContent).toContain("2,0 s"));
+    // …while the engine's own record is genuinely absent.
+    expect(screen.queryByRole("radiogroup", { name: /niveau de revue/i })).toBeNull();
+  });
+
+  it("claims no cadence while the block is still loading", async () => {
+    // "cadence inconnue" is a CLAIM, and it is false before the answer arrives.
+    // Found by the slice-01 Feature Path, which read the header mid-fetch.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const header = await screen.findByRole("region", { name: "partie" });
+    expect(header.textContent).not.toContain("cadence inconnue");
   });
 });

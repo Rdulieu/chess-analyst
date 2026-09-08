@@ -68,6 +68,52 @@ export function timeControlOf(pgn: string): TimeControl | null {
 }
 
 /**
+ * How precise a Game's `Clock` readings actually are — a property of the
+ * material, not a display preference (ADR-0029).
+ *
+ * chess.com's PGN writes tenths (`0:01:00.8`); Lichess's rounds to the nearest
+ * second (180.03 → `0:03:00`, 66.75 → `0:01:07`). So a `Time spent` — a
+ * difference of two readings — is good to ±0.2 s on one Platform and ±1 s on
+ * the other. The screen prints a decimal only where one is real: the column has
+ * to tell the truth about its own precision, or the Player learns to distrust
+ * every figure in it.
+ */
+export type ClockPrecision = "tenths" | "seconds";
+
+/**
+ * Why a Game carries no `Clock`. **These are two different facts and melting
+ * them would be the story's central mistake:**
+ *
+ * - `not-applicable` — a `correspondence` Game. There is no clock to have; the
+ *   Platform never had one. It reads "sans objet".
+ * - `not-recorded` — a real-time Game whose PGN carries no `[%clk]`. The clock
+ *   existed and we do not hold it. Every one of the 434 Lichess Games in the
+ *   corpus is in this state until the refresh of slice 05, because the export
+ *   was never asked for `clocks=true`.
+ *
+ * Said as one, "pas d'horloge" would mean both, and a future aggregate would
+ * average an absence that is a fact together with one that is a gap.
+ *
+ * This absence deliberately does **not** travel through `UncountedReason`, which
+ * holds two values by decision (ADR-0023) and serves the `Counted Move`
+ * denominator. The clock declares its own holes.
+ */
+export type NoClockReason = "not-applicable" | "not-recorded";
+
+/** One half-move's time. Ply-indexed like every other per-Move array here:
+ *  index 0 is the starting Position, which no side has played to. */
+export interface PlyTime {
+  ply: number;
+  /** What the side had left after playing this half-move; `null` when unknown. */
+  clockCs: number | null;
+  /** How long this half-move took, **derived** and never stored (ADR-0009):
+   *  the same side's previous `Clock` minus this one, plus the increment — and
+   *  for a side's first Move, `initial + increment − Clock`. `null` where it
+   *  cannot be derived, never `0`. */
+  spentCs: number | null;
+}
+
+/**
  * What a Game says about time, as every read path receives it (US-15b).
  *
  * Read from the PGN, so it exists on a Game the engine has never seen — which
@@ -77,10 +123,116 @@ export function timeControlOf(pgn: string): TimeControl | null {
 export interface GameTime {
   /** The exact clock setting, or `null` when the PGN declares none. */
   timeControl: TimeControl | null;
+  /** Every half-move's time, index 0 being the starting Position. */
+  plies: PlyTime[];
+  /** `null` when Clocks are recorded; otherwise **why** they are not. */
+  absence: NoClockReason | null;
+  /** The precision the source carries; `null` when no Clock is recorded. */
+  precision: ClockPrecision | null;
 }
 
-/** Everything a Game's PGN says about time. One entry point, so no caller
- *  assembles the block itself and no two callers assemble it differently. */
+/** `[%clk 0:03:00.8]` — the token, wherever it sits in the comment. A Lichess
+ *  comment holds several (`"[%eval 0.18] [%clk 0:03:00]"`), so this matches the
+ *  token rather than the whole string (ADR-0029). */
+const CLOCK_TOKEN = /\[%clk\s+(\d+):(\d{1,2}):(\d{1,2}(?:\.\d+)?)\s*\]/;
+
+/** One `[%clk]` reading in centiseconds, or `null` when the comment holds none. */
+function clockIn(comment: string | undefined): number | null {
+  if (comment === undefined) return null;
+  const found = CLOCK_TOKEN.exec(comment);
+  if (found === null) return null;
+  const [, hours, minutes, seconds] = found;
+  // Rounded, not truncated: the seconds field carries at most a tenth, and
+  // floating-point multiplication of `0.8` does not land on an integer.
+  return Math.round((Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds)) * 100);
+}
+
+/** Whether any reading carries a fraction of a second — which is what says the
+ *  source writes tenths rather than whole seconds. */
+function precisionOf(comments: (string | undefined)[]): ClockPrecision {
+  const tenths = comments.some((comment) => {
+    const found = comment === undefined ? null : CLOCK_TOKEN.exec(comment);
+    return found !== null && found[3].includes(".");
+  });
+  return tenths ? "tenths" : "seconds";
+}
+
+/**
+ * Everything a Game's PGN says about time. **One entry point**, so no caller
+ * assembles the block itself and no two callers assemble it differently — and
+ * the per-Game reading of slice 03 is a fold over exactly these numbers rather
+ * than a second pass over the PGN (ADR-0017: two implementations of one method
+ * agree only by luck).
+ */
 export function gameTime(pgn: string): GameTime {
-  return { timeControl: timeControlOf(pgn) };
+  const timeControl = timeControlOf(pgn);
+  const history = loadGame(pgn).history();
+  const comments = history.map((move) => move.commentAfter);
+
+  // A correspondence Game HAS a Time control and has no Clock — the Platform
+  // exposes none, and the `[%clk]` chess.com does write on its `daily` Games is
+  // non-monotone and outside any 24 h budget, i.e. interpretable as nothing.
+  // Measured 2026-09-08; reading it would fabricate a pressure nobody was under.
+  const daily = timeControl?.kind === "correspondence";
+  const readings = daily ? [] : comments.map(clockIn);
+  const recorded = readings.some((reading) => reading !== null);
+
+  const plies: PlyTime[] = [
+    // Ply 0 is the starting Position: no side has played to it, so it carries
+    // no Clock and no Time spent. Stated, not omitted, so the array stays
+    // index-aligned with every other per-Move array the payload serves.
+    { ply: 0, clockCs: null, spentCs: null },
+    ...readings.map((clockCs, index) => ({
+      ply: index + 1,
+      clockCs,
+      spentCs: spentAt(readings, index, timeControl),
+    })),
+  ];
+
+  return {
+    timeControl,
+    plies,
+    absence: recorded ? null : daily ? "not-applicable" : "not-recorded",
+    precision: recorded ? precisionOf(comments) : null,
+  };
+}
+
+/**
+ * How long the half-move at `index` (0-based over the Moves) took.
+ *
+ * A side's clock is compared with **its own** previous reading, two plies back —
+ * never with the opponent's — and the increment it was granted for playing is
+ * added back, otherwise every Move on an incremented cadence reads as faster
+ * than it was, and a Move that gained time reads as negative.
+ *
+ * A side's **first** Move has no previous reading, so the cadence supplies it:
+ * `initial + increment − Clock`. That is what stops line 1 being a hole.
+ *
+ * `null` — never `0` — wherever the difference cannot be taken: no Clock here,
+ * none to compare against, or no Time control to name the increment.
+ */
+function spentAt(
+  readings: (number | null)[],
+  index: number,
+  timeControl: TimeControl | null,
+): number | null {
+  const clock = readings[index];
+  if (clock === null || clock === undefined) return null;
+  // Only a real-time cadence carries an increment and an initial budget; without
+  // one there is no honest difference to state.
+  if (timeControl === null || timeControl.kind !== "realtime") return null;
+
+  const previous = index >= 2 ? readings[index - 2] : undefined;
+  const spent =
+    previous === null || previous === undefined
+      ? // A side's first Move, measured against the budget it started from.
+        timeControl.initialCs + timeControl.incrementCs - clock
+      : previous + timeControl.incrementCs - clock;
+
+  // A Move cannot take less than no time. A small negative here is an artefact
+  // of the PGN's rounding — Lichess rounds to the second, so a difference is
+  // only good to ±1 s (ADR-0029) — and printing "−0,4 s of thought" would be a
+  // reading of the app, not of the Game. Floored rather than dropped, because
+  // the Move WAS played and its time is genuinely near zero.
+  return Math.max(0, spent);
 }
