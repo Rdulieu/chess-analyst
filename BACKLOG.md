@@ -112,8 +112,13 @@
   >   Se grille **entière** — récupérer la donnée de temps *et* l'exploiter (décision du demandeur ;
   >   une story amont dédiée à la seule récupération a été proposée puis écartée).
   >   **Priorité relevée par une mesure** : le focus du demandeur est **blitz + rapide**, or `rapid`
-  >   n'a **1 partie sur 231** qui porte l'horloge (230 sont lichess) et **aucune analysée**. Le
+  >   n'a **aucune partie** qui porte l'horloge (230 sur 231 sont lichess) et **aucune analysée**. Le
   >   rafraîchissement ne complète pas un corpus, **il fait exister l'axe rapid**.
+  >   **« 1 partie sur 231 » était un artefact, corrigé le 2026-09-08 à la livraison** : la sonde
+  >   comptait avec `LIKE '%[%clk%'`, sans espace après `clk`, et matchait donc l'en-tête
+  >   `[Black "Omer_clkc"]` — un nom de joueur. Le vrai compte était **zéro**. Trouvé par la FP de la
+  >   tranche 05 sur le vrai corpus ; le même motif fautif était dans le CLI, où il faussait le seul
+  >   chiffre affiché pour prouver le travail.
   >   **Prémisse corrigée le 2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.**
   >   `clocks=true` n'est pas envoyé à l'export (`platform/lichess/client.ts` n'envoie que `since`,
   >   `until`, `pgnInJson`, `opening`, `sort`), donc le PGN arrive **sans** `[%clk]`. **Chiffres

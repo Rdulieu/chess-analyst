@@ -187,6 +187,23 @@ three passes together, and read `subjects` before reading `failures`.
 > rather than pretending the cue is covered; closing it means changing a selection rule, and a
 > selection rule tuned for cost is exactly what this suite warns about tuning.
 
+> **The severity glyphs on Analyse have been carried by nobody since US-28, measured 2026-09-09.**
+> The sentence above says HP-01 "is the scenario that carries the severity glyphs" — and it no
+> longer does. The `Review mode` is not remembered any more (US-28: every review starts Unaided),
+> so the pass, which opens a Game and audits it **as it lands**, always audits Analyse at
+> **Unaided** — where `?!` `?` `??`, the advantage bar and the `Evaluation curve` have no subject at
+> all. The rule is **dropped, not failed**, in all 36 readings, and HP-01's own step 11 asks for
+> exactly what nobody is checking.
+>
+> Same shape as the danger ⚠ hole above, and unlike it this one is **cheap to close**: the pass has
+> to ask for `Annoté` on the Game it opens, rather than take the level it is given. Until it does,
+> the US-15b run closed it **by hand** — four extra readings of `/analyse/<analysed game>` at
+> `Annoté`, both themes, both widths, all clean, the glyphs legible at night and at 380 px. That is
+> evidence the tints are fine; it is not evidence the suite is watching them.
+>
+> Recorded here rather than fixed in passing: changing what the pass drives is a change to the
+> instrument, and it belongs to a slice that can measure the result.
+
 Assertions 1 to 5 are **measured, not eyeballed**: one browser-side function returns a report per
 screen, and the two themes are compared on the `constants` block for assertion 5. The theme itself is
 switched by **emulating** `prefers-color-scheme: dark` and never from inside the page — the app ships
