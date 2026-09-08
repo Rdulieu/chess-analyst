@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gameHeader } from "../src/features/games/gameHeader";
+import { gameHeader, timeControlLabel } from "../src/features/games/gameHeader";
 import { OPERA_GAME } from "./fixtures";
 
 describe("gameHeader", () => {
@@ -57,5 +57,36 @@ describe("gameHeader", () => {
     });
 
     expect(header.sides.find((s) => !s.isPlayer)?.name).toBe("Bob");
+  });
+});
+
+/**
+ * How the exact `Time control` is **said** (US-15b). The translation of the four
+ * platform spellings is the server's (ADR-0029) — this is only the wording, and
+ * it is here so the two are never confused for one another.
+ */
+describe("timeControlLabel", () => {
+  it("names a real-time cadence as its budget and its increment", () => {
+    expect(timeControlLabel({ kind: "realtime", initialCs: 18_000, incrementCs: 200 })).toBe("3+2");
+  });
+
+  it("keeps the zero increment written, so 5+0 and 5+3 read as the same kind of fact", () => {
+    expect(timeControlLabel({ kind: "realtime", initialCs: 30_000, incrementCs: 0 })).toBe("5+0");
+  });
+
+  it("says the budget in minutes and seconds when it is not a whole minute", () => {
+    // A 90-second bullet Game is `1:30`, not `1.5`.
+    expect(timeControlLabel({ kind: "realtime", initialCs: 9_000, incrementCs: 100 })).toBe(
+      "1:30+1",
+    );
+  });
+
+  it("names a correspondence allowance in days, agreeing in number", () => {
+    expect(timeControlLabel({ kind: "correspondence", daysPerMove: 1 })).toBe("1 jour par coup");
+    expect(timeControlLabel({ kind: "correspondence", daysPerMove: 3 })).toBe("3 jours par coup");
+  });
+
+  it("says a cadence it does not have as absent, never as a zero", () => {
+    expect(timeControlLabel(null)).toBeNull();
   });
 });

@@ -11,7 +11,7 @@ import { gameHeader } from "./gameHeader";
 import { ReviewModeControl } from "../review/ReviewModeControl";
 import { atLeastAnnotated, INITIAL_REVIEW_MODE, type ReviewMode } from "../review/reviewMode";
 import { noteEngineShown, showsEngine } from "../personal/engineSeen";
-import type { Game, GameRecap, MoveAnnotation } from "../../types";
+import type { Game, GameRecap, GameTime, MoveAnnotation } from "../../types";
 
 /**
  * Shows one selected Game on the interactive board. When the Game has been
@@ -48,6 +48,13 @@ export function GameViewer({
    *  derivation the future aggregate folds (ADR-0017). */
   const [recap, setRecap] = useState<GameRecap | null>(null);
   /**
+   * What this Game says about **time** (US-15b). Held apart from `recap` because
+   * it is derived from the PGN (ADR-0029) and therefore exists on a Game the
+   * engine has never seen — `rapid`, the cadence this story exists for, has no
+   * analysed Game at all.
+   */
+  const [time, setTime] = useState<GameTime | null>(null);
+  /**
    * The level for **this** review, and for no other. Every opening starts at
    * Unaided (US-28): a level is never carried over from another Game, nor from
    * another session. Neither this state nor the promotion below speaks for the
@@ -61,15 +68,20 @@ export function GameViewer({
   const positions = useMemo(() => parseGame(game.pgn).plies.length + 1, [game.pgn]);
 
   useEffect(() => {
-    if (!game.analyzed) return;
+    // Asked for **whatever `analyzed` says**, which it was not until US-15b: the
+    // payload now also carries the time block, and that block is read from the
+    // PGN. Gating the request on the engine would have left the time invisible
+    // on precisely the Games that have nothing but time to show.
     fetchGameAnnotations(game.id, game.profileId)
       .then((result) => {
-        setAnnotations(result.plies);
+        setAnnotations(result.analyzed ? result.plies : null);
         setRecap(result.recap);
+        setTime(result.time);
       })
       .catch(() => {
         setAnnotations(null);
         setRecap(null);
+        setTime(null);
       });
     // `game.profileId` belongs here: the annotations route is Profile-scoped now
     // (ADR-0014), so the Profile is part of what the request asks for.
@@ -111,7 +123,7 @@ export function GameViewer({
     // axis at all, and how much width is the stylesheet's call, not this
     // component's.
     <div>
-      <GameHeader game={game} />
+      <GameHeader game={game} time={time} />
       {/* The Player reads their own Game the way they played it (CONTEXT.md → Board orientation). */}
       <Board
         pgn={game.pgn}

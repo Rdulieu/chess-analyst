@@ -16,6 +16,13 @@ declare module "cm-chess" {
     to?: string;
     /** The promotion piece, on a promoting Move. */
     promotion?: string;
+    /**
+     * The PGN comment written **after** this half-move, as one string. It holds
+     * **several tokens** on a Lichess Game somebody analysed
+     * (`"[%eval 0.18] [%clk 0:03:00]"`), so reading the `Clock` out of it is a
+     * token extraction, never "the comment is the clock" (ADR-0029).
+     */
+    commentAfter?: string;
   }
 
   export class Chess {
@@ -28,6 +35,9 @@ declare module "cm-chess" {
     history(): CmMove[];
     /** The initial position's FEN (SetUp header, or the standard start). */
     setUpFen(): string;
+    /** The PGN's tag pairs (`TimeControl`, `White`, `Result`, …), keyed by tag
+     *  name — where the exact `Time control` is read from (ADR-0029). */
+    header(): Record<string, string | undefined>;
     fen(move?: CmMove): string;
   }
 }

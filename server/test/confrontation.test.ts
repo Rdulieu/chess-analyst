@@ -4,7 +4,7 @@ import type { GameConfrontation } from "../src/personal/confrontation";
 import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 import { gameRecap } from "../src/analysis/recap";
 import { gameNotations, gamePositions } from "../src/chess/positions";
-import type { GameAnnotations } from "../src/annotations/repository";
+import type { ConfrontableAnnotations } from "../src/personal/confrontation";
 import type { PersonalAnalysis, PersonalMark } from "../src/personal/repository";
 
 /**
@@ -24,7 +24,7 @@ const REGIME = { depth: 16, lines: 2 };
 const QUIET = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 /** What the API already serves for a Game — the confrontation's one engine-side input. */
-function annotationsOf(cps: number[] = QUIET): GameAnnotations {
+function annotationsOf(cps: number[] = QUIET): ConfrontableAnnotations {
   const evals = stored(PGN, cps);
   const game = { playerColor: "white" as const };
   return {
@@ -43,7 +43,7 @@ function annotationsFrom(
   fens: string[],
   cps: number[],
   playerColor: "white" | "black",
-): GameAnnotations {
+): ConfrontableAnnotations {
   const evals: StoredEvaluation[] = fens.map((fen, ply) => ({
     ply,
     fen,

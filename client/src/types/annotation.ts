@@ -73,6 +73,30 @@ export interface GameRecap {
   regime: SearchRegime | null;
 }
 
+/**
+ * The exact clock setting a Game was played under (CONTEXT.md, `Time control`),
+ * as the server derives it from the PGN (ADR-0029). Two shapes, because a
+ * real-time budget and a correspondence allowance are not the same kind of fact
+ * — folding them into one would invite subtracting days from seconds.
+ *
+ * Centiseconds, like every measured time here: the finest unit the material
+ * carries, and an integer that cannot drift over a sum.
+ */
+export type TimeControl =
+  | { kind: "realtime"; initialCs: number; incrementCs: number }
+  | { kind: "correspondence"; daysPerMove: number };
+
+/**
+ * What a Game says about **time** (US-15b) — served beside the annotations and
+ * deliberately outside `recap`, because it is read from the PGN and therefore
+ * exists on a Game the engine has never seen. `rapid` has no analysed Game at
+ * all, and it is the cadence this story exists for.
+ */
+export interface GameTime {
+  /** The exact clock setting, or `null` when the PGN declares none. */
+  timeControl: TimeControl | null;
+}
+
 /** `GET /api/games/:id/annotations` response: `plies` is empty when `analyzed` is `false`. */
 export interface GameAnnotations {
   analyzed: boolean;
@@ -81,4 +105,6 @@ export interface GameAnnotations {
   regime: SearchRegime | null;
   /** What this Game contributes; `null` when it has not been analyzed. */
   recap: GameRecap | null;
+  /** What this Game says about time — filled whatever `analyzed` says. */
+  time: GameTime;
 }

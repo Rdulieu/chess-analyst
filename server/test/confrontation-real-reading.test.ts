@@ -3,7 +3,7 @@ import { confrontGame, ConfrontationRefusal } from "../src/personal/confrontatio
 import { gameAnnotations } from "../src/analysis/derivation";
 import { gameRecap } from "../src/analysis/recap";
 import { gameNotations } from "../src/chess/positions";
-import type { GameAnnotations } from "../src/annotations/repository";
+import type { ConfrontableAnnotations } from "../src/personal/confrontation";
 import {
   realReading,
   realReadingEvaluations,
@@ -29,7 +29,7 @@ import {
  */
 const REGIME = { depth: 16, lines: 2 };
 
-function annotations(): GameAnnotations {
+function annotations(): ConfrontableAnnotations {
   const evals = realReadingEvaluations();
   const game = { playerColor: REAL_READING_COLOR };
   return {

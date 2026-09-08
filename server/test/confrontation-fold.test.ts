@@ -8,13 +8,13 @@ import {
 import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 import { gameRecap } from "../src/analysis/recap";
 import { gamePositions } from "../src/chess/positions";
-import type { GameAnnotations } from "../src/annotations/repository";
+import type { ConfrontableAnnotations } from "../src/personal/confrontation";
 import type { PersonalAnalysis, PersonalMark } from "../src/personal/repository";
 
 const PGN = "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. d3 d6";
 const REGIME = { depth: 16, lines: 2 };
 
-function annotationsOf(cps: number[]): GameAnnotations {
+function annotationsOf(cps: number[]): ConfrontableAnnotations {
   const fens = gamePositions(PGN);
   const evals: StoredEvaluation[] = cps.map((cp, ply) => ({
     ply,

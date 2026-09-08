@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { GameViewer } from "../src/features/games/GameViewer";
 import { OPERA_GAME } from "./fixtures";
-import type { MoveAnnotation } from "../src/types";
+import type { GameTime, MoveAnnotation } from "../src/types";
 /**
  * The current-Move readout names this Move — number then notation since US-23
  * (F3), so a test that means "the readout is on this Move" says that rather than
@@ -21,10 +21,37 @@ function expectCurrentMove(san: string) {
 }
 
 
-function stubAnnotations(plies: MoveAnnotation[]) {
+function stubAnnotations(plies: MoveAnnotation[], time: GameTime = NO_TIME) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ analyzed: true, plies }) }) as Response),
+    vi.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          json: async () => ({ analyzed: true, plies, time }),
+        }) as Response,
+    ),
+  );
+}
+
+/** A Game whose PGN declares no `[TimeControl]` — absent, which is what most of
+ *  these fixtures are, and never a zero. */
+const NO_TIME: GameTime = { timeControl: null };
+
+/** The annotations payload of a Game the engine has never seen: no ply, no
+ *  recap — and a time block all the same (ADR-0029). */
+function stubUnanalyzed(time: GameTime) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          json: async () => ({ analyzed: false, plies: [], regime: null, recap: null, time }),
+        }) as Response,
+    ),
   );
 }
 
@@ -169,20 +196,24 @@ describe("GameViewer", () => {
     expectCurrentMove("Start");
   });
 
-  it("does not fetch annotations, and offers no level control, for a not-yet-analyzed Game", () => {
+  it("fetches annotations even for a not-yet-analyzed Game, but offers no level control", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
-    // The annotations endpoint specifically — the page does ask for the last
-    // pass on mount, so that an unacknowledged summary reappears (US-8 02).
+    // **Reversed by US-15b, deliberately.** The request used to be gated on
+    // `analyzed`, and the payload now also carries the time block — read from the
+    // PGN, so it exists with no Evaluation behind it (ADR-0029). `rapid` has no
+    // analysed Game at all, so the old gate hid the time on exactly the cadence
+    // the feature exists for.
     expect(
       fetchMock.mock.calls
         .map(([url]) => url as string)
         .some((url) => url.startsWith(`/api/games/${OPERA_GAME.id}/annotations`)),
-    ).toBe(false);
-    // Nothing to reveal on an unanalysed Game, so the control offers nothing.
+    ).toBe(true);
+    // What has NOT changed: there is still nothing of the engine to reveal here,
+    // so the level control offers nothing.
     expect(screen.queryByRole("radiogroup", { name: /niveau de revue/i })).toBeNull();
   });
 
@@ -559,5 +590,55 @@ describe("GameViewer — one board, one author (US-23, ADR-0022)", () => {
     for (const severity of ["inaccuracy", "mistake", "blunder"]) {
       expect(container.querySelectorAll(`[style*='--square-${severity}']`)).toHaveLength(0);
     }
+  });
+});
+
+/**
+ * The exact `Time control`, on screen beside the category (US-15b, slice 01).
+ * The category confuses a 3+2 with a 5+0; naming the cadence is what separates
+ * them — and it must not *replace* the category, which says something else.
+ */
+describe("GameViewer — the exact Time control", () => {
+  it("names the cadence beside the category, not instead of it", async () => {
+    stubUnanalyzed({ timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 } });
+
+    render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "blitz" }} />);
+
+    const header = await screen.findByRole("region", { name: "partie" });
+    await waitFor(() => expect(header.textContent).toContain("3+2"));
+    // Both, because they answer different questions.
+    expect(header.textContent).toContain("blitz");
+  });
+
+  it("names the days per move of a correspondence Game", async () => {
+    stubUnanalyzed({ timeControl: { kind: "correspondence", daysPerMove: 2 } });
+
+    render(
+      <GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />,
+    );
+
+    const header = await screen.findByRole("region", { name: "partie" });
+    await waitFor(() => expect(header.textContent).toContain("2 jours par coup"));
+  });
+
+  it("says the cadence is unknown in words when the PGN declares none", async () => {
+    stubUnanalyzed(NO_TIME);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const header = await screen.findByRole("region", { name: "partie" });
+    // Never a blank and never a `0`: an absent cadence is stated as absent.
+    await waitFor(() => expect(header.textContent).toContain("cadence inconnue"));
+  });
+
+  it("asks for the annotations even on a Game the engine has never seen", async () => {
+    // The structural assertion of the story: `rapid` has no analysed Game at
+    // all, so a fetch gated on `analyzed` would leave that cadence blank.
+    stubUnanalyzed({ timeControl: { kind: "realtime", initialCs: 60_000, incrementCs: 0 } });
+
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
+
+    const header = await screen.findByRole("region", { name: "partie" });
+    await waitFor(() => expect(header.textContent).toContain("10+0"));
   });
 });

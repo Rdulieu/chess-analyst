@@ -156,7 +156,15 @@ describe("games API", () => {
     const res = await request(app).get(`/api/games/${id}/annotations?profileId=${SOLE_PROFILE}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ analyzed: false, plies: [], regime: null, recap: null });
+    // The time block travels even here: it is read from the PGN, not from the
+    // engine (ADR-0029), and this Game declares no `[TimeControl]`.
+    expect(res.body).toEqual({
+      analyzed: false,
+      plies: [],
+      regime: null,
+      recap: null,
+      time: { timeControl: null },
+    });
   });
 
   it("GET /api/games/:id/annotations returns the per-ply annotations for an analyzed Game", async () => {
