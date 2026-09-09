@@ -95,7 +95,7 @@ switching Profile takes them away and brings them back untouched.
 ### Surface
 - Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **82** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other two still offer "Sélectionner" — and nothing on the list overflows its container, and every scoped screen afterwards carries the banner naming `DudulSmash`. No screen is read before a Profile is current.
 - Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games). Since US-13 the board and the candidates sit side by side while there is room for both and **fold into one column** when there is not — in either case nothing is clipped and the page does not scroll sideways.
-- Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown; the win rate is consistent with standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; the per-cadence counts sum to the candidate's game count; no candidate is hidden for a small sample.
+- Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown, and the exact count behind each is visible; no candidate is hidden for a small sample. **Spot-check the arithmetic on one candidate** — its win rate consistent with standard scoring `(wins + 0.5·draws)/games`, its per-cadence counts summing to its game count — and check that every rate on screen lies within 0–100%, which is a *shape* assertion and cheap. Re-deriving the formula on every candidate is `server/test/move-habits.test.ts`'s and `openings.test.ts`'s job, in milliseconds.
 - Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold. On a Black-oriented board the arrows are mirrored with it — they still start and end on the squares the Moves name.
 - Step 5: selecting a list candidate replaces the shown candidates with those from the resulting Position; the breadcrumb gains that Move.
 - Step 6: descending from the board produces the **same** candidates and breadcrumb as the corresponding list entry would. Note the arrow overlay is `pointer-events: none`, so the arrows are drawn, not clicked: the click lands on the destination **square** underneath. Aim at the square, not at the arrow. On a Black-oriented board the squares keep their names but change place on screen — locate the target **by its square name**, never by where it sat on a White-oriented board.
@@ -104,9 +104,15 @@ switching Profile takes them away and brings them back untouched.
 - Step 9: the side-to-move readout **alternates** down the line while the orientation **does not move**, on the way down and on the way back up. Exploring as Black, the starting Position reads "Trait aux Blancs" — those candidates are `Opponent reply`s, not the Player's own habits — and the next level reads "Trait aux Noirs". Nothing on this page phrases the side to move as the Player's own.
 - Depth: once 40 Moves (20 full moves) deep, no further descent is offered.
 - Step 10: the view is a distinct page reached via navigation; with a non-empty history a table of openings is shown (not the empty-history invitation).
-- Step 11: every row shows a readable opening name **and** an ECO code, a side, a cadence, a game count, a spelled-out win/draw/loss tally, and a `Win rate`; the `Win rate` equals standard scoring `(wins + 0.5·draws)/games` and lies within 0–100%; each row's win/draw/loss parts sum to its game count; rows are in non-increasing game-count order.
+- Step 11: every row shows a readable opening name **and** an ECO code, a side, a cadence, a game count, a spelled-out win/draw/loss tally, and a `Win rate`; every rate lies within 0–100% and the rows are in non-increasing game-count order — both **shape** assertions, checkable at a glance over the whole table. **Spot-check the arithmetic on one or two rows** (`Win rate` = `(wins + 0.5·draws)/games`, parts summing to the count) rather than on all of them: `server/test/openings.test.ts` already asserts the tally, the rate and the sort order — "returns one entry per (opening, side, cadence), with its tally and Win rate, sorted by games desc" — and asserts them faster than a run can read the table.
 - Step 12: at least the highlight rule holds — every row under 50% is highlighted and no row at/above 50% is (a 50% row, if present, is **not** highlighted; the threshold is strict). The highlight is perceivable without relying on colour alone: since US-13 the row carries the review tint **with its own ink** plus a ⚠ marker whose accessible name is "ouverture faible à revoir" — the glyph is what is visible, the words are what a screen reader gets, and either survives if colour is not perceived at all.
 - Step 13: the sum of all entries' game counts equals the **82** Games the Profile holds (the count `/profiles` reports for it); if the account has any unclassified Game in scope, exactly one **Other** entry (per side/cadence) carries it.
+
+  > **This one stays exhaustive, and it is not the same kind of check as steps 3 and 11.** Those
+  > re-derive a formula the unit tests own; this is a **coverage** claim over the **real corpus** —
+  > "the aggregate loses no Game" — and a fixture-based test cannot make it, because it builds the
+  > corpus it then counts. It is one addition over a few dozen rows and costs a second. Do not
+  > lighten it along with the others (noted 2026-09-09, when steps 3 and 11 were lightened).
 - Step 14: under `Nonomoho` the `/openings` table is absent and the empty invitation is shown
   instead — an empty **state**, not an error and not a redirect — and the explorer likewise offers no
   candidate; the banner reads `Nonomoho`. Coming back to `DudulSmash` restores exactly the entries of
@@ -161,6 +167,13 @@ switching Profile takes them away and brings them back untouched.
 - Assert **shape and internal consistency** (counts present, parts sum, rate in range, list/arrow
   parity, counts sum to the import total, highlight rule, sort order), never fixed ECOs, frequencies
   or rates — the real games drive the values.
+- **Shape over the whole table; arithmetic on a sample.** The two are not the same cost and were
+  being paid alike. "Every rate lies in 0–100 %", "the rows are in non-increasing order" and "the
+  counts sum to the import total" are read at a glance over all the rows and stay exhaustive.
+  Re-deriving `(wins + 0.5·draws)/games` row by row is a **unit test's** job (`openings.test.ts`,
+  `move-habits.test.ts`) and is spot-checked here instead — a run that re-computes a formula
+  forty-six times buys nothing the millisecond test has not bought, and spends the suite's
+  wall clock doing it (2026-09-09).
 - Real chess.com PGNs carry `[ECO]`/`[ECOUrl]` headers, so most Games classify; a small **Other**
   bucket (aborted/very short Games) may or may not appear depending on the month — its absence is
   not a failure.
