@@ -166,18 +166,33 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    under the low-clock mark it **names**, and **two rankings** of their costliest Moves — one by
    seconds, one by share of the clock — each Move carrying both figures.
 
-   **Recoup the total by hand**: step through the Player's Moves, reading each one's time off the
-   line, and add them → the total the panel announces, exactly. It costs more steps than reading a
-   column did, and that is the price of the layout the requester chose; the audit itself is
-   unchanged and is still the EPIC's requirement. **Recoup the two rankings too** — they must be
-   the top three of their own ordering, and on a real Game they **disagree**: a long think early
-   and a short one on a nearly-flagged clock are different faults, which is why both are served.
+   **Spot-check, do not sum the Game.** Take **one** ordinary Move and **one** first Move, check
+   their arithmetic against the line, and read the panel for **coherence** — its total is of the
+   right order for the Moves played, its low-clock count is plausible against the clocks seen, its
+   two rankings **disagree** somewhere (a long think early and a short one on a nearly-flagged clock
+   are different faults, which is why both are served). That is the whole of what this step owes.
+
+   > **Why this step does NOT add up the whole Game** — requester's call, 2026-09-09, and it is the
+   > pyramid's own rule. Stepping through forty Moves to re-add a column is minutes of driving to
+   > re-prove what `server/test/time-reading.test.ts` proves in milliseconds — including against a
+   > **hand-computed oracle** (White's total on the reference Game, derived from the telescoping sum
+   > `initial + n × increment − last clock`, not echoed from the code). An agentic step that
+   > re-does a unit test's arithmetic buys nothing and costs the suite its running time.
+   >
+   > What this tier is for is the part no unit test can reach: that the **real screen**, on a
+   > **real Game**, shows those figures at all, in the right place, and agreeing with each other.
+   > A spot check establishes that; an exhaustive one establishes it no better.
 
    > **Why here, and why it costs nothing.** Step 9 has just reloaded onto a Game that step 7
    > established is **not analysed**, and time is read from the stored PGN, not from the engine
    > (ADR-0029). So this graft costs a few reads and **no engine time at all** — and it exercises
    > the story's own structural claim: the time is there **before** any analysis, which is the
    > entire reason `rapid`, with zero analysed Games, is a cadence this feature can serve.
+   >
+   > **Where the audit lives now.** The EPIC requires the panel be recoupable against the Moves by
+   > hand, and it still is — that requirement did not move. What moved is **who pays for checking
+   > it every run**: the exhaustive fold is a unit test's job, and this step's job is that the real
+   > screen shows it. The two are not the same assertion and neither replaces the other.
    >
    > **Rewritten 2026-09-09, and the first version is worth knowing about.** The figures were built
    > into the **move list**, two per row, and the acceptance criterion asked for exactly that
@@ -321,8 +336,11 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   carries **« Votre temps sur cette partie »** with **two rankings** — by seconds and by share — each
   Move stating both figures in the **same wording**, so what a reader compares between the lists is
   the ordering and nothing else. Every figure in the panel is **the sum or the extremum of what the
-  Moves carry**: stepping through the Player's Moves and adding their times gives the announced
-  total **exactly**, and the low-clock count recounts against a mark the panel **names**. All of
+  Moves carry** — asserted here by **spot check and coherence**, not by re-adding the Game: one
+  ordinary Move and one first Move check against the line, the total is of the right order, the
+  low-clock count is plausible against the clocks seen, and the two rankings disagree somewhere.
+  The exhaustive fold is `server/test/time-reading.test.ts`'s job, hand-computed oracle included,
+  and it does it in milliseconds (requester's call, 2026-09-09). All of
   this on a Game with **no `Evaluation` whatsoever**, which is the structural claim: `Review mode`
   is irrelevant here, because none of it comes from the engine. A Move whose share is unknown prints
   its seconds **alone**, never `0 %`. **Not exercisable in this scenario**: whole-second precision
