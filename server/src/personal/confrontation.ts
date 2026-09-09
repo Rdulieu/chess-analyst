@@ -251,6 +251,21 @@ export class ConfrontationRefusal {
 }
 
 /**
+ * The engine side of a `Confrontation`, exactly as the API serves it — narrowed
+ * to the four fields the join actually reads.
+ *
+ * A `Confrontation` is a **join, not a second derivation** (ADR-0019), so it
+ * asks for what it reads and nothing more. The narrowing is what keeps the whole
+ * annotations payload free to grow — the time block of US-15b, and whatever
+ * comes next — without every caller that builds an engine side by hand having to
+ * carry fields the join never looks at.
+ */
+export type ConfrontableAnnotations = Pick<
+  GameAnnotations,
+  "analyzed" | "recap" | "plies" | "regime"
+>;
+
+/**
  * Sets a sealed `Personal analysis` against what the engine found on the same
  * Game — **a join**, not a second derivation (ADR-0019). Everything the engine
  * side contributes arrives in `annotations`, exactly as the API already serves
@@ -258,7 +273,13 @@ export class ConfrontationRefusal {
  */
 export function confrontGame(
   analysis: PersonalAnalysis,
-  annotations: GameAnnotations,
+  /**
+   * The engine side, exactly as the API serves it. Narrowed to the four fields
+   * a `Confrontation` actually joins on: it is a join, not a second derivation
+   * (ADR-0019), so what it does not read it does not ask for — and a caller
+   * holding an engine verdict from anywhere else can still be confronted.
+   */
+  annotations: ConfrontableAnnotations,
   /**
    * The Game's half-moves in standard notation, indexed by ply. Optional because
    * **no figure depends on it**: it names the Moves a distance talks about, and

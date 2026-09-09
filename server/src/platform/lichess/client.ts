@@ -180,8 +180,23 @@ async function* exportRange(
     // (ADR-0007's amendment).
     pgnInJson: "true",
     opening: "true",
+    // **The clocks, asked for at last** (US-15b). Without this the exported PGN
+    // carries no `[%clk]` whatsoever — which is why 434 already-imported Lichess
+    // Games are mute on time, and why `rapid`, the cadence the Player actually
+    // uses, has ONE Game in 231 with a clock. Asking here is what stops a future
+    // import repaying the refresh of slice 05.
+    clocks: "true",
+    // The `Lichess division` (ADR-0031) — captured with no consumer, on purpose.
+    // The occasion is now: one range request answers for the whole span, where
+    // Game by Game it would take 434, against an endpoint that has answered ten
+    // consecutive 429s from this address.
+    division: "true",
     // Not a preference: month coverage is DERIVED from this order.
     sort: "dateAsc",
+    // `evals` and `accuracy` are deliberately ABSENT and must stay so. They
+    // exist only where somebody happened to click "analyse" on Lichess, so their
+    // presence is a lottery — and they are an outside oracle, which is not what
+    // this app's own figures are made of.
   });
   const { status, body } = await exportGames(
     `${root}/api/games/user/${encodeURIComponent(username)}?${query}`,

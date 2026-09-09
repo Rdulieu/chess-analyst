@@ -1,0 +1,45 @@
+-- Hand-written (ADR-0015), like 0010–0014: the snapshot chain in `meta/` is
+-- already unreliable and the migrator's journal is what this project applies,
+-- so the SQL is written rather than generated.
+--
+-- **Purely additive.** Three columns on `games`; no table is read, rebuilt or
+-- rewritten, so no `Evaluation` — the one thing here only engine time can
+-- rebuild — is anywhere near this migration's path.
+--
+-- **THE THREE COLUMNS ARE PERMANENTLY NULLABLE. DO NOT TIGHTEN THEM.**
+-- `CLAUDE.md` asks for nullable -> backfill -> `NOT NULL`, the tightening acting
+-- as the assertion. That discipline does not apply here, and this is the note
+-- that says why:
+--
+--   * `last_clock_cs` is the one Clock reading that belongs to no Move — what
+--     the side to move had left when the Game ended **without them playing**
+--     (resignation, agreement, abandonment). On a **mate** there is nobody to
+--     read, and Lichess's clocks array then holds exactly as many entries as
+--     there are half-moves (measured on eight Games, four terminations,
+--     2026-09-08). chess.com exposes no equivalent at all, so it is null for
+--     every one of the 1983 chess.com Games and null on every mate.
+--   * `division_middle_ply` / `division_end_ply` are the `Lichess division`
+--     (CONTEXT.md, ADR-0031) — Lichess's own opinion of where the middlegame and
+--     endgame begin. chess.com has no equivalent, so they are null for every
+--     chess.com Game, for ever.
+--
+-- Nothing will ever make these columns complete. A future `NOT NULL` on any of
+-- them could only be satisfied by inventing a value, which is the opposite of
+-- what they are for.
+--
+-- **Re-runnable**: SQLite has no `ADD COLUMN IF NOT EXISTS`, so the migrator's
+-- own journal is what makes a second run a no-op — it records this file as
+-- applied and does not replay it. That is the same mechanism every migration
+-- here relies on; the re-runnability test asserts it rather than assuming it.
+--
+-- **Written by nobody yet, and that is deliberate for the division** (ADR-0031):
+-- the two plies are captured because the occasion is now — one range request
+-- answers for all 434 Lichess Games — and are read by **no consumer** until
+-- US-32 uses them as an outside oracle to check its own `Phase` derivation.
+-- They are never the `Phase`: deriving ours where chess.com is concerned and
+-- reading Lichess's where it exists would make two `Profile`s silently
+-- incomparable.
+
+ALTER TABLE `games` ADD `last_clock_cs` integer;--> statement-breakpoint
+ALTER TABLE `games` ADD `division_middle_ply` integer;--> statement-breakpoint
+ALTER TABLE `games` ADD `division_end_ply` integer;

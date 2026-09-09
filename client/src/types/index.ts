@@ -20,7 +20,19 @@ export type {
   ImportStatus,
 } from "./import";
 export type { AnalysisStatus } from "./analysis";
-export type { MoveAnnotation, GameAnnotations, GameRecap, SearchRegime } from "./annotation";
+export type {
+  MoveAnnotation,
+  GameAnnotations,
+  GameRecap,
+  SearchRegime,
+  TimeControl,
+  GameTime,
+  PlyTime,
+  ClockPrecision,
+  NoClockReason,
+  TimeReading,
+  LongMove,
+} from "./annotation";
 export type { DeclaredSeverity, PersonalMark, PersonalAnalysis } from "./personal";
 export { DECLARED_SEVERITIES } from "./personal";
 export type {

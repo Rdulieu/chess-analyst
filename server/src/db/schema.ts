@@ -68,6 +68,40 @@ export const games = sqliteTable(
     // `moveHabitsComputed`: makes the pass incremental and idempotent, so already-
     // analyzed Games are skipped and their Evaluations are never recomputed.
     analyzed: integer("analyzed", { mode: "boolean" }).notNull().default(false),
+    /**
+     * The one `Clock` reading that belongs to **no `Move`** (CONTEXT.md,
+     * `Clock`): what the side to move had left when the Game ended **without
+     * them playing** — a resignation, an agreed draw, an abandonment.
+     *
+     * It is the single clock value that is stored, because it is the only one
+     * the PGN does not carry: Lichess's `clocks` array holds one entry more than
+     * there are half-moves in exactly those endings, and that entry appears in
+     * no `[%clk]` (measured on eight Games, four terminations, 2026-09-08).
+     * Everything else about time is derived from the PGN (ADR-0029).
+     *
+     * **Permanently nullable, and never to be tightened.** Null on every **mate**
+     * — the last Move ends the Game and there is nobody to read — and null for
+     * all 1983 chess.com Games, since that Platform exposes no equivalent. A
+     * calculation resting on it works on Lichess Games that were not mated.
+     */
+    lastClockCs: integer("last_clock_cs"),
+    /**
+     * The `Lichess division` (CONTEXT.md, ADR-0031): that Platform's own opinion
+     * of where the middlegame and the endgame begin, two ply numbers stored
+     * **exactly as Lichess gave them**.
+     *
+     * **This is not our `Phase` and is never read as one.** `Phase` is derived
+     * by our own rules for every Platform alike; this exists for Lichess Games
+     * only, so using it where it exists and deriving elsewhere would make two
+     * `Profile`s silently incomparable — the fault `CONTEXT.md` already refuses
+     * three times. It is kept as an **outside oracle** for US-32 to test our own
+     * derivation against, and until then it has **no consumer at all**, on
+     * purpose. The name is the guard-rail: it says its source.
+     *
+     * **Permanently nullable**: null for every chess.com Game, for ever.
+     */
+    divisionMiddlePly: integer("division_middle_ply"),
+    divisionEndPly: integer("division_end_ply"),
   },
   (t) => [unique().on(t.profileId, t.gameUrl)],
 );

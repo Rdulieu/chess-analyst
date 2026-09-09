@@ -11,13 +11,16 @@ import { phaseBands } from "../chess/phaseBands";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
+import { TimeReadingReadout } from "../features/analysis/TimeReadingReadout";
+import { TimeGraph } from "./TimeGraph";
+import { formatClock, formatDuration, formatShare } from "../chess/moveTime";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { moveName, plyNumber, startingPoint } from "../features/confrontation/moveName";
 import { BOARD_SQUARES } from "../chess/boardTheme";
-import type { GameRecap, MoveAnnotation } from "../types";
+import type { GameRecap, GameTime, MoveAnnotation } from "../types";
 
 /**
  * Interactive board for a Game: renders a Position, steps through the Game's
@@ -42,6 +45,7 @@ export function Board({
   annotations,
   detailed = false,
   recap = null,
+  time = null,
   orientation = "white",
   controls,
   keyboardStepping = false,
@@ -62,6 +66,13 @@ export function Board({
    * the Detailed panel. `null` on a Game with no recap to state.
    */
   recap?: GameRecap | null;
+  /**
+   * What this Game says about **time** (US-15b), or `null` while it is still
+   * loading. Read from the PGN, so it is present on a Game the engine has never
+   * seen — which is why it is not gated on `annotations` the way every engine
+   * readout here is. `rapid` has no analysed Game at all.
+   */
+  time?: GameTime | null;
   /**
    * A caller's own controls, read beside the board. Taken as a slot rather than
    * left above the board, because everything stacked above the diagram is height
@@ -418,6 +429,46 @@ export function Board({
               {!detailed && <ErrorTallyReadout annotations={annotations} />}
             </>
           )}
+          {/*
+            The time, as a PICTURE plus one exact line — never as two numbers per
+            row of the move list. Tried that way first, it made the list
+            unreadable (requester, 2026-09-09): a move list names Moves, and the
+            figures were competing with the notation. The shape of a Game's time
+            is what a column could not give anyway.
+
+            Outside the `annotations` guard on purpose: the time is read from the
+            PGN, not from the engine, so it is there on a Game with no analysis at
+            all — which is every `rapid` Game there is.
+          */}
+          {time?.absence === null && (
+            <>
+              <p data-part="graph-label">Temps par coup — vous en haut, l'adversaire en bas</p>
+              <div data-part="time-graph">
+                <TimeGraph
+                  time={time}
+                  playerColor={orientation}
+                  currentPly={index}
+                  bands={bands}
+                />
+              </div>
+              {/* The exact pair for the Move being read. This is what carries the
+                  figures in TEXT, and therefore what licenses the drawing above
+                  being `aria-hidden` — the same bargain `DriftGraph` makes. */}
+              <CurrentMoveTime time={time} ply={index} />
+            </>
+          )}
+
+          {/*
+            What the Game has to say about time, when it has nothing per-Move to
+            say. Stated once, above the list, rather than repeated as a blank on
+            thirty lines — and the two absences are NOT the same sentence
+            (CONTEXT.md → Clock): a correspondence Game has no clock to have,
+            where a real-time Game whose PGN carries none is a gap in what we
+            hold. Melting them would let a future aggregate average a fiction.
+          */}
+          {time?.absence && (
+            <p data-part="time-absence">{CLOCK_ABSENCE[time.absence]}</p>
+          )}
           <ol aria-label="moves">
             {plies.flatMap((ply, i) => {
               const annotation = annotations?.[i + 1];
@@ -474,6 +525,7 @@ export function Board({
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
+
                 </li>,
               ].filter(Boolean);
             })}
@@ -488,6 +540,32 @@ export function Board({
         (CONTEXT.md): Annotated is exactly what US-7 and US-14 delivered, and the
         record is what Detailed adds to it.
       */}
+      {/*
+        The Game's reading of the time, beside the analysis recap — one axis
+        among the others, which is why it is not visually set apart. It follows
+        NO Review mode and is not gated on `recap`: the time is not something the
+        engine said, and `rapid` — the cadence this feature exists for — has no
+        analysed Game to carry a recap at all.
+      */}
+      {time?.reading ? (
+        <TimeReadingReadout reading={time.reading} precision={time.precision} start={start} />
+      ) : (
+        time?.absence && (
+          // The reading ANSWERS, rather than going quiet. A panel that simply
+          // vanishes leaves the Player unable to tell "this Game has nothing to
+          // say about time" from "this screen is broken" — and the two absences
+          // are still said in their own words, because a correspondence Game
+          // never had a clock while a real-time one merely has none recorded.
+          <section
+            aria-labelledby="time-reading-heading"
+            className="card"
+            data-part="time-reading-absent"
+          >
+            <h3 id="time-reading-heading">Votre temps sur cette partie</h3>
+            <p>{READING_ABSENCE[time.absence]}</p>
+          </section>
+        )
+      )}
       {annotations && detailed && recap && <GameRecapReadout recap={recap} />}
       {annotations && detailed && (
         <MoveRecord
@@ -511,4 +589,81 @@ interface BoardArrow {
 /** The arrow for a line's first ply, or `null` for a line with no ply to draw. */
 function arrowFor(ply: LinePly | undefined, color: string): BoardArrow | null {
   return ply ? { startSquare: ply.from, endSquare: ply.to, color } : null;
+}
+
+/**
+ * How each absence of a `Clock` is said — **in that absence's own words**
+ * (CONTEXT.md → `Clock`). Kept apart on purpose: "sans objet" asserts the Game
+ * never had a clock, and saying it of a Lichess Game whose clocks we simply
+ * never asked for would be false — and would make the refresh of slice 05 look
+ * like it had nothing to fix.
+ */
+/** The same two facts, said at the scale of the whole Game. Kept apart here for
+ *  the same reason as in the column: melting them would let a later aggregate
+ *  average an absence that is a fact together with one that is a gap. */
+const READING_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
+  "not-applicable":
+    "Sans objet : une partie en correspondance a une cadence, et aucune horloge.",
+  "not-recorded":
+    "Aucune horloge n'a été enregistrée pour cette partie : il n'y a pas de lecture du temps à en faire.",
+};
+
+const CLOCK_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
+  "not-applicable": "Temps par coup : sans objet (partie en correspondance).",
+  "not-recorded": "Temps par coup : pas d'horloge enregistrée pour cette partie.",
+};
+
+
+/**
+ * The **reviewed** Move's two figures, in words: how long that side took, and
+ * what they had left.
+ *
+ * One Move at a time, beside the board, replacing the two numbers that used to
+ * sit on every row of the move list. It is the text half of the bargain the
+ * drawing above depends on — a hidden picture is only allowed while its figures
+ * exist in words somewhere (the precedent `DriftGraph` sets).
+ *
+ * It says **whose** Move it is, because the drawing puts the Player above the
+ * axis and the opponent below, and a reader who cannot see the drawing needs the
+ * same fact in words.
+ *
+ * One line in every state it has anything to say, so stepping from Move to Move
+ * cannot displace what sits under it.
+ */
+function CurrentMoveTime({ time, ply }: { time: GameTime; ply: number }) {
+  const entry = time.plies[ply];
+  const spent = formatDuration(entry?.spentCs ?? null, time.precision);
+  const left = formatClock(entry?.clockCs ?? null, time.precision);
+  /** The share of the clock this Move cost, derived server-side against what the
+   *  side held **before** playing it. Worded by the one formatter the summary
+   *  panel also uses, so the line and the panel cannot disagree. */
+  const share = formatShare(entry?.shareOfRemaining ?? null);
+  // Ply 0 is nobody's Move; a Move with no figure says nothing rather than a `0`.
+  if (spent === null && left === null) {
+    return <p data-part="current-move-time">Temps du coup : rien à afficher ici.</p>;
+  }
+
+  return (
+    <p data-part="current-move-time">
+      Ce coup
+      {spent !== null && (
+        <>
+          {" "}
+          a pris <strong>{spent}</strong>
+        </>
+      )}
+      {share !== null && (
+        <>
+          {" "}
+          — <strong>{share}</strong> de ce qu'il vous restait
+        </>
+      )}
+      {left !== null && (
+        <>
+          {(spent !== null || share !== null) && ","} il restait <strong>{left}</strong>
+        </>
+      )}
+      .
+    </p>
+  );
 }

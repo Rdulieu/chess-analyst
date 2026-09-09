@@ -1,6 +1,6 @@
-import { gameHeader } from "./gameHeader";
+import { gameHeader, timeControlLabel } from "./gameHeader";
 import { RESULT_LABEL } from "../../types";
-import type { Game } from "../../types";
+import type { Game, GameTime } from "../../types";
 
 const COLOR_LABEL = { white: "Blancs", black: "Noirs" } as const;
 
@@ -17,8 +17,21 @@ const COLOR_LABEL = { white: "Blancs", black: "Noirs" } as const;
  * rather than as a symmetric `1-0`: what is stored is Player-relative, and
  * making it symmetric only to re-attribute it on screen would lose that.
  */
-export function GameHeader({ game }: { game: Game }) {
+export function GameHeader({ game, time = null }: { game: Game; time?: GameTime | null }) {
   const { sides, result, date, timeControlCategory, opening } = gameHeader(game);
+  /**
+   * The exact cadence, **beside** the category and never instead of it: the
+   * category answers "what pace of game is this", the cadence answers "what were
+   * the clocks set to", and `blitz` puts a 3+2 and a 5+0 in the same bucket.
+   *
+   * Three states, not two, and the third is why this is not a `??` chain.
+   * "Cadence inconnue" is a **claim about the Game**, and it is false while the
+   * answer is still in flight: `time === null` means *not answered yet* and says
+   * nothing at all, where a loaded block with no `timeControl` means the PGN
+   * genuinely declares none. Found by slice 01's Feature Path, which read the
+   * header mid-fetch and was told a falsehood.
+   */
+  const cadence = time === null ? null : (timeControlLabel(time.timeControl) ?? "cadence inconnue");
 
   return (
     <section aria-label="partie">
@@ -39,6 +52,11 @@ export function GameHeader({ game }: { game: Game }) {
       ))}
       <p>
         {date} · {timeControlCategory} ·{" "}
+        {cadence !== null && (
+          <>
+            <span data-part="time-control">{cadence}</span> ·{" "}
+          </>
+        )}
         {opening ? `${opening.eco} — ${opening.name}` : "ouverture non classée"}
       </p>
     </section>

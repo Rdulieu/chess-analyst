@@ -69,7 +69,27 @@ describe("getGameAnnotations", () => {
     // Still distinct from an analyzed Game with nothing to say, which is the
     // whole reason `analyzed` is reported at all — and with no regime, because
     // no pass has ever run on it.
-    expect(getGameAnnotations(db, game.id)).toEqual({ analyzed: false, plies: [], regime: null, recap: null });
+    expect(getGameAnnotations(db, game.id)).toEqual({
+      analyzed: false,
+      plies: [],
+      regime: null,
+      recap: null,
+      time: {
+        timeControl: null,
+        // "1. e4" — one half-move, and no `[%clk]` on it. A real-time Game with
+        // no clock recorded, which is a different fact from a correspondence
+        // Game having none to record.
+        plies: [
+          { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+          { ply: 1, clockCs: null, spentCs: null, shareOfRemaining: null },
+        ],
+        absence: "not-recorded",
+        precision: null,
+        // No Clock recorded, so there is nothing to fold — and a reading at zero
+        // would be a fabrication, not a summary.
+        reading: null,
+      },
+    });
   });
 
   it("reports each Position's Best line, so a Move's own line and its refutation are both readable", () => {
@@ -117,6 +137,62 @@ describe("getGameAnnotations", () => {
     // Unknown provenance is stated as unknown, never guessed at from the regime
     // this app happens to run today.
     expect(getGameAnnotations(db, game.id)!.regime).toBeNull();
+  });
+
+  /**
+   * The time block (US-15b). It is filled **from the PGN**, so it does not
+   * depend on the engine having run — which is the whole point: `rapid` has no
+   * analysed Game at all, and it is the cadence the story exists for.
+   */
+  describe("the time block", () => {
+    it("names the exact Time control of an analyzed Game", () => {
+      const db = tempDb();
+      const game = seedGame(db, { pgn: '[TimeControl "180+2"]\n\n1. e4 e5 1/2-1/2' });
+      seedEvaluation(db, game, 0, { cp: 0 });
+
+      expect(getGameAnnotations(db, game.id)!.time.timeControl).toEqual({
+        kind: "realtime",
+        initialCs: 18_000,
+        incrementCs: 200,
+      });
+    });
+
+    it("names it on a Game the engine has never seen", () => {
+      const db = tempDb();
+      const game = seedGame(db, {
+        pgn: '[TimeControl "600+5"]\n\n1. e4 e5 1/2-1/2',
+        analyzed: false,
+      });
+
+      // The assertion that keeps `rapid` from showing nothing: no Evaluation
+      // exists here, and the cadence is still answered.
+      expect(getGameAnnotations(db, game.id)!.time.timeControl).toEqual({
+        kind: "realtime",
+        initialCs: 60_000,
+        incrementCs: 500,
+      });
+    });
+
+    it("names the days per move of a correspondence Game", () => {
+      const db = tempDb();
+      const game = seedGame(db, {
+        pgn: '[TimeControl "1/172800"]\n\n1. e4 e5 1/2-1/2',
+        timeControlCategory: "correspondence",
+        analyzed: false,
+      });
+
+      expect(getGameAnnotations(db, game.id)!.time.timeControl).toEqual({
+        kind: "correspondence",
+        daysPerMove: 2,
+      });
+    });
+
+    it("says absent, not zero, when the PGN declares no Time control", () => {
+      const db = tempDb();
+      const game = seedGame(db, { pgn: "1. e4 e5 1/2-1/2", analyzed: false });
+
+      expect(getGameAnnotations(db, game.id)!.time.timeControl).toBeNull();
+    });
   });
 
   it("returns the per-ply annotations for an analyzed Game", () => {

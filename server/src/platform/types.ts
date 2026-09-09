@@ -68,6 +68,19 @@ export interface ImportedGame {
   timeControlCategory: TimeControlCategory;
   eco: string;
   openingName: string;
+  /**
+   * The one `Clock` reading belonging to no `Move` (CONTEXT.md) — what the side
+   * to move had left when the Game ended without them playing. `null` on a mate,
+   * and `null` for every chess.com Game: that Platform exposes no equivalent.
+   */
+  lastClockCs: number | null;
+  /**
+   * The `Lichess division` (ADR-0031) — that Platform's own opinion of where the
+   * middlegame and endgame begin. `null` for every chess.com Game, for ever, and
+   * **never** read as our `Phase`.
+   */
+  divisionMiddlePly: number | null;
+  divisionEndPly: number | null;
 }
 
 /**

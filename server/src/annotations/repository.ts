@@ -4,6 +4,7 @@ import { games, evaluations, analysisPasses } from "../db/schema";
 import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, type MoveAnnotation } from "../analysis/derivation";
 import { gameRecap, type GameRecap } from "../analysis/recap";
+import { gameTime, type GameTime } from "../analysis/time";
 
 export interface GameAnnotations {
   analyzed: boolean;
@@ -22,6 +23,18 @@ export interface GameAnnotations {
    * page's own making. `null` when the Game is not analyzed.
    */
   recap: GameRecap | null;
+  /**
+   * What this Game says about **time** (US-15b) — a block of its own, and
+   * deliberately not part of `recap`.
+   *
+   * It is derived from the stored PGN (ADR-0029), so it is filled **whatever
+   * `analyzed` says**. That is the structural reason it does not travel inside
+   * `GameRecap`: a recap is "what this Game contributes to the **analysis**"
+   * (ADR-0017) and is `null` on an unanalysed Game — while `rapid`, the very
+   * cadence this story exists for, has no analysed Game at all. Folding time
+   * into the recap would have made it invisible exactly where it matters most.
+   */
+  time: GameTime;
 }
 
 /**
@@ -34,7 +47,8 @@ export interface GameAnnotations {
 export function getGameAnnotations(db: Db, gameId: number): GameAnnotations | undefined {
   const game = db.select().from(games).where(eq(games.id, gameId)).get();
   if (!game) return undefined;
-  if (!game.analyzed) return { analyzed: false, plies: [], regime: null, recap: null };
+  const time = gameTime(game.pgn, game.playerColor, game.lastClockCs);
+  if (!game.analyzed) return { analyzed: false, plies: [], regime: null, recap: null, time };
 
   const evals = db.select().from(evaluations).where(eq(evaluations.gameId, gameId)).all();
   const regime = gameRegime(db, gameId);
@@ -43,6 +57,7 @@ export function getGameAnnotations(db: Db, gameId: number): GameAnnotations | un
     plies: gameAnnotations(game, evals),
     regime,
     recap: gameRecap(game, evals, regime),
+    time,
   };
 }
 

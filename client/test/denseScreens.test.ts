@@ -323,6 +323,12 @@ describe("the layout inline styles, gone from the components", () => {
     "components/PhaseRibbon.tsx": 1,
     // Two: the whole-Game rule's own figure, and one per gradation.
     "components/DriftGraph.tsx": 2,
+    // Two, and for the same reason as the drift scale's: each gradation is placed
+    // at the height of the value it names, against a ceiling that is this Game's
+    // own longest Move. It is twice rather than once because the scale is
+    // **mirrored** — one magnitude governs both halves of the drawing, the
+    // Player's above the axis and the opponent's below (US-15b).
+    "components/TimeGraph.tsx": 2,
   };
 
   const inlineStyles = (source: string) => source.match(/style=\{\{/g)?.length ?? 0;
