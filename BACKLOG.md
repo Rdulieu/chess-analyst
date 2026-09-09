@@ -110,11 +110,20 @@
   >     c'est **cette** tranche qui fait exister l'axe `rapid`
   >   - `06-graft-onto-hp-01-and-the-pr` — greffe sur HP-01 et la PR *(bloqué par 01-05)*
   >
+  >   - **tranche 07** *(hors découpage initial)* — trois retours du demandeur après avoir vu
+  >     tourner 01-06 sur la vraie base : le temps **quitte la liste des coups** pour un graphe
+  >     « Temps par coup » sous le graphe d'analyse, et gagne la **part de l'horloge** consommée,
+  >     avec **deux** classements dans le panneau (par secondes, par part). L'AC de la tranche 02
+  >     — les chiffres « dans le relevé que je lis déjà » — est **renversée par le demandeur** :
+  >     c'était le mauvais endroit, et cela ne se voyait qu'à l'écran.
+  >
   >   **LIVRÉE le 2026-09-09 — [PR #109](https://github.com/Rdulieu/chess-analyst/pull/109), en
   >   attente du merge humain** (`integration → develop` reste une décision humaine). Les six
-  >   tranches sont sur la branche d'intégration. Gate : build OK, **515 tests serveur + 898
+  >   tranches sont sur la branche d'intégration. Gate : build OK, **523 tests serveur + 918
   >   client**, `lint` a **tourné et rendu 0**, **FP 01→05 vertes**, **suite HP 3/3 verte**
-  >   (+ path 0), **aucun finding bloquant**.
+  >   (+ path 0, jouée contre `9de48ac` — donc **avant** la tranche 07 ; l'étape 9c de HP-01 porte
+  >   sur l'ancien emplacement des chiffres et reste à re-jouer si l'on veut la couverture
+  >   agentique de la forme actuelle), **aucun finding bloquant**.
   >   **Reste à faire par le demandeur** : passer `npm run repair:clocks -w server -- <db>` sur la
   >   vraie base — geste destructeur sur 434 PGN dont 10 parties analysées, vérifié à l'octet sur
   >   des copies mais jamais joué sur l'original.
