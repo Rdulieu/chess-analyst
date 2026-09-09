@@ -888,6 +888,91 @@ $drift-inset: $drift-frame + $drift-headroom;
   }
 }
 
+// The third drawing: how long each Move took. Shorter than the curve and taller
+// than the drift trace — it carries two facing halves, so it needs the room the
+// mirror costs, and landscape for the same reason as the other two.
+//
+// Its geometry borrows the drift box's frame and headroom variables above,
+// because a third box that disagreed with the two beside it would read as a
+// misalignment rather than as a third quantity.
+[data-part="time-graph"] {
+  block-size: 8rem;
+
+  > [data-part="time-frame"] {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-1);
+    block-size: 100%;
+  }
+
+  // The scale's column, mirrored about the axis: the same magnitude governs both
+  // halves, so it is printed twice rather than once at the top. Outside the plot,
+  // never over it — the bars are solid and a figure on one would print on the bar.
+  [data-part="time-scale"] {
+    position: relative;
+    flex: 0 0 2.25rem;
+    margin: 0;
+    border-block: $drift-inset solid transparent;
+    padding: 0;
+    list-style: none;
+    font: var(--text-s) / 1 var(--mono);
+    color: var(--ink-muted);
+    text-align: end;
+
+    li {
+      position: absolute;
+      inset-inline-end: 0;
+      // Centred ON its height, the same idiom the other two scales use: a figure
+      // means "this height", so it straddles it.
+      transform: translateY(-50%);
+      white-space: nowrap;
+    }
+  }
+
+  [data-part="time-plot"] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    padding-block: $drift-headroom;
+    border: $drift-frame solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    background: var(--ground-sunk);
+
+    svg {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+    }
+  }
+
+  // The bars. **The side is carried by which way the bar goes**, not by its ink
+  // (ADR-0013): the Player's half is above the axis and the opponent's below, and
+  // that stays true with no colour at all. The two inks differ only so the eye
+  // can group a half quickly — remove them and the picture still says everything.
+  rect {
+    fill: var(--ink-muted);
+  }
+
+  rect[data-mine="true"] {
+    fill: var(--ink);
+  }
+
+  // The axis the two halves hang from, and the reading cursor — the same marks
+  // the other two drawings use, so the three are read as one instrument.
+  [data-mark="axis"] {
+    stroke: var(--ink-muted);
+  }
+
+  [data-mark="cursor"] {
+    stroke: var(--curve-cursor);
+  }
+
+  [data-mark="phase-boundary"] {
+    stroke: var(--border);
+  }
+}
+
 // Each drawing's visible label. Small and muted, but real text and never
 // `aria-hidden`: it is the only part of either picture a reader gets, and two
 // drawings that do not say the same thing must not be mistakable for one another.

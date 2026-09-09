@@ -49,3 +49,23 @@ function decimal(seconds: number, precision: ClockPrecision): string {
   if (precision === "seconds") return String(Math.round(seconds));
   return seconds.toFixed(1).replace(".", ",");
 }
+
+
+/**
+ * What share of a clock a Move cost, said on screen — or `null` when there is no
+ * share to say, which the caller states in words rather than as `0 %`.
+ *
+ * **One decimal below 10 %, a whole number above.** The difference between 0,2 %
+ * and 0,3 % is real on a full clock, where 36 % against 37 % is noise the reader
+ * cannot use — and printing a decimal there would invite a comparison the
+ * material does not support (the seconds behind it are good to ±0,2 s at best).
+ *
+ * One home, because two callers need it: the reviewed Move's own line beside the
+ * board, and the two rankings in the summary panel. Spelled twice they would
+ * drift, and the panel is meant to be recoupable against the line.
+ */
+export function formatShare(share: number | null): string | null {
+  if (share === null) return null;
+  if (share < 10) return `${share.toFixed(1).replace(".", ",")} %`;
+  return `${Math.round(share)} %`;
+}

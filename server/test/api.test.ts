@@ -168,7 +168,12 @@ describe("games API", () => {
     });
     // One entry per half-move, plus the starting Position — index-aligned with
     // every other per-Move array the payload serves.
-    expect(res.body.time.plies[0]).toEqual({ ply: 0, clockCs: null, spentCs: null });
+    expect(res.body.time.plies[0]).toEqual({
+      ply: 0,
+      clockCs: null,
+      spentCs: null,
+      shareOfRemaining: null,
+    });
     expect(res.body.time.plies.every((ply: { clockCs: number | null }) => ply.clockCs === null)).toBe(
       true,
     );
@@ -212,7 +217,15 @@ describe("games API", () => {
       initialCs: 18_000,
       incrementCs: 200,
     });
-    expect(res.body.time.plies[1]).toEqual({ ply: 1, clockCs: 18_000, spentCs: 200 });
+    // The share too: 2 s of the 180 s budget the Player began with. Measured
+    // against the budget alone, not budget + increment — the increment is granted
+    // for having played, so it was never available to think with.
+    expect(res.body.time.plies[1]).toEqual({
+      ply: 1,
+      clockCs: 18_000,
+      spentCs: 200,
+      shareOfRemaining: (200 / 18_000) * 100,
+    });
     expect(res.body.time.reading).toMatchObject({ moves: 1, measuredMoves: 1 });
   });
 

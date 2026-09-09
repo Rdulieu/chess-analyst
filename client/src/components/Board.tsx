@@ -12,7 +12,8 @@ import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
 import { TimeReadingReadout } from "../features/analysis/TimeReadingReadout";
-import { formatClock, formatDuration } from "../chess/moveTime";
+import { TimeGraph } from "./TimeGraph";
+import { formatClock, formatDuration, formatShare } from "../chess/moveTime";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
@@ -429,6 +430,35 @@ export function Board({
             </>
           )}
           {/*
+            The time, as a PICTURE plus one exact line — never as two numbers per
+            row of the move list. Tried that way first, it made the list
+            unreadable (requester, 2026-09-09): a move list names Moves, and the
+            figures were competing with the notation. The shape of a Game's time
+            is what a column could not give anyway.
+
+            Outside the `annotations` guard on purpose: the time is read from the
+            PGN, not from the engine, so it is there on a Game with no analysis at
+            all — which is every `rapid` Game there is.
+          */}
+          {time?.absence === null && (
+            <>
+              <p data-part="graph-label">Temps par coup — vous en haut, l'adversaire en bas</p>
+              <div data-part="time-graph">
+                <TimeGraph
+                  time={time}
+                  playerColor={orientation}
+                  currentPly={index}
+                  bands={bands}
+                />
+              </div>
+              {/* The exact pair for the Move being read. This is what carries the
+                  figures in TEXT, and therefore what licenses the drawing above
+                  being `aria-hidden` — the same bargain `DriftGraph` makes. */}
+              <CurrentMoveTime time={time} ply={index} />
+            </>
+          )}
+
+          {/*
             What the Game has to say about time, when it has nothing per-Move to
             say. Stated once, above the list, rather than repeated as a blank on
             thirty lines — and the two absences are NOT the same sentence
@@ -495,7 +525,7 @@ export function Board({
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
-                  <MoveTime time={time} ply={i + 1} />
+
                 </li>,
               ].filter(Boolean);
             })}
@@ -583,32 +613,57 @@ const CLOCK_ABSENCE: Record<NonNullable<GameTime["absence"]>, string> = {
   "not-recorded": "Temps par coup : pas d'horloge enregistrée pour cette partie.",
 };
 
+
 /**
- * One half-move's time, in the record the Player already reads: **how long they
- * took**, and **how much they had left**.
+ * The **reviewed** Move's two figures, in words: how long that side took, and
+ * what they had left.
  *
- * The time spent leads, because that is what the Player *did*; the clock left is
- * the pressure they did it under, and the two are different questions (the
- * glossary keeps them apart for that reason). Both are named in **words** — a
- * bare pair of numbers, or a tint, could not say which was which, and no cue
- * here is chromatic only.
+ * One Move at a time, beside the board, replacing the two numbers that used to
+ * sit on every row of the move list. It is the text half of the bargain the
+ * drawing above depends on — a hidden picture is only allowed while its figures
+ * exist in words somewhere (the precedent `DriftGraph` sets).
  *
- * Renders nothing at all when there is no figure. Never a `0` and never a blank
- * placeholder: a fabricated zero is what a future aggregate would average.
+ * It says **whose** Move it is, because the drawing puts the Player above the
+ * axis and the opponent below, and a reader who cannot see the drawing needs the
+ * same fact in words.
+ *
+ * One line in every state it has anything to say, so stepping from Move to Move
+ * cannot displace what sits under it.
  */
-function MoveTime({ time, ply }: { time: GameTime | null; ply: number }) {
-  if (time === null) return null;
+function CurrentMoveTime({ time, ply }: { time: GameTime; ply: number }) {
   const entry = time.plies[ply];
-  if (!entry) return null;
-  const spent = formatDuration(entry.spentCs, time.precision);
-  const left = formatClock(entry.clockCs, time.precision);
-  if (spent === null && left === null) return null;
+  const spent = formatDuration(entry?.spentCs ?? null, time.precision);
+  const left = formatClock(entry?.clockCs ?? null, time.precision);
+  /** The share of the clock this Move cost, derived server-side against what the
+   *  side held **before** playing it. Worded by the one formatter the summary
+   *  panel also uses, so the line and the panel cannot disagree. */
+  const share = formatShare(entry?.shareOfRemaining ?? null);
+  // Ply 0 is nobody's Move; a Move with no figure says nothing rather than a `0`.
+  if (spent === null && left === null) {
+    return <p data-part="current-move-time">Temps du coup : rien à afficher ici.</p>;
+  }
 
   return (
-    <span data-part="move-time">
-      {spent !== null && <span aria-label={`temps pris ${spent}`}>{spent}</span>}
-      {spent !== null && left !== null && " · "}
-      {left !== null && <span aria-label={`temps restant ${left}`}>{left}</span>}
-    </span>
+    <p data-part="current-move-time">
+      Ce coup
+      {spent !== null && (
+        <>
+          {" "}
+          a pris <strong>{spent}</strong>
+        </>
+      )}
+      {share !== null && (
+        <>
+          {" "}
+          — <strong>{share}</strong> de ce qu'il vous restait
+        </>
+      )}
+      {left !== null && (
+        <>
+          {(spent !== null || share !== null) && ","} il restait <strong>{left}</strong>
+        </>
+      )}
+      .
+    </p>
   );
 }

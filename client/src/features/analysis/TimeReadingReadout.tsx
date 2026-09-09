@@ -1,6 +1,6 @@
-import { formatDuration } from "../../chess/moveTime";
+import { formatDuration, formatShare } from "../../chess/moveTime";
 import { plyNumber, type StartingPoint } from "../confrontation/moveName";
-import type { GameTime, TimeReading } from "../../types";
+import type { GameTime, LongMove, TimeReading } from "../../types";
 
 /**
  * What this Game says about the Player's **time** (US-15b), read in the recap
@@ -80,13 +80,23 @@ export function TimeReadingReadout({
         Sous les <strong>{mark}</strong> restantes : <strong>{reading.underLowClock}</strong> de vos
         coups.
       </p>
+      {/*
+        **Two rankings, and they are not the same list.** Seconds say what a Move
+        cost; the share says what it cost relative to what was left. On a real
+        Game they disagree — a 1,1 s Move with 14 s left is a third of the clock,
+        and it never appears in a ranking by seconds — so serving only one of them
+        hides either the long think or the late panic it caused.
+      */}
       {reading.longest.length > 0 && (
         <p data-part="longest">
           Vos coups les plus longs :{" "}
-          {reading.longest
-            .map((move) => `${plyNumber(move.ply, start)} (${formatDuration(move.spentCs, precision)})`)
-            .join(", ")}
-          .
+          {reading.longest.map((move) => describe(move, precision, start)).join(", ")}.
+        </p>
+      )}
+      {reading.costliestShare.length > 0 && (
+        <p data-part="costliest-share">
+          Vos coups les plus chers, en part de ce qu'il vous restait :{" "}
+          {reading.costliestShare.map((move) => describe(move, precision, start)).join(", ")}.
         </p>
       )}
       <p data-part="within">
@@ -97,4 +107,22 @@ export function TimeReadingReadout({
       </p>
     </section>
   );
+}
+
+/**
+ * One ranked Move, said the same way in both lists: its number, its seconds and
+ * its share. **The same wording in both** is deliberate — the lists differ by
+ * what they rank, not by what they say, so a reader comparing them is comparing
+ * the ordering and nothing else.
+ *
+ * A Move whose share is unknown prints its seconds alone rather than a `0 %`.
+ */
+function describe(
+  move: LongMove,
+  precision: GameTime["precision"],
+  start: StartingPoint,
+): string {
+  const share = formatShare(move.shareOfRemaining);
+  const spent = formatDuration(move.spentCs, precision);
+  return `${plyNumber(move.ply, start)} (${spent}${share === null ? "" : ` — ${share}`})`;
 }

@@ -106,10 +106,12 @@ export interface GameTime {
   reading: TimeReading | null;
 }
 
-/** One of the Player's Moves, named by its ply and how long it took. */
+/** One of the Player's Moves, named by its ply and what it cost — in seconds,
+ *  and as a share of what that side held before playing it. */
 export interface LongMove {
   ply: number;
   spentCs: number;
+  shareOfRemaining: number | null;
 }
 
 /**
@@ -129,8 +131,14 @@ export interface TimeReading {
    *  cadence, not a number chosen on paper for every Game alike. */
   lowClockCs: number;
   underLowClock: number;
-  /** The Player's longest Moves, longest first. */
+  /** The Player's longest Moves in **seconds**, longest first. */
   longest: LongMove[];
+  /**
+   * The Player's costliest Moves as a **share** of what was left, biggest first.
+   * A different list from `longest`, on purpose: seconds alone hide every
+   * late-Game panic, and share alone hides the long think that caused it.
+   */
+  costliestShare: LongMove[];
   /** The cadence this reading is read **within** — carried so it can never be
    *  compared across two `Time control category`s. */
   timeControl: TimeControl;
@@ -169,6 +177,13 @@ export interface PlyTime {
   /** How long it took — **derived**, never stored. `null` where it cannot be
    *  derived, and never `0`. */
   spentCs: number | null;
+  /**
+   * What share of the clock this Move cost, 0–100, measured against what the side
+   * had **before playing it**. The figure that tells two identical `Time spent`s
+   * apart: 12 s is a shrug on a full clock and a catastrophe on 20 s left.
+   * `null` wherever the `Time spent` is unknown — never `0`.
+   */
+  shareOfRemaining: number | null;
 }
 
 /** `GET /api/games/:id/annotations` response: `plies` is empty when `analyzed` is `false`. */

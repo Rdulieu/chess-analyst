@@ -80,8 +80,8 @@ describe("getGameAnnotations", () => {
         // no clock recorded, which is a different fact from a correspondence
         // Game having none to record.
         plies: [
-          { ply: 0, clockCs: null, spentCs: null },
-          { ply: 1, clockCs: null, spentCs: null },
+          { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+          { ply: 1, clockCs: null, spentCs: null, shareOfRemaining: null },
         ],
         absence: "not-recorded",
         precision: null,

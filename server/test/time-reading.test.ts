@@ -107,6 +107,44 @@ describe("the Game's time reading", () => {
     expect(reading.longest[0].spentCs).toBe(expected.spentCs);
   });
 
+  it("carries each longest Move's share of the clock, not only its seconds", () => {
+    // Asked for on 2026-09-09. The seconds say what the Move cost; the share says
+    // what it cost RELATIVE to what was left, which is the pressure.
+    for (const move of reading.longest) {
+      expect(move.shareOfRemaining).not.toBeNull();
+      const ply = time.plies[move.ply];
+      expect(move.shareOfRemaining).toBeCloseTo(ply.shareOfRemaining!, 6);
+    }
+  });
+
+  it("names the three costliest by SHARE, which are not the three costliest by seconds", () => {
+    // The two rankings answer different questions, and on a real Game they
+    // genuinely disagree: a 1.1 s Move with 14 s left costs a bigger share than a
+    // 12 s Move with 60 s left. Ranking only by seconds hides every late-Game
+    // panic; ranking only by share hides the long think that caused it.
+    const bySeconds = reading.longest.map((m) => m.ply);
+    const byShare = reading.costliestShare.map((m) => m.ply);
+
+    expect(byShare).toHaveLength(3);
+    // Each is genuinely the top of its own ordering, recomputed from the column.
+    const mine = time.plies.filter(
+      (ply) => ply.ply > 0 && ply.ply % 2 === 1 && ply.shareOfRemaining !== null,
+    );
+    const expected = [...mine]
+      .sort((a, b) => b.shareOfRemaining! - a.shareOfRemaining!)
+      .slice(0, 3)
+      .map((ply) => ply.ply);
+    expect(byShare).toEqual(expected);
+    // And the two orderings are not the same list on this Game — which is the
+    // whole reason both are served.
+    expect(byShare).not.toEqual(bySeconds);
+  });
+
+  it("counts only the Player's Moves in the share ranking too", () => {
+    const opponents = reading.costliestShare.filter((m) => m.ply % 2 === 0);
+    expect(opponents).toEqual([]);
+  });
+
   it("counts the Player's Moves played under the low clock it names", () => {
     // The reading states the mark it counted against, so the Player can count
     // the same Moves themselves rather than take the figure on trust.

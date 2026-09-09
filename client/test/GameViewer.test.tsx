@@ -650,18 +650,23 @@ describe("GameViewer — the exact Time control", () => {
 });
 
 /**
- * The time per Move, in the record the Player already reads (US-15b, slice 02).
- * The 1983 chess.com Games carry a `[%clk]` on every half-move and nothing read
- * them before this slice.
+ * The time per Move — **as a drawing plus one exact line, never as two numbers
+ * per row of the move list.**
+ *
+ * It was built into the list first, and that made the list unreadable: a move
+ * list names Moves, and the figures competed with the notation. The requester
+ * said so on 2026-09-09 and the list went back to bare notation. What replaced it
+ * gives something a column could not: the **shape** of a Game's time, with the
+ * exact pair for the Move being read stated beside it.
  */
 describe("GameViewer — the time per Move", () => {
   /** "1. e4 e5" on a 3+2, at the tenth precision chess.com writes. */
   const TIMED: GameTime = {
     timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
     plies: [
-      { ply: 0, clockCs: null, spentCs: null },
-      { ply: 1, clockCs: 18_000, spentCs: 200 },
-      { ply: 2, clockCs: 17_850, spentCs: 350 },
+      { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+      { ply: 1, clockCs: 18_000, spentCs: 200, shareOfRemaining: 1.1 },
+      { ply: 2, clockCs: 17_850, spentCs: 350, shareOfRemaining: 1.9 },
     ],
     absence: null,
     precision: "tenths",
@@ -671,49 +676,169 @@ describe("GameViewer — the time per Move", () => {
   const moveItems = () =>
     within(screen.getByRole("list", { name: "moves" })).getAllByRole("listitem");
 
-  it("gives every half-move the time spent and the time left, the Player's and the opponent's", async () => {
+  it("keeps the move list to bare notation — no time on any row", async () => {
     stubUnanalyzed(TIMED);
 
     render(<GameViewer game={{ ...OPERA_GAME }} />);
 
-    await waitFor(() => {
-      const first = moveItems()[0].textContent ?? "";
-      // 2 s of thought, 3 min left. Both figures, on the Player's own Move.
-      expect(first).toContain("2,0 s");
-      expect(first).toContain("3 min 0,0 s");
-    });
-    // And on the opponent's — who suffered the pressure and who inflicted it is
-    // the question, so both sides are measured.
-    const second = moveItems()[1].textContent ?? "";
-    expect(second).toContain("3,5 s");
+    await screen.findByText(/temps par coup/i);
+    // The reversal itself, asserted: the list carries the Move and nothing about
+    // time. This is what the requester asked for.
+    for (const item of moveItems()) {
+      expect(item.textContent).not.toMatch(/\ds\b|\d,\d s| s$/);
+    }
+    expect(document.querySelector('[data-part="move-time"]')).toBeNull();
   });
 
-  it("names both figures, so the Player knows which is which", async () => {
+  it("draws the time per Move, saying which half is whose", async () => {
     stubUnanalyzed(TIMED);
 
     render(<GameViewer game={{ ...OPERA_GAME }} />);
 
-    // Text, not a bare pair of numbers, and not a colour: the guard-rail is that
-    // no cue is chromatic only.
-    const spent = await screen.findAllByLabelText(/temps pris/i);
-    expect(spent.length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/temps restant/i).length).toBeGreaterThan(0);
+    // The label is the only part of the drawing a reader gets, so it must say
+    // what the drawing does — including that the two halves are two sides.
+    const label = await screen.findByText(/temps par coup/i);
+    expect(label.textContent).toMatch(/vous en haut/i);
+    expect(label.textContent).toMatch(/adversaire en bas/i);
+    expect(document.querySelector('[data-part="time-graph"] svg')).toBeTruthy();
+  });
+
+  it("states the reviewed Move's own two figures, in words", async () => {
+    stubUnanalyzed(TIMED);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    // Navigation starts at ply 0, which is nobody's Move; step to the first.
+    const line = await screen.findByText(/rien à afficher ici/i);
+    expect(line).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => {
+      const now = document.querySelector('[data-part="current-move-time"]');
+      // 2 s of thought, 3 min left — the figures that used to sit on the row.
+      expect(now?.textContent).toContain("2,0 s");
+      expect(now?.textContent).toContain("3 min 0,0 s");
+    });
+  });
+
+  it("says what share of the clock the Move cost", async () => {
+    // Asked for on 2026-09-09. "12 s" is a shrug on a full clock and a
+    // catastrophe on 20 s left; the share is what tells the two apart.
+    stubUnanalyzed({
+      ...TIMED,
+      plies: [
+        { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+        { ply: 1, clockCs: 12_000, spentCs: 6_000, shareOfRemaining: 33.333 },
+      ],
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+    await screen.findByText(/temps par coup/i);
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      const now = document.querySelector('[data-part="current-move-time"]');
+      // A whole number above 10 %: 33 vs 34 is noise, and the decimal would
+      // claim a distinction the reader cannot use.
+      expect(now?.textContent).toContain("33 %");
+      expect(now?.textContent).toMatch(/de ce qu'il vous restait/);
+    });
+  });
+
+  it("keeps a decimal on a small share, where the distinction is real", async () => {
+    stubUnanalyzed({
+      ...TIMED,
+      plies: [
+        { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+        { ply: 1, clockCs: 17_980, spentCs: 20, shareOfRemaining: 0.333 },
+      ],
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+    await screen.findByText(/temps par coup/i);
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      const now = document.querySelector('[data-part="current-move-time"]');
+      expect(now?.textContent).toContain("0,3 %");
+    });
+  });
+
+  it("says nothing about a share it does not have, rather than 0 %", async () => {
+    stubUnanalyzed({
+      ...TIMED,
+      plies: [
+        { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+        { ply: 1, clockCs: 18_000, spentCs: null, shareOfRemaining: null },
+      ],
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+    await screen.findByText(/temps par coup/i);
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      const now = document.querySelector('[data-part="current-move-time"]');
+      expect(now?.textContent).not.toContain("%");
+    });
+  });
+
+  it("draws the time graph BELOW the analysis curve", async () => {
+    // The requester's layout call, 2026-09-09: the analysis graph comes first.
+    // Its own annotated fixture: `ANNOTATED` belongs to another describe block.
+    const annotated = [
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
+    ] satisfies MoveAnnotation[];
+    stubAnnotations(annotated, TIMED);
+
+    render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+    await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+    await userEvent.click(screen.getByRole("radio", { name: /annoté/i }));
+
+    await waitFor(() => expect(document.querySelector('[data-part="curve"]')).toBeTruthy());
+    const labels = [...document.querySelectorAll('[data-part="graph-label"]')].map(
+      (el) => el.textContent ?? "",
+    );
+    const curve = labels.findIndex((t) => /avantage au fil/i.test(t));
+    const timeAt = labels.findIndex((t) => /temps par coup/i.test(t));
+    expect(curve).toBeGreaterThanOrEqual(0);
+    expect(timeAt).toBeGreaterThan(curve);
+  });
+
+  it("follows the Player onto the opponent's Move too", async () => {
+    // Both sides are measured — who suffered the pressure and who inflicted it
+    // is the question (kept on the requester's decision, 2026-09-09).
+    stubUnanalyzed(TIMED);
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+    await screen.findByText(/temps par coup/i);
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      const now = document.querySelector('[data-part="current-move-time"]');
+      expect(now?.textContent).toContain("3,5 s");
+    });
   });
 
   it("prints a whole second, with no decimal, where the source rounds to the second", async () => {
     stubUnanalyzed({ ...TIMED, precision: "seconds" });
 
     render(<GameViewer game={{ ...OPERA_GAME }} />);
+    await screen.findByText(/temps par coup/i);
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
-      const first = moveItems()[0].textContent ?? "";
-      expect(first).toContain("2 s");
+      const now = document.querySelector('[data-part="current-move-time"]');
+      expect(now?.textContent).toContain("2 s");
       // A tenth here would claim a precision the PGN never carried (±1 s).
-      expect(first).not.toContain("2,0 s");
+      expect(now?.textContent).not.toContain("2,0 s");
     });
   });
 
-  it("says « sans objet » on a correspondence Game, and shows no zero", async () => {
+  it("says « sans objet » on a correspondence Game, and draws nothing", async () => {
     stubUnanalyzed({
       timeControl: { kind: "correspondence", daysPerMove: 2 },
       plies: [],
@@ -724,12 +849,10 @@ describe("GameViewer — the time per Move", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME, timeControlCategory: "correspondence" }} />);
 
-    // Said twice on purpose since the review of this story: once for the column
-    // and once for the Game's reading, each answering where a Player would look.
     const said = await screen.findAllByText(/sans objet/i);
     expect(said.length).toBeGreaterThan(0);
-    // Never a `0` standing in for a figure the app does not have.
-    expect(screen.queryByLabelText(/temps pris/i)).toBeNull();
+    // No drawing, and no `0` standing in for a figure the app does not have.
+    expect(document.querySelector('[data-part="time-graph"]')).toBeNull();
   });
 
   it("distinguishes a clock never recorded from one that does not apply", async () => {
@@ -743,19 +866,20 @@ describe("GameViewer — the time per Move", () => {
 
     render(<GameViewer game={{ ...OPERA_GAME }} />);
 
-    // A real-time Game whose clock we simply do not hold. Saying "sans objet"
-    // here would claim the Game had no clock, which is false.
     await screen.findByText(/pas d'horloge enregistrée/i);
     expect(screen.queryByText(/sans objet/i)).toBeNull();
+    expect(document.querySelector('[data-part="time-graph"]')).toBeNull();
   });
 
-  it("shows the times on a Game the engine has never seen", async () => {
-    // The structural assertion: `rapid` has zero analysed Games.
+  it("draws and states the time on a Game the engine has never seen", async () => {
+    // The structural assertion: `rapid` has zero analysed Games, and the drawing
+    // is outside the `annotations` guard for exactly that reason.
     stubUnanalyzed(TIMED);
 
     render(<GameViewer game={{ ...OPERA_GAME, analyzed: false }} />);
 
-    await waitFor(() => expect(moveItems()[0].textContent).toContain("2,0 s"));
+    await screen.findByText(/temps par coup/i);
+    expect(document.querySelector('[data-part="time-graph"] svg')).toBeTruthy();
     // …while the engine's own record is genuinely absent.
     expect(screen.queryByRole("radiogroup", { name: /niveau de revue/i })).toBeNull();
   });
@@ -781,9 +905,9 @@ describe("GameViewer — the Game's time reading", () => {
   const READ: GameTime = {
     timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
     plies: [
-      { ply: 0, clockCs: null, spentCs: null },
-      { ply: 1, clockCs: 18_000, spentCs: 200 },
-      { ply: 2, clockCs: 17_850, spentCs: 350 },
+      { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+      { ply: 1, clockCs: 18_000, spentCs: 200, shareOfRemaining: 1.1 },
+      { ply: 2, clockCs: 17_850, spentCs: 350, shareOfRemaining: 1.9 },
     ],
     absence: null,
     precision: "tenths",
@@ -794,7 +918,8 @@ describe("GameViewer — the Game's time reading", () => {
       totalSpentCs: 200,
       lowClockCs: 1_800,
       underLowClock: 0,
-      longest: [{ ply: 1, spentCs: 200 }],
+      longest: [{ ply: 1, spentCs: 200, shareOfRemaining: 1.1 }],
+      costliestShare: [{ ply: 1, spentCs: 200, shareOfRemaining: 1.1 }],
       timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
     },
   };
@@ -807,6 +932,56 @@ describe("GameViewer — the Game's time reading", () => {
     const panel = await screen.findByRole("region", { name: /temps/i });
     expect(panel.textContent).toContain("2,0 s");
     expect(panel.textContent).toMatch(/1 coup/);
+  });
+
+  it("serves BOTH rankings, and each Move with its share", async () => {
+    // Asked for on 2026-09-09. The two lists answer different questions and are
+    // not the same list: a long think early and a short one on a nearly-flagged
+    // clock are two different faults.
+    stubUnanalyzed({
+      ...READ,
+      reading: {
+        ...READ.reading!,
+        // 43,3 s out of 120 s — the long think.
+        longest: [{ ply: 39, spentCs: 4_330, shareOfRemaining: 36.1 }],
+        // 1,1 s out of 3 s — the panic, invisible in a ranking by seconds.
+        costliestShare: [{ ply: 75, spentCs: 110, shareOfRemaining: 36.7 }],
+      },
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    const bySeconds = panel.querySelector('[data-part="longest"]')?.textContent ?? "";
+    const byShare = panel.querySelector('[data-part="costliest-share"]')?.textContent ?? "";
+
+    // Each list carries seconds AND share, in the same wording, so what a reader
+    // compares between them is the ordering and nothing else.
+    expect(bySeconds).toContain("43,3 s");
+    expect(bySeconds).toContain("36 %");
+    expect(byShare).toContain("1,1 s");
+    expect(byShare).toContain("37 %");
+    // And they are genuinely two different Moves here.
+    expect(bySeconds).toContain("20.");
+    expect(byShare).toContain("38.");
+  });
+
+  it("prints a Move's seconds alone when its share is unknown, never 0 %", async () => {
+    stubUnanalyzed({
+      ...READ,
+      reading: {
+        ...READ.reading!,
+        longest: [{ ply: 1, spentCs: 200, shareOfRemaining: null }],
+        costliestShare: [],
+      },
+    });
+
+    render(<GameViewer game={{ ...OPERA_GAME }} />);
+
+    const panel = await screen.findByRole("region", { name: /temps/i });
+    const line = panel.querySelector('[data-part="longest"]')?.textContent ?? "";
+    expect(line).toContain("2,0 s");
+    expect(line).not.toContain("%");
   });
 
   it("names the low-clock mark it counted against, so the Player can count the same Moves", async () => {
@@ -859,8 +1034,8 @@ describe("GameViewer — what the reading refuses to invent", () => {
   const base: GameTime = {
     timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
     plies: [
-      { ply: 0, clockCs: null, spentCs: null },
-      { ply: 1, clockCs: 18_000, spentCs: 200 },
+      { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+      { ply: 1, clockCs: 18_000, spentCs: 200, shareOfRemaining: 1.1 },
     ],
     absence: null,
     precision: "tenths",
@@ -872,6 +1047,7 @@ describe("GameViewer — what the reading refuses to invent", () => {
       lowClockCs: 1_800,
       underLowClock: 0,
       longest: [],
+      costliestShare: [],
       timeControl: { kind: "realtime", initialCs: 18_000, incrementCs: 200 },
     },
   };

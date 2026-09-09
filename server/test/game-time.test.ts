@@ -20,7 +20,12 @@ describe("gameTime", () => {
     it("records a Clock for every half-move, and nothing for the starting Position", () => {
       // 76 half-moves; index 0 is the start, which no side has played to.
       expect(time.plies).toHaveLength(77);
-      expect(time.plies[0]).toEqual({ ply: 0, clockCs: null, spentCs: null });
+      expect(time.plies[0]).toEqual({
+        ply: 0,
+        clockCs: null,
+        spentCs: null,
+        shareOfRemaining: null,
+      });
       expect(time.plies[76].clockCs).not.toBeNull();
     });
 
@@ -64,6 +69,47 @@ describe("gameTime", () => {
     });
   });
 
+  describe("what share of the clock a Move cost", () => {
+    // Asked for on 2026-09-09: not just "12 s", but "12 s out of the 40 you had".
+    // The same 12 s is a shrug at the start of a Game and a catastrophe at the end,
+    // and the figure that tells them apart is the share.
+    const time = gameTime(REAL_READING_PGN, "white");
+
+    it("measures the Move against what the side had BEFORE playing it", () => {
+      // White's first Move on a 60+1: 0.2 s out of the 60 s budget = 0.33 %.
+      // The budget, not budget + increment: the increment is granted for having
+      // played, so it was not available to think with.
+      expect(time.plies[1].shareOfRemaining).toBeCloseTo((20 / 6_000) * 100, 4);
+    });
+
+    it("measures a later Move against that side's own previous Clock", () => {
+      // 2.Bb2 took 0.1 s, and White had 60.8 s when it began.
+      expect(time.plies[3].shareOfRemaining).toBeCloseTo((10 / 6_080) * 100, 4);
+    });
+
+    it("grows as the clock shrinks, on the same time spent", () => {
+      // The whole point of the figure. 38.Ka3 took 1.1 s with 14.5 s left; the
+      // same 1.1 s at the start of the Game was worth a fraction of that share.
+      const late = time.plies[75].shareOfRemaining!;
+      const early = time.plies[3].shareOfRemaining!;
+      expect(late).toBeGreaterThan(early);
+    });
+
+    it("says nothing rather than a zero where the Time spent is unknown", () => {
+      const unknown = gameTime(
+        '[TimeControl "180+2"]\n\n1. e4 1... e5 {[%clk 0:02:58]} 1/2-1/2',
+        "white",
+      );
+      expect(unknown.plies[1].spentCs).toBeNull();
+      expect(unknown.plies[1].shareOfRemaining).toBeNull();
+    });
+
+    it("has none on a correspondence Game, which has no clock to spend", () => {
+      const daily = gameTime('[TimeControl "2 days per move"]\n\n1. e4 e5 1/2-1/2', "white");
+      expect(daily.plies[1].shareOfRemaining).toBeNull();
+    });
+  });
+
   describe("a Lichess Game, whose PGN rounds to the second", () => {
     // Real shape: an analysed Lichess Game's comment carries SEVERAL tokens.
     const LICHESS = [
@@ -92,9 +138,12 @@ describe("gameTime", () => {
     // Lichess's own spelling; chess.com's `1/86400` reaches the same shape.
     const DAILY = '[TimeControl "2 days per move"]\n\n1. e4 e5 2. Nf3 Nc6 1/2-1/2';
 
-    it("has a Time control and no Clock at all", () => {
+    it("has a Time control and no Clock at all, one empty entry per half-move", () => {
       const time = gameTime(DAILY, "white");
       expect(time.timeControl).toEqual({ kind: "correspondence", daysPerMove: 2 });
+      // 4 half-moves plus the starting Position: index-aligned, all empty. A short
+      // array would let a caller indexing by ply fall off the end.
+      expect(time.plies).toHaveLength(5);
       expect(time.plies.every((ply) => ply.clockCs === null && ply.spentCs === null)).toBe(true);
     });
 
@@ -141,7 +190,9 @@ describe("gameTime", () => {
     it("reports the starting Position and nothing else", () => {
       // An aborted Game is a Game we keep on purpose (US-12).
       const time = gameTime('[TimeControl "180+2"]\n\n*', "white");
-      expect(time.plies).toEqual([{ ply: 0, clockCs: null, spentCs: null }]);
+      expect(time.plies).toEqual([
+        { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+      ]);
     });
   });
 });

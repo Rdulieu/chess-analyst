@@ -121,6 +121,19 @@ export interface PlyTime {
    *  for a side's first Move, `initial + increment − Clock`. `null` where it
    *  cannot be derived, never `0`. */
   spentCs: number | null;
+  /**
+   * What share of the clock this Move cost, as a percentage of what the side had
+   * **before playing it** — 0 to 100.
+   *
+   * The figure that tells two identical `Time spent`s apart: 12 s is a shrug on a
+   * full clock and a catastrophe on 20 s left, and the raw seconds cannot say
+   * which. Measured against the clock **before** the Move, and therefore against
+   * the budget alone on a side's first Move: the increment is granted for having
+   * played, so it was never available to think with.
+   *
+   * `null` wherever the `Time spent` itself is unknown — never `0`.
+   */
+  shareOfRemaining: number | null;
 }
 
 /**
@@ -143,10 +156,14 @@ export interface GameTime {
   reading: TimeReading | null;
 }
 
-/** One of the Player's Moves, named by its ply and how long it took. */
+/** One of the Player's Moves, named by its ply and what it cost — in seconds,
+ *  and as a share of what that side held before playing it. */
 export interface LongMove {
   ply: number;
   spentCs: number;
+  /** The same share `PlyTime` carries, folded up so the panel never recomputes
+   *  it (ADR-0017). `null` only where the share itself could not be derived. */
+  shareOfRemaining: number | null;
 }
 
 /**
@@ -195,8 +212,17 @@ export interface TimeReading {
   lowClockCs: number;
   /** How many of the Player's Moves were played under that mark. */
   underLowClock: number;
-  /** The Player's longest Moves, longest first. */
+  /**
+   * The Player's longest Moves in **seconds**, longest first.
+   *
+   * Served beside `costliestShare` and not instead of it: the two rankings answer
+   * different questions and genuinely disagree on a real Game. Seconds alone hide
+   * every late-Game panic — 1.1 s with 14 s left is a third of the clock — and
+   * share alone hides the long think that caused the panic.
+   */
   longest: LongMove[];
+  /** The Player's costliest Moves as a **share** of what was left, biggest first. */
+  costliestShare: LongMove[];
   /**
    * The cadence this reading is to be read **within** — carried, so the reading
    * can never be compared across two `Time control category`s. The rule that
@@ -276,7 +302,11 @@ export function gameTime(
   // non-monotone and outside any 24 h budget, i.e. interpretable as nothing.
   // Measured 2026-09-08; reading it would fabricate a pressure nobody was under.
   const daily = timeControl?.kind === "correspondence";
-  const readings = daily ? [] : comments.map(clockIn);
+  // A correspondence Game still gets **one entry per half-move**, all empty — not
+  // a short array. The block promises to be index-aligned with every other
+  // per-Move array the payload serves, and a caller indexing by ply must find a
+  // stated absence rather than fall off the end.
+  const readings = daily ? comments.map(() => null) : comments.map(clockIn);
   const recorded = readings.some((reading) => reading !== null);
   const precision = precisionOf(comments);
 
@@ -284,12 +314,16 @@ export function gameTime(
     // Ply 0 is the starting Position: no side has played to it, so it carries
     // no Clock and no Time spent. Stated, not omitted, so the array stays
     // index-aligned with every other per-Move array the payload serves.
-    { ply: 0, clockCs: null, spentCs: null },
-    ...readings.map((clockCs, index) => ({
-      ply: index + 1,
-      clockCs,
-      spentCs: spentAt(readings, index, timeControl, precision),
-    })),
+    { ply: 0, clockCs: null, spentCs: null, shareOfRemaining: null },
+    ...readings.map((clockCs, index) => {
+      const spentCs = spentAt(readings, index, timeControl, precision);
+      return {
+        ply: index + 1,
+        clockCs,
+        spentCs,
+        shareOfRemaining: shareAt(readings, index, timeControl, spentCs),
+      };
+    }),
   ];
 
   return {
@@ -301,6 +335,27 @@ export function gameTime(
     // disagree, because there is only one set of numbers (ADR-0017).
     reading: recorded ? readingOf(plies, playerColor, timeControl, lastClockCs) : null,
   };
+}
+
+/**
+ * The top `LONGEST_SHOWN` Moves by whatever `cost` says, biggest first.
+ *
+ * One function for both rankings, so the two lists cannot drift apart in how
+ * they cut or how many they keep — the only thing that differs between them is
+ * the quantity being ranked.
+ */
+function rank(
+  plies: (PlyTime & { spentCs: number })[],
+  cost: (ply: PlyTime & { spentCs: number }) => number,
+): LongMove[] {
+  return [...plies]
+    .sort((a, b) => cost(b) - cost(a))
+    .slice(0, LONGEST_SHOWN)
+    .map((ply) => ({
+      ply: ply.ply,
+      spentCs: ply.spentCs,
+      shareOfRemaining: ply.shareOfRemaining,
+    }));
 }
 
 /** Whether the half-move at this ply was played by the Player. Ply 1 is White's
@@ -336,10 +391,14 @@ function readingOf(
     totalSpentCs: measured.reduce((total, ply) => total + ply.spentCs, 0),
     lowClockCs,
     underLowClock: mine.filter((ply) => ply.clockCs !== null && ply.clockCs < lowClockCs).length,
-    longest: [...measured]
-      .sort((a, b) => b.spentCs - a.spentCs)
-      .slice(0, LONGEST_SHOWN)
-      .map((ply) => ({ ply: ply.ply, spentCs: ply.spentCs })),
+    longest: rank(measured, (ply) => ply.spentCs),
+    // Ranked over the Moves whose share IS known: a Move with no share cannot be
+    // placed in an ordering of shares, and dropping it is not the same as scoring
+    // it zero.
+    costliestShare: rank(
+      measured.filter((ply) => ply.shareOfRemaining !== null),
+      (ply) => ply.shareOfRemaining!,
+    ),
     timeControl,
     lastClockCs,
   };
@@ -390,4 +449,32 @@ function spentAt(
   // silently pass a fabricated zero to a future aggregate. That one is answered
   // `null`: no figure, said as no figure.
   return precision === "seconds" ? 0 : null;
+}
+
+/**
+ * What share of its side's clock the half-move at `index` cost — a percentage of
+ * what that side had **before** playing it.
+ *
+ * The denominator is the same side's previous `Clock`, and the **initial budget
+ * alone** on a side's first Move: the increment is granted for having played, so
+ * it was not time the Player had to think with. Using `initial + increment`
+ * there would understate every opening Move by the increment's share.
+ *
+ * `null` wherever the `Time spent` is unknown, and wherever the denominator is
+ * not positive — a share of nothing is not `0`, it is nothing.
+ */
+function shareAt(
+  readings: (number | null)[],
+  index: number,
+  timeControl: TimeControl | null,
+  spentCs: number | null,
+): number | null {
+  if (spentCs === null) return null;
+  if (timeControl === null || timeControl.kind !== "realtime") return null;
+
+  const previous = index >= 2 ? readings[index - 2] : undefined;
+  const available =
+    previous === null || previous === undefined ? timeControl.initialCs : previous;
+  if (available <= 0) return null;
+  return (spentCs / available) * 100;
 }
