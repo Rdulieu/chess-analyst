@@ -41,9 +41,12 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
   colours must be opened** — a run that only ever opens a White Game never exercises the flip and
   would pass just as happily on a broken orientation.
 - `Time control` and `Clock` (US-15b, graft — no fourth HP; the 3-HP cap is already spent): an
-  opened Game names its **exact cadence** beside the category, every half-move carries the time
-  taken and the time left, and the recap panel's reading is **the sum of that column** — recoupable
-  by hand, which is the point rather than a nicety. All of it on a Game the engine has never seen.
+  opened Game names its **exact cadence** beside the category; the time per Move is a **drawing**
+  below the analysis graph plus one line stating the reviewed Move's time, **share of clock** and
+  time left — **never figures on the move list's rows**, which is a decision the requester made on
+  a real screen (see step 9c). The recap panel's reading is **the sum of what the Moves carry**,
+  recoupable by hand, and it serves **two rankings** because seconds and share disagree. All of it
+  on a Game the engine has never seen.
 - Incremental Import: replaying the same range adds no duplicate.
 - Engine analysis pass (US-4, graft — no dedicated HP; the 3-HP cap is already spent): analyzing
   one imported Game with the real engine marks it "analysée" and the resulting `Danger position`
@@ -141,16 +144,34 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    > The two prove different things about the same route.
 
 9c. **(US-15b) Read the time of a Game the engine has never touched.** Staying on the Analyse page
-   of an imported — and still **unanalysed** — blitz Game, read what it now says about time → the
-   header names the **exact cadence** (`3+2`, `2+1`…) **beside** the `Time control category`, not
-   instead of it: the category puts a 3+2 and a 5+0 in one bucket and the cadence is what tells
-   them apart. Every half-move of the record carries **two** figures, both named in words — how long
-   that side **took** (led with, because it is what the Player did) and how much they had **left**.
-   Pick one Move and check it by hand: the same side's previous Clock, minus this one, plus the
-   increment → the time shown. Then read the recap panel → **« Votre temps sur cette partie »**
-   states how many Moves the Player played and in what total, how many fell under the low-clock
-   mark it **names**, and which of their Moves were longest. Add up the column's own figures for
-   the Player's Moves → the total the panel announces, exactly.
+   of an imported — and still **unanalysed** — blitz Game, read what it now says about time.
+
+   **The header** names the **exact cadence** (`3+2`, `2+1`…) **beside** the `Time control
+   category`, not instead of it: the category puts a 3+2 and a 5+0 in one bucket, and the cadence
+   is what tells them apart.
+
+   **The move list carries no time at all** — bare notation, and that is the assertion. Two figures
+   per row made the list unreadable, and a move list names Moves.
+
+   **A drawing, « Temps par coup », sits BELOW the analysis graph**: the Player's Moves above a
+   shared axis and the opponent's below it, so the side is carried by *which way the bar goes* and
+   never by its ink. Its scale is printed beside it.
+
+   **A line under the drawing states the reviewed Move's own figures** — how long that side
+   **took**, what **share of its clock** that cost, and how much it had **left**. Step to a Move and
+   check it by hand: the same side's previous Clock, minus this one, plus the increment → the time
+   shown; and that time over the clock the side held **before** playing → the share shown.
+
+   **The recap panel** states how many Moves the Player played and in what total, how many fell
+   under the low-clock mark it **names**, and **two rankings** of their costliest Moves — one by
+   seconds, one by share of the clock — each Move carrying both figures.
+
+   **Recoup the total by hand**: step through the Player's Moves, reading each one's time off the
+   line, and add them → the total the panel announces, exactly. It costs more steps than reading a
+   column did, and that is the price of the layout the requester chose; the audit itself is
+   unchanged and is still the EPIC's requirement. **Recoup the two rankings too** — they must be
+   the top three of their own ordering, and on a real Game they **disagree**: a long think early
+   and a short one on a nearly-flagged clock are different faults, which is why both are served.
 
    > **Why here, and why it costs nothing.** Step 9 has just reloaded onto a Game that step 7
    > established is **not analysed**, and time is read from the stored PGN, not from the engine
@@ -158,17 +179,31 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
    > the story's own structural claim: the time is there **before** any analysis, which is the
    > entire reason `rapid`, with zero analysed Games, is a cadence this feature can serve.
    >
+   > **Rewritten 2026-09-09, and the first version is worth knowing about.** The figures were built
+   > into the **move list**, two per row, and the acceptance criterion asked for exactly that
+   > ("dans le relevé que je lis déjà"). Seen on a real Game it made the list unreadable, and the
+   > requester reversed it. The lesson is not about time: an assertion can be met to the letter and
+   > still be wrong, and only a screen says so. If a future run finds figures back on the rows, that
+   > is a regression of a **decision**, not of a detail.
+   >
    > **What is checkable here and what is not.** The imported range is chess.com, whose PGN carries
-   > **tenths**, so the column shows one decimal and it is real. A Lichess Game rounds to the whole
+   > **tenths**, so the figures show one decimal and it is real. A Lichess Game rounds to the whole
    > second and must show **no** decimal — that asymmetry is ADR-0029's accepted cost, and it is
    > **not exercisable from this scenario**, whose corpus is chess.com. Do not report its absence as
-   > a failure.
+   > a failure. Since path 0 now imports Lichess Games **with** their clocks, HP-02 can exercise it
+   > and does.
    >
    > **The two absences are different sentences and must not be melted.** A `correspondence` Game
    > says **« sans objet »** — it never had a clock. A real-time Game whose PGN carries none says
    > **« pas d'horloge enregistrée »** — the clock existed and we do not hold it. If a run ever
    > sees one of those sentences where the other belongs, that is a finding, not a wording nit:
    > a future aggregate would average an absence that is a fact together with one that is a gap.
+   >
+   > **A third readout borrows « sans objet », and that is not the melting above.** The panel's
+   > last-Clock line reads « … : sans objet (partie matée, ou partie chess.com) » — it states its
+   > own reason in the same breath and fills with a real figure on a Lichess Game. Recorded because
+   > the phrase now carries two meanings in two places, and a reader keying on the **words** rather
+   > than the `data-part` could conflate them.
    >
    > It is a **step, not a fourth HP**: the cap stays at three, the same arbitration US-14 and
    > US-15a made.
@@ -273,20 +308,29 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
 - Step 9: after reload, the `Review mode` is Unaided — where every review now starts (US-28), never volunteered — and `DudulSmash` is still the current Profile — the banner names it with no re-selection, and the scoped screens render its history rather than sending the Player to `/profiles`. The selection is what survives a restart now; there is no remembered username field left to pre-fill.
 - Step 9c: on the **unanalysed** blitz Game, the Analyse header states the **exact `Time control`**
   (e.g. `3+2`) **beside** the `Time control category`, and does not replace it — the two answer
-  different questions, and `blitz` alone confuses a 3+2 with a 5+0. Every half-move of the record
-  carries **both** figures, each **named in words** (never a bare pair of numbers, and no cue
-  chromatic only): the time **taken**, led with, and the time **left**. The arithmetic checks: the
-  same side's previous `Clock` − this one + the increment = the time taken, and a side's **first**
-  Move is derived from the cadence (`initial + increment − Clock₁`) rather than left as a hole. The
-  recap panel carries **« Votre temps sur cette partie »**, and every figure in it is **the sum of
-  the column beside it** — the total spent adds up **exactly**, and the low-clock count recounts,
-  against a mark the panel **names**. All of this on a Game with **no `Evaluation` whatsoever**,
-  which is the structural claim: `Review mode` is irrelevant here, because none of this comes from
-  the engine. **Not exercisable in this scenario**: whole-second precision (this corpus is
-  chess.com, which writes tenths) — its absence is not a failure. **A finding, not a nit**, if
-  « sans objet » ever appears where « pas d'horloge enregistrée » belongs, or the reverse: those
-  name two different facts (a Game that never had a clock vs. one whose clock we do not hold), and
-  melting them would let a later aggregate average a fiction.
+  different questions, and `blitz` alone confuses a 3+2 with a 5+0. **The move list carries no time
+  on any row**: bare notation, which is the assertion of this step since 2026-09-09 (see the step's
+  own note). A drawing labelled **« Temps par coup »** sits **below** the analysis graph, its label
+  naming which half is whose, with its scale printed beside it; the side is carried by **which way
+  the bar goes**, never by ink alone. A line under it states the **reviewed** Move's three figures —
+  time taken, **share of the clock it cost**, time left — each in words, never a bare number. The
+  arithmetic checks: the same side's previous `Clock` − this one + the increment = the time taken;
+  a side's **first** Move is derived from the cadence (`initial + increment − Clock₁`) rather than
+  left as a hole; and the share is that time over the clock held **before** the Move — over the
+  budget **alone** on a first Move, the increment being granted for having played. The recap panel
+  carries **« Votre temps sur cette partie »** with **two rankings** — by seconds and by share — each
+  Move stating both figures in the **same wording**, so what a reader compares between the lists is
+  the ordering and nothing else. Every figure in the panel is **the sum or the extremum of what the
+  Moves carry**: stepping through the Player's Moves and adding their times gives the announced
+  total **exactly**, and the low-clock count recounts against a mark the panel **names**. All of
+  this on a Game with **no `Evaluation` whatsoever**, which is the structural claim: `Review mode`
+  is irrelevant here, because none of it comes from the engine. A Move whose share is unknown prints
+  its seconds **alone**, never `0 %`. **Not exercisable in this scenario**: whole-second precision
+  (this corpus is chess.com, which writes tenths) — its absence is not a failure, and HP-02 covers
+  it now that path 0 imports Lichess clocks. **A finding, not a nit**, if « sans objet » ever appears
+  where « pas d'horloge enregistrée » belongs, or the reverse: those name two different facts (a
+  Game that never had a clock vs. one whose clock we do not hold), and melting them would let a
+  later aggregate average a fiction.
 - Step 9b: the reading route (`/analyse/:gameId/lecture`) renders **no engine information at all** —
   no `Evaluation`, no advantage bar, no `Evaluation curve`, no severity glyph, no `Best line`, no
   `Niveau de revue` control — on a Game that has not been analysed, and it neither reads nor writes
