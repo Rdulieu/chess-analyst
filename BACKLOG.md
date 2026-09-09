@@ -91,66 +91,10 @@
   > **Roadmap** — l'EPIC se découpe en stories lettrées (précédent US-10a/US-10b) :
   > - **US-15a** — Comprendre l'analyse sur **une** partie. Sortie de l'EPIC en story autonome, sur
   >   sa propre branche d'intégration : **livrée et mergée** (PR #58, 2026-08-23), voir `## Done`.
-  > - **US-15b** — La pression du temps. **Grillée le 2026-09-08** — 24 décisions, frontière vide ;
-  >   état complet et faits mesurés : `.scratch/time-pressure/GRILL-NOTES.md` (+ le relevé
-  >   `clock-probe.md`). Branche `integration/US-15b-time-pressure`. `CONTEXT.md` : quatre termes
-  >   ajoutés (**Time control**, **Clock**, **Time spent**, **Lichess division**), `Time control
-  >   category` amendée ; **ADR-0029** (l'horloge est dérivée du PGN), **ADR-0030** (le
-  >   rafraîchissement remplace le PGN et refuse un mouvement différent), **ADR-0031** (la division
-  >   lichess est un oracle, jamais la `Phase`).
-  >   **Spec** : `.scratch/time-pressure/SPEC.md` (`ready-for-agent`). **Découpée en 6 tickets**
-  >   sous `.scratch/time-pressure/tickets/`, tous `ready-for-agent`, implémentés sur la branche
-  >   d'intégration :
-  >   - `01-the-exact-time-control` — la cadence exacte de bout en bout *(aucun bloqueur)*
-  >   - `02-time-per-move` — le temps par coup dans le relevé *(bloqué par 01)* ; **livre les 1983
-  >     parties chess.com sans aucun rafraîchissement**
-  >   - `03-the-game-s-time-reading` — la lecture du temps sur la partie *(bloqué par 02)*
-  >   - `04-the-lichess-export-asks-for-clocks` — `clocks`/`division` + la migration *(bloqué par 02)*
-  >   - `05-the-cli-brings-back-the-434` — le CLI rapatrie les 434 parties *(bloqué par 03, 04)* ;
-  >     c'est **cette** tranche qui fait exister l'axe `rapid`
-  >   - `06-graft-onto-hp-01-and-the-pr` — greffe sur HP-01 et la PR *(bloqué par 01-05)*
-  >
-  >   - **tranche 07** *(hors découpage initial)* — trois retours du demandeur après avoir vu
-  >     tourner 01-06 sur la vraie base : le temps **quitte la liste des coups** pour un graphe
-  >     « Temps par coup » sous le graphe d'analyse, et gagne la **part de l'horloge** consommée,
-  >     avec **deux** classements dans le panneau (par secondes, par part). L'AC de la tranche 02
-  >     — les chiffres « dans le relevé que je lis déjà » — est **renversée par le demandeur** :
-  >     c'était le mauvais endroit, et cela ne se voyait qu'à l'écran.
-  >
-  >   **LIVRÉE le 2026-09-09 — [PR #109](https://github.com/Rdulieu/chess-analyst/pull/109), en
-  >   attente du merge humain** (`integration → develop` reste une décision humaine). Les six
-  >   tranches sont sur la branche d'intégration. Gate : build OK, **523 tests serveur + 918
-  >   client**, `lint` a **tourné et rendu 0**, **FP 01→05 vertes**, **suite HP 3/3 verte**
-  >   (+ path 0, jouée contre `9de48ac` — donc **avant** la tranche 07 ; l'étape 9c de HP-01 porte
-  >   sur l'ancien emplacement des chiffres et reste à re-jouer si l'on veut la couverture
-  >   agentique de la forme actuelle), **aucun finding bloquant**.
-  >   **Reste à faire par le demandeur** : passer `npm run repair:clocks -w server -- <db>` sur la
-  >   vraie base — geste destructeur sur 434 PGN dont 10 parties analysées, vérifié à l'octet sur
-  >   des copies mais jamais joué sur l'original.
-  >   **Trois décisions ouvertes** : le repère « horloge basse » à 10 % du budget initial (choix de
-  >   l'agent, dans aucune ADR — déclaré au titre d'ADR-0027) ; la catégorie affichée en anglais
-  >   brut à côté de libellés français ; les coups les plus longs désignés par leur numéro sans le
-  >   SAN.
-  >   Se grille **entière** — récupérer la donnée de temps *et* l'exploiter (décision du demandeur ;
-  >   une story amont dédiée à la seule récupération a été proposée puis écartée).
-  >   **Priorité relevée par une mesure** : le focus du demandeur est **blitz + rapide**, or `rapid`
-  >   n'a **aucune partie** qui porte l'horloge (230 sur 231 sont lichess) et **aucune analysée**. Le
-  >   rafraîchissement ne complète pas un corpus, **il fait exister l'axe rapid**.
-  >   **« 1 partie sur 231 » était un artefact, corrigé le 2026-09-08 à la livraison** : la sonde
-  >   comptait avec `LIKE '%[%clk%'`, sans espace après `clk`, et matchait donc l'en-tête
-  >   `[Black "Omer_clkc"]` — un nom de joueur. Le vrai compte était **zéro**. Trouvé par la FP de la
-  >   tranche 05 sur le vrai corpus ; le même motif fautif était dans le CLI, où il faussait le seul
-  >   chiffre affiché pour prouver le travail.
-  >   **Prémisse corrigée le 2026-09-02 : sur lichess, l'horloge n'est pas dans nos données.**
-  >   `clocks=true` n'est pas envoyé à l'export (`platform/lichess/client.ts` n'envoie que `since`,
-  >   `until`, `pgnInJson`, `opening`, `sort`), donc le PGN arrive **sans** `[%clk]`. **Chiffres
-  >   re-mesurés le 2026-09-08** — les précédents (« 282 sur 282 », « 1 sur 434 ») avaient vieilli :
-  >   **1983 parties chess.com sur 1983 portent l'horloge, 0 sur 434 côté lichess** (zéro, pas une),
-  >   dont **10 parties lichess déjà analysées**. La story n'est donc pas « un parseur, zéro coût
-  >   moteur » : c'est un paramètre d'export, **plus une reprise d'import** des parties lichess déjà
-  >   là — et le PGN stocké devra être remplacé, pas complété, ce qui est dû à ADR-0015 une assertion
-  >   « même mouvement » pour que les `Evaluation`s de ces 10 parties survivent. Tant que ce n'est pas
-  >   fait, tout axe « pression du temps » ne vaudrait que pour un compte sur deux, en silence.
+  > - **US-15b** — La pression du temps. **Livrée et mergée** (PR #109, 2026-09-08), sur sa
+  >   propre branche d'intégration comme 15a — voir `## Done` pour l'état complet, les sept
+  >   tranches, la réserve sur la couverture agentique de la tranche 07 et le geste
+  >   `repair:clocks` qui reste dû au demandeur.
   > - **US-15a-bis** — Approfondir la vue par partie sur de vraies parties **avant** l'agrégat
   >   (demandé le 2026-08-23, après la livraison de 15a). **Bloque 15c** : l'agrégat étant la somme
   >   du récapitulatif par partie (ADR-0017), tout approximatif se propage.
@@ -667,14 +611,81 @@
 
 ## In review
 
+## Done
+
+- **US-15b**: La pression du temps — savoir où le temps consommé explique mes fautes, et sur quels
+  coups l'horloge basse coïncide avec la dérive.
+  > **LIVRÉE le 2026-09-08 — [PR #109](https://github.com/Rdulieu/chess-analyst/pull/109) MERGÉE
+  > dans `develop`** (`400ab9a`). Sous-story de l'**EPIC US-15**, sur sa propre branche
+  > d'intégration `integration/US-15b-time-pressure`. Gate à la livraison : build OK, **523 tests
+  > serveur + 918 client**, `lint` a **tourné et rendu 0**, **FP 01→05 vertes**, **suite HP 3/3
+  > verte** (+ path 0), **aucun finding bloquant**.
+  >
+  > **Réserve sur la couverture agentique** : la suite HP a été jouée contre `9de48ac`, donc
+  > **avant la tranche 07**. L'étape 9c de HP-01 portait sur l'ancien emplacement des chiffres ;
+  > elle a été réécrite en sondage à la livraison (HP-01, HP-02, HP-03 amendés), mais la forme
+  > actuelle n'a **pas** été re-jouée par un agent.
+  >
+  > **Reste à faire par le demandeur** : passer `npm run repair:clocks -w server -- <db>` sur la
+  > vraie base — geste destructeur sur 434 PGN dont 10 parties analysées, vérifié à l'octet sur des
+  > copies mais **jamais joué sur l'original**. Tant qu'il ne l'est pas, l'axe `rapid` reste vide.
+  >
+  > **Trois décisions ouvertes**, laissées au demandeur : le repère « horloge basse » à 10 % du
+  > budget initial (choix de l'agent, dans aucune ADR — déclaré au titre d'ADR-0027) ; la catégorie
+  > affichée en anglais brut à côté de libellés français ; les coups les plus longs désignés par
+  > leur numéro sans le SAN.
+  >
+  > **Grillée le 2026-09-08** — 24 décisions, frontière vide ; état complet et faits mesurés :
+  > `.scratch/time-pressure/GRILL-NOTES.md` (+ le relevé `clock-probe.md`). `CONTEXT.md` : quatre
+  > termes ajoutés (**Time control**, **Clock**, **Time spent**, **Lichess division**), `Time
+  > control category` amendée ; **ADR-0029** (l'horloge est dérivée du PGN), **ADR-0030** (le
+  > rafraîchissement remplace le PGN et refuse un mouvement différent), **ADR-0031** (la division
+  > lichess est un oracle, jamais la `Phase`). **Spec** : `.scratch/time-pressure/SPEC.md`.
+  > Grillée **entière** — récupérer la donnée de temps *et* l'exploiter (décision du demandeur ; une
+  > story amont dédiée à la seule récupération a été proposée puis écartée).
+  >
+  > **Sept tranches** sous `.scratch/time-pressure/tickets/` :
+  > - `01-the-exact-time-control` — la cadence exacte de bout en bout
+  > - `02-time-per-move` — le temps par coup dans le relevé ; **livre les 1983 parties chess.com
+  >   sans aucun rafraîchissement**
+  > - `03-the-game-s-time-reading` — la lecture du temps sur la partie
+  > - `04-the-lichess-export-asks-for-clocks` — `clocks`/`division` + la migration
+  > - `05-the-cli-brings-back-the-434` — le CLI rapatrie les 434 parties ; c'est **cette** tranche
+  >   qui fait exister l'axe `rapid`
+  > - `06-graft-onto-hp-01-and-the-pr` — greffe sur HP-01 et la PR
+  > - **tranche 07** *(hors découpage initial)* — trois retours du demandeur après avoir vu tourner
+  >   01-06 sur la vraie base : le temps **quitte la liste des coups** pour un graphe « Temps par
+  >   coup » sous le graphe d'analyse, et gagne la **part de l'horloge** consommée, avec **deux**
+  >   classements dans le panneau (par secondes, par part). L'AC de la tranche 02 — les chiffres
+  >   « dans le relevé que je lis déjà » — a été **renversée par le demandeur** : c'était le mauvais
+  >   endroit, et cela ne se voyait qu'à l'écran.
+  >
+  > **Priorité relevée par une mesure** : le focus du demandeur est **blitz + rapide**, or `rapid`
+  > n'a **aucune partie** qui porte l'horloge (230 sur 231 sont lichess) et **aucune analysée**. Le
+  > rafraîchissement ne complète pas un corpus, **il fait exister l'axe rapid**.
+  >
+  > **« 1 partie sur 231 » était un artefact, corrigé le 2026-09-08 à la livraison** : la sonde
+  > comptait avec `LIKE '%[%clk%'`, sans espace après `clk`, et matchait donc l'en-tête
+  > `[Black "Omer_clkc"]` — un nom de joueur. Le vrai compte était **zéro**. Trouvé par la FP de la
+  > tranche 05 sur le vrai corpus ; le même motif fautif était dans le CLI, où il faussait le seul
+  > chiffre affiché pour prouver le travail.
+  >
+  > **Prémisse corrigée le 2026-09-02 : sur lichess, l'horloge n'était pas dans nos données.**
+  > `clocks=true` n'était pas envoyé à l'export, donc le PGN arrivait **sans** `[%clk]`. **Chiffres
+  > re-mesurés le 2026-09-08** : **1983 parties chess.com sur 1983 portent l'horloge, 0 sur 434 côté
+  > lichess** (zéro, pas une), dont **10 parties lichess déjà analysées**. La story n'était donc pas
+  > « un parseur, zéro coût moteur » : c'était un paramètre d'export, **plus une reprise d'import**
+  > des parties lichess déjà là — et le PGN stocké devait être remplacé, pas complété, ce qui devait
+  > à ADR-0015 une assertion « même mouvement » pour que les `Evaluation`s de ces 10 parties
+  > survivent.
+
 - **US-21**: Remettre l'usine d'accord avec elle-même — pour qu'un agent qui lit la méthode y trouve
   ce que le dépôt fait vraiment, et que la file `ready-for-agent` redevienne une file.
-  > **En revue depuis le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`
-  > vers `develop`. **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
+  > **LIVRÉE et MERGÉE dans `develop` le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`.
+  > **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
   > PRD, huit tranches, deux références gardées, parce que le renommage de vocabulaire de
   > l'amont *est* la passe de cohérence qu'US-21 demandait. La PR porte le filet de code, le
   > rapport du contrôle de santé, celui de la suite HP et celui de l'épreuve de l'agent frais.
-  > **Le merge vers `develop` est une décision humaine.**
   >
   > **Remise à `To do` le 2026-09-01** : elle n'a jamais été en revue — aucune PR ne la porte.
   > **Elle doit être grillée** avant toute implémentation.
@@ -867,15 +878,15 @@
   > tranche que si `git diff --name-only` sort de `.claude/`, `docs/`, `.scratch/` et `BACKLOG.md`.
   > Le filet passe **une fois, entier, à la tranche 08**.
 
+
 - **US-25**: Reprendre les mises à jour de l'usine amont sans perdre les nôtres — pour que rejouer
   l'installation cesse d'être un choix entre « rester en arrière » et « écraser huit mois de
   terrain ».
-  > **En revue depuis le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`
-  > vers `develop`. **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
+  > **LIVRÉE et MERGÉE dans `develop` le 2026-09-04** — PR https://github.com/Rdulieu/chess-analyst/pull/108, `integration/US-21-US-25-factory-update`.
+  > **US-21 et US-25 ont été grillées ensemble et livrées ensemble** : un seul
   > PRD, huit tranches, deux références gardées, parce que le renommage de vocabulaire de
   > l'amont *est* la passe de cohérence qu'US-21 demandait. La PR porte le filet de code, le
   > rapport du contrôle de santé, celui de la suite HP et celui de l'épreuve de l'agent frais.
-  > **Le merge vers `develop` est une décision humaine.**
   >
   > **Pas encore grillée.** Demandée le 2026-09-02. L'usine vient de
   > [`Loulen/prompt-driven-software-factory`](https://github.com/Loulen/prompt-driven-software-factory)
@@ -1059,9 +1070,6 @@
   > **Filet de code allégé, par décision du demandeur** : build + tests + lint ne tournent en fin de
   > tranche que si `git diff --name-only` sort de `.claude/`, `docs/`, `.scratch/` et `BACKLOG.md`.
   > Le filet passe **une fois, entier, à la tranche 08**.
-
-
-## Done
 
 - **US-37**: Le barème d'`Inaccuracy` passe à **5 points** — pour que l'app cesse d'être muette sur
   les coups que le Player voit et qu'elle ne compte pas comme des fautes.
