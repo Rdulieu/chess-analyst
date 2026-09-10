@@ -202,6 +202,20 @@ a helper is recognised as *this* returning, not as a new mystery.
   straight to `/analyse/<id>/confrontation` lands on the Profile picker and looks like a broken
   route. Select the Profile first (minding the `selectProfile` quirk just below). Measured
   2026-09-10.
+- **The Confrontation screen's own hooks, so the next run does not re-derive them** (2026-09-10):
+  the per-Move panel is `[data-part="move-reading"]`, holding `[data-part="reading-term"]` (its
+  register is `data-tone` — `agreement` / `missed` / `overcalled` / `unscored`, the last shared by
+  all five non-scored cases), `[data-part="reading-detail"]` and `[data-part="reading-note"]`. The
+  block at the foot is `[data-part="unscored-section"]`, one `[data-uncounted]` / `[data-unscored]`
+  `<p>` per reason.
+- **`textContent` cannot see a flex-stacking regression, and this one shipped past 955 tests.**
+  A rule written for a `<section>` of block children (`display: flex; flex-direction: column`) left
+  on an element that becomes a `<p>` of inline runs promotes **each run to an anonymous flex item**
+  and stacks one sentence into fragments, swallowing the spaces — while `textContent` reads exactly
+  the same either way, and jsdom has no layout to fail on. Measured 2026-09-10 on US-26-04.
+  **Measure the geometry**: the computed `display`, and whether a `<strong>` and the text node
+  after it share a `y`. A stacked paragraph gives one line *per run*; a healthy one gives one line,
+  or a normal wrap.
 - **`[data-part="confrontation-entry"]` is a `<p>` WRAPPING the anchor**, so `.click()` on the
   element itself does nothing and the URL does not change — which reads exactly like a dead link.
   Click `[data-part="confrontation-entry"] a`. Measured 2026-09-10 on the FP of US-26-01, where it
