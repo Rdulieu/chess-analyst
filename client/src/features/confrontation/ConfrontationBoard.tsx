@@ -41,6 +41,7 @@ export function ConfrontationBoard({
   annotations,
   reading,
   moves,
+  focusRequest,
 }: {
   game: Game;
   annotations: GameAnnotations;
@@ -55,6 +56,8 @@ export function ConfrontationBoard({
   reading: PersonalAnalysis;
   /** The reading of every Move, as the Confrontation now serves it (ADR-0032). */
   moves: MoveReading[];
+  /** A request from elsewhere on the page to bring the board to one ply. */
+  focusRequest?: { ply: number; id: number };
 }) {
   // By ply, because that is how the board asks: it hands over the index it is
   // standing on, and a linear scan per ply transition would be a lookup written
@@ -152,6 +155,7 @@ export function ConfrontationBoard({
       // The arrows step the Moves — and asking for them is what makes the board
       // announce them, so working and announced cannot come apart (US-23, D6).
       keyboardStepping
+      focusRequest={focusRequest}
       // **Below the step controls**, which is where `Board` puts this slot and
       // which is ADR-0021: everything that appears and disappears with the ply
       // goes under the buttons the Player is clicking, never above them.

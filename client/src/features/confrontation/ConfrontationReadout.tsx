@@ -25,8 +25,14 @@ import type { GameConfrontation } from "../../types";
  */
 export function ConfrontationReadout({
   confrontation,
+  onFocusMove,
 }: {
   confrontation: GameConfrontation;
+  /**
+   * Bring the board to one Move — the matrix's cells reaching the diagram.
+   * Optional, because the corpus screen shows a matrix with no board under it.
+   */
+  onFocusMove?: (ply: number) => void;
 }) {
   const { countedMoves, examined, scorable, agreed, matrix } =
     confrontation.severity;
@@ -64,7 +70,11 @@ export function ConfrontationReadout({
       </div>
       {/* HOW the Player is wrong, UNDER the figures and not beside them: the two
           rates answer *how much*, and the matrix is what explains them. */}
-      <ConfusionMatrixTable matrix={matrix} />
+      <ConfusionMatrixTable
+        matrix={matrix}
+        moves={confrontation.moves}
+        onFocusMove={onFocusMove}
+      />
     </>
   );
 }
