@@ -162,6 +162,41 @@ describe("the per-Move reading of a Confrontation", () => {
     });
   });
 
+  /**
+   * **Why the "nearest loss" search excludes what it excludes.**
+   *
+   * `namedFault` skips the queried ply and any fault that cost nothing. A
+   * review read those as fixes to a live defect — a marker naming *itself* as
+   * the nearest loss, or a "loss" worth zero points. Measured here rather than
+   * argued: **both are unreachable**, because a flagged Move always costs
+   * something.
+   *
+   * That is not a coincidence. `moveSeverities` calls
+   * `classifyMove(before, 100 - after)` and `chancesLostByMove` subtracts the
+   * very same pair, so severity and cost are **one quantity read twice**: a
+   * band of 5 or more *is* a loss of 5 or more. A marked fault therefore always
+   * has `lost > 0` and is answered `found` long before any distance is sought.
+   *
+   * The exclusions stay, as the assertion that this remains true. If the two
+   * derivations are ever pulled apart — a severity that means something other
+   * than a drop — this test goes red **and** the exclusions start doing real
+   * work, which is exactly the order one wants.
+   */
+  it("a flagged counted Move always costs something, so no fault can be worth zero", () => {
+    const flagged = confronted().moves.filter(
+      (move) => move.measured !== "none" && move.unscored === null,
+    );
+
+    expect(flagged.length).toBeGreaterThan(0);
+    for (const move of flagged) {
+      expect(
+        move.keyMoment,
+        `ply ${move.ply} is flagged and counted, so it must carry a cost`,
+      ).not.toBeNull();
+      expect(move.keyMoment!.lost).toBeGreaterThan(0);
+    }
+  });
+
   describe("what the Key moments were worth, Move by Move", () => {
     it("credits a marker that landed on a real, costly fault", () => {
       const { keyMomentFound } = CONFRONTATION_FIXTURE_CASES;

@@ -648,19 +648,19 @@ function keyMomentOf(
  * Ties go to the **later** Move, because a marker placed just before the loss
  * is the common near miss and naming the Move that follows it is what teaches.
  *
- * Two exclusions, and both are corrections of a real defect rather than
- * defensive noise:
+ * Two exclusions — the queried ply, and any fault that cost nothing — and they
+ * are **defensive, not fixes**. Both cases are currently unreachable, and it is
+ * worth saying why rather than leaving a reader to assume a bug was closed:
+ * `moveSeverities` calls `classifyMove(before, 100 - after)` while
+ * `chancesLostByMove` subtracts the very same pair, so a severity and a cost
+ * are **one quantity read twice**. A flagged counted Move therefore always
+ * costs something, and a marked one is answered `found` before any distance is
+ * sought.
  *
- * - **The marked ply itself is excluded.** `faults` holds every flagged counted
- *   Move, and a flagged Move can cost `0` — `classifyMove` compares best play
- *   against what was played, while `chancesLostByMove` compares the two actual
- *   Positions, and `gameRecap` already skips `lost <= 0` for exactly this
- *   reason. A marked Move of that shape used to win its own distance-0
- *   comparison, and the sentence read "this Move cost nothing — the nearest
- *   loss is on **this same Move**".
- * - **Moves that cost nothing are excluded.** Pointing a Player at a "loss"
- *   worth zero teaches a contradiction, and the whole purpose of this sentence
- *   is to teach *where to have looked*.
+ * They stay because they make that invariant explicit at the point that depends
+ * on it. `confrontation-per-move.test.ts` asserts it directly: the day severity
+ * stops meaning a drop, that test goes red **and** these two lines begin doing
+ * real work — which is the order one wants.
  *
  * `null` when there was no costly Move to point at: nothing to find is a fact,
  * not a miss, and saying so is fairer than implying one.
