@@ -202,6 +202,18 @@ a helper is recognised as *this* returning, not as a new mystery.
   straight to `/analyse/<id>/confrontation` lands on the Profile picker and looks like a broken
   route. Select the Profile first (minding the `selectProfile` quirk just below). Measured
   2026-09-10.
+- **On a re-measure after a fix: reload ignoring cache, and assert a marker the fix introduced.**
+  A partially-new bundle looks exactly like a partially-working fix. Measured 2026-09-10 on the
+  US-26-06 FP: the served bundle carried one change from a commit (`aria-hidden` removed) while
+  missing another from the *same* commit, so "some of the new code is here" proved nothing and a
+  geometry pass had to be thrown away. `Page.reload {ignoreCache: true}`, then throw by name on a
+  structural attribute the slice added (there, `ol[aria-label="moves"][data-columns="authors"]`)
+  before measuring anything.
+- **`attach()` wants a PAGE target, not the browser endpoint.** `/json/version`'s
+  `webSocketDebuggerUrl` is browser-level; `attach()` then calls `Page.enable` on it and gets
+  `'Page.enable' wasn't found (CDP -32601)`, which reads like a broken helper rather than a wrong
+  endpoint. Use `GET /json/list` and take the entry with `type === "page"`. Measured 2026-09-10.
+  Companion to the `.stop()` note below — same situation, driving in phases across shell calls.
 - **`stopApp` takes `repoRoot`, not `root`.** A teardown written with the wrong key throws before
   killing anything, so the app survives a run that believes it tore down. Measured 2026-09-10
   (US-26-05 FP), cost one retry. Same family as the `session.stop` trap: **helper signatures are

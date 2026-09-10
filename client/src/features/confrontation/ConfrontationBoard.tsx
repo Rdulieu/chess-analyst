@@ -3,7 +3,16 @@ import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
 import { MoveMarks } from "../personal/MoveMarks";
 import { MoveReadout } from "./MoveReadout";
+import {
+  divergencesOf,
+  DIVERGENCE_GLYPH,
+  DIVERGENCE_LABEL,
+  DIVERGENCE_TINT,
+  DIVERGENCE_INK,
+  divergenceAt,
+} from "./divergence";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../personal/declaredSeverity";
+import type { Divergence } from "./divergence";
 import type { Game, GameAnnotations, MoveReading, PersonalAnalysis } from "../../types";
 
 /**
@@ -51,6 +60,35 @@ export function ConfrontationBoard({
   // standing on, and a linear scan per ply transition would be a lookup written
   // where a map belongs.
   const byPly = useMemo(() => new Map(moves.map((move) => [move.ply, move])), [moves]);
+  /**
+   * The divergences, and **only** those, for the curve — a handful of marks on
+   * sixty plies instead of one per fault. The engine's severities are not put
+   * back beside them: the curve already draws the engine's reading by its
+   * shape, and a second copy of it would drown the marks that are new.
+   */
+  const divergences = useMemo(() => divergencesOf(moves), [moves]);
+  const curveMarks = useMemo(
+    () =>
+      divergences.map((divergence) => ({
+        ply: divergence.ply,
+        glyph: DIVERGENCE_GLYPH[divergence.direction],
+        // The DIRECTION, as a slug: this is the sheet's and a driver's hook,
+        // not an accessible name. The curve as a whole is `aria-hidden` — the
+        // marks are a picture of what the list already says in words — so the
+        // sentence belongs on the list's glyph, where it is read aloud.
+        label: divergence.direction,
+        // **A constant pair, like the severity markers carry.** Left to
+        // inherit, the glyph took the theme's ink — and the curve's own fill
+        // is theme-INVARIANT, so in dark the mark measured 1.04:1 against it
+        // and three of five disappeared into the drawing. A mark on this curve
+        // straddles two grounds, so it needs its own ink and its own tint, and
+        // both have to come from the family that does not move with the theme
+        // (ADR-0013 — the same reason the board's square tints are constant).
+        tint: DIVERGENCE_TINT,
+        ink: DIVERGENCE_INK,
+      })),
+    [divergences],
+  );
 
   return (
     <Board
@@ -80,7 +118,29 @@ export function ConfrontationBoard({
       // colonne ou son titre »*. Slice 06 pays it, with two titled columns —
       // « Ma lecture » and « Le moteur ». Declared here rather than left to be
       // discovered, because the slices auto-merge (ADR-0027).
-      moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
+      moveMarks={(ply) => (
+        <>
+          <MoveMarks marks={reading.marks} ply={ply} />
+          {/* The disagreement, in the list as well as on the curve — so it is
+              findable by scanning the Moves and not only by reading the
+              drawing. The glyph is the same one, and its accessible name says
+              the direction in words: the shape carries it for the eye, the
+              name for everyone else (ADR-0013). */}
+          <DivergenceMark direction={divergenceAt(byPly.get(ply))} />
+        </>
+      )}
+      curveMarks={curveMarks}
+      // **The one place two authors may coexist** (ADR-0022): a list has
+      // columns, a square has none. The titles are what make the pairing
+      // readable — the glyph alone could not, being identical on both sides by
+      // construction.
+      moveListHeadings={
+        <p data-part="move-list-headings" aria-hidden="true">
+          <span>Coup</span>
+          <span>Ma lecture</span>
+          <span>Le moteur</span>
+        </p>
+      }
       // The PLAYER's verdict on the square (ADR-0022). Resolved by `markKinds`,
       // the same function `MoveMarks` above uses — never a second rule, so the
       // square and the glyph three centimetres from it cannot say different
@@ -97,5 +157,17 @@ export function ConfrontationBoard({
       // goes under the buttons the Player is clicking, never above them.
       controls={(ply) => <MoveReadout move={byPly.get(ply) ?? null} marks={reading.marks} />}
     />
+  );
+}
+
+
+/** The disagreement, in the move list — the same glyph the curve carries. */
+function DivergenceMark({ direction }: { direction: Divergence["direction"] | null }) {
+  if (direction === null) return null;
+
+  return (
+    <span data-part="divergence" data-direction={direction} aria-label={DIVERGENCE_LABEL[direction]}>
+      {DIVERGENCE_GLYPH[direction]}
+    </span>
   );
 }

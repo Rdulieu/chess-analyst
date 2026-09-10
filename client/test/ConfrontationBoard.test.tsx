@@ -140,9 +140,23 @@ function renderPage() {
   );
 }
 
-/** The board, once it has mounted — the page loads three records before it can. */
+/**
+ * The board, once it has mounted — the page loads three records before it can.
+ *
+ * **A longer wait than the default, and deliberately.** This screen resolves
+ * three fetches and then mounts sixty-four squares through `react-chessboard`;
+ * on a loaded machine that has exceeded `waitFor`'s 1 s more than once, and
+ * every failure was here rather than in the assertion that followed. The same
+ * lateness is recorded on the driving side — "the board mounts a beat AFTER
+ * the page text settles" — so this is the subject being slow, not the test
+ * being wrong. A gate that reddens under load is a gate people learn to
+ * ignore, and the cost of waiting longer is paid only when something is
+ * genuinely broken.
+ */
 async function board(container: HTMLElement) {
-  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull());
+  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull(), {
+    timeout: 5000,
+  });
   return container;
 }
 
@@ -179,15 +193,20 @@ describe("the board on the Confrontation route", () => {
     const { container } = renderPage();
     await board(container);
 
+    /*
+     * Asserted **synchronously**, with no `waitFor`. Stepping is a `setState`
+     * in the keydown handler, and `fireEvent` flushes it inside `act` — so
+     * there is nothing to wait for, and waiting anyway made this the one test
+     * in the suite that failed under load. It went red three times on a busy
+     * machine and passed alone every time: a `waitFor` on an already-settled
+     * value only ever measures how contended the box is. A gate that reddens
+     * under load is a gate people learn to ignore.
+     */
     fireEvent.keyDown(document, { key: "ArrowRight" });
-    await waitFor(() =>
-      expect(screen.getByLabelText("current move").textContent).toContain("1.e4"),
-    );
+    expect(screen.getByLabelText("current move").textContent).toContain("1.e4");
 
     fireEvent.keyDown(document, { key: "ArrowLeft" });
-    await waitFor(() =>
-      expect(screen.getByLabelText("current move").textContent).toContain("Start"),
-    );
+    expect(screen.getByLabelText("current move").textContent).toContain("Start");
 
     // A shortcut nothing on screen mentions does not exist (US-23, D6).
     expect(container.querySelector('[data-part="shortcuts"]')).not.toBeNull();
@@ -340,6 +359,148 @@ describe("the board on the Confrontation route", () => {
     );
     // Sixty cartouches saying "nothing here" would bury the ones that speak.
     expect(container.querySelectorAll('[data-part="reading-term"]')).toHaveLength(1);
+  });
+
+  describe("the divergences, findable without walking sixty Moves", () => {
+    it("puts ONLY the disagreements on the curve, never the engine's severities", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const marks = [...container.querySelectorAll("[data-mark-label]")];
+      // Ply 1 diverges (declared Inaccuracy, measured Blunder). The engine also
+      // measures a Blunder there — and that glyph must NOT be on the curve: the
+      // curve already draws the engine's reading by its shape, and a second
+      // copy would drown the handful of marks that are new.
+      expect(marks).toHaveLength(1);
+      expect(marks[0].getAttribute("data-mark-label")).toBe("sous-lecture");
+      expect(marks[0].textContent).toBe("▼");
+    });
+
+    it("gives each curve mark its own tint and ink, so dark theme cannot swallow it", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const mark = container.querySelector<HTMLElement>("[data-mark-label]")!;
+      // **This test exists because its absence shipped dead code.** The pair
+      // was set on the caller's side, `CurveMark` never declared it, and the
+      // excess properties were dropped in silence — leaving the glyph to
+      // inherit the theme's ink over a theme-INVARIANT curve fill, measured at
+      // 1.04:1 in dark, three of five marks gone into the drawing. The
+      // severity path has had this assertion all along; the new path did not.
+      expect(mark.style.backgroundColor || mark.style.background).toBeTruthy();
+      expect(mark.style.color).toBeTruthy();
+    });
+
+    it("tells the two directions apart by their SHAPE, not their colour", async () => {
+      stub({
+        confrontation: {
+          status: 200,
+          body: {
+            ...CONFRONTATION,
+            moves: [
+              { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null },
+              { ply: 3, notation: "Nf3", declared: "blunder", measured: "none", term: "sur-lecture", unscored: null, keyMoment: null },
+            ],
+          },
+        },
+      });
+      const { container } = renderPage();
+      await board(container);
+
+      const glyphs = [...container.querySelectorAll("[data-mark-label]")].map(
+        (mark) => mark.textContent,
+      );
+      // Over-reading danger and under-reading it are opposite faults, and no
+      // rate separates them. Two forms, so the lean is readable with no colour.
+      expect(new Set(glyphs)).toEqual(new Set(["▼", "▲"]));
+    });
+
+    it("titles the two authors' columns in the move list", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const headings = container.querySelector('[data-part="move-list-headings"]');
+      expect(headings!.textContent).toContain("Ma lecture");
+      expect(headings!.textContent).toContain("Le moteur");
+    });
+
+    it("gives every row EXACTLY three cells, whatever happened on that Move", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const rows = [
+        ...container.querySelectorAll('ol[data-columns="authors"] > li'),
+      ].filter((li) => li.getAttribute("data-part") !== "phase-start");
+      expect(rows.length).toBeGreaterThan(0);
+
+      // **This is what makes a column a column.** A row emits between two and
+      // six children depending on what happened — a verdict, a note, a marker,
+      // a severity, an exclusion, an evaluation — and a grid that counts
+      // children would drift its columns on every line. Grouping each author's
+      // marks into one cell is the invariant the titles rest on; jsdom has no
+      // layout, so this count is the only thing that can guard it here.
+      for (const row of rows) {
+        expect(row.children).toHaveLength(3);
+        expect(row.querySelector('[data-cell="player"]')).not.toBeNull();
+        expect(row.querySelector('[data-cell="engine"]')).not.toBeNull();
+      }
+    });
+
+    it("keeps each author's marks inside their own cell", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const first = container.querySelector('ol[data-columns="authors"] > li')!;
+      // The Player's verdict and divergence on one side; the engine's severity
+      // and its evaluation on the other. A mark in the wrong cell would sit
+      // under the wrong title, which is worse than no title at all.
+      expect(first.querySelector('[data-cell="player"] [data-part="move-marks"]')).not.toBeNull();
+      expect(first.querySelector('[data-cell="player"] [data-part="divergence"]')).not.toBeNull();
+      expect(first.querySelector('[data-cell="engine"] [data-severity]')).not.toBeNull();
+      expect(first.querySelector('[data-cell="engine"] [aria-label="evaluation"]')).not.toBeNull();
+    });
+
+    it("carries the disagreement glyph in the list too, named in words", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const divergence = container.querySelector('[data-part="divergence"]');
+      expect(divergence!.textContent).toBe("▼");
+      // The shape carries it for the eye; the accessible name for everyone else.
+      // The term AND what it means: "sous-lecture" alone would be vocabulary
+      // the screen never shows — the cartouches say « Bévue ratée ».
+      expect(divergence!.getAttribute("aria-label")).toMatch(/^sous-lecture : /);
+      expect(divergence!.getAttribute("aria-label")).toMatch(/plus grand/);
+    });
+
+    it("marks no agreement and nothing unscored — a forced Move is not a disagreement", async () => {
+      stub({
+        confrontation: {
+          status: 200,
+          body: {
+            ...CONFRONTATION,
+            moves: [
+              { ply: 1, notation: "e4", declared: "sound", measured: "none", term: "bonne-lecture", unscored: null, keyMoment: null },
+              // The story's central case: a forced catastrophe the Player
+              // called Sound, and was right about. Putting it on the curve as
+              // a divergence would accuse them of the one thing they got right.
+              { ply: 3, notation: "Nf3", declared: "sound", measured: "blunder", term: null, unscored: "forced", keyMoment: null },
+            ],
+          },
+        },
+      });
+      const { container } = renderPage();
+      await board(container);
+
+      expect(container.querySelectorAll("[data-mark-label]")).toHaveLength(0);
+      expect(container.querySelector('[data-part="divergence"]')).toBeNull();
+    });
   });
 
   it("carries no Review mode: the seal has fallen, everything is revealed", async () => {
