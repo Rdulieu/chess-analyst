@@ -4,7 +4,7 @@ import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
-import { EvaluationGraph } from "./EvaluationGraph";
+import { EvaluationGraph, type CurveMark } from "./EvaluationGraph";
 import { DriftGraph } from "./DriftGraph";
 import { PhaseRibbon } from "./PhaseRibbon";
 import { phaseBands } from "../chess/phaseBands";
@@ -50,6 +50,8 @@ export function Board({
   controls,
   keyboardStepping = false,
   moveMarks,
+  moveListHeadings,
+  curveMarks,
   squareTint,
 }: {
   pgn: string;
@@ -94,6 +96,22 @@ export function Board({
    * caller's. Absent everywhere else, so the Analyse page's list is untouched.
    */
   moveMarks?: (ply: number) => ReactNode;
+  /**
+   * Column titles for the move list — the one place on a screen where **two
+   * authors may legitimately coexist**, because a list has columns and a square
+   * has none (ADR-0022, ADR-0033).
+   *
+   * A slot, and absent everywhere else: `Analyse` and the reading route each
+   * show one author, and a title over a single column would name a distinction
+   * that is not there.
+   */
+  moveListHeadings?: ReactNode;
+  /**
+   * Marks for the evaluation curve, **replacing** the engine's severity glyphs.
+   * The `Confrontation` screen carries only the Player's divergences there;
+   * every other caller keeps the severities. See `EvaluationGraph`.
+   */
+  curveMarks?: CurveMark[];
   /**
    * The tint for one ply's destination square, or nothing — **the caller's
    * verdict, not this component's** (US-23, ADR-0022).
@@ -400,7 +418,12 @@ export function Board({
                   is not `aria-hidden`. */}
               <p data-part="graph-label">Avantage au fil de la partie</p>
               <div data-part="curve">
-                <EvaluationGraph annotations={annotations} currentPly={index} bands={bands} />
+                <EvaluationGraph
+                  annotations={annotations}
+                  currentPly={index}
+                  bands={bands}
+                  marks={curveMarks}
+                />
               </div>
               {/*
                 The ribbon belongs to the CURVE, so it appears wherever the curve
@@ -482,7 +505,8 @@ export function Board({
           {time?.absence && (
             <p data-part="time-absence">{CLOCK_ABSENCE[time.absence]}</p>
           )}
-          <ol aria-label="moves">
+          {moveListHeadings}
+          <ol aria-label="moves" data-columns={moveListHeadings ? "authors" : undefined}>
             {plies.flatMap((ply, i) => {
               const annotation = annotations?.[i + 1];
               const phaseStart = phaseStartAt.get(i + 1);

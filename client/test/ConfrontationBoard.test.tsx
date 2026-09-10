@@ -342,6 +342,91 @@ describe("the board on the Confrontation route", () => {
     expect(container.querySelectorAll('[data-part="reading-term"]')).toHaveLength(1);
   });
 
+  describe("the divergences, findable without walking sixty Moves", () => {
+    it("puts ONLY the disagreements on the curve, never the engine's severities", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const marks = [...container.querySelectorAll("[data-mark-label]")];
+      // Ply 1 diverges (declared Inaccuracy, measured Blunder). The engine also
+      // measures a Blunder there — and that glyph must NOT be on the curve: the
+      // curve already draws the engine's reading by its shape, and a second
+      // copy would drown the handful of marks that are new.
+      expect(marks).toHaveLength(1);
+      expect(marks[0].getAttribute("data-mark-label")).toBe("sous-lecture");
+      expect(marks[0].textContent).toBe("▼");
+    });
+
+    it("tells the two directions apart by their SHAPE, not their colour", async () => {
+      stub({
+        confrontation: {
+          status: 200,
+          body: {
+            ...CONFRONTATION,
+            moves: [
+              { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null },
+              { ply: 3, notation: "Nf3", declared: "blunder", measured: "none", term: "sur-lecture", unscored: null, keyMoment: null },
+            ],
+          },
+        },
+      });
+      const { container } = renderPage();
+      await board(container);
+
+      const glyphs = [...container.querySelectorAll("[data-mark-label]")].map(
+        (mark) => mark.textContent,
+      );
+      // Over-reading danger and under-reading it are opposite faults, and no
+      // rate separates them. Two forms, so the lean is readable with no colour.
+      expect(new Set(glyphs)).toEqual(new Set(["▼", "▲"]));
+    });
+
+    it("titles the two authors' columns in the move list", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const headings = container.querySelector('[data-part="move-list-headings"]');
+      expect(headings!.textContent).toContain("Ma lecture");
+      expect(headings!.textContent).toContain("Le moteur");
+    });
+
+    it("carries the disagreement glyph in the list too, named in words", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const divergence = container.querySelector('[data-part="divergence"]');
+      expect(divergence!.textContent).toBe("▼");
+      // The shape carries it for the eye; the accessible name for everyone else.
+      expect(divergence!.getAttribute("aria-label")).toBe("sous-lecture");
+    });
+
+    it("marks no agreement and nothing unscored — a forced Move is not a disagreement", async () => {
+      stub({
+        confrontation: {
+          status: 200,
+          body: {
+            ...CONFRONTATION,
+            moves: [
+              { ply: 1, notation: "e4", declared: "sound", measured: "none", term: "bonne-lecture", unscored: null, keyMoment: null },
+              // The story's central case: a forced catastrophe the Player
+              // called Sound, and was right about. Putting it on the curve as
+              // a divergence would accuse them of the one thing they got right.
+              { ply: 3, notation: "Nf3", declared: "sound", measured: "blunder", term: null, unscored: "forced", keyMoment: null },
+            ],
+          },
+        },
+      });
+      const { container } = renderPage();
+      await board(container);
+
+      expect(container.querySelectorAll("[data-mark-label]")).toHaveLength(0);
+      expect(container.querySelector('[data-part="divergence"]')).toBeNull();
+    });
+  });
+
   it("carries no Review mode: the seal has fallen, everything is revealed", async () => {
     stub();
     const { container } = renderPage();

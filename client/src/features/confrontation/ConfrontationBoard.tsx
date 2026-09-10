@@ -3,6 +3,7 @@ import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
 import { MoveMarks } from "../personal/MoveMarks";
 import { MoveReadout } from "./MoveReadout";
+import { divergencesOf, DIVERGENCE_GLYPH, DIVERGENCE_LABEL } from "./divergence";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../personal/declaredSeverity";
 import type { Game, GameAnnotations, MoveReading, PersonalAnalysis } from "../../types";
 
@@ -51,6 +52,22 @@ export function ConfrontationBoard({
   // standing on, and a linear scan per ply transition would be a lookup written
   // where a map belongs.
   const byPly = useMemo(() => new Map(moves.map((move) => [move.ply, move])), [moves]);
+  /**
+   * The divergences, and **only** those, for the curve — a handful of marks on
+   * sixty plies instead of one per fault. The engine's severities are not put
+   * back beside them: the curve already draws the engine's reading by its
+   * shape, and a second copy of it would drown the marks that are new.
+   */
+  const divergences = useMemo(() => divergencesOf(moves), [moves]);
+  const curveMarks = useMemo(
+    () =>
+      divergences.map((divergence) => ({
+        ply: divergence.ply,
+        glyph: DIVERGENCE_GLYPH[divergence.direction],
+        label: DIVERGENCE_LABEL[divergence.direction],
+      })),
+    [divergences],
+  );
 
   return (
     <Board
@@ -80,7 +97,37 @@ export function ConfrontationBoard({
       // colonne ou son titre »*. Slice 06 pays it, with two titled columns —
       // « Ma lecture » and « Le moteur ». Declared here rather than left to be
       // discovered, because the slices auto-merge (ADR-0027).
-      moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
+      moveMarks={(ply) => (
+        <>
+          <MoveMarks marks={reading.marks} ply={ply} />
+          {/* The disagreement, in the list as well as on the curve — so it is
+              findable by scanning the Moves and not only by reading the
+              drawing. The glyph is the same one, and its accessible name says
+              the direction in words: the shape carries it for the eye, the
+              name for everyone else (ADR-0013). */}
+          {byPly.get(ply)?.term === "sous-lecture" || byPly.get(ply)?.term === "sur-lecture" ? (
+            <span
+              data-part="divergence"
+              data-direction={byPly.get(ply)!.term}
+              aria-label={DIVERGENCE_LABEL[byPly.get(ply)!.term as "sous-lecture" | "sur-lecture"]}
+            >
+              {DIVERGENCE_GLYPH[byPly.get(ply)!.term as "sous-lecture" | "sur-lecture"]}
+            </span>
+          ) : null}
+        </>
+      )}
+      curveMarks={curveMarks}
+      // **The one place two authors may coexist** (ADR-0022): a list has
+      // columns, a square has none. The titles are what make the pairing
+      // readable — the glyph alone could not, being identical on both sides by
+      // construction.
+      moveListHeadings={
+        <p data-part="move-list-headings" aria-hidden="true">
+          <span>Coup</span>
+          <span>Ma lecture</span>
+          <span>Le moteur</span>
+        </p>
+      }
       // The PLAYER's verdict on the square (ADR-0022). Resolved by `markKinds`,
       // the same function `MoveMarks` above uses — never a second rule, so the
       // square and the glyph three centimetres from it cannot say different

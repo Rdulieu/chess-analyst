@@ -39,10 +39,24 @@ import type { MoveAnnotation } from "../types";
  * instead, which also lets them keep a legible ink colour on a light ground —
  * the tint reinforces, the glyph carries.
  */
+/** One mark a caller draws on the curve, in place of the engine's severities. */
+export interface CurveMark {
+  ply: number;
+  glyph: string;
+  /** What the mark means, for the sheet and for a driver — never a colour hook. */
+  label: string;
+}
+
+/** Where a ply sits on the vertical axis, so a caller's mark lands on the line. */
+function whiteShareAt(annotations: MoveAnnotation[], ply: number): number {
+  return annotations[ply]?.whiteWinChances ?? 50;
+}
+
 export function EvaluationGraph({
   annotations,
   currentPly,
   bands = [],
+  marks,
 }: {
   annotations: MoveAnnotation[];
   currentPly: number;
@@ -53,8 +67,39 @@ export function EvaluationGraph({
    * the contrast the markers and the cursor were measured at (ADR-0013).
    */
   bands?: PhaseBand[];
+  /**
+   * Marks to draw **instead of** the engine's severities (US-26, ADR-0033).
+   *
+   * The `Confrontation` screen carries only the Player's **divergences** here,
+   * and that is a decision rather than an omission: the curve already draws the
+   * engine's reading *by its shape*, so repeating its verdicts on it would say
+   * nothing new while drowning the handful of marks that do.
+   *
+   * A replacement rather than an addition — passing both would put two authors
+   * on one drawing with nothing to tell them apart, which is the thing ADR-0022
+   * refuses on the board and this drawing has no more room for.
+   */
+  marks?: CurveMark[];
 }) {
-  const { points, lastX, markers } = evaluationCurve(annotations);
+  const { points, lastX, markers: severityMarks } = evaluationCurve(annotations);
+  // The caller's marks win outright when it supplies them.
+  const markers = marks
+    ? marks.map((mark) => ({
+        x: mark.ply,
+        glyph: mark.glyph,
+        label: mark.label,
+        whiteShare: whiteShareAt(annotations, mark.ply),
+        tint: undefined as string | undefined,
+        ink: undefined as string | undefined,
+      }))
+    : severityMarks.map((marker) => ({
+        x: marker.x,
+        glyph: SEVERITY_GLYPH[marker.severity],
+        label: marker.severity,
+        whiteShare: marker.whiteShare,
+        tint: SEVERITY_TINT[marker.severity] as string | undefined,
+        ink: SEVERITY_TINT_INK[marker.severity] as string | undefined,
+      }));
   if (points.length === 0) return null;
 
   const span = Math.max(lastX, 1);
@@ -104,12 +149,13 @@ export function EvaluationGraph({
         />
       </svg>
       {markers.map((marker) => (
-        // Four declarations, and every one of them is DATA: where the mark goes,
-        // and which severity it means. Its shape — absolutely placed, centred on
-        // its point, a bordered pill in mono — is the sheet's (`_dense`), which is
-        // why nothing static is written here any more.
+        // Every declaration here is DATA: where the mark goes, and what it
+        // means. Its shape — absolutely placed, centred on its point, a bordered
+        // pill in mono — is the sheet's (`_dense`).
         <span
           key={marker.x}
+          data-mark-label={marker.label}
+          aria-hidden="true"
           style={{
             left: `${(marker.x / span) * 100}%`,
             top: `${100 - marker.whiteShare}%`,
@@ -124,11 +170,11 @@ export function EvaluationGraph({
             // roles swap (9.17 / 11.92). Neither half would do the job alone, in
             // either theme — which is a stronger reason than "the inherited
             // `--ink` inverts", true though that also is.
-            background: SEVERITY_TINT[marker.severity],
-            color: SEVERITY_TINT_INK[marker.severity],
+            background: marker.tint,
+            color: marker.ink,
           }}
         >
-          {SEVERITY_GLYPH[marker.severity]}
+          {marker.glyph}
         </span>
       ))}
     </div>
