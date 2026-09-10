@@ -1072,6 +1072,58 @@ $drift-inset: $drift-frame + $drift-headroom;
 // The Confrontation (US-16b): a sealed reading set against what the engine found.
 // ---------------------------------------------------------------------------
 
+// **The cartouche of the current Move** (US-26, ADR-0033) — what the Player's
+// reading was worth right here.
+//
+// It takes the **semantic tint family**, not the board family. The board tints
+// are constant across themes because a piece is painted on top of them and its
+// ink must not move; nothing is painted on top of a cartouche, so it takes the
+// pairs that DO follow the theme and stay legible in both by construction.
+//
+// The colour is never the only cue (ADR-0013): the label names its case in full
+// words, and the sentence under it explains. The tone only makes the case
+// findable at a glance — a Player scanning a Game for their misses should not
+// have to read sixty labels.
+[data-part="reading-term"] {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+  margin-block-end: var(--space-1);
+}
+
+// Written out rather than generated from an `@each`, for the reason the verdict
+// chips above give: the token-consistency audit reads this file as source, and a
+// token name assembled by interpolation is a name the audit cannot see.
+[data-part="reading-term"][data-tone="agreement"] {
+  background: var(--tint-ok);
+  color: var(--tint-ok-ink);
+}
+
+[data-part="reading-term"][data-tone="missed"] {
+  background: var(--tint-fail);
+  color: var(--tint-fail-ink);
+}
+
+[data-part="reading-term"][data-tone="overcalled"] {
+  background: var(--tint-inaccuracy);
+  color: var(--tint-inaccuracy-ink);
+}
+
+// One neutral for the five unscored cases (ADR-0033) — which is exactly why
+// each of them carries its own words: the tone cannot tell them apart, and it
+// is not asked to.
+[data-part="reading-term"][data-tone="unscored"] {
+  background: var(--tint-wait);
+  color: var(--tint-wait-ink);
+}
+
+// The Player's own words, set apart from the app's. Quiet rather than boxed:
+// it is the one thing on this screen nobody generated.
+[data-part="reading-note"] [data-part="note-label"] {
+  color: var(--ink-muted);
+}
+
 // The two figures, SIDE BY SIDE and never stacked into a ranking. A grid of two
 // equal columns says they are two answers to two questions; one above the other
 // would invite reading the first as the headline and the second as its detail —

@@ -89,22 +89,51 @@ export function readingLabel(move: MoveReading): ReadingLabel {
   // Player under-read, what was claimed when they over-read.
   if (move.term === "sous-lecture") {
     const missed = MEASURED_NAME[move.measured];
-    // Nothing said, or `Sound`: the Player did not see it at all. A degree
-    // apart: they saw it, and smaller than it was. Melting the two would tell
-    // someone they were blind when they were only imprecise.
-    const blind = move.declared === null || move.declared === "sound";
+    /*
+     * `Sound`, or nothing said at all: the Player did not see it. A milder
+     * BAND: they saw it, and judged it smaller than it was. Melting the two
+     * would tell someone they were blind when they were merely imprecise —
+     * the distinction this whole slice exists for.
+     *
+     * Written as a narrowing branch rather than a boolean plus a ternary,
+     * because the ternary's else-arm has to index a label table and a flag
+     * carries no proof to the type system that the key is there.
+     *
+     * The `null` case cannot arrive from the server — a null verdict is always
+     * `unscored: "silence"` — and it is handled rather than asserted away.
+     */
+    const declared = move.declared;
+    if (declared === null || declared === "sound") {
+      return {
+        tone: "missed",
+        label: `${missed} ratée`,
+        detail: `Le moteur mesure ${article(missed)} ici, et vous ne l'aviez pas signalée.`,
+      };
+    }
     return {
       tone: "missed",
-      label: blind ? `${missed} ratée` : `${missed} sous-estimée`,
-      detail: blind
-        ? `Le moteur mesure ${article(missed)} ici, et vous ne l'aviez pas signalée.`
-        : `Vous aviez dit « ${DECLARED_SEVERITY_LABEL[move.declared!]} » ; le moteur mesure ${article(missed)}. Vous avez vu le danger, plus petit qu'il n'était.`,
+      label: `${missed} sous-estimée`,
+      detail: `Vous aviez dit « ${DECLARED_SEVERITY_LABEL[declared]} » ; le moteur mesure ${article(missed)}. Vous avez vu le danger, plus petit qu'il n'était.`,
     };
   }
 
-  // Over-read. Either the engine flagged nothing at all — a false alarm — or it
-  // flagged something milder than the Player claimed.
-  const claimed = DECLARED_SEVERITY_LABEL[move.declared!];
+  /*
+   * Over-read — and **guarded rather than assumed**. The server holds `term`
+   * and `unscored` exclusive and exhaustive, so reaching here means
+   * `sur-lecture` and a declared band. But this branch used to be the
+   * fall-through for *anything* that was neither of the two cases above, and an
+   * entry arriving with both fields null would have printed the words
+   * `undefined surestimée` on screen. A screen that invents a severity is worse
+   * than one that says nothing, so the impossible case is named and refused.
+   */
+  if (move.term !== "sur-lecture" || move.declared === null) {
+    return {
+      tone: "unscored",
+      label: "Rien dit",
+      detail: "Aucun verdict n'est enregistré pour ce coup.",
+    };
+  }
+  const claimed = DECLARED_SEVERITY_LABEL[move.declared];
   if (move.measured === "none") {
     return {
       tone: "overcalled",
@@ -126,9 +155,9 @@ export function readingLabel(move: MoveReading): ReadingLabel {
  * reason `Sound` is a value one poses.
  */
 function agreementDetail(move: MoveReading): string {
-  return move.measured === "none"
+  return move.measured === "none" || move.declared === null
     ? "Vous aviez regardé et ne trouviez rien à reprocher ; le moteur ne signale rien non plus."
-    : `Vous aviez dit « ${DECLARED_SEVERITY_LABEL[move.declared!]} », et c'est exactement ce que le moteur mesure.`;
+    : `Vous aviez dit « ${DECLARED_SEVERITY_LABEL[move.declared]} », et c'est exactement ce que le moteur mesure.`;
 }
 
 /** The measured bands, in the Player's own words — the shared vocabulary. */

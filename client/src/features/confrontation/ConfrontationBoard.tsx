@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
 import { MoveMarks } from "../personal/MoveMarks";
@@ -49,7 +50,7 @@ export function ConfrontationBoard({
   // By ply, because that is how the board asks: it hands over the index it is
   // standing on, and a linear scan per ply transition would be a lookup written
   // where a map belongs.
-  const byPly = new Map(moves.map((move) => [move.ply, move]));
+  const byPly = useMemo(() => new Map(moves.map((move) => [move.ply, move])), [moves]);
 
   return (
     <Board
