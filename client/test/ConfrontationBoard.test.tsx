@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ConfrontationPage } from "../src/pages/ConfrontationPage";
 import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
 import { SEVERITY_SQUARE_TINT } from "../src/chess/severity";
+import { DECLARED_SEVERITY_SQUARE_TINT } from "../src/features/personal/declaredSeverity";
+import { stubConfrontation, NO_CLOCK } from "./support/confrontationStub";
 import type { GameAnnotations, GameConfrontation, MoveAnnotation } from "../src/types";
 
 /**
@@ -56,13 +58,7 @@ const ANNOTATIONS: GameAnnotations = {
   },
   // A Game with no Clock recorded: the time block is not what this slice is
   // about, and an absence is a legitimate shape rather than a hole.
-  time: {
-    timeControl: null,
-    plies: [],
-    absence: "not-recorded",
-    precision: null,
-    reading: null,
-  },
+  time: NO_CLOCK,
   plies: [
     ply({ ply: 0 }),
     // The Player is White, so ply 1 and 3 are theirs. The ENGINE measures a
@@ -114,25 +110,12 @@ const READING = {
 };
 
 function stub(over: { confrontation?: { status: number; body: unknown } } = {}) {
-  const answer = over.confrontation ?? { status: 200, body: CONFRONTATION };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string) => {
-      const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body }) as Response;
-      if (url.startsWith("/api/profiles"))
-        return ok([{ id: 3, handle: "Me", platform: "chess.com" }]);
-      if (url.startsWith("/api/games/1/annotations")) return ok(ANNOTATIONS);
-      if (url.startsWith("/api/games/1")) return ok(GAME);
-      if (url.includes("/confrontation"))
-        return {
-          ok: answer.status === 200,
-          status: answer.status,
-          json: async () => answer.body,
-        } as Response;
-      if (url.startsWith("/api/personal/1")) return ok(READING);
-      throw new Error(`unexpected request: ${url}`);
-    }),
-  );
+  stubConfrontation({
+    confrontation: over.confrontation ?? { status: 200, body: CONFRONTATION },
+    game: GAME,
+    annotations: ANNOTATIONS,
+    reading: READING,
+  });
 }
 
 function renderPage() {
@@ -231,7 +214,10 @@ describe("the board on the Confrontation route", () => {
     // Inaccuracy; the engine measured a Blunder. One board, one author.
     await waitFor(() => {
       const square = container.querySelector<HTMLElement>('[data-square="e4"] > div');
-      expect(square!.style.backgroundColor).toBe(SEVERITY_SQUARE_TINT.inaccuracy);
+      // The PLAYER's table, named as such. Asserting the engine's passed only
+      // because the two coincide on `inaccuracy` by design — a test that names
+      // the wrong author is a test that stops meaning anything the day they part.
+      expect(square!.style.backgroundColor).toBe(DECLARED_SEVERITY_SQUARE_TINT.inaccuracy);
     });
     expect(
       container.querySelector<HTMLElement>('[data-square="e4"] > div')!.style.backgroundColor,
@@ -278,6 +264,26 @@ describe("the board on the Confrontation route", () => {
       expect(container.querySelector('[data-part="confrontation-refused"]')).not.toBeNull(),
     );
     // A refused screen must not, in the same breath, draw the Game it refused.
+    expect(container.querySelector("[data-square]")).toBeNull();
+  });
+
+  it("says a malfunction is a malfunction, not «cette partie n'est pas la vôtre»", async () => {
+    // Before the board there was one call here, and falling back on "not yours"
+    // was true. Three more can fail now, and this route's whole value is that
+    // its refusals are NAMED — so a broken annotations read must not assert
+    // something false about the Profile.
+    stubConfrontation({
+      confrontation: { status: 200, body: CONFRONTATION },
+      game: GAME,
+      annotations: ANNOTATIONS,
+      reading: READING,
+      failing: ["/api/games/1/annotations"],
+    });
+    const { container } = renderPage();
+
+    await waitFor(() => expect(screen.getByRole("alert")).not.toBeNull());
+    expect(screen.getByRole("alert").textContent).toMatch(/n'a pas pu être chargée/i);
+    expect(screen.queryByText(/introuvable pour le profil/i)).toBeNull();
     expect(container.querySelector("[data-square]")).toBeNull();
   });
 

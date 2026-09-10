@@ -1,5 +1,6 @@
 import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
+import { MoveMarks } from "../personal/MoveMarks";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../personal/declaredSeverity";
 import type { Game, GameAnnotations, PersonalAnalysis } from "../../types";
 
@@ -52,8 +53,26 @@ export function ConfrontationBoard({
       // record and the recap, which belong to `Analyse` and would put a second
       // full reading of the Game on a screen that already has two.
       annotations={annotations.plies}
+      // The Player's own marks IN THE LIST — which is what stops the square's
+      // tint from being the only cue (ADR-0013). `Board`'s own contract says so
+      // in as many words, and ADR-0022 makes it the *condition* of letting a
+      // square carry a verdict at all.
+      //
+      // It matters more here than on the reading route, because this list also
+      // carries the ENGINE's severity glyph, drawn from `annotations`. Without
+      // this the screen would show two authors in one visual grammar with
+      // nothing saying which is whose — on the one screen built to keep the two
+      // readings apart. Each glyph carries its own accessible name (`verdict :
+      // Correct` against `blunder`), so they are told apart in words today.
+      //
+      // **Told apart in words is not yet told apart at a glance**, and that is
+      // the debt ADR-0022 named for this very screen: *« il devra apporter sa
+      // colonne ou son titre »*. Slice 06 pays it, with two titled columns —
+      // « Ma lecture » and « Le moteur ». Declared here rather than left to be
+      // discovered, because the slices auto-merge (ADR-0027).
+      moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
       // The PLAYER's verdict on the square (ADR-0022). Resolved by `markKinds`,
-      // the same function the move list uses — never a second rule, so the
+      // the same function `MoveMarks` above uses — never a second rule, so the
       // square and the glyph three centimetres from it cannot say different
       // things about the same ply.
       squareTint={(ply) => {

@@ -37,7 +37,8 @@ type State =
   | { status: "loading" }
   | { status: "ready"; confrontation: GameConfrontation; board: BoardRecords }
   | { status: "refused"; refusal: ConfrontationRefused }
-  | { status: "absent" };
+  | { status: "absent" }
+  | { status: "failed" };
 
 /**
  * What the board needs beyond the `Confrontation` itself: the Game to walk, the
@@ -84,7 +85,12 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
         // the same screen as "this Game is not yours" or "the app is broken".
         if (error instanceof ConfrontationRefused) setState({ status: "refused", refusal: error });
         else if (error instanceof GameNotThisProfiles) setState({ status: "absent" });
-        else setState({ status: "absent" });
+        // A malfunction is NOT "this Game is not yours". Before the board there
+        // was one call here and that fallback was true; now three more can fail,
+        // and a 500 on the annotations would have this screen assert something
+        // false about the Profile — on the one route whose whole value is that
+        // its refusals are named.
+        else setState({ status: "failed" });
       });
     return () => {
       live = false;
@@ -100,6 +106,9 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
         {state.status === "loading" && <p>Chargement de la confrontation…</p>}
         {state.status === "absent" && (
           <p>Cette partie est introuvable pour le profil sélectionné.</p>
+        )}
+        {state.status === "failed" && (
+          <p role="alert">La confrontation de cette partie n'a pas pu être chargée.</p>
         )}
         {state.status === "refused" && <Refusal refusal={state.refusal} gameId={id} />}
         {state.status === "ready" && (

@@ -191,6 +191,17 @@ a helper is recognised as *this* returning, not as a new mystery.
   a false red on the exact assertion that the entry appears only after the seal. The probe that
   answers it is `[data-part="confrontation-entry"]` (measured 2026-09-04). General shape: **a
   selector that matches the nav matches every page**.
+- **`aria-current` is on the move-list `<button>`, not on its `<li>`.** A probe reading
+  `li[aria-current]` reports "no current Move marked" on a list that marks it perfectly — measured
+  2026-09-10 on the FP of US-26-02, a false red lifted by re-reading the DOM. This is the **fourth**
+  time a driver reading the wrong node or attribute has produced a near-finding on this suite
+  (`[data-square]`'s child div, the `/stats` `aria-labelledby`, the confrontation entry's anchor,
+  now this): **resolve the node that carries the property, do not guess which one should.**
+- **The Confrontation route redirects to `/profiles` when no `Profile` is current.** Expected
+  behaviour, not a defect — but a fresh private browser has none, so a scenario that navigates
+  straight to `/analyse/<id>/confrontation` lands on the Profile picker and looks like a broken
+  route. Select the Profile first (minding the `selectProfile` quirk just below). Measured
+  2026-09-10.
 - **`[data-part="confrontation-entry"]` is a `<p>` WRAPPING the anchor**, so `.click()` on the
   element itself does nothing and the URL does not change — which reads exactly like a dead link.
   Click `[data-part="confrontation-entry"] a`. Measured 2026-09-10 on the FP of US-26-01, where it
