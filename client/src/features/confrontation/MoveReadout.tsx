@@ -1,5 +1,5 @@
-import { readingLabel } from "./readingLabel";
-import type { MoveReading, PersonalMark } from "../../types";
+import { readingLabel, keyMomentLabel } from "./readingLabel";
+import type { MoveKeyMoment, MoveReading, PersonalMark } from "../../types";
 
 /**
  * **What the Player's reading was worth on the Move they are looking at**
@@ -51,6 +51,17 @@ export function MoveReadout({
         {label}
       </p>
       <p data-part="reading-detail">{detail}</p>
+      {/*
+        The SECOND family — what the Player's `Key moment`s were worth here.
+        Two cartouches, never fused: judging a Move well and looking in the
+        right place are two different abilities, and a Player strong at one and
+        weak at the other learns exactly that from seeing them apart.
+
+        Absent entirely where there is neither a marker nor a loss — the great
+        majority of a Game. Sixty cartouches reading "nothing here" would bury
+        the six that speak.
+      */}
+      {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} />}
       {note && (
         /* The Player's own words, in front of the engine's verdict. This is the
            reason the reading is written down at all: re-reading one's reasoning
@@ -61,5 +72,28 @@ export function MoveReadout({
         </p>
       )}
     </div>
+  );
+}
+
+
+/**
+ * The `Key moment` cartouche, told from the reading one by its **glyph** and
+ * not by its colour (ADR-0033).
+ *
+ * The two families share the four tones on purpose — the colour says the
+ * quality, the glyph says which question is being answered, the label says the
+ * case. Distinguishing them by tint instead would need eight colours nobody
+ * could learn, and would still fail the reader who sees none of them.
+ */
+function KeyMomentCartouche({ reading }: { reading: MoveKeyMoment }) {
+  const { tone, label, detail } = keyMomentLabel(reading);
+
+  return (
+    <>
+      <p data-part="reading-term" data-family="key-moment" data-tone={tone}>
+        {label}
+      </p>
+      <p data-part="reading-detail">{detail}</p>
+    </>
   );
 }

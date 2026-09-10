@@ -1092,6 +1092,15 @@ $drift-inset: $drift-frame + $drift-headroom;
   margin-block-end: var(--space-1);
 }
 
+// The `Key moment` family shares the four tones with the reading family — the
+// colour says the quality, the glyph says which question is answered, the
+// label says the case (ADR-0033). What keeps them from blurring is the `◆` in
+// the label plus this slightly lighter weight: two cartouches in a column
+// should read as two ANSWERS, not as one statement continued.
+[data-part="reading-term"][data-family="key-moment"] {
+  font-weight: 600;
+}
+
 // Written out rather than generated from an `@each`, for the reason the verdict
 // chips above give: the token-consistency audit reads this file as source, and a
 // token name assembled by interpolation is a name the audit cannot see.

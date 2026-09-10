@@ -94,10 +94,10 @@ const CONFRONTATION: GameConfrontation = {
   // Inaccuracy where the engine measured a Blunder — a Sous-lecture, and a
   // disagreement, so a board painting the wrong author cannot pass by luck.
   moves: [
-    { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null },
-    { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent" },
-    { ply: 3, notation: "Nf3", declared: null, measured: "none", term: null, unscored: "silence" },
-    { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent" },
+    { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: { case: "missed", lost: 30, nearest: null } },
+    { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
+    { ply: 3, notation: "Nf3", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null },
+    { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
   ],
   uncounted: [],
   posterior: [],
@@ -304,6 +304,42 @@ describe("the board on the Confrontation route", () => {
     expect(
       container.querySelector('[data-part="reading-term"]')!.getAttribute("data-tone"),
     ).toBe("unscored");
+  });
+
+  it("shows the two families of cartouche together, told apart by the glyph", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    fireEvent.click(screen.getByRole("button", { name: "1.e4" }));
+
+    await waitFor(() =>
+      expect(container.querySelectorAll('[data-part="reading-term"]')).toHaveLength(2),
+    );
+    const [reading, keyMoment] = [
+      ...container.querySelectorAll('[data-part="reading-term"]'),
+    ];
+    expect(reading.textContent).toBe("Bévue sous-estimée");
+    expect(keyMoment.textContent).toBe("◆ Moment clé manqué");
+    // Judging a Move well and looking in the right place are two abilities.
+    // The glyph is what says which one is being answered — not the tone, which
+    // the two families deliberately share.
+    expect(keyMoment.getAttribute("data-family")).toBe("key-moment");
+    expect(reading.getAttribute("data-family")).toBeNull();
+  });
+
+  it("shows no ◆ cartouche where there is neither a marker nor a loss", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    fireEvent.click(screen.getByRole("button", { name: "2.Nf3" }));
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe("Rien dit"),
+    );
+    // Sixty cartouches saying "nothing here" would bury the ones that speak.
+    expect(container.querySelectorAll('[data-part="reading-term"]')).toHaveLength(1);
   });
 
   it("carries no Review mode: the seal has fallen, everything is revealed", async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readingLabel } from "../src/features/confrontation/readingLabel";
-import type { MoveReading } from "../src/types";
+import { readingLabel, keyMomentLabel } from "../src/features/confrontation/readingLabel";
+import type { MoveKeyMoment, MoveReading } from "../src/types";
 
 /**
  * The table of reading labels (US-26, ADR-0033) — **the fifteen cases, one by
@@ -22,6 +22,7 @@ function move(over: Partial<MoveReading>): MoveReading {
     measured: "none",
     term: null,
     unscored: null,
+    keyMoment: null,
     ...over,
   };
 }
@@ -203,6 +204,86 @@ describe("the reading label of one Move", () => {
     for (const entry of everything) {
       expect(readingLabel(entry).label.length).toBeGreaterThan(0);
       expect(readingLabel(entry).detail.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+
+/**
+ * The `Key moment` table — the second family of cartouches (ADR-0033).
+ *
+ * Same discipline as the first: each case is named in words, so the glyph and
+ * the colour are additive. What these tests hold onto is the **distinction
+ * between the three greys** — a marker on the opponent, on an uncounted Move,
+ * and on nothing at all are three different lessons, and melting them would
+ * tell a Player they missed something when they did not.
+ */
+describe("the Key moment label of one Move", () => {
+  const km = (over: Partial<MoveKeyMoment>): MoveKeyMoment => ({
+    case: "found",
+    lost: 0,
+    nearest: null,
+    ...over,
+  });
+
+  it("credits a marker that found a real loss", () => {
+    const label = keyMomentLabel(km({ case: "found", lost: 30 }));
+
+    expect(label.label).toBe("◆ Moment clé trouvé");
+    expect(label.tone).toBe("agreement");
+  });
+
+  it("NAMES the costly Move when the marker landed beside it", () => {
+    const label = keyMomentLabel(
+      km({ case: "aside", nearest: { ply: 44, notation: "Nxe5", lost: 22 } }),
+    );
+
+    expect(label.label).toBe("◆ Marqueur à côté");
+    // The distance teaches; a silent partial credit would not.
+    expect(label.detail).toMatch(/22…Nxe5|22\.Nxe5/);
+    expect(label.tone).toBe("overcalled");
+  });
+
+  it("says there was nothing to find, rather than implying a miss", () => {
+    const label = keyMomentLabel(km({ case: "no-target" }));
+
+    expect(label.label).toBe("◆ Marqueur sans cible");
+    expect(label.detail).toMatch(/aucune faute comptée à trouver/i);
+  });
+
+  it("tells a marker on the opponent from one on an uncounted Move", () => {
+    // Three greys, three lessons. Melting them would tell a Player they missed
+    // something when they did not.
+    expect(keyMomentLabel(km({ case: "on-opponent" })).label).toBe("◆ Marqueur sur l'adversaire");
+    expect(keyMomentLabel(km({ case: "on-uncounted" })).label).toBe(
+      "◆ Marqueur sur un coup non compté",
+    );
+    expect(keyMomentLabel(km({ case: "no-target" })).label).toBe("◆ Marqueur sans cible");
+  });
+
+  it("shows the damage no marker pointed at — the case that was missing", () => {
+    const label = keyMomentLabel(km({ case: "missed", lost: 38 }));
+
+    expect(label.label).toBe("◆ Moment clé manqué");
+    expect(label.tone).toBe("missed");
+    expect(label.detail).toMatch(/aucun de vos marqueurs/i);
+  });
+
+  it("carries the ◆ on every case, so the two families never blur", () => {
+    const cases: MoveKeyMoment["case"][] = [
+      "found",
+      "aside",
+      "no-target",
+      "on-opponent",
+      "on-uncounted",
+      "missed",
+    ];
+
+    // The glyph is what says WHICH question is answered; the colour only says
+    // how well. Both families reuse the same four tones, so without this the
+    // Player could not tell "I judged well" from "I looked in the right place".
+    for (const kase of cases) {
+      expect(keyMomentLabel(km({ case: kase })).label.startsWith("◆")).toBe(true);
     }
   });
 });

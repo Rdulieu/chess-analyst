@@ -1,4 +1,5 @@
 import type { UncountedReason } from "../analysis/counted";
+import type { MoveAnnotation } from "../analysis/derivation";
 import type { MoveSeverity } from "../danger/move-quality";
 import type { SearchRegime } from "../engine/types";
 import type { GameAnnotations } from "../annotations/repository";
@@ -95,6 +96,44 @@ export type ReadingTerm = "bonne-lecture" | "sous-lecture" | "sur-lecture";
 export type UnscoredCase = "good" | "opponent" | "forced" | "decided" | "silence";
 
 /**
+ * What the Player's `Key moment`s were worth on **one Move** — the second
+ * reading of a `Confrontation`, *did I look in the right place*, said at the
+ * Move instead of as a rate with no Moves behind it.
+ *
+ * Six cases and a silence. Five of them are re-readings of what the derivation
+ * already held; **`missed` is new**. "Your markers found 30% of the damage" had
+ * no Move to show for the other 70%: the derivation carried the markers that
+ * found nothing, never the losses no marker points at. They come from the very
+ * same data — the counted, costly faults, minus those carrying a marker.
+ */
+export type KeyMomentCase =
+  /** Marked, and the Move cost chances. The marker earned its place. */
+  | "found"
+  /** Marked, cost nothing, and a fault exists elsewhere — the distance is shown. */
+  | "aside"
+  /** Marked, cost nothing, and the Game holds no fault at all to have found. */
+  | "no-target"
+  /** Marked, but the opponent played it. */
+  | "on-opponent"
+  /** Marked, but the analysis does not count this Move. */
+  | "on-uncounted"
+  /** **Not** marked, and the Move cost chances. The damage nobody pointed at. */
+  | "missed";
+
+/** The `Key moment` reading of one Move, or nothing where there is nothing to say. */
+export interface MoveKeyMoment {
+  case: KeyMomentCase;
+  /** What this Move cost the Player. `0` on every case but `found` and `missed`. */
+  lost: number;
+  /**
+   * For `aside`: the Player's costly Move nearest the marker, so the sentence
+   * can name **where they should have looked** rather than merely saying the
+   * marker was wrong. `null` when there was no fault to point at.
+   */
+  nearest: { ply: number; notation: string | null; lost: number } | null;
+}
+
+/**
  * What the Player's reading was worth on **one Move** (ADR-0032).
  *
  * The derivation used to increment four counters and throw the pair away, which
@@ -118,6 +157,12 @@ export interface MoveReading {
   term: ReadingTerm | null;
   /** Set exactly when it is not. */
   unscored: UnscoredCase | null;
+  /**
+   * What the Player's `Key moment`s were worth here. `null` where there is
+   * **neither a marker nor a loss** — and that silence is deliberate: sixty
+   * cartouches saying "nothing" would bury the six that say something.
+   */
+  keyMoment: MoveKeyMoment | null;
 }
 
 /** Verdicts shown and never scored, by the reason nothing scores them. */
@@ -393,6 +438,7 @@ export function confrontGame(
       measured,
       term: null,
       unscored: null,
+      keyMoment: keyMomentOf(move, marked, lostAt, faults, notations),
     };
     moves.push(entry);
 
@@ -553,6 +599,52 @@ function termFor(declared: DeclaredSeverity, measured: MeasuredLabel): ReadingTe
   const actual = DANGER_ORDER[measured];
   if (claimed === actual) return "bonne-lecture";
   return claimed < actual ? "sous-lecture" : "sur-lecture";
+}
+
+/**
+ * What the Player's `Key moment`s were worth on one Move.
+ *
+ * The order of the tests is the meaning. A marker on the opponent's Move or on
+ * an uncounted one is named **for what it is** before anything is said about
+ * distance: telling a Player their marker was "beside the damage" when it was
+ * actually on a Move nothing scores would send them looking for a mistake they
+ * did not make.
+ *
+ * `null` where there is neither a marker nor a loss — the great majority of a
+ * Game. Sixty cartouches saying "nothing here" would bury the six that speak.
+ */
+function keyMomentOf(
+  move: MoveAnnotation,
+  marked: Set<number>,
+  lostAt: Map<number, number>,
+  faults: { ply: number; lost: number }[],
+  notations: string[],
+): MoveKeyMoment | null {
+  const lost = lostAt.get(move.ply) ?? 0;
+  const none = { lost: 0, nearest: null };
+
+  if (!marked.has(move.ply)) {
+    // **The case that was missing.** A costly fault nobody pointed at is the
+    // other side of "your markers found 30% of the damage" — and until now it
+    // had no Move to show. Nothing else here is new.
+    return lost > 0 ? { case: "missed", lost, nearest: null } : null;
+  }
+
+  // Marked. Why it earned nothing matters more than that it earned nothing.
+  if (move.counted === null) return { case: "on-opponent", ...none };
+  if (!move.counted.counted) return { case: "on-uncounted", ...none };
+  if (lost > 0) return { case: "found", lost, nearest: null };
+
+  // Marked, counted, and it cost nothing. Either the Game had a fault to find
+  // elsewhere — and the distance is what teaches — or it had none at all, and
+  // saying so is fairer than implying the Player missed something.
+  const nearest = nearestFault(move.ply, faults);
+  if (nearest === null) return { case: "no-target", ...none };
+  return {
+    case: "aside",
+    lost: 0,
+    nearest: { ...nearest, notation: notations[nearest.ply] ?? null },
+  };
 }
 
 /**

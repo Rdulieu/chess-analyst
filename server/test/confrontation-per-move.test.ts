@@ -162,6 +162,82 @@ describe("the per-Move reading of a Confrontation", () => {
     });
   });
 
+  describe("what the Key moments were worth, Move by Move", () => {
+    it("credits a marker that landed on a real, costly fault", () => {
+      const { keyMomentFound } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(keyMomentFound).keyMoment).toMatchObject({ case: "found" });
+      expect(at(keyMomentFound).keyMoment!.lost).toBeGreaterThan(0);
+    });
+
+    it("shows the DISTANCE when a marker landed beside the damage, rather than crediting it", () => {
+      const { keyMomentAside } = CONFRONTATION_FIXTURE_CASES;
+      const reading = at(keyMomentAside).keyMoment!;
+
+      expect(reading.case).toBe("aside");
+      expect(reading.lost).toBe(0);
+      // "Your marker is on 21.Rd1, which cost nothing — the loss is on 22.Nxe5"
+      // says more than a silent partial credit, and keeps the score additive.
+      expect(reading.nearest).not.toBeNull();
+      expect(reading.nearest!.lost).toBeGreaterThan(0);
+      expect(reading.nearest!.ply).not.toBe(keyMomentAside);
+    });
+
+    it("names a marker on the opponent's Move for what it is, not as a near miss", () => {
+      const { markerOnOpponent } = CONFRONTATION_FIXTURE_CASES;
+
+      // Calling this "beside the damage" would send the Player looking for a
+      // mistake they did not make.
+      expect(at(markerOnOpponent).keyMoment).toMatchObject({ case: "on-opponent" });
+    });
+
+    it("names a marker on an uncounted Move for what it is", () => {
+      const { markerOnUncounted } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(markerOnUncounted).keyMoment).toMatchObject({ case: "on-uncounted" });
+    });
+
+    it("**shows the damage no marker points at** — the case that was missing", () => {
+      const { keyMomentMissed } = CONFRONTATION_FIXTURE_CASES;
+      const reading = at(keyMomentMissed).keyMoment!;
+
+      // "Your markers found 30% of the damage" had no Move to show for the
+      // other 70%. This is it.
+      expect(reading.case).toBe("missed");
+      expect(reading.lost).toBeGreaterThan(0);
+    });
+
+    it("says nothing at all where there is neither a marker nor a loss", () => {
+      const { silence } = CONFRONTATION_FIXTURE_CASES;
+
+      // Sixty cartouches reading "nothing here" would bury the six that speak.
+      expect(at(silence).keyMoment).toBeNull();
+    });
+
+    it("**folds**: the damage found plus the damage missed IS the total already served", () => {
+      const { moves, keyMoments } = confronted();
+      const sum = (kase: string) =>
+        moves
+          .filter((move) => move.keyMoment?.case === kase)
+          .reduce((total, move) => total + move.keyMoment!.lost, 0);
+
+      // The ticket's own requirement, and the reason `missed` belongs in the
+      // per-Move list rather than beside it: found + missed exhausts the
+      // flagged loss, so the coverage rate can be read off the Moves.
+      expect(sum("found") + sum("missed")).toBeCloseTo(keyMoments.damageTotal, 6);
+      expect(sum("found")).toBeCloseTo(keyMoments.damageFound, 6);
+    });
+
+    it("leaves the coverage figures untouched", () => {
+      const { keyMoments } = confronted();
+
+      // This slice renders what was already derived and adds one case; it
+      // retunes nothing. `marked` counts every marker, wherever it landed.
+      expect(keyMoments.marked).toBe(4);
+      expect(keyMoments.misses).toHaveLength(3);
+    });
+  });
+
   /**
    * **The assertion ADR-0032 exists for.** Each figure is re-derived from the
    * per-Move list alone and must land exactly on the one served. If these ever
