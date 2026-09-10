@@ -119,6 +119,28 @@
   >   sur commande (forcé mesuré `Bévue` déclaré `Sound`, écarts de degré, `Good` non scoré, les
   >   cinq libellés gris). À dire dans le scénario : elle prouve que l'écran rend ces cas, pas que
   >   le moteur les produit — la 715 réelle est le témoin, à ouvrir en HP.
+  >
+  > ### Spécifiée et découpée le 2026-09-10
+  >
+  > Spec : `.scratch/confrontation-per-move/SPEC.md` (48 user stories). **Sept sous-tickets**,
+  > `ready-for-agent`, sous `.scratch/confrontation-per-move/tickets/`, tous implémentés sur
+  > `integration/US-26-confrontation-per-move` :
+  >
+  > | # | Ticket | Bloqué par |
+  > |---|---|---|
+  > | 01 | La fixture semée : une lecture scellée qui contient les cas rares | — |
+  > | 02 | L'échiquier sur la route de confrontation | 01 |
+  > | 03 | Le terme du coup courant (par-coup serveur + agrégat = somme, ADR-0032) | 02 |
+  > | 04 | Ce qui n'est pas scoré, dit à son coup (les cinq gris ; règle la note 8) | 03 |
+  > | 05 | Les moments clés coup par coup (cartouche `◆`, dont `Moment clé manqué`) | 03 |
+  > | 06 | Les divergences se voient (glyphes sur la courbe, liste à deux colonnes) | 03 |
+  > | 07 | De la matrice au coup (dépliage d'une cellule, focus sur l'échiquier) | 03 |
+  >
+  > **04 à 07 ne se bloquent pas entre elles** : quatre tranches parallélisables une fois 03 mergée.
+  > 03 est la tranche lourde et n'est **pas** découpée — le refactor serveur et la première
+  > cartouche doivent atterrir ensemble, sinon la part serveur n'est ni démontrable ni verticale.
+  > Son garde-fou : le test qui rejoue la vraie lecture scellée doit rendre les mêmes totaux **à
+  > l'unité près**.
 
 - **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
   seulement par ouverture ou par position.
