@@ -1,5 +1,7 @@
 import { DECLARED_SEVERITY_LABEL } from "../personal/declaredSeverity";
-import type { MoveReading } from "../../types";
+import { moveName } from "./moveName";
+import { halfMoveGap, points } from "./distance";
+import type { MoveKeyMoment, MoveReading } from "../../types";
 
 /**
  * What the cartouche says about the Player's reading of the current Move, and
@@ -198,4 +200,79 @@ const MEASURED_NAME: Record<MoveReading["measured"], string> = {
 /** French wants the article agreed; all three names happen to be feminine. */
 function article(name: string): string {
   return `une ${name.toLowerCase()}`;
+}
+
+
+/**
+ * **The second family of cartouches** — what the Player's `Key moment`s were
+ * worth here (ADR-0033).
+ *
+ * The two families reuse the same four tones deliberately: **the colour says
+ * the quality, the glyph says what is being talked about, the label says the
+ * case.** Three cues, none of them alone — and the `◆` is the one that keeps
+ * "I judged well" from being mistaken for "I looked in the right place", which
+ * a colour alone could never distinguish.
+ *
+ * `◆` is not a new sign: it is the marker the move list already uses for a
+ * `Key moment` (`MoveMarks`), so the Player meets one glyph in two places
+ * rather than learning a second vocabulary.
+ */
+export const KEY_MOMENT_GLYPH = "◆";
+
+export function keyMomentLabel(reading: MoveKeyMoment, ply: number): ReadingLabel {
+  switch (reading.case) {
+    case "found":
+      return {
+        tone: "agreement",
+        label: `${KEY_MOMENT_GLYPH} Moment clé trouvé`,
+        detail:
+          "Votre marqueur est sur un coup qui vous a réellement coûté des chances. C'est exactement ce qu'un moment clé doit désigner.",
+      };
+    case "aside":
+      return {
+        tone: "overcalled",
+        label: `${KEY_MOMENT_GLYPH} Marqueur à côté`,
+        // The distance, NAMED — "your marker is on 21.Rd1, which cost nothing;
+        // the loss is on 22.Nxe5" teaches where to have looked, where a silent
+        // partial credit would teach nothing and hide the miss.
+        // The Move **and the distance** — the ticket asks for both, and the
+        // distance is the half that teaches: a marker one half-move from the
+        // loss and one six half-moves away are not the same near miss, and a
+        // sentence naming only the Move makes them read alike.
+        detail: reading.nearest
+          ? `Ce coup n'a rien coûté. La perte est sur ${moveName(reading.nearest.ply, reading.nearest.notation)} (${points(reading.nearest.lost)}), ${halfMoveGap(ply, reading.nearest.ply)} plus loin — c'est là qu'il fallait regarder.`
+          : "Ce coup n'a rien coûté.",
+      };
+    case "no-target":
+      return {
+        tone: "unscored",
+        label: `${KEY_MOMENT_GLYPH} Marqueur sans cible`,
+        // Not a miss: there was nothing to find. Saying "beside the damage"
+        // here would invent a mistake the Player did not make.
+        detail:
+          "Ce coup n'a rien coûté — et cette partie ne contient aucune faute comptée à trouver. Il n'y avait rien à désigner.",
+      };
+    case "on-opponent":
+      return {
+        tone: "unscored",
+        label: `${KEY_MOMENT_GLYPH} Marqueur sur l'adversaire`,
+        detail:
+          "Repérer un tournant chez l'adversaire est une vraie lecture, mais la couverture des dégâts porte sur vos propres coups fautifs.",
+      };
+    case "on-uncounted":
+      return {
+        tone: "unscored",
+        label: `${KEY_MOMENT_GLYPH} Marqueur sur un coup non compté`,
+        detail:
+          "Ce coup n'entre pas dans l'analyse — forcé, ou joué en position déjà décidée — donc il ne porte aucun dégât à trouver.",
+      };
+    case "missed":
+      return {
+        tone: "missed",
+        label: `${KEY_MOMENT_GLYPH} Moment clé manqué`,
+        // The 70% that had no Move to show. This is the whole point of the case.
+        detail:
+          "Ce coup vous a coûté des chances et aucun de vos marqueurs ne le désigne. C'est une part des dégâts que votre lecture n'a pas trouvée.",
+      };
+  }
 }

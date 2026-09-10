@@ -1,4 +1,5 @@
 import type { UncountedReason } from "../analysis/counted";
+import type { MoveAnnotation } from "../analysis/derivation";
 import type { MoveSeverity } from "../danger/move-quality";
 import type { SearchRegime } from "../engine/types";
 import type { GameAnnotations } from "../annotations/repository";
@@ -95,6 +96,44 @@ export type ReadingTerm = "bonne-lecture" | "sous-lecture" | "sur-lecture";
 export type UnscoredCase = "good" | "opponent" | "forced" | "decided" | "silence";
 
 /**
+ * What the Player's `Key moment`s were worth on **one Move** — the second
+ * reading of a `Confrontation`, *did I look in the right place*, said at the
+ * Move instead of as a rate with no Moves behind it.
+ *
+ * Six cases and a silence. Five of them are re-readings of what the derivation
+ * already held; **`missed` is new**. "Your markers found 30% of the damage" had
+ * no Move to show for the other 70%: the derivation carried the markers that
+ * found nothing, never the losses no marker points at. They come from the very
+ * same data — the counted, costly faults, minus those carrying a marker.
+ */
+export type KeyMomentCase =
+  /** Marked, and the Move cost chances. The marker earned its place. */
+  | "found"
+  /** Marked, cost nothing, and a fault exists elsewhere — the distance is shown. */
+  | "aside"
+  /** Marked, cost nothing, and the Game holds no fault at all to have found. */
+  | "no-target"
+  /** Marked, but the opponent played it. */
+  | "on-opponent"
+  /** Marked, but the analysis does not count this Move. */
+  | "on-uncounted"
+  /** **Not** marked, and the Move cost chances. The damage nobody pointed at. */
+  | "missed";
+
+/** The `Key moment` reading of one Move, or nothing where there is nothing to say. */
+export interface MoveKeyMoment {
+  case: KeyMomentCase;
+  /** What this Move cost the Player. `0` on every case but `found` and `missed`. */
+  lost: number;
+  /**
+   * For `aside`: the Player's costly Move nearest the marker, so the sentence
+   * can name **where they should have looked** rather than merely saying the
+   * marker was wrong. `null` when there was no fault to point at.
+   */
+  nearest: { ply: number; notation: string | null; lost: number } | null;
+}
+
+/**
  * What the Player's reading was worth on **one Move** (ADR-0032).
  *
  * The derivation used to increment four counters and throw the pair away, which
@@ -118,6 +157,12 @@ export interface MoveReading {
   term: ReadingTerm | null;
   /** Set exactly when it is not. */
   unscored: UnscoredCase | null;
+  /**
+   * What the Player's `Key moment`s were worth here. `null` where there is
+   * **neither a marker nor a loss** — and that silence is deliberate: sixty
+   * cartouches saying "nothing" would bury the six that say something.
+   */
+  keyMoment: MoveKeyMoment | null;
 }
 
 /** Verdicts shown and never scored, by the reason nothing scores them. */
@@ -393,6 +438,7 @@ export function confrontGame(
       measured,
       term: null,
       unscored: null,
+      keyMoment: keyMomentOf(move, marked, lostAt, faults, notations),
     };
     moves.push(entry);
 
@@ -463,15 +509,15 @@ export function confrontGame(
       misses: [...marked]
         .filter((ply) => !lostAt.get(ply))
         .sort((a, b) => a - b)
-        .map((ply) => {
-          const nearest = nearestFault(ply, faults);
-          return {
-            ply,
-            notation: notations[ply] ?? null,
-            lostThere: 0,
-            nearest: nearest && { ...nearest, notation: notations[nearest.ply] ?? null },
-          };
-        }),
+        .map((ply) => ({
+          ply,
+          notation: notations[ply] ?? null,
+          lostThere: 0,
+          // The same helper as the per-Move `aside` case: two derivations of
+          // "the nearest loss" would agree only by luck, and this one carried
+          // a real defect (it could name the marked Move itself).
+          nearest: namedFault(ply, faults, notations),
+        })),
     },
     uncounted,
     posterior: analysis.marks
@@ -556,25 +602,85 @@ function termFor(declared: DeclaredSeverity, measured: MeasuredLabel): ReadingTe
 }
 
 /**
- * The Player's flawed Move nearest a marker that found nothing. Ties go to the
- * **later** Move, because a marker placed just before the loss is the common
- * near miss and naming the Move that follows it is what teaches.
+ * What the Player's `Key moment`s were worth on one Move.
  *
- * `null` when the Player had no flawed Move at all: there was nothing to point
- * at, so there is no distance to state.
+ * The order of the tests is the meaning. A marker on the opponent's Move or on
+ * an uncounted one is named **for what it is** before anything is said about
+ * distance: telling a Player their marker was "beside the damage" when it was
+ * actually on a Move nothing scores would send them looking for a mistake they
+ * did not make.
+ *
+ * `null` where there is neither a marker nor a loss — the great majority of a
+ * Game. Sixty cartouches saying "nothing here" would bury the six that speak.
  */
-function nearestFault(
+function keyMomentOf(
+  move: MoveAnnotation,
+  marked: Set<number>,
+  lostAt: Map<number, number>,
+  faults: { ply: number; lost: number }[],
+  notations: string[],
+): MoveKeyMoment | null {
+  const lost = lostAt.get(move.ply) ?? 0;
+  const none = { lost: 0, nearest: null };
+
+  if (!marked.has(move.ply)) {
+    // **The case that was missing.** A costly fault nobody pointed at is the
+    // other side of "your markers found 30% of the damage" — and until now it
+    // had no Move to show. Nothing else here is new.
+    return lost > 0 ? { case: "missed", lost, nearest: null } : null;
+  }
+
+  // Marked. Why it earned nothing matters more than that it earned nothing.
+  if (move.counted === null) return { case: "on-opponent", ...none };
+  if (!move.counted.counted) return { case: "on-uncounted", ...none };
+  if (lost > 0) return { case: "found", lost, nearest: null };
+
+  // Marked, counted, and it cost nothing. Either the Game had a fault to find
+  // elsewhere — and the distance is what teaches — or it had none at all, and
+  // saying so is fairer than implying the Player missed something.
+  const nearest = namedFault(move.ply, faults, notations);
+  if (nearest === null) return { case: "no-target", ...none };
+  return { case: "aside", lost: 0, nearest };
+}
+
+/**
+ * The Player's **costly** Move nearest a marker that found nothing, named.
+ * Ties go to the **later** Move, because a marker placed just before the loss
+ * is the common near miss and naming the Move that follows it is what teaches.
+ *
+ * Two exclusions — the queried ply, and any fault that cost nothing — and they
+ * are **defensive, not fixes**. Both cases are currently unreachable, and it is
+ * worth saying why rather than leaving a reader to assume a bug was closed:
+ * `moveSeverities` calls `classifyMove(before, 100 - after)` while
+ * `chancesLostByMove` subtracts the very same pair, so a severity and a cost
+ * are **one quantity read twice**. A flagged counted Move therefore always
+ * costs something, and a marked one is answered `found` before any distance is
+ * sought.
+ *
+ * They stay because they make that invariant explicit at the point that depends
+ * on it. `confrontation-per-move.test.ts` asserts it directly: the day severity
+ * stops meaning a drop, that test goes red **and** these two lines begin doing
+ * real work — which is the order one wants.
+ *
+ * `null` when there was no costly Move to point at: nothing to find is a fact,
+ * not a miss, and saying so is fairer than implying one.
+ */
+function namedFault(
   ply: number,
   faults: { ply: number; lost: number }[],
-): { ply: number; lost: number } | null {
-  if (faults.length === 0) return null;
-  return faults.reduce((best, fault) => {
+  notations: string[],
+): { ply: number; lost: number; notation: string | null } | null {
+  const costly = faults.filter((fault) => fault.lost > 0 && fault.ply !== ply);
+  if (costly.length === 0) return null;
+
+  const nearest = costly.reduce((best, fault) => {
     const d = Math.abs(fault.ply - ply);
     const bestD = Math.abs(best.ply - ply);
     if (d < bestD) return fault;
     if (d === bestD && fault.ply > best.ply) return fault;
     return best;
   });
+  return { ...nearest, notation: notations[nearest.ply] ?? null };
 }
 
 /**

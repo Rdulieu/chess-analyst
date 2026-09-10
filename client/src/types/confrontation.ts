@@ -39,6 +39,23 @@ export type ReadingTerm = "bonne-lecture" | "sous-lecture" | "sur-lecture";
 /** Why nothing scores a Move. Five cases, **never melted into one "not scored"**. */
 export type UnscoredCase = "good" | "opponent" | "forced" | "decided" | "silence";
 
+/** What a `Key moment` was worth on one Move. Six cases, and a deliberate silence. */
+export type KeyMomentCase =
+  | "found"
+  | "aside"
+  | "no-target"
+  | "on-opponent"
+  | "on-uncounted"
+  | "missed";
+
+/** The `Key moment` reading of one Move. */
+export interface MoveKeyMoment {
+  case: KeyMomentCase;
+  lost: number;
+  /** For `aside`: the costly Move the marker missed, so the distance can be named. */
+  nearest: { ply: number; notation: string | null; lost: number } | null;
+}
+
 /**
  * What the Player's reading was worth on **one Move** (ADR-0032) — the list the
  * screen's figures are the sum of.
@@ -53,6 +70,8 @@ export interface MoveReading {
   measured: MeasuredLabel;
   term: ReadingTerm | null;
   unscored: UnscoredCase | null;
+  /** `null` where there is neither a marker nor a loss — most of a Game. */
+  keyMoment: MoveKeyMoment | null;
 }
 
 /** Why one of the Player's Moves is not counted — the two are never melted into one. */
