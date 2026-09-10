@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
 import { MoveMarks } from "../personal/MoveMarks";
+import { MoveReadout } from "./MoveReadout";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../personal/declaredSeverity";
-import type { Game, GameAnnotations, PersonalAnalysis } from "../../types";
+import type { Game, GameAnnotations, MoveReading, PersonalAnalysis } from "../../types";
 
 /**
  * The board on the `Confrontation` route (US-26, ADR-0033).
@@ -29,6 +31,7 @@ export function ConfrontationBoard({
   game,
   annotations,
   reading,
+  moves,
 }: {
   game: Game;
   annotations: GameAnnotations;
@@ -41,7 +44,14 @@ export function ConfrontationBoard({
    * prop goes with it.
    */
   reading: PersonalAnalysis;
+  /** The reading of every Move, as the Confrontation now serves it (ADR-0032). */
+  moves: MoveReading[];
 }) {
+  // By ply, because that is how the board asks: it hands over the index it is
+  // standing on, and a linear scan per ply transition would be a lookup written
+  // where a map belongs.
+  const byPly = useMemo(() => new Map(moves.map((move) => [move.ply, move])), [moves]);
+
   return (
     <Board
       pgn={game.pgn}
@@ -82,6 +92,10 @@ export function ConfrontationBoard({
       // The arrows step the Moves — and asking for them is what makes the board
       // announce them, so working and announced cannot come apart (US-23, D6).
       keyboardStepping
+      // **Below the step controls**, which is where `Board` puts this slot and
+      // which is ADR-0021: everything that appears and disappears with the ply
+      // goes under the buttons the Player is clicking, never above them.
+      controls={(ply) => <MoveReadout move={byPly.get(ply) ?? null} marks={reading.marks} />}
     />
   );
 }

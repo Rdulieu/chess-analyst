@@ -121,6 +121,7 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
               game={state.board.game}
               annotations={state.board.annotations}
               reading={state.board.reading}
+              moves={state.confrontation.moves}
             />
             <ConfrontationReadout confrontation={state.confrontation} />
             {/* Below the figures, because it is what explains them: the gap

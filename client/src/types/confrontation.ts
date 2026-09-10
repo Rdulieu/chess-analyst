@@ -29,6 +29,32 @@ export interface SeverityReading {
   unscored: { good: number; opponent: number };
 }
 
+/**
+ * How the Player's reading of one Move compares with what was measured
+ * (CONTEXT.md). Equal band is an agreement — `Sound` against "nothing flagged"
+ * included; a gap is read by its **direction**, with no tolerance window.
+ */
+export type ReadingTerm = "bonne-lecture" | "sous-lecture" | "sur-lecture";
+
+/** Why nothing scores a Move. Five cases, **never melted into one "not scored"**. */
+export type UnscoredCase = "good" | "opponent" | "forced" | "decided" | "silence";
+
+/**
+ * What the Player's reading was worth on **one Move** (ADR-0032) — the list the
+ * screen's figures are the sum of.
+ *
+ * `term` and `unscored` are mutually exclusive and jointly exhaustive: exactly
+ * one is non-null.
+ */
+export interface MoveReading {
+  ply: number;
+  notation: string | null;
+  declared: DeclaredSeverity | null;
+  measured: MeasuredLabel;
+  term: ReadingTerm | null;
+  unscored: UnscoredCase | null;
+}
+
 /** Why one of the Player's Moves is not counted — the two are never melted into one. */
 export type UncountedReason = "forced" | "decided";
 
@@ -97,6 +123,8 @@ export interface GameConfrontation {
   provenance: Provenance;
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /** The reading of every half-move, from ply 1 (ADR-0032). */
+  moves: MoveReading[];
   /** Where the Player looked — the `Key moment` reading. */
   keyMoments: KeyMomentReading;
   /** The Player's Moves the analysis does not count, each with its reason. */

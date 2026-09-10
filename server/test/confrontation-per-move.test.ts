@@ -1,0 +1,227 @@
+import { describe, it, expect } from "vitest";
+import { openDb } from "../src/db";
+import { getGameAnnotations } from "../src/annotations/repository";
+import { getPersonalAnalysis } from "../src/personal/repository";
+import {
+  confrontGame,
+  ConfrontationRefusal,
+  MEASURED_LABELS,
+  type GameConfrontation,
+  type MoveReading,
+} from "../src/personal/confrontation";
+import { seedConfrontationFixture, CONFRONTATION_FIXTURE_CASES } from "../src/personal/fixture";
+import { DECLARED_SEVERITIES } from "../src/personal/severity";
+import { gameNotations } from "../src/chess/positions";
+import { seedProfile } from "./fixtures";
+import { games } from "../src/db/schema";
+import { eq } from "drizzle-orm";
+
+/**
+ * **The `Confrontation` of one Game keeps the reading of every Move, and its
+ * figures are the sum of that list** (ADR-0032).
+ *
+ * The derivation used to walk the Moves, increment four counters and throw the
+ * pair away. Nothing new is walked here and no table is added: it is the same
+ * single pass, which now **keeps** what it computes. That is what lets the
+ * screen answer "1 sur 4" with the four Moves — and what makes the per-Move
+ * view and the aggregate incapable of diverging, because they are one
+ * derivation read at two altitudes rather than two that agree by luck.
+ */
+describe("the per-Move reading of a Confrontation", () => {
+  const confronted = (() => {
+    let cached: GameConfrontation | null = null;
+    return () => {
+      if (cached) return cached;
+      const { db } = openDb(":memory:");
+      const profileId = seedProfile(db, "fixture-reader");
+      const gameId = seedConfrontationFixture(db, profileId);
+      const annotations = getGameAnnotations(db, gameId)!;
+      const analysis = getPersonalAnalysis(db, gameId)!;
+      const game = db.select().from(games).where(eq(games.id, gameId)).get()!;
+      const result = confrontGame(analysis, annotations, gameNotations(game.pgn));
+      if (result instanceof ConfrontationRefusal) throw new Error(`refused: ${result.reason}`);
+      return (cached = result);
+    };
+  })();
+
+  /** The entry for one ply — the lookup the screen itself performs. */
+  const at = (ply: number): MoveReading => {
+    const entry = confronted().moves.find((move) => move.ply === ply);
+    if (!entry) throw new Error(`no reading for ply ${ply}`);
+    return entry;
+  };
+
+  describe("what each entry carries", () => {
+    it("holds one entry per half-move, the starting Position excepted", () => {
+      const { moves } = confronted();
+
+      // Ply 0 is nobody's Move. Every other ply has an entry — including the
+      // opponent's, which is what lets the screen say "coup de l'adversaire"
+      // rather than going silent on a Move the Player is standing on.
+      expect(moves.map((move) => move.ply)).toEqual(
+        Array.from({ length: 35 }, (_, i) => i + 1),
+      );
+    });
+
+    it("names the Move, so an entry is readable without the Game beside it", () => {
+      expect(at(11).notation).toBe("Kxf2");
+      expect(at(1).notation).toBe("g3");
+    });
+
+    it("carries the declared verdict and the measured label side by side", () => {
+      const { underRead } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(underRead)).toMatchObject({ declared: "mistake", measured: "blunder" });
+    });
+
+    it("says «nothing flagged» as a fact rather than as an absence", () => {
+      const { falseAlarm } = CONFRONTATION_FIXTURE_CASES;
+
+      // The fourth column. It is what makes `Sound` scorable at all.
+      expect(at(falseAlarm).measured).toBe("none");
+    });
+
+    it("gives every entry exactly one of a term and an unscored reason", () => {
+      // The invariant that stops a Move being both scored and excused, or
+      // neither — and the one a reader relies on when branching on `term`.
+      for (const move of confronted().moves) {
+        expect(
+          (move.term === null) !== (move.unscored === null),
+          `ply ${move.ply} has term=${move.term} and unscored=${move.unscored}`,
+        ).toBe(true);
+      }
+    });
+  });
+
+  describe("the term, following the comparison already shipped", () => {
+    it("calls an agreement a Bonne lecture, on the band and on «nothing flagged»", () => {
+      const { agreement } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(agreement).term).toBe("bonne-lecture");
+      // `Sound` against nothing flagged is an agreement — the entire reason
+      // `Sound` is a value the Player poses.
+      expect(at(1)).toMatchObject({ declared: "sound", measured: "none", term: "bonne-lecture" });
+    });
+
+    it("calls a milder verdict than measured a Sous-lecture", () => {
+      const { underRead } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(underRead).term).toBe("sous-lecture");
+    });
+
+    it("calls a harder verdict than measured a Sur-lecture", () => {
+      const { overRead, falseAlarm } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(overRead).term).toBe("sur-lecture");
+      // A band declared where the engine flagged nothing is the same fault in
+      // its purest form: the Player saw danger that was not there.
+      expect(at(falseAlarm).term).toBe("sur-lecture");
+    });
+
+    it("opens no tolerance window — one band apart is still a divergence", () => {
+      const { overRead } = CONFRONTATION_FIXTURE_CASES;
+
+      // `Blunder` declared, `Mistake` measured. Adjacent, and still not an
+      // agreement: the accuracy figure already shipped does not move a hair.
+      expect(at(overRead)).toMatchObject({ declared: "blunder", measured: "mistake" });
+      expect(at(overRead).term).not.toBe("bonne-lecture");
+    });
+  });
+
+  describe("what nothing scores, kept apart by reason", () => {
+    it("names each of the five cases at its own ply", () => {
+      const cases = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(cases.forcedBlunderDeclaredSound).unscored).toBe("forced");
+      expect(at(cases.decidedWithVerdict).unscored).toBe("decided");
+      expect(at(cases.opponentVerdict).unscored).toBe("opponent");
+      expect(at(cases.good).unscored).toBe("good");
+      expect(at(cases.silence).unscored).toBe("silence");
+    });
+
+    it("keeps the Player's verdict on a forced Move — the case that settles the denominator", () => {
+      const { forcedBlunderDeclaredSound } = CONFRONTATION_FIXTURE_CASES;
+
+      // A forced catastrophe measures a Blunder and is nobody's mistake, so a
+      // Player calling it `Sound` is RIGHT. The screen can only say so if the
+      // verdict is still here — and it carries no term, so nothing scores it
+      // against them.
+      expect(at(forcedBlunderDeclaredSound)).toMatchObject({
+        declared: "sound",
+        measured: "blunder",
+        unscored: "forced",
+        term: null,
+      });
+    });
+
+    it("keeps silence and Good apart — they are not the same fact", () => {
+      const { silence, good } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(at(silence).declared).toBeNull();
+      expect(at(good).declared).toBe("good");
+    });
+  });
+
+  /**
+   * **The assertion ADR-0032 exists for.** Each figure is re-derived from the
+   * per-Move list alone and must land exactly on the one served. If these ever
+   * disagree, the screen and the summary are telling the Player two different
+   * stories about the same Game.
+   */
+  describe("the figures ARE the sum of the list", () => {
+    /** The entries the accuracy figures are computed over. */
+    const examinedMoves = () =>
+      confronted().moves.filter(
+        (move) => move.declared !== null && !["opponent", "forced", "decided"].includes(move.unscored ?? ""),
+      );
+
+    it("re-derives `examined` from the list", () => {
+      expect(examinedMoves()).toHaveLength(confronted().severity.examined);
+    });
+
+    it("re-derives `scorable` from the list", () => {
+      const scorable = examinedMoves().filter((move) => move.unscored !== "good");
+
+      expect(scorable).toHaveLength(confronted().severity.scorable);
+    });
+
+    it("re-derives `agreed` from the list", () => {
+      const agreed = confronted().moves.filter((move) => move.term === "bonne-lecture");
+
+      expect(agreed).toHaveLength(confronted().severity.agreed);
+    });
+
+    it("re-derives every cell of the matrix from the list", () => {
+      const { matrix } = confronted().severity;
+
+      for (const declared of DECLARED_SEVERITIES) {
+        for (const label of MEASURED_LABELS) {
+          const cell = examinedMoves().filter(
+            (move) => move.declared === declared && move.measured === label,
+          );
+          expect(cell, `cell ${declared}/${label}`).toHaveLength(matrix[declared][label]);
+        }
+      }
+    });
+
+    it("re-derives `unscored.good` and `unscored.opponent` from the list", () => {
+      const { unscored } = confronted().severity;
+      const moves = confronted().moves;
+
+      expect(moves.filter((move) => move.unscored === "good")).toHaveLength(unscored.good);
+      // Only those CARRYING a verdict: an opponent Move the Player said nothing
+      // about is not a verdict that went unscored.
+      expect(
+        moves.filter((move) => move.unscored === "opponent" && move.declared !== null),
+      ).toHaveLength(unscored.opponent);
+    });
+
+    it("re-derives the uncounted list from the list", () => {
+      const fromMoves = confronted()
+        .moves.filter((move) => move.unscored === "forced" || move.unscored === "decided")
+        .map((move) => move.ply);
+
+      expect(fromMoves).toEqual(confronted().uncounted.map((move) => move.ply));
+    });
+  });
+});

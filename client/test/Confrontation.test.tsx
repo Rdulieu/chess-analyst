@@ -27,6 +27,10 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       matrix: MATRIX,
       unscored: { good: 0, opponent: 0 },
     },
+    // This file exercises the AGGREGATE readout, which reads none of the
+    // per-Move list — empty rather than fabricated, so nothing here can be
+    // mistaken for a claim about what the list contains.
+    moves: [],
     keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
     uncounted: [],
     posterior: [],

@@ -26,6 +26,8 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       unscored: { good: 1, opponent: 2 },
     },
     keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
+    /* The unscored block reads no per-Move entry — this file makes no claim about the list. */
+    moves: [],
     uncounted: [
       { ply: 7, notation: "Nf3", reason: "forced", declared: "sound" },
       { ply: 41, notation: "Rd1", reason: "decided", declared: null },
