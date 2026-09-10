@@ -248,10 +248,15 @@ export function Board({
     if (!focusRequest) return;
     setIndex(Math.min(Math.max(focusRequest.ply, 0), plies.length));
     setPreview({ focus: null, hover: null });
-    // `ply` is deliberately absent: the id is what says "asked", and including
-    // the ply would fire again on a re-render that merely re-created the object.
+    // **The id alone.** `ply` is absent because the id is what says "asked",
+    // and including it would fire again on a re-render that merely re-created
+    // the object. `plies.length` is absent for a sharper reason: it changes
+    // when the Game does, and with it in the deps a stale request re-fired the
+    // moment a new PGN parsed — sending the Player to a ply of the Game they
+    // had just left. It is only read to clamp, which the id-keyed run already
+    // does correctly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusRequest?.id, plies.length]);
+  }, [focusRequest?.id]);
 
   /** Reports one channel's preview without disturbing the other's. */
   const previewVia = (fen: string | null, via: "focus" | "hover") =>

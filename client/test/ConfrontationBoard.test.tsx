@@ -22,7 +22,7 @@ import type { GameAnnotations, GameConfrontation, MoveAnnotation } from "../src/
  */
 
 /** A Game whose PGN the board can actually walk. Four half-moves is enough. */
-const PGN = "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5";
+const PGN = "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. Nc3 Nf6";
 
 /** The Player's own Game, as `/api/games/:id` serves it. */
 const GAME = { id: 1, pgn: PGN, opponent: "opp", playerColor: "white" as const };
@@ -72,6 +72,8 @@ const ANNOTATIONS: GameAnnotations = {
     // announced number" from "at least one".
     ply({ ply: 5, counted: { counted: true, reason: null }, chancesLost: 0 }),
     ply({ ply: 6 }),
+    ply({ ply: 7, counted: { counted: true, reason: null }, chancesLost: 0 }),
+    ply({ ply: 8 }),
   ],
 };
 
@@ -90,7 +92,7 @@ const CONFRONTATION: GameConfrontation = {
       mistake: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
       inaccuracy: { blunder: 2, mistake: 0, inaccuracy: 0, none: 0 },
       sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
-      good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
+      good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 1 },
     },
     unscored: { good: 0, opponent: 0 },
   },
@@ -103,6 +105,11 @@ const CONFRONTATION: GameConfrontation = {
     { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
     { ply: 3, notation: "Nf3", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null },
     { ply: 5, notation: "Bc4", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null },
+    // A `Good`: it FILLS its matrix cell (the server counts every examined
+    // Move) while carrying `unscored: "good"`. The row the table renders and
+    // never scores — and the one a naive "exclude everything unscored" filter
+    // silently emptied.
+    { ply: 7, notation: "Nc3", declared: "good", measured: "none", term: null, unscored: "good", keyMoment: null },
     { ply: 6, notation: "Bc5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
     { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
   ],
@@ -226,7 +233,9 @@ describe("the board on the Confrontation route", () => {
 
     const list = screen.getByRole("list", { name: "moves" });
     const moves = [...list.querySelectorAll("button")].map((b) => b.textContent);
-    expect(moves).toEqual(["1.e4", "1…e5", "2.Nf3", "2…Nc6", "3.Bc4", "3…Bc5"]);
+    expect(moves).toEqual([
+      "1.e4", "1…e5", "2.Nf3", "2…Nc6", "3.Bc4", "3…Bc5", "4.Nc3", "4…Nf6",
+    ]);
 
     fireEvent.click(screen.getByRole("button", { name: "2.Nf3" }));
     await waitFor(() =>
@@ -560,6 +569,32 @@ describe("the board on the Confrontation route", () => {
       expect(listed).toHaveLength(2);
       expect(listed.map((b) => b.textContent)).toEqual(["1.e4", "2.Nf3"]);
       expect(cell.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("unfolds exactly what it announces on EVERY non-empty cell, the Good row included", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const toggles = [
+        ...container.querySelectorAll<HTMLButtonElement>('[data-part="cell-toggle"]'),
+      ];
+      expect(toggles.length).toBeGreaterThan(1);
+
+      // **One cell is not enough.** The count and the list used to agree only
+      // where the `good` row was empty — a coincidence that held on every
+      // fixture that happened to have no `Good`. Walking all of them is what
+      // turns ADR-0032 from a claim into a guard.
+      for (const toggle of toggles) {
+        const announced = Number(toggle.textContent);
+        fireEvent.click(toggle);
+        await waitFor(() =>
+          expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
+        );
+        const listed = container.querySelectorAll('[data-part="cell-moves"] li');
+        expect(listed, `cell announcing ${announced}`).toHaveLength(announced);
+        fireEvent.click(toggle);
+      }
     });
 
     it("brings the board to a Move clicked in the unfolded list", async () => {

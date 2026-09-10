@@ -77,6 +77,10 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
     if (!gameId) return;
     let live = true;
     setState({ status: "loading" });
+    // A focus request belongs to the Game it was made on. Left standing across
+    // a change of Game it is a pointer into a history that is no longer on
+    // screen — the belt to the board's own braces.
+    setFocusRequest(undefined);
     // The Confrontation FIRST, and the rest only if it answers: its two refusals
     // are the whole point of this route, and fetching a Game to draw a board on
     // a screen that is about to refuse would draw the Game it just refused.

@@ -1,9 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { biasOf } from "./bias";
 import { moveName } from "./moveName";
 import { DECLARED_SEVERITY_LABEL } from "../personal/declaredSeverity";
 import { DECLARED_SEVERITIES, MEASURED_LABELS } from "../../types";
-import type { ConfusionMatrix, MeasuredLabel, MoveReading } from "../../types";
+import type {
+  ConfusionMatrix,
+  DeclaredSeverity,
+  MeasuredLabel,
+  MoveReading,
+} from "../../types";
+
+/**
+ * **Which Moves a matrix cell is made of** — the server's own rule, restated
+ * once and used everywhere.
+ *
+ * The server fills the matrix for **every examined Move**, and `Good` is
+ * examined: it increments `matrix[declared][measured]` *before* deciding the
+ * verdict is unscorable. So a `Good` fills its cell and carries
+ * `unscored: "good"` — and a predicate that simply excluded everything
+ * unscored dropped the whole `good` row, which the table deliberately renders.
+ *
+ * The two derivations then agreed only where that row was empty. They agree by
+ * **construction** now: scored, or unscored *for the one reason that still
+ * counts as having looked*.
+ */
+function fillsMatrix(move: MoveReading): boolean {
+  return move.declared !== null && (move.term !== null || move.unscored === "good");
+}
+
+/** One cell of the matrix, as a pair rather than a string to be split apart. */
+interface Cell {
+  declared: DeclaredSeverity;
+  measured: MeasuredLabel;
+}
+
+/** Whether two cells are the same one. */
+function sameCell(a: Cell | null, b: Cell): boolean {
+  return a !== null && a.declared === b.declared && a.measured === b.measured;
+}
+
+/** The panel every cell's control points at — one open at a time, so one id. */
+const CELL_PANEL_ID = "confrontation-cell-moves";
 
 /** The four measured columns, in the Player's own terms. */
 const MEASURED_LABEL: Record<MeasuredLabel, string> = {
@@ -55,7 +92,21 @@ export function ConfusionMatrixTable({
    * come back as sixteen open lists, and a Player who wants one cell is not
    * asking for the other nineteen.
    */
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<Cell | null>(null);
+  /**
+   * The disclosure exists only where there is a board to jump to. The corpus
+   * screen renders this same table over a whole history, with no Game under
+   * it — offering to unfold there would reintroduce the enumeration slice 04
+   * removed, and, with no per-Move list to draw on, would unfold to nothing.
+   */
+  const unfoldable = onFocusMove !== undefined && moves.length > 0;
+  /**
+   * An unfolded cell belongs to the matrix it was opened on. After a change of
+   * Game the same cell holds different Moves, and leaving it open would show
+   * the new Game's Moves under the old Game's disclosure without anybody
+   * having asked.
+   */
+  useEffect(() => setOpen(null), [matrix]);
 
   return (
     <div data-part="matrix">
@@ -102,8 +153,10 @@ export function ConfusionMatrixTable({
                       <CellContent
                         count={count}
                         agreement={agreement}
-                        cellId={`${declared}-${label}`}
-                        open={open === `${declared}-${label}`}
+                        cell={{ declared, measured: label }}
+                        label={`${DECLARED_SEVERITY_LABEL[declared]} contre ${MEASURED_LABEL[label]}`}
+                        unfoldable={unfoldable}
+                        open={sameCell(open, { declared, measured: label })}
                         onToggle={setOpen}
                       />
                     </td>
@@ -123,12 +176,7 @@ export function ConfusionMatrixTable({
         last block of the panel.
       */}
       {open && (
-        <CellMoves
-          cellId={open}
-          moves={moves}
-          matrix={matrix}
-          onFocusMove={onFocusMove}
-        />
+        <CellMoves cell={open} moves={moves} matrix={matrix} onFocusMove={onFocusMove} />
       )}
     </div>
   );
@@ -178,19 +226,24 @@ function BiasSentence({ bias }: { bias: ReturnType<typeof biasOf> }) {
 function CellContent({
   count,
   agreement,
-  cellId,
+  cell,
+  label,
+  unfoldable,
   open,
   onToggle,
 }: {
   count: number;
   agreement: boolean;
-  cellId: string;
+  cell: Cell;
+  /** What the cell is, so the control's own name says it and not just "2". */
+  label: string;
+  unfoldable: boolean;
   open: boolean;
-  onToggle: (next: string | null) => void;
+  onToggle: (next: Cell | null) => void;
 }) {
   const mark = agreement && count > 0 && <span data-part="agreement-mark"> ✓</span>;
 
-  if (count === 0) {
+  if (count === 0 || !unfoldable) {
     return (
       <>
         <span data-count>{count}</span>
@@ -203,8 +256,17 @@ function CellContent({
     <>
       {/* A real `<button>`, so it is reachable and operable by keyboard for
           free, and `aria-expanded` says which state it is in — a disclosure
-          that does not announce itself is a disclosure only a mouse can find. */}
-      <button type="button" aria-expanded={open} onClick={() => onToggle(open ? null : cellId)}>
+          that does not announce itself is a disclosure only a mouse can find.
+          Named by its CELL: the count alone would have every control in the
+          table announce itself as a bare number. */}
+      <button
+        type="button"
+        data-part="cell-toggle"
+        aria-expanded={open}
+        aria-controls={CELL_PANEL_ID}
+        aria-label={`${label} : ${count} — voir les coups`}
+        onClick={() => onToggle(open ? null : cell)}
+      >
         <span data-count>{count}</span>
       </button>
       {mark}
@@ -219,49 +281,44 @@ function CellContent({
  * This is the exact gap the 25/08 feedback named: a Player reading "1 sur 4"
  * could not find the other three. They are here, each named by its notation
  * rather than merely numbered, and each a way back to the diagram.
+ *
+ * There is **no "unavailable" fallback**. There was one, and it was a mistake:
+ * it turned two real defects into a sentence the Player was invited to
+ * distrust. The count and the list now come from one predicate, so a cell that
+ * announces four has four — and if that ever stops being true, the test that
+ * checks every cell of the matrix goes red, which is where it should be said.
  */
 function CellMoves({
-  cellId,
+  cell,
   moves,
   matrix,
   onFocusMove,
 }: {
-  cellId: string;
+  cell: Cell;
   moves: MoveReading[];
   matrix: ConfusionMatrix;
   onFocusMove?: (ply: number) => void;
 }) {
-  const [declared, measured] = cellId.split("-") as [
-    keyof ConfusionMatrix,
-    MeasuredLabel,
-  ];
   const inCell = moves.filter(
-    (move) => move.declared === declared && move.measured === measured && move.unscored === null,
+    (move) =>
+      fillsMatrix(move) && move.declared === cell.declared && move.measured === cell.measured,
   );
-  const announced = matrix[declared][measured];
 
   return (
-    <div data-part="cell-moves">
+    <div data-part="cell-moves" id={CELL_PANEL_ID}>
       <h4>
-        {DECLARED_SEVERITY_LABEL[declared]} contre {MEASURED_LABEL[measured]} — {announced}
+        {DECLARED_SEVERITY_LABEL[cell.declared]} contre {MEASURED_LABEL[cell.measured]} —{" "}
+        {matrix[cell.declared][cell.measured]}
       </h4>
-      {inCell.length === 0 ? (
-        /* The count and the list come from the same per-Move readings, so this
-           cannot happen while ADR-0032 holds. Said rather than rendered as an
-           empty list, because an empty list under a count of four is the exact
-           shape of a bug the Player should be told about. */
-        <p>Les coups de cette cellule ne sont pas disponibles.</p>
-      ) : (
-        <ul>
-          {inCell.map((move) => (
-            <li key={move.ply}>
-              <button type="button" onClick={() => onFocusMove?.(move.ply)}>
-                {moveName(move.ply, move.notation)}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul>
+        {inCell.map((move) => (
+          <li key={move.ply}>
+            <button type="button" onClick={() => onFocusMove?.(move.ply)}>
+              {moveName(move.ply, move.notation)}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
