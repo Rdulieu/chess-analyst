@@ -54,7 +54,15 @@ export const CONFRONTATION_FIXTURE_CASES = {
   agreement: 7,
   /** A Move carrying a written note, to be read back beside the verdict. */
   note: 23,
-  /** A `Key moment` landing on a real, costly fault. */
+  /**
+   * A `Key moment` landing on a real, costly fault.
+   *
+   * **The same ply as `agreement`, and deliberately so**: a Move the Player
+   * both judged rightly and marked as pivotal is the combination worth
+   * rendering — the screen shows its two cartouches side by side there. The
+   * cost is that retuning ply 7 moves both cases at once, which is why they are
+   * named apart here even though they point at one number.
+   */
   keyMomentFound: 7,
   /** A `Key moment` landing on nothing, with a fault left to name the distance to. */
   keyMomentAside: 21,
@@ -64,7 +72,16 @@ export const CONFRONTATION_FIXTURE_CASES = {
   markerOnUncounted: 13,
   /** A marker on one of the opponent's Moves. */
   markerOnOpponent: 14,
+  /** A flagged `Inaccuracy` the Player called `Sound` — a lesser miss. */
+  inaccuracyMissed: 25,
 } as const;
+
+/**
+ * How many plies the sealed reading writes on. Exported so the re-runnability
+ * test counts marks against the fixture itself rather than against a literal
+ * that drifts the moment a case is added.
+ */
+export const CONFRONTATION_FIXTURE_MARKS = 14;
 
 /**
  * The Game's half-moves. Exported so a test can assert the seed writes one

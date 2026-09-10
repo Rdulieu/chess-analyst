@@ -8,10 +8,11 @@ import {
   seedConfrontationFixture,
   CONFRONTATION_FIXTURE_CASES,
   CONFRONTATION_FIXTURE_PLIES,
-} from "../src/personal/confrontation-fixture";
+  CONFRONTATION_FIXTURE_MARKS,
+} from "../src/personal/fixture";
 import { gameNotations } from "../src/chess/positions";
 import { seedProfile } from "./fixtures";
-import { games, evaluations } from "../src/db/schema";
+import { games, evaluations, personalAnalyses, personalMarks } from "../src/db/schema";
 
 /**
  * The seeded fixture US-26 runs its Feature Paths on: **one analysed Game with a
@@ -29,6 +30,9 @@ import { games, evaluations } from "../src/db/schema";
  * `Evaluation`s are fabricated. The real witness stays Game 715 of the live
  * database, opened by hand in the HP pass.
  */
+/** How many plies the sealed reading writes on. Read from the fixture itself. */
+const FIXTURE_MARK_COUNT = CONFRONTATION_FIXTURE_MARKS;
+
 describe("the seeded Confrontation fixture", () => {
   /**
    * The fixture seeded once and joined as the route joins it.
@@ -93,7 +97,11 @@ describe("the seeded Confrontation fixture", () => {
       const { decidedWithVerdict: ply } = CONFRONTATION_FIXTURE_CASES;
 
       expect(measured(ply).counted).toEqual({ counted: false, reason: "decided" });
-      expect(declared(ply)?.declaredSeverity).not.toBeNull();
+      // The BAND, not merely "not null": `declared()` answers `null` for a
+      // vanished mark, `null?.declaredSeverity` is `undefined`, and
+      // `expect(undefined).not.toBeNull()` passes — so the weaker assertion
+      // could not fail for the reason it was written.
+      expect(declared(ply)?.declaredSeverity).toBe("blunder");
     });
 
     it("a degree gap DOWNWARDS — a Mistake declared where a Blunder was measured", () => {
@@ -130,7 +138,8 @@ describe("the seeded Confrontation fixture", () => {
       // `null`, not `counted: false`: nothing at all is derived for the
       // opponent's play, which is not the same claim as "not counted".
       expect(measured(ply).counted).toBeNull();
-      expect(declared(ply)?.declaredSeverity).not.toBeNull();
+      // The band, for the reason spelled out on the decided case above.
+      expect(declared(ply)?.declaredSeverity).toBe("mistake");
     });
 
     it("a counted Move the Player said nothing about — silence, not a verdict", () => {
@@ -145,6 +154,16 @@ describe("the seeded Confrontation fixture", () => {
 
       expect(measured(ply)).toMatchObject({ severity: "inaccuracy", counted: { counted: true } });
       expect(declared(ply)?.declaredSeverity).toBe("inaccuracy");
+    });
+
+    it("an Inaccuracy missed — a flagged Move the Player called Sound", () => {
+      const { inaccuracyMissed: ply } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(measured(ply)).toMatchObject({
+        severity: "inaccuracy",
+        counted: { counted: true },
+      });
+      expect(declared(ply)?.declaredSeverity).toBe("sound");
     });
 
     it("a written note, so the screen has one to render beside a verdict", () => {
@@ -210,6 +229,10 @@ describe("the seeded Confrontation fixture", () => {
     expect(
       db.select().from(evaluations).all().filter((row) => row.gameId === first),
     ).toHaveLength(CONFRONTATION_FIXTURE_PLIES + 1);
+    // The marks too. The cascade makes accumulation impossible today, which is
+    // exactly why nothing would notice the day it stopped being true.
+    expect(db.select().from(personalAnalyses).all()).toHaveLength(1);
+    expect(db.select().from(personalMarks).all()).toHaveLength(FIXTURE_MARK_COUNT);
   });
 
   it("leaves every other Profile's data alone", () => {

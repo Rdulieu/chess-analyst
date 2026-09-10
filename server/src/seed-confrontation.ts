@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { openDb } from "./db";
 import { resolveProfile } from "./profiles/repository";
-import { seedConfrontationFixture } from "./personal/confrontation-fixture";
+import { seedConfrontationFixture } from "./personal/fixture";
 
 /**
  * Seeds the `Confrontation` fixture US-26's Feature Paths run on (US-26, slice 01).
