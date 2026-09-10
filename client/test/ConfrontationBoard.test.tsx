@@ -281,6 +281,31 @@ describe("the board on the Confrontation route", () => {
     expect(stepper.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("says an unscored Move's case AT that Move, naming it rather than going grey and mute", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    // The opponent's Move: the Player standing here must learn why no verdict
+    // of theirs is scored, instead of meeting a blank.
+    fireEvent.click(screen.getByRole("button", { name: "1…e5" }));
+    await waitFor(() =>
+      expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe(
+        "Coup de l'adversaire",
+      ),
+    );
+
+    // Silence, which is NOT the same fact as a `Good` and must not read as one.
+    fireEvent.click(screen.getByRole("button", { name: "2.Nf3" }));
+    await waitFor(() =>
+      expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe("Rien dit"),
+    );
+    // One neutral tone for all five, so the words are what separate them.
+    expect(
+      container.querySelector('[data-part="reading-term"]')!.getAttribute("data-tone"),
+    ).toBe("unscored");
+  });
+
   it("carries no Review mode: the seal has fallen, everything is revealed", async () => {
     stub();
     const { container } = renderPage();
