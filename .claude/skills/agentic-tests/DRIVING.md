@@ -202,6 +202,16 @@ a helper is recognised as *this* returning, not as a new mystery.
   straight to `/analyse/<id>/confrontation` lands on the Profile picker and looks like a broken
   route. Select the Profile first (minding the `selectProfile` quirk just below). Measured
   2026-09-10.
+- **Before writing off an unreproducible finding, read `git log -1` and `git status`.** The Vite
+  dev server hot-reloads the worktree, so a defect that stops reproducing may be somebody else's
+  fix landing *inside your session*. Measured 2026-09-10 on the US-26-07 FP: two true readings of
+  a real bug (a matrix row unfolding to nothing), then five clean re-measurements against code
+  that had changed underneath — and the agent correctly filed a non-finding from sound evidence.
+  Only an independent review of the source caught the bug. This is the mirror of "re-measure
+  before calling anything a defect", and it is the **more expensive** of the two to get wrong:
+  that one costs a false red, this one converts a real bug into a documented non-finding.
+  Corollary for whoever dispatched the run: **do not edit the worktree while a scenario drives
+  the app from it.**
 - **On a re-measure after a fix: reload ignoring cache, and assert a marker the fix introduced.**
   A partially-new bundle looks exactly like a partially-working fix. Measured 2026-09-10 on the
   US-26-06 FP: the served bundle carried one change from a commit (`aria-hidden` removed) while

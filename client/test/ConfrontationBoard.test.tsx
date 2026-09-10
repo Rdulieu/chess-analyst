@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, configure } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ConfrontationPage } from "../src/pages/ConfrontationPage";
 import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
@@ -155,6 +155,20 @@ function renderPage() {
 }
 
 /**
+ * **Every wait in this file is given room, not just the board's.**
+ *
+ * This screen resolves three fetches and mounts sixty-four squares through
+ * `react-chessboard`; on a loaded machine that has repeatedly overrun the 1 s
+ * default, and every failure was a wait timing out rather than an assertion
+ * being wrong — the same tests pass alone, every time. Raising the helper's
+ * own timeout only moved the problem to the next `waitFor`, so it is set once
+ * here. A gate that reddens under load is a gate people learn to ignore, and
+ * the extra patience costs nothing when something is genuinely broken: the
+ * assertion still fails, just later.
+ */
+configure({ asyncUtilTimeout: 5000 });
+
+/**
  * The board, once it has mounted — the page loads three records before it can.
  *
  * **A longer wait than the default, and deliberately.** This screen resolves
@@ -168,9 +182,7 @@ function renderPage() {
  * genuinely broken.
  */
 async function board(container: HTMLElement) {
-  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull(), {
-    timeout: 5000,
-  });
+  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull());
   return container;
 }
 
