@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ConfrontationPage } from "../src/pages/ConfrontationPage";
 import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
 import type { GameConfrontation } from "../src/types";
+import { stubConfrontation } from "./support/confrontationStub";
 
 const CONFRONTATION: GameConfrontation = {
   gameId: 1,
@@ -29,24 +30,9 @@ const CONFRONTATION: GameConfrontation = {
   posterior: [],
 };
 
-/**
- * The confrontation route talks to two endpoints and no more. Anything else
- * throws loudly: this screen derives everything from records the app already
- * serves, and a silent extra fetch would mean a second derivation of the method.
- */
+/** The route's records, named exactly and closed — see the shared helper. */
 function stub(answer: { status: number; body: unknown }) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string) => {
-      if (url.startsWith("/api/profiles"))
-        return { ok: true, status: 200, json: async () => [{ id: 3, handle: "Me", platform: "chess.com" }] } as Response;
-      if (url.startsWith("/api/games/1"))
-        return { ok: true, status: 200, json: async () => ({ id: 1, opponent: "opp", playerColor: "white" }) } as Response;
-      if (url.includes("/confrontation"))
-        return { ok: answer.status === 200, status: answer.status, json: async () => answer.body } as Response;
-      throw new Error(`unexpected request: ${url}`);
-    }),
-  );
+  stubConfrontation({ confrontation: answer });
 }
 
 function renderPage() {

@@ -403,6 +403,22 @@ export function Board({
                 <EvaluationGraph annotations={annotations} currentPly={index} bands={bands} />
               </div>
               {/*
+                The ribbon belongs to the CURVE, so it appears wherever the curve
+                does — not only in Detailed, where it used to sit because the
+                second drawing was the only thing it was thought to serve. It
+                reads the same axis as the curve above it, and it is the one
+                device on this pane that is deliberately NOT `aria-hidden`.
+
+                Moved out of the Detailed guard by US-26, whose Confrontation
+                screen needs the ribbon and must not take the record and the
+                recap with it. The adjustment is made **for both screens**, as
+                the story's own spec requires — a `Board` bent for one caller is
+                how two boards start diverging. Analyse therefore gains the
+                ribbon at the Annoté level: no figure changes, a ribbon is not a
+                figure.
+              */}
+              <PhaseRibbon bands={bands} lastX={annotations.length - 1} />
+              {/*
                 The second drawing is Detailed-only, and that is not a layout
                 preference: it is `aria-hidden` on the grounds that every figure in
                 it is already text in the Game's recap — which is itself Detailed.
@@ -411,9 +427,6 @@ export function Board({
               */}
               {detailed && (
                 <>
-                  {/* One ribbon for the two drawings, since they share the axis —
-                      and between them, so it reads as belonging to both. */}
-                  <PhaseRibbon bands={bands} lastX={annotations.length - 1} />
                   <p data-part="graph-label">Chances perdues (cumul)</p>
                   <div data-part="drift">
                     <DriftGraph annotations={annotations} currentPly={index} bands={bands} />

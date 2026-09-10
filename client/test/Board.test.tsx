@@ -755,6 +755,36 @@ describe("Board — the second drawing", () => {
 
     expect(boxes(container).curve).not.toBeNull();
     expect(boxes(container).drift).toBeNull();
+  });
+
+  /**
+   * **This reverses an assertion of US-14.** The ribbon used to be Detailed-only,
+   * bundled into the same guard as the second drawing on the reading that it
+   * served that drawing. It does not: it reads the axis of the **curve**, which
+   * is present at Annoté too, and a Player looking at the curve without it has
+   * to guess where the finale began.
+   *
+   * Moved by US-26, whose Confrontation screen needs the ribbon and must not
+   * take the record and the recap with it — and moved **for both screens**, as
+   * that story's spec requires, because a `Board` bent for one caller is how two
+   * boards start diverging.
+   *
+   * Nothing about US-14's actual constraint is touched: the second drawing stays
+   * Detailed-only (asserted just above), because *its* reason was never the axis
+   * — it is `aria-hidden`, and its figures exist in words only in the recap.
+   */
+  it("shows the Phase ribbon wherever the curve is, Annotated included", () => {
+    const { container } = render(<Board pgn="1. e4 e5 2. Nf3" annotations={game(null, 5, null, 30)} />);
+
+    expect(boxes(container).curve).not.toBeNull();
+    expect(screen.queryByLabelText("phases de la partie")).not.toBeNull();
+  });
+
+  it("shows no ribbon on a Game with no annotations at all", () => {
+    render(<Board pgn="1. e4 e5 2. Nf3" />);
+
+    // No curve, no axis, nothing to band: the ribbon follows the curve rather
+    // than appearing on its own.
     expect(screen.queryByLabelText("phases de la partie")).toBeNull();
   });
 });
