@@ -1297,12 +1297,17 @@ tr[data-scored="false"] {
 }
 
 // One exclusion reason, with its own count and its own explanation. The two
-// reasons never share a block: they say different things, and a Player who
+// reasons never share a line: they say different things, and a Player who
 // cannot tell them apart can audit neither.
+//
+// **A paragraph, not a flex column.** This was `display: flex` while the block
+// was a `<section>` of an `<h4>`, a `<p>` and a `<ul>`. US-26 slice 04 dropped
+// the enumeration and the element became one `<p>` of inline runs — on which
+// flex promotes each contiguous run to an anonymous flex item and stacks the
+// sentence into pieces, swallowing the spaces between them. Nothing in the
+// suite could catch that: jsdom has no layout.
 [data-uncounted] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  margin-block: var(--space-1);
 }
 
 // The layer written after the reveal — separated by a rule rather than a tint,

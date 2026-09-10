@@ -48,17 +48,18 @@ export function UnscoredReadout({ confrontation }: { confrontation: GameConfront
 
       {/*
         **The count and the reason, never the list** (US-26 slice 04).
-        
+
         These used to be enumerated one Move per line — sixteen of them on the
         Game the requester tested, which is the volume complaint of the 25/08
         feedback: "la liste des éva sur position déjà décidée prend beaucoup de
         place". ADR-0017 asked for the gap between what was played and what is
         counted to be **readable**; it never asked for an enumeration, and the
         two are not the same thing.
-        
+
         Each exclusion is now said **at its own Move**, in its own cartouche,
-        with the verdict the Player put there — including the case that settles
-        the whole denominator, a forced catastrophe called `Sound` and right.
+        carrying the verdict the Player placed there — including the case that
+        settles the whole denominator, a forced catastrophe called `Sound` where
+        the Player is right.
         What an aggregate block can still say, and the per-Move view cannot, is
         **how many**: a Player standing on Move 12 has no way to learn that
         sixteen Moves were excluded, and reading a counted figure well below
@@ -70,8 +71,7 @@ export function UnscoredReadout({ confrontation }: { confrontation: GameConfront
           <strong>
             {REASON[reason].label} — {moves.length}
           </strong>{" "}
-          : {REASON[reason].why} Chacun le dit à son coup, sur l'échiquier
-          ci-dessus.
+          : {REASON[reason].why} Chacun le dit à son coup, sur l'échiquier ci-dessus.
         </p>
       ))}
 

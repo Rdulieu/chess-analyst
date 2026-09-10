@@ -128,6 +128,28 @@ describe("the reading label of one Move", () => {
       expect(label.detail).not.toMatch(/tort|faux|erreur de lecture/i);
     });
 
+    it("CARRIES the verdict the Player placed on an excluded Move", () => {
+      const label = readingLabel(
+        move({ declared: "sound", measured: "blunder", unscored: "forced" }),
+      );
+
+      // This is the case that settles the whole denominator, and the screen can
+      // only say the Player was right while their verdict is still on it. It
+      // was lost once already — the enumeration at the foot of the screen used
+      // to be its only home, and removing that took the verdict with it.
+      expect(label.detail).toMatch(/Vous aviez dit « Correct »/);
+      expect(label.detail).toMatch(/ni pour vous, ni contre vous/);
+    });
+
+    it("adds no verdict where there is none to add, and none where the label already says it", () => {
+      // Silence has no verdict by definition; `Good` already names itself in
+      // the label, and repeating it would be the screen talking to itself.
+      expect(readingLabel(move({ unscored: "silence" })).detail).not.toMatch(/Vous aviez dit/);
+      expect(readingLabel(move({ declared: "good", unscored: "good" })).detail).not.toMatch(
+        /Vous aviez dit/,
+      );
+    });
+
     it("names an already-decided Position", () => {
       expect(readingLabel(move({ declared: "blunder", unscored: "decided" })).label).toBe(
         "Position déjà décidée — non comptée",

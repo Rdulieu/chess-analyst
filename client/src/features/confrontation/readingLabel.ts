@@ -75,7 +75,7 @@ const UNSCORED: Record<NonNullable<MoveReading["unscored"]>, ReadingLabel> = {
  * were merely imprecise.
  */
 export function readingLabel(move: MoveReading): ReadingLabel {
-  if (move.unscored) return UNSCORED[move.unscored];
+  if (move.unscored) return unscoredLabel(move, move.unscored);
 
   if (move.term === "bonne-lecture") {
     return {
@@ -145,6 +145,31 @@ export function readingLabel(move: MoveReading): ReadingLabel {
     tone: "overcalled",
     label: `${claimed} surestimée`,
     detail: `Vous aviez dit « ${claimed} » ; le moteur mesure ${article(MEASURED_NAME[move.measured])}. Vous avez dramatisé, pas halluciné.`,
+  };
+}
+
+/**
+ * An unscored case, **carrying the verdict the Player placed there**.
+ *
+ * The verdict is what makes this case worth showing at all: *"le coup est
+ * montré, sa raison d'exclusion aussi, et le verdict du joueur dessus n'est pas
+ * noté"*. A forced catastrophe measures a `Blunder` and is nobody's mistake, so
+ * a Player who called it `Sound` is **right** — and the screen can only say so
+ * while the verdict is still on it. Dropping it would leave the case that
+ * settles the whole denominator invisible, which is the one thing this screen
+ * cannot afford: it is the reason the denominator is what it is.
+ *
+ * Not appended to `good` (the label already names the verdict) nor to `silence`
+ * (there is none by definition) — saying "vous aviez dit Bon" under "Correct —
+ * rien à comparer" would be the screen repeating itself.
+ */
+function unscoredLabel(move: MoveReading, unscored: NonNullable<MoveReading["unscored"]>): ReadingLabel {
+  const base = UNSCORED[unscored];
+  if (move.declared === null || unscored === "good" || unscored === "silence") return base;
+
+  return {
+    ...base,
+    detail: `${base.detail} Vous aviez dit « ${DECLARED_SEVERITY_LABEL[move.declared]} » — et ce n'est noté ni pour vous, ni contre vous.`,
   };
 }
 

@@ -62,9 +62,21 @@ de la machine (v26, NODE_MODULE_VERSION 147) le module ne se charge pas et `npm 
 qui n'est pas celui de ce node. Sous node 22 la même suite passe.
 
 C'est le cas d'école de la règle ci-dessus : **la suite ne mesurait rien**, et rien dans son
-rouge ne le disait. Corollaire mesuré le 2026-09-10 : `npx vitest run --reporter=basic` — un nom
-de reporter invalide sur cette version — meurt au démarrage **et sort en code 0**. Un `npm test`
-qui n'a lancé aucun test n'est pas vert.
+rouge ne le disait.
+
+**Et le symptôme à reconnaître : un zéro silencieux, pas une erreur.** Trois fois le 2026-09-10,
+sur trois drapeaux différents, une commande de test n'a rien lancé *et est sortie en code 0* :
+
+| Ce qui a été lancé | Ce qu'elle a affiché | Code |
+|---|---|---|
+| `npm test` sous node 26 | 271 échecs `Module did not self-register` | 1 |
+| `npx vitest run --reporter=basic` | une erreur de démarrage, aucun test | **0** |
+| `npx vitest run --maxWorkers=2` dans `server/` | `Test Files no tests` | **0** |
+
+Les deux derniers passent une porte qui ne regarde que `$?`. **Lire le compte, pas seulement le
+code de sortie** : une suite verte annonce ses centaines de tests, et `no tests` n'est pas un
+résultat, c'est une absence. Et n'ajoutez pas de drapeau à `vitest` sans revérifier qu'il tourne
+encore quelque chose — les deux drapeaux ci-dessus avaient l'air inoffensifs.
 
 Ne **pas** recompiler (`npm rebuild`) pour s'en sortir : `node_modules` est un symlink partagé
 entre le dépôt principal et tous les worktrees (voir `git-flow/WORKTREES.md`), et recompiler le

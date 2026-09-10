@@ -168,6 +168,18 @@ affichés en bas sont désormais littéralement la somme de ce que le joueur voi
 - **Matrice** : chaque cellule déplie ses coups, repliée par défaut ; un clic **focalise
   l'échiquier**. La matrice étant le dernier bloc, le dépliage ne déplace rien au-dessus.
 - **La couche postérieure n'apparaît pas** sur cet écran (décision explicite du grill).
+
+  > **OUVERT au 2026-09-10 — aucun ticket ne porte ce retrait, et il n'a donc pas eu lieu.**
+  > Le bloc « Écrit après le scellement » est toujours à l'écran à la fin de la tranche 04.
+  > Aucune des sept tranches ne le retire : la 04 retire la **liste des coups exclus**, ce qui est
+  > une autre décision, et ses critères d'acceptation ne mentionnent pas la couche postérieure.
+  > Le supprimer au passage aurait été une surenchère déguisée en conformité — c'est un
+  > comportement testé, décidé par US-16b, et ADR-0033 (l'autorité citée par cette section) n'en
+  > dit rien.
+  >
+  > **Décision due avant le MR `integration → develop`** : soit un ticket porte le retrait, soit
+  > cette ligne est amendée. Elle ne doit pas s'évaporer — c'est précisément ce qu'une ligne de
+  > SPEC sans ticket finit par faire.
 - **`ScopedPage` et les deux refus nommés** (`not-sealed`, `not-analyzed`) restent inchangés.
 
 ## Testing Decisions

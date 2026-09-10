@@ -44,10 +44,13 @@ describe("What the Confrontation shows without scoring it", () => {
 
     // "Forced" and "already decided" say different things, and a Player who
     // cannot tell them apart can audit neither.
+    // The count NEXT TO ITS REASON, not merely a digit somewhere in the prose:
+    // `/1/` alone would pass on a paragraph that had lost its count entirely,
+    // since the sentence around it is full of other characters.
     const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
-    expect(forced?.textContent).toMatch(/1/);
+    expect(forced?.textContent).toMatch(/Coup forcé — 1/);
     const decided = screen.getByText(/déjà décidée|déjà décidé/i).closest("[data-uncounted]");
-    expect(decided?.textContent).toMatch(/2/);
+    expect(decided?.textContent).toMatch(/Position déjà décidée — 2/);
   });
 
   it("says why a Good is not scored, rather than dropping it silently", () => {
@@ -146,9 +149,12 @@ describe("What the Confrontation shows without scoring it", () => {
     // ADR-0017's actual requirement. A Player who cannot see that 16 Moves
     // played produced 14 counted reads the discrepancy as a bug — and the
     // per-Move cartouche only speaks when they are standing on that Move.
+    // The count NEXT TO ITS REASON, not merely a digit somewhere in the prose:
+    // `/1/` alone would pass on a paragraph that had lost its count entirely,
+    // since the sentence around it is full of other characters.
     const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
-    expect(forced?.textContent).toMatch(/1/);
+    expect(forced?.textContent).toMatch(/Coup forcé — 1/);
     const decided = screen.getByText(/déjà décidée|déjà décidé/i).closest("[data-uncounted]");
-    expect(decided?.textContent).toMatch(/2/);
+    expect(decided?.textContent).toMatch(/Position déjà décidée — 2/);
   });
 });
