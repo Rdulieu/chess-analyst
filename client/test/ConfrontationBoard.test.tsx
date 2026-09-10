@@ -90,6 +90,15 @@ const CONFRONTATION: GameConfrontation = {
     unscored: { good: 0, opponent: 0 },
   },
   keyMoments: { marked: 0, damageFound: 0, damageTotal: 30, drift: 0, misses: [] },
+  // Ply 1 is the one the tint test stands on: the Player called it an
+  // Inaccuracy where the engine measured a Blunder — a Sous-lecture, and a
+  // disagreement, so a board painting the wrong author cannot pass by luck.
+  moves: [
+    { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null },
+    { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent" },
+    { ply: 3, notation: "Nf3", declared: null, measured: "none", term: null, unscored: "silence" },
+    { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent" },
+  ],
   uncounted: [],
   posterior: [],
 };
@@ -232,6 +241,44 @@ describe("the board on the Confrontation route", () => {
     expect(container.querySelector('[data-part="curve"]')).not.toBeNull();
     expect(container.querySelector('[data-bar="winning-chances"]')).not.toBeNull();
     expect(container.querySelector('[data-part="phase-ribbon"]')).not.toBeNull();
+  });
+
+  it("names what the reading was worth on the Move being read", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    // Nobody's Move at the start: no cartouche rather than a neutral one that
+    // says nothing.
+    expect(container.querySelector('[data-part="reading-term"]')).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "1.e4" }));
+
+    await waitFor(() => {
+      const term = container.querySelector('[data-part="reading-term"]');
+      // Declared Inaccuracy, measured Blunder — read milder than it was, and
+      // named as UNDERESTIMATED rather than missed: the Player saw the danger.
+      expect(term!.textContent).toBe("Bévue sous-estimée");
+    });
+    expect(container.querySelector('[data-part="reading-detail"]')!.textContent).toMatch(
+      /plus petit qu'il n'était/i,
+    );
+  });
+
+  it("puts the reading BELOW the step controls, which must never move (ADR-0021)", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+    fireEvent.click(screen.getByRole("button", { name: "1.e4" }));
+    await waitFor(() =>
+      expect(container.querySelector('[data-part="reading-term"]')).not.toBeNull(),
+    );
+
+    const stepper = container.querySelector('[data-part="stepper"]')!;
+    const reading = container.querySelector('[data-part="move-reading"]')!;
+    // Document order is what holds the rule: a block that appears with the ply
+    // cannot displace the buttons if it comes after them.
+    expect(stepper.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("carries no Review mode: the seal has fallen, everything is revealed", async () => {

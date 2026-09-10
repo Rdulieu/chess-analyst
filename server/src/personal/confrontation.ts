@@ -1,5 +1,4 @@
 import type { UncountedReason } from "../analysis/counted";
-import type { MoveAnnotation } from "../analysis/derivation";
 import type { MoveSeverity } from "../danger/move-quality";
 import type { SearchRegime } from "../engine/types";
 import type { GameAnnotations } from "../annotations/repository";
@@ -75,6 +74,52 @@ export interface SeverityReading {
   unscored: UnscoredVerdicts;
 }
 
+/**
+ * How the Player's reading of one Move compares with what was measured
+ * (CONTEXT.md — `Bonne lecture` / `Sous-lecture` / `Sur-lecture`).
+ *
+ * Follows `agrees()` **without modifying it**: equality on the band, `Sound`
+ * against "nothing flagged" being an agreement. A gap is read by its direction
+ * — milder than measured is a `Sous-lecture`, harder is a `Sur-lecture` — and
+ * there is **no tolerance window**: one band apart is a divergence, so the
+ * accuracy figure already shipped does not move a hair.
+ */
+export type ReadingTerm = "bonne-lecture" | "sous-lecture" | "sur-lecture";
+
+/**
+ * Why nothing scores a Move — **never melted into one "not scored"**. Each says
+ * something different, and a Player who cannot tell them apart can audit none
+ * of them. A mute grey would erase the case that settles the whole denominator:
+ * a forced Move measured a `Blunder` where the Player said `Sound` and is right.
+ */
+export type UnscoredCase = "good" | "opponent" | "forced" | "decided" | "silence";
+
+/**
+ * What the Player's reading was worth on **one Move** (ADR-0032).
+ *
+ * The derivation used to increment four counters and throw the pair away, which
+ * is why a Player reading "1 sur 4" could not find the other three. It keeps
+ * them now, and the four figures become a **fold over this list** — one
+ * derivation read at two altitudes rather than two that agree by luck.
+ *
+ * `term` and `unscored` are **mutually exclusive and jointly exhaustive**:
+ * exactly one is non-null. A Move is scored, or it is excused for a stated
+ * reason; it is never both and never neither.
+ */
+export interface MoveReading {
+  ply: number;
+  /** Standard notation, so an entry names its Move rather than numbering it. */
+  notation: string | null;
+  /** `null` where the Player said nothing — silence, not a verdict. */
+  declared: DeclaredSeverity | null;
+  /** The engine's band, or `none` — a **fact**, not an absence. */
+  measured: MeasuredLabel;
+  /** Set exactly when the Move is scored. */
+  term: ReadingTerm | null;
+  /** Set exactly when it is not. */
+  unscored: UnscoredCase | null;
+}
+
 /** Verdicts shown and never scored, by the reason nothing scores them. */
 export interface UnscoredVerdicts {
   good: number;
@@ -125,6 +170,20 @@ export interface GameConfrontation {
   /** The `Search regime` behind the engine's figures — one per Game. */
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /**
+   * **The reading of every Move**, from ply 1 (ply 0 is nobody's Move) —
+   * the Player's own and the opponent's alike (ADR-0032).
+   *
+   * The opponent's are here on purpose: the screen indexes by the ply it is
+   * standing on, and a list with holes would make every reader write the same
+   * lookup guard — then go silent on a Move the Player is looking at, instead
+   * of saying why their verdict is not scored there.
+   *
+   * `severity`'s four figures are the **sum** of this list. The corpus fold
+   * (`foldConfrontations`) does not consume it: a corpus has nothing to do with
+   * one Game's Moves, so the summary's contract is untouched.
+   */
+  moves: MoveReading[];
   /**
    * The Player's Moves the analysis **does not count**, each with **its own
    * reason** — never melted into one "not counted". A Game where the Player
@@ -305,15 +364,12 @@ export function confrontGame(
     unscored: { good: 0, opponent: 0 },
   };
 
-  // The Player's verdicts on the OPPONENT's Moves. Counted here rather than in
-  // the loop below, which walks the Player's own counted Moves only. Ply 0 is
-  // excluded: it is nobody's Move, so it is not the opponent's either.
-  for (const move of annotations.plies) {
-    if (move.ply === 0 || move.counted !== null) continue;
-    if (verdicts.has(move.ply)) reading.unscored.opponent += 1;
-  }
-
   const uncounted: UncountedMove[] = [];
+  /**
+   * What the derivation now KEEPS (ADR-0032). Filled by the same single pass
+   * that fills the counters above — nothing extra is walked.
+   */
+  const moves: MoveReading[] = [];
   // The sealed layer only, and a ply **once**: `Key moment`s are not ranked and
   // are not counted twice.
   const marks = analysis.marks.filter((mark) => !mark.posterior);
@@ -325,35 +381,67 @@ export function confrontGame(
   const lostAt = new Map(faults.map((fault) => [fault.ply, fault.lost]));
 
   for (const move of annotations.plies) {
-    // `counted` is `null` for ply 0 and for the **opponent's** Moves: nothing is
-    // derived for them, so they are not "not counted" — they are not the
-    // Player's play at all.
-    if (move.counted === null) continue;
+    // Ply 0 is nobody's Move, so it has no reading to keep.
+    if (move.ply === 0) continue;
+    const declared = verdicts.get(move.ply) ?? null;
+    const measured: MeasuredLabel = move.severity ?? "none";
+    /** One entry, whatever this Move turns out to be. Completed below. */
+    const entry: MoveReading = {
+      ply: move.ply,
+      notation: notations[move.ply] ?? null,
+      declared,
+      measured,
+      term: null,
+      unscored: null,
+    };
+    moves.push(entry);
+
+    // `counted` is `null` for the **opponent's** Moves: nothing is derived for
+    // them, so they are not "not counted" — they are not the Player's play at
+    // all. Said at their own Move rather than left blank, because the Player
+    // standing on one needs to know why their verdict is not scored there.
+    if (move.counted === null) {
+      entry.unscored = "opponent";
+      // Counted HERE, in the one pass, rather than in a pre-pass of its own as
+      // it used to be — the pre-pass existed only because the main loop walked
+      // the Player's counted Moves alone. It walks every ply now, so a second
+      // traversal would be a second derivation of a figure this list already
+      // holds, which is the very thing ADR-0032 is against.
+      if (declared !== null) reading.unscored.opponent += 1;
+      continue;
+    }
     if (!move.counted.counted) {
-      // Shown WITH its reason: the two reasons say different things, and a
-      // Player who cannot tell them apart can audit neither.
+      // Kept apart BY REASON: the two say different things, and a Player who
+      // cannot tell them apart can audit neither.
       if (move.counted.reason) {
+        entry.unscored = move.counted.reason;
         uncounted.push({
           ply: move.ply,
-          notation: notations[move.ply] ?? null,
+          notation: entry.notation,
           reason: move.counted.reason,
-          declared: verdicts.get(move.ply) ?? null,
+          declared,
         });
       }
       continue;
     }
-    const declared = verdicts.get(move.ply);
-    if (declared === undefined) continue;
+    if (declared === null) {
+      // **Silence is not a verdict.** A Move nobody examined is neither right
+      // nor wrong, and saying so is itself worth knowing.
+      entry.unscored = "silence";
+      continue;
+    }
     reading.examined += 1;
     // Filled for every examined Move, `Good` included: the matrix shows what the
     // Player said. What it does NOT do is score the `good` row.
-    reading.matrix[declared][move.severity ?? "none"] += 1;
+    reading.matrix[declared][measured] += 1;
     if (!isScorable(declared)) {
+      entry.unscored = "good";
       reading.unscored.good += 1;
       continue;
     }
     reading.scorable += 1;
-    if (agrees(declared, move)) reading.agreed += 1;
+    entry.term = termFor(declared, measured);
+    if (entry.term === "bonne-lecture") reading.agreed += 1;
   }
 
   return {
@@ -366,6 +454,7 @@ export function confrontGame(
     provenance: analysis.engineSeenBeforeSeal ? "informed" : "unaided",
     regime: annotations.regime,
     severity: reading,
+    moves,
     keyMoments: {
       marked: marked.size,
       damageFound: [...marked].reduce((sum, ply) => sum + (lostAt.get(ply) ?? 0), 0),
@@ -425,17 +514,45 @@ function isScorable(declared: DeclaredSeverity): boolean {
 }
 
 /**
- * Whether a declared verdict and a measured one say the same thing. The two
- * scales share their vocabulary deliberately (CONTEXT.md), so on the three
- * measured bands this is an equality.
+ * The bands **ordered by how much danger they claim**, mildest first — the one
+ * thing a boolean agreement could not say: *which way* the Player was wrong.
  *
- * The case worth naming is the fourth column: the engine flagged **nothing**.
- * That is a fact, not an absence, and `Sound` set against it is an **agreement**
- * — which is the entire reason `Sound` is a value the Player poses. Without it a
- * confrontation could only ever expose the Player's misses, never their hits.
+ * `sound` sits on "nothing flagged" because that is exactly what it asserts:
+ * *I looked, and I find nothing to fault*. That equivalence is what makes
+ * `Sound` scorable at all, and it is the same one `agrees()` encoded — read as
+ * a position on a scale rather than as a special case.
+ *
+ * `good` is absent: the engine has **no band for merit**, so a `Good` has
+ * nothing to be above or below and is never given a term.
  */
-function agrees(declared: DeclaredSeverity, move: MoveAnnotation): boolean {
-  return move.severity === null ? declared === "sound" : declared === move.severity;
+const DANGER_ORDER: Record<Exclude<DeclaredSeverity, "good"> | MeasuredLabel, number> = {
+  none: 0,
+  sound: 0,
+  inaccuracy: 1,
+  mistake: 2,
+  blunder: 3,
+};
+
+/**
+ * What one scorable verdict was worth against what was measured.
+ *
+ * **This replaces `agrees()` without changing a single answer it gave.** Equal
+ * rank is an agreement — the three shared bands by equality, and `Sound`
+ * against "nothing flagged" by the equivalence above, which is the entire
+ * reason a confrontation can expose the Player's *hits* and not only their
+ * misses. What is new is only the **direction** of a disagreement, which the
+ * boolean threw away: reading danger milder than it was and reading it harder
+ * are opposite faults of analysis, and no rate separates them.
+ *
+ * **No tolerance window.** One band apart is a divergence, not a near-miss:
+ * the accuracy figure already shipped does not move a hair, and a silent
+ * partial credit would be exactly the magic constant this project refuses.
+ */
+function termFor(declared: DeclaredSeverity, measured: MeasuredLabel): ReadingTerm {
+  const claimed = DANGER_ORDER[declared as Exclude<DeclaredSeverity, "good">];
+  const actual = DANGER_ORDER[measured];
+  if (claimed === actual) return "bonne-lecture";
+  return claimed < actual ? "sous-lecture" : "sur-lecture";
 }
 
 /**

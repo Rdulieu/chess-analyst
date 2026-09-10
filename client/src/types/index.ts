@@ -48,5 +48,8 @@ export type {
   UncountedReason,
   UncountedMove,
   PosteriorMark,
+  MoveReading,
+  ReadingTerm,
+  UnscoredCase,
 } from "./confrontation";
 export { MEASURED_LABELS } from "./confrontation";
