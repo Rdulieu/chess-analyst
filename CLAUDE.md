@@ -78,6 +78,11 @@ code de sortie** : une suite verte annonce ses centaines de tests, et `no tests`
 résultat, c'est une absence. Et n'ajoutez pas de drapeau à `vitest` sans revérifier qu'il tourne
 encore quelque chose — les deux drapeaux ci-dessus avaient l'air inoffensifs.
 
+> **L'espace est porteur** : `nvm use 22>/dev/null` (sans espace) est lu comme une redirection du
+> descripteur 22 et echoue sur « No .nvmrc file found ». `nvm use 22 >/dev/null` marche. Consigne
+> ici plutot que dans les pieges du pilote parce que ca **echoue bruyamment** — les pieges qui
+> meritent une entree ailleurs sont ceux qui rendent une reponse plausible et fausse.
+
 Ne **pas** recompiler (`npm rebuild`) pour s'en sortir : `node_modules` est un symlink partagé
 entre le dépôt principal et tous les worktrees (voir `git-flow/WORKTREES.md`), et recompiler le
 casse pour les autres agents qui travaillent en parallèle. Changer de node, pas de binaire.
