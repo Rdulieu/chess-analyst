@@ -227,25 +227,32 @@ describe("the Key moment label of one Move", () => {
   });
 
   it("credits a marker that found a real loss", () => {
-    const label = keyMomentLabel(km({ case: "found", lost: 30 }));
+    const label = keyMomentLabel(km({ case: "found", lost: 30 }), 40);
 
     expect(label.label).toBe("◆ Moment clé trouvé");
     expect(label.tone).toBe("agreement");
   });
 
   it("NAMES the costly Move when the marker landed beside it", () => {
+    // The marker is on ply 40; the loss is on 44 — four half-moves further.
     const label = keyMomentLabel(
       km({ case: "aside", nearest: { ply: 44, notation: "Nxe5", lost: 22 } }),
+      40,
     );
 
     expect(label.label).toBe("◆ Marqueur à côté");
-    // The distance teaches; a silent partial credit would not.
+    // The ticket asks for the costly Move **and the distance**. The distance is
+    // the half that teaches: a marker one half-move from the loss and one six
+    // away are not the same near miss, and naming only the Move makes them read
+    // alike.
     expect(label.detail).toMatch(/22…Nxe5|22\.Nxe5/);
+    expect(label.detail).toMatch(/4 demi-coups plus loin/);
+    expect(label.detail).toMatch(/22 points/);
     expect(label.tone).toBe("overcalled");
   });
 
   it("says there was nothing to find, rather than implying a miss", () => {
-    const label = keyMomentLabel(km({ case: "no-target" }));
+    const label = keyMomentLabel(km({ case: "no-target" }), 40);
 
     expect(label.label).toBe("◆ Marqueur sans cible");
     expect(label.detail).toMatch(/aucune faute comptée à trouver/i);
@@ -254,15 +261,15 @@ describe("the Key moment label of one Move", () => {
   it("tells a marker on the opponent from one on an uncounted Move", () => {
     // Three greys, three lessons. Melting them would tell a Player they missed
     // something when they did not.
-    expect(keyMomentLabel(km({ case: "on-opponent" })).label).toBe("◆ Marqueur sur l'adversaire");
-    expect(keyMomentLabel(km({ case: "on-uncounted" })).label).toBe(
+    expect(keyMomentLabel(km({ case: "on-opponent" }), 40).label).toBe("◆ Marqueur sur l'adversaire");
+    expect(keyMomentLabel(km({ case: "on-uncounted" }), 40).label).toBe(
       "◆ Marqueur sur un coup non compté",
     );
-    expect(keyMomentLabel(km({ case: "no-target" })).label).toBe("◆ Marqueur sans cible");
+    expect(keyMomentLabel(km({ case: "no-target" }), 40).label).toBe("◆ Marqueur sans cible");
   });
 
   it("shows the damage no marker pointed at — the case that was missing", () => {
-    const label = keyMomentLabel(km({ case: "missed", lost: 38 }));
+    const label = keyMomentLabel(km({ case: "missed", lost: 38 }), 40);
 
     expect(label.label).toBe("◆ Moment clé manqué");
     expect(label.tone).toBe("missed");
@@ -283,7 +290,7 @@ describe("the Key moment label of one Move", () => {
     // how well. Both families reuse the same four tones, so without this the
     // Player could not tell "I judged well" from "I looked in the right place".
     for (const kase of cases) {
-      expect(keyMomentLabel(km({ case: kase })).label.startsWith("◆")).toBe(true);
+      expect(keyMomentLabel(km({ case: kase }), 40).label.startsWith("◆")).toBe(true);
     }
   });
 });

@@ -1,5 +1,6 @@
 import { DECLARED_SEVERITY_LABEL } from "../personal/declaredSeverity";
 import { moveName } from "./moveName";
+import { halfMoveGap, points } from "./distance";
 import type { MoveKeyMoment, MoveReading } from "../../types";
 
 /**
@@ -218,7 +219,7 @@ function article(name: string): string {
  */
 export const KEY_MOMENT_GLYPH = "◆";
 
-export function keyMomentLabel(reading: MoveKeyMoment): ReadingLabel {
+export function keyMomentLabel(reading: MoveKeyMoment, ply: number): ReadingLabel {
   switch (reading.case) {
     case "found":
       return {
@@ -234,8 +235,12 @@ export function keyMomentLabel(reading: MoveKeyMoment): ReadingLabel {
         // The distance, NAMED — "your marker is on 21.Rd1, which cost nothing;
         // the loss is on 22.Nxe5" teaches where to have looked, where a silent
         // partial credit would teach nothing and hide the miss.
+        // The Move **and the distance** — the ticket asks for both, and the
+        // distance is the half that teaches: a marker one half-move from the
+        // loss and one six half-moves away are not the same near miss, and a
+        // sentence naming only the Move makes them read alike.
         detail: reading.nearest
-          ? `Ce coup n'a rien coûté. La perte la plus proche est sur ${moveName(reading.nearest.ply, reading.nearest.notation)} — c'est là qu'il fallait regarder.`
+          ? `Ce coup n'a rien coûté. La perte est sur ${moveName(reading.nearest.ply, reading.nearest.notation)} (${points(reading.nearest.lost)}), ${halfMoveGap(ply, reading.nearest.ply)} plus loin — c'est là qu'il fallait regarder.`
           : "Ce coup n'a rien coûté.",
       };
     case "no-target":

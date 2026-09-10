@@ -61,7 +61,7 @@ export function MoveReadout({
         majority of a Game. Sixty cartouches reading "nothing here" would bury
         the six that speak.
       */}
-      {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} />}
+      {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} ply={move.ply} />}
       {note && (
         /* The Player's own words, in front of the engine's verdict. This is the
            reason the reading is written down at all: re-reading one's reasoning
@@ -85,8 +85,10 @@ export function MoveReadout({
  * case. Distinguishing them by tint instead would need eight colours nobody
  * could learn, and would still fail the reader who sees none of them.
  */
-function KeyMomentCartouche({ reading }: { reading: MoveKeyMoment }) {
-  const { tone, label, detail } = keyMomentLabel(reading);
+function KeyMomentCartouche({ reading, ply }: { reading: MoveKeyMoment; ply: number }) {
+  // The ply is needed for the DISTANCE: "six half-moves further" cannot be
+  // derived from the target alone.
+  const { tone, label, detail } = keyMomentLabel(reading, ply);
 
   return (
     <>

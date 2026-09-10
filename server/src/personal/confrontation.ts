@@ -509,15 +509,15 @@ export function confrontGame(
       misses: [...marked]
         .filter((ply) => !lostAt.get(ply))
         .sort((a, b) => a - b)
-        .map((ply) => {
-          const nearest = nearestFault(ply, faults);
-          return {
-            ply,
-            notation: notations[ply] ?? null,
-            lostThere: 0,
-            nearest: nearest && { ...nearest, notation: notations[nearest.ply] ?? null },
-          };
-        }),
+        .map((ply) => ({
+          ply,
+          notation: notations[ply] ?? null,
+          lostThere: 0,
+          // The same helper as the per-Move `aside` case: two derivations of
+          // "the nearest loss" would agree only by luck, and this one carried
+          // a real defect (it could name the marked Move itself).
+          nearest: namedFault(ply, faults, notations),
+        })),
     },
     uncounted,
     posterior: analysis.marks
@@ -638,35 +638,49 @@ function keyMomentOf(
   // Marked, counted, and it cost nothing. Either the Game had a fault to find
   // elsewhere — and the distance is what teaches — or it had none at all, and
   // saying so is fairer than implying the Player missed something.
-  const nearest = nearestFault(move.ply, faults);
+  const nearest = namedFault(move.ply, faults, notations);
   if (nearest === null) return { case: "no-target", ...none };
-  return {
-    case: "aside",
-    lost: 0,
-    nearest: { ...nearest, notation: notations[nearest.ply] ?? null },
-  };
+  return { case: "aside", lost: 0, nearest };
 }
 
 /**
- * The Player's flawed Move nearest a marker that found nothing. Ties go to the
- * **later** Move, because a marker placed just before the loss is the common
- * near miss and naming the Move that follows it is what teaches.
+ * The Player's **costly** Move nearest a marker that found nothing, named.
+ * Ties go to the **later** Move, because a marker placed just before the loss
+ * is the common near miss and naming the Move that follows it is what teaches.
  *
- * `null` when the Player had no flawed Move at all: there was nothing to point
- * at, so there is no distance to state.
+ * Two exclusions, and both are corrections of a real defect rather than
+ * defensive noise:
+ *
+ * - **The marked ply itself is excluded.** `faults` holds every flagged counted
+ *   Move, and a flagged Move can cost `0` — `classifyMove` compares best play
+ *   against what was played, while `chancesLostByMove` compares the two actual
+ *   Positions, and `gameRecap` already skips `lost <= 0` for exactly this
+ *   reason. A marked Move of that shape used to win its own distance-0
+ *   comparison, and the sentence read "this Move cost nothing — the nearest
+ *   loss is on **this same Move**".
+ * - **Moves that cost nothing are excluded.** Pointing a Player at a "loss"
+ *   worth zero teaches a contradiction, and the whole purpose of this sentence
+ *   is to teach *where to have looked*.
+ *
+ * `null` when there was no costly Move to point at: nothing to find is a fact,
+ * not a miss, and saying so is fairer than implying one.
  */
-function nearestFault(
+function namedFault(
   ply: number,
   faults: { ply: number; lost: number }[],
-): { ply: number; lost: number } | null {
-  if (faults.length === 0) return null;
-  return faults.reduce((best, fault) => {
+  notations: string[],
+): { ply: number; lost: number; notation: string | null } | null {
+  const costly = faults.filter((fault) => fault.lost > 0 && fault.ply !== ply);
+  if (costly.length === 0) return null;
+
+  const nearest = costly.reduce((best, fault) => {
     const d = Math.abs(fault.ply - ply);
     const bestD = Math.abs(best.ply - ply);
     if (d < bestD) return fault;
     if (d === bestD && fault.ply > best.ply) return fault;
     return best;
   });
+  return { ...nearest, notation: notations[nearest.ply] ?? null };
 }
 
 /**

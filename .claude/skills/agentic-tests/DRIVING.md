@@ -202,6 +202,10 @@ a helper is recognised as *this* returning, not as a new mystery.
   straight to `/analyse/<id>/confrontation` lands on the Profile picker and looks like a broken
   route. Select the Profile first (minding the `selectProfile` quirk just below). Measured
   2026-09-10.
+- **`stopApp` takes `repoRoot`, not `root`.** A teardown written with the wrong key throws before
+  killing anything, so the app survives a run that believes it tore down. Measured 2026-09-10
+  (US-26-05 FP), cost one retry. Same family as the `session.stop` trap: **helper signatures are
+  read, not guessed.**
 - **The Confrontation screen's own hooks, so the next run does not re-derive them** (2026-09-10):
   the per-Move panel is `[data-part="move-reading"]`, holding `[data-part="reading-term"]` (its
   register is `data-tone` — `agreement` / `missed` / `overcalled` / `unscored`, the last shared by
