@@ -392,6 +392,44 @@ describe("the board on the Confrontation route", () => {
       expect(headings!.textContent).toContain("Le moteur");
     });
 
+    it("gives every row EXACTLY three cells, whatever happened on that Move", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const rows = [
+        ...container.querySelectorAll('ol[data-columns="authors"] > li'),
+      ].filter((li) => li.getAttribute("data-part") !== "phase-start");
+      expect(rows.length).toBeGreaterThan(0);
+
+      // **This is what makes a column a column.** A row emits between two and
+      // six children depending on what happened — a verdict, a note, a marker,
+      // a severity, an exclusion, an evaluation — and a grid that counts
+      // children would drift its columns on every line. Grouping each author's
+      // marks into one cell is the invariant the titles rest on; jsdom has no
+      // layout, so this count is the only thing that can guard it here.
+      for (const row of rows) {
+        expect(row.children).toHaveLength(3);
+        expect(row.querySelector('[data-cell="player"]')).not.toBeNull();
+        expect(row.querySelector('[data-cell="engine"]')).not.toBeNull();
+      }
+    });
+
+    it("keeps each author's marks inside their own cell", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const first = container.querySelector('ol[data-columns="authors"] > li')!;
+      // The Player's verdict and divergence on one side; the engine's severity
+      // and its evaluation on the other. A mark in the wrong cell would sit
+      // under the wrong title, which is worse than no title at all.
+      expect(first.querySelector('[data-cell="player"] [data-part="move-marks"]')).not.toBeNull();
+      expect(first.querySelector('[data-cell="player"] [data-part="divergence"]')).not.toBeNull();
+      expect(first.querySelector('[data-cell="engine"] [data-severity]')).not.toBeNull();
+      expect(first.querySelector('[data-cell="engine"] [aria-label="evaluation"]')).not.toBeNull();
+    });
+
     it("carries the disagreement glyph in the list too, named in words", async () => {
       stub();
       const { container } = renderPage();

@@ -535,6 +535,44 @@ export function Board({
                     {plyNumber(i + 1, start)}
                     {ply.san}
                   </button>
+                  {/*
+                    **Two cells, one per author** — but only where a caller has
+                    titled them (US-26, ADR-0022). A list is the one place two
+                    authors may coexist, and it can only do so if each side's
+                    marks are ONE grid item: a row emits between two and six
+                    children depending on what happened on that Move, and a
+                    column that counts children drifts on every row.
+
+                    Absent everywhere else, so `Analyse` and the reading route
+                    keep the chip flow that lets a whole Game sit beside the
+                    board.
+                  */}
+                  {moveListHeadings ? (
+                    <>
+                      <span data-cell="player">{moveMarks?.(i + 1)}</span>
+                      <span data-cell="engine">
+                        {annotation?.severity && (
+                          <span data-severity={annotation.severity} aria-label={annotation.severity}>
+                            {SEVERITY_GLYPH[annotation.severity]}
+                          </span>
+                        )}
+                        {annotation && marksUncounted(annotation) && annotation.counted?.reason && (
+                          <span
+                            data-part="uncounted"
+                            aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
+                          >
+                            {UNCOUNTED_MARK[annotation.counted.reason].text}
+                          </span>
+                        )}
+                        {annotation && (
+                          <span aria-label="evaluation">
+                            {formatEvaluation(annotation.whiteEval)}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <>
                   {moveMarks?.(i + 1)}
                   {annotation?.severity && (
                     // The glyph is the signal; `data-severity` only lets the sheet
@@ -562,7 +600,8 @@ export function Board({
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
-
+                    </>
+                  )}
                 </li>,
               ].filter(Boolean);
             })}

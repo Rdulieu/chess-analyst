@@ -1076,25 +1076,54 @@ $drift-inset: $drift-frame + $drift-headroom;
 // this screen where the Player's reading and the engine's sit side by side.
 //
 // A square has neither a column nor a title, only a colour, so it cannot hold
-// two authors. A list can, and the titles are what make the pairing readable:
-// the disagreement glyph is identical on both sides by construction, so it
-// could never say by itself which mark belongs to whom.
+// two authors. A list can — but only as **one row per Move**. Everywhere else
+// this `ol` is a wrapping flow of chips (`_semantics`), several Moves to a
+// line, which is what lets a whole Game sit beside the board; a grid laid on
+// those chips aligns nothing, because each chip sizes to its own content.
+// Here the flow becomes a column, and that cost is deliberate: a titled column
+// that does not line up is worse than no title at all.
+//
+// **The tracks are `fr`, never `auto`.** `auto` sizes to content, so every row
+// would resolve its own widths and the headings would sit over nothing. Shared
+// fractions of one full-width row are what actually makes a column a column.
+$move-authors-tracks: minmax(6rem, 1fr) 1fr 1fr;
+
 [data-part="move-list-headings"] {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: var(--space-2);
+  grid-template-columns: $move-authors-tracks;
+  gap: var(--space-1);
   font-size: var(--text-s);
   color: var(--ink-muted);
   margin-block-end: var(--space-1);
 }
 
-// The rows follow the same three tracks, so a title actually sits over the
-// marks it names rather than merely above the list.
-ol[data-columns="authors"] > li {
+ol[data-columns="authors"] {
+  display: flex;
+  flex-direction: column;
+  // The intra-row gap, NOT the column gap. `_semantics` makes the two
+  // deliberately unequal — a mark has to belong to the Move it judges, and with
+  // both equal the glyph sat halfway between two Moves with nothing to attach
+  // it to (measured 2026-08-28). A column list has no second Move on the line,
+  // but the rule that a row is tighter than the space around it still holds.
+  gap: var(--space-1);
+}
+
+// Phase boundaries are announcements between Moves, not rows of the table, so
+// they keep their own shape rather than being forced into three tracks.
+ol[data-columns="authors"] > li:not([data-part="phase-start"]) {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: var(--space-2);
+  grid-template-columns: $move-authors-tracks;
+  gap: var(--space-1);
   align-items: baseline;
+}
+
+// Each author's marks are ONE cell, so a row emits three grid items whatever
+// happened on that Move — between two and six children would drift the columns
+// on every line.
+ol[data-columns="authors"] [data-cell] {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
 }
 
 // The disagreement, in the list. Its FORM carries the direction — a reader who
