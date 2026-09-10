@@ -76,12 +76,7 @@ export const CONFRONTATION_FIXTURE_CASES = {
   inaccuracyMissed: 25,
 } as const;
 
-/**
- * How many plies the sealed reading writes on. Exported so the re-runnability
- * test counts marks against the fixture itself rather than against a literal
- * that drifts the moment a case is added.
- */
-export const CONFRONTATION_FIXTURE_MARKS = 14;
+
 
 /**
  * The Game's half-moves. Exported so a test can assert the seed writes one
@@ -179,6 +174,19 @@ const FIXTURE_MARKS: FixtureMark[] = [
   },
   { ply: 25, declaredSeverity: "sound" },
 ];
+
+/**
+ * How many plies the sealed reading writes on — **derived from the reading
+ * itself**, never a hand-kept literal.
+ *
+ * A literal here would be updated in the same edit that removed a mark, and the
+ * re-runnability test would go on passing over a fixture that had lost a case.
+ * Derived, it can only ever say what the seed actually writes, which is the one
+ * thing that test is asking. Guarding the *cases* is the other assertions' job,
+ * one per ply — and that split is deliberate: this constant proves nothing
+ * doubled, they prove nothing vanished.
+ */
+export const CONFRONTATION_FIXTURE_MARKS = FIXTURE_MARKS.length;
 
 /** When the reading was sealed. Fixed, so two seedings say the same date. */
 const SEALED_AT = "2026-09-10T09:00:00.000Z";

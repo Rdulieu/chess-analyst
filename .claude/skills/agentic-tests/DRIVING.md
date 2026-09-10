@@ -191,6 +191,18 @@ a helper is recognised as *this* returning, not as a new mystery.
   a false red on the exact assertion that the entry appears only after the seal. The probe that
   answers it is `[data-part="confrontation-entry"]` (measured 2026-09-04). General shape: **a
   selector that matches the nav matches every page**.
+- **`[data-part="confrontation-entry"]` is a `<p>` WRAPPING the anchor**, so `.click()` on the
+  element itself does nothing and the URL does not change — which reads exactly like a dead link.
+  Click `[data-part="confrontation-entry"] a`. Measured 2026-09-10 on the FP of US-26-01, where it
+  cost a false "URL did not change". Same family as the tint-on-a-child-div trap: **the named node
+  and the actionable node are two different questions.**
+- **`selectProfile` times out on a Profile that is ALREADY current.** It takes its
+  "nothing navigated" branch and waits on `matcherFor("/profiles")`, which never satisfies even
+  while the walk is on `/profiles` (last reading `{"path":"/profiles","text":258,"quiet":true}`).
+  The first call, on a Profile not yet current, works. Measured 2026-09-10 (US-26-01 FP).
+  **Driver quirk, not the app** — guard the call on the Profile not already being the current one
+  until the helper grows that branch.
+
 - **The review control and the curve are not named what a driver guesses.** Measured 2026-09-04,
   where a first probe reported `curve:false` at the `Annoté` level and it was a **false red**: the
   review control is `[data-part="review-mode"]` (not `review-level`), and the curve is
