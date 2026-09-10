@@ -30,24 +30,46 @@ const CONFRONTATION: GameConfrontation = {
 };
 
 /**
- * The confrontation route talks to two endpoints and no more. Anything else
- * throws loudly: this screen derives everything from records the app already
- * serves, and a silent extra fetch would mean a second derivation of the method.
+ * The confrontation route reads a **named, closed** set of records, and anything
+ * else throws loudly: this screen derives everything from records the app
+ * already serves elsewhere, and a silent extra fetch would mean a second
+ * derivation of the method.
+ *
+ * **US-26 widened the set from two to five, and the rule is unchanged.** The
+ * board needs the Game to walk, the engine's annotations that carry the curve,
+ * and the Player's sealed reading that paints the squares. Every one of them is
+ * a record another screen already reads, taken as it stands. What the guard
+ * forbids is not a fourth request — it is a request whose answer this screen
+ * would then re-derive.
  */
 function stub(answer: { status: number; body: unknown }) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
+      const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body }) as Response;
       if (url.startsWith("/api/profiles"))
-        return { ok: true, status: 200, json: async () => [{ id: 3, handle: "Me", platform: "chess.com" }] } as Response;
+        return ok([{ id: 3, handle: "Me", platform: "chess.com" }]);
+      if (url.startsWith("/api/games/1/annotations"))
+        return ok({ analyzed: true, plies: [], regime: null, recap: null, time: TIME });
       if (url.startsWith("/api/games/1"))
-        return { ok: true, status: 200, json: async () => ({ id: 1, opponent: "opp", playerColor: "white" }) } as Response;
+        return ok({ id: 1, pgn: "1. e4 e5", opponent: "opp", playerColor: "white" });
       if (url.includes("/confrontation"))
         return { ok: answer.status === 200, status: answer.status, json: async () => answer.body } as Response;
+      if (url.startsWith("/api/personal/1"))
+        return ok({ gameId: 1, sealedAt: "2026-08-25T10:00:00.000Z", engineSeenBeforeSeal: false, marks: [] });
       throw new Error(`unexpected request: ${url}`);
     }),
   );
 }
+
+/** A Game with no Clock recorded — the time block is not this file's subject. */
+const TIME = {
+  timeControl: null,
+  plies: [],
+  absence: "not-recorded" as const,
+  precision: null,
+  reading: null,
+};
 
 function renderPage() {
   localStorage.setItem("chess-analyst.current-profile", "3");

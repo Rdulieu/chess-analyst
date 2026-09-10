@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchConfrontation, ConfrontationRefused, GameNotThisProfiles } from "../api";
+import {
+  fetchConfrontation,
+  fetchGame,
+  fetchGameAnnotations,
+  fetchPersonalAnalysis,
+  ConfrontationRefused,
+  GameNotThisProfiles,
+} from "../api";
+import { ConfrontationBoard } from "../features/confrontation/ConfrontationBoard";
 import { ConfrontationReadout } from "../features/confrontation/ConfrontationReadout";
 import { UnscoredReadout } from "../features/confrontation/UnscoredReadout";
 import { ScopedPage } from "../features/profiles/ScopedPage";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import type { GameConfrontation, Profile } from "../types";
+import type { Game, GameAnnotations, GameConfrontation, PersonalAnalysis, Profile } from "../types";
 
 /**
  * The `Confrontation` route (`/analyse/:gameId/confrontation`): the Player's
@@ -27,9 +35,27 @@ export function ConfrontationPage() {
 /** What the screen is showing: the confrontation, a named refusal, or neither yet. */
 type State =
   | { status: "loading" }
-  | { status: "ready"; confrontation: GameConfrontation }
+  | { status: "ready"; confrontation: GameConfrontation; board: BoardRecords }
   | { status: "refused"; refusal: ConfrontationRefused }
   | { status: "absent" };
+
+/**
+ * What the board needs beyond the `Confrontation` itself: the Game to walk, the
+ * engine's per-Move annotations that carry the curve, and the Player's own
+ * sealed reading, which is what paints the squares.
+ *
+ * Three further reads, and worth naming why. This screen used to talk to two
+ * endpoints and no more, deliberately: it derives everything from records the
+ * app already serves, and a silent extra fetch would mean a second derivation
+ * of the method. These three are the same discipline, not an exception to it —
+ * every one of them is a record already served to another screen, read as it
+ * stands and re-derived nowhere.
+ */
+interface BoardRecords {
+  game: Game;
+  annotations: GameAnnotations;
+  reading: PersonalAnalysis;
+}
 
 function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
   const { gameId } = useParams();
@@ -39,8 +65,19 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
     if (!gameId) return;
     let live = true;
     setState({ status: "loading" });
+    // The Confrontation FIRST, and the rest only if it answers: its two refusals
+    // are the whole point of this route, and fetching a Game to draw a board on
+    // a screen that is about to refuse would draw the Game it just refused.
     fetchConfrontation(Number(gameId), profile.id)
-      .then((confrontation) => live && setState({ status: "ready", confrontation }))
+      .then(async (confrontation) => {
+        const [game, annotations, reading] = await Promise.all([
+          fetchGame(Number(gameId), profile.id),
+          fetchGameAnnotations(Number(gameId), profile.id),
+          fetchPersonalAnalysis(Number(gameId), profile.id),
+        ]);
+        return { confrontation, board: { game, annotations, reading } };
+      })
+      .then(({ confrontation, board }) => live && setState({ status: "ready", confrontation, board }))
       .catch((error: unknown) => {
         if (!live) return;
         // A refusal is a business fact with something true to say, and it is not
@@ -57,7 +94,7 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
   const id = Number(gameId);
 
   return (
-    <section aria-labelledby="confrontation-heading">
+    <section aria-labelledby="confrontation-heading" data-width="wide">
       <h2 id="confrontation-heading">Ma lecture face au moteur</h2>
       <ErrorBoundary key={id}>
         {state.status === "loading" && <p>Chargement de la confrontation…</p>}
@@ -68,6 +105,14 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
         {state.status === "ready" && (
           <>
             <Provenance confrontation={state.confrontation} />
+            {/* The Moves, shown rather than imagined. Above the figures, because
+                the figures are now a claim ABOUT what the board shows — and the
+                Player who reads "1 sur 4" has to be able to go and look. */}
+            <ConfrontationBoard
+              game={state.board.game}
+              annotations={state.board.annotations}
+              reading={state.board.reading}
+            />
             <ConfrontationReadout confrontation={state.confrontation} />
             {/* Below the figures, because it is what explains them: the gap
                 between what the Game shows and what the Player is held to. */}
