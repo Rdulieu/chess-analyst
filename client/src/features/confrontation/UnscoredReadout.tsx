@@ -46,32 +46,33 @@ export function UnscoredReadout({ confrontation }: { confrontation: GameConfront
         ci-dessus. La raison n'est pas la même à chaque fois, et c'est elle qui compte.
       </p>
 
+      {/*
+        **The count and the reason, never the list** (US-26 slice 04).
+
+        These used to be enumerated one Move per line — sixteen of them on the
+        Game the requester tested, which is the volume complaint of the 25/08
+        feedback: "la liste des éva sur position déjà décidée prend beaucoup de
+        place". ADR-0017 asked for the gap between what was played and what is
+        counted to be **readable**; it never asked for an enumeration, and the
+        two are not the same thing.
+
+        Each exclusion is now said **at its own Move**, in its own cartouche,
+        carrying the verdict the Player placed there — including the case that
+        settles the whole denominator, a forced catastrophe called `Sound` where
+        the Player is right.
+        What an aggregate block can still say, and the per-Move view cannot, is
+        **how many**: a Player standing on Move 12 has no way to learn that
+        sixteen Moves were excluded, and reading a counted figure well below
+        what they played, with nothing accounting for the difference, is exactly
+        the "looks like a bug" ADR-0017 exists against.
+      */}
       {byReason.map(([reason, moves]) => (
-        <section key={reason} data-uncounted={reason}>
-          <h4>
+        <p key={reason} data-uncounted={reason}>
+          <strong>
             {REASON[reason].label} — {moves.length}
-          </h4>
-          <p>{REASON[reason].why}</p>
-          <ul>
-            {moves.map((move) => (
-              <li key={move.ply}>
-                {moveName(move.ply, move.notation)}
-                {move.declared ? (
-                  <>
-                    {" — vous aviez dit "}
-                    <strong>{DECLARED_SEVERITY_LABEL[move.declared]}</strong>
-                    {/* The case that settles the denominator: `Sound` on a forced
-                        catastrophe is RIGHT, and a naive matrix would count it
-                        wrong. Saying so outright is the point of showing it. */}
-                    {", et ce n'est pas noté — ni pour vous, ni contre vous."}
-                  </>
-                ) : (
-                  " — vous n'aviez rien dit ici."
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+          </strong>{" "}
+          : {REASON[reason].why} Chacun le dit à son coup, sur l'échiquier ci-dessus.
+        </p>
       ))}
 
       {good > 0 && (
