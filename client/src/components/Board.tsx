@@ -51,6 +51,7 @@ export function Board({
   keyboardStepping = false,
   moveMarks,
   moveListHeadings,
+  focusRequest,
   curveMarks,
   squareTint,
 }: {
@@ -106,6 +107,17 @@ export function Board({
    * that is not there.
    */
   moveListHeadings?: ReactNode;
+  /**
+   * A caller's request to bring the board to one ply — the matrix's cells
+   * reaching the diagram (US-26, slice 07).
+   *
+   * A **request with an id**, not a plain ply, and that is the whole design:
+   * where the Player is remains this component's own state, so a caller cannot
+   * pin them to a Move. Asking twice for the same ply — clicking the same
+   * entry after having stepped away — must work, and a bare number would look
+   * unchanged and do nothing. The id says *asked again*, which a value cannot.
+   */
+  focusRequest?: { ply: number; id: number };
   /**
    * Marks for the evaluation curve, **replacing** the engine's severity glyphs.
    * The `Confrontation` screen carries only the Player's divergences there;
@@ -225,6 +237,26 @@ export function Board({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [keyboardStepping, plies.length]);
+
+  /**
+   * Answers a caller's focus request. Keyed on the request's **id** so that
+   * asking for the same ply twice still moves — and so that a re-render with
+   * an unchanged request never yanks the Player back to where they were sent
+   * ten Moves ago.
+   */
+  useEffect(() => {
+    if (!focusRequest) return;
+    setIndex(Math.min(Math.max(focusRequest.ply, 0), plies.length));
+    setPreview({ focus: null, hover: null });
+    // **The id alone.** `ply` is absent because the id is what says "asked",
+    // and including it would fire again on a re-render that merely re-created
+    // the object. `plies.length` is absent for a sharper reason: it changes
+    // when the Game does, and with it in the deps a stale request re-fired the
+    // moment a new PGN parsed — sending the Player to a ply of the Game they
+    // had just left. It is only read to clamp, which the id-keyed run already
+    // does correctly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest?.id]);
 
   /** Reports one channel's preview without disturbing the other's. */
   const previewVia = (fen: string | null, via: "focus" | "hover") =>

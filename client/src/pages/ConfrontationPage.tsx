@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   fetchConfrontation,
@@ -61,11 +61,26 @@ interface BoardRecords {
 function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
   const { gameId } = useParams();
   const [state, setState] = useState<State>({ status: "loading" });
+  /**
+   * The board's focus, owned **here** because the matrix and the board are
+   * siblings and this is their nearest common parent. A **request with an id**
+   * rather than a ply: where the Player is belongs to the board, and asking
+   * for the same Move twice — after having stepped away — has to work.
+   */
+  const [focusRequest, setFocusRequest] = useState<{ ply: number; id: number }>();
+  const focusMove = useCallback(
+    (ply: number) => setFocusRequest((current) => ({ ply, id: (current?.id ?? 0) + 1 })),
+    [],
+  );
 
   useEffect(() => {
     if (!gameId) return;
     let live = true;
     setState({ status: "loading" });
+    // A focus request belongs to the Game it was made on. Left standing across
+    // a change of Game it is a pointer into a history that is no longer on
+    // screen — the belt to the board's own braces.
+    setFocusRequest(undefined);
     // The Confrontation FIRST, and the rest only if it answers: its two refusals
     // are the whole point of this route, and fetching a Game to draw a board on
     // a screen that is about to refuse would draw the Game it just refused.
@@ -122,8 +137,9 @@ function ConfrontationOfOneGame({ profile }: { profile: Profile }) {
               annotations={state.board.annotations}
               reading={state.board.reading}
               moves={state.confrontation.moves}
+              focusRequest={focusRequest}
             />
-            <ConfrontationReadout confrontation={state.confrontation} />
+            <ConfrontationReadout confrontation={state.confrontation} onFocusMove={focusMove} />
             {/* Below the figures, because it is what explains them: the gap
                 between what the Game shows and what the Player is held to. */}
             <UnscoredReadout confrontation={state.confrontation} />

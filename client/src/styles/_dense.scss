@@ -1141,6 +1141,61 @@ ol[data-columns="authors"] [data-cell] {
   font-family: var(--mono);
 }
 
+// **The matrix's cells became controls** (US-26, slice 07), and a control is
+// given a border, a background and generous padding by `_controls`. Left as
+// they came, every figure in the table would grow into a box and widen the
+// very columns the Player is meant to add up — which is the same argument that
+// keeps the unfolded list out of the `<td>`. So the toggle is stripped back to
+// its number, exactly as the move list strips its own chips.
+// **Scoped, and that is a specificity point, not decoration.** Written bare,
+// `[data-part="cell-toggle"]` is (0,1,0) and loses to `_controls`'
+// `:is(button, a[data-action])` at (0,1,1) — `:is()` takes the specificity of
+// its most specific argument. The rule then shipped, sat in the stylesheet,
+// and applied only its unopposed properties: the border, the background and
+// the padding still came from `_controls`, and every clickable figure stayed a
+// 43×34 box against a 9×22 count. Measured on the live page 2026-09-10; the
+// unfolded Move chips below render correctly because their selector is nested
+// and therefore (0,1,1), which is the same file getting it right two rules
+// later.
+[data-part="matrix"] [data-part="cell-toggle"] {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+// The unfolded cell. Its entries are Moves, so they are chips like the move
+// list's — not full-height form controls.
+[data-part="cell-moves"] {
+  margin-block-start: var(--space-2);
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  li button {
+    border: none;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    font-family: var(--mono);
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+  }
+}
+
 // **The cartouche of the current Move** (US-26, ADR-0033) — what the Player's
 // reading was worth right here.
 //

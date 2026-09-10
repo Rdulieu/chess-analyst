@@ -1,7 +1,46 @@
+import { useEffect, useState } from "react";
 import { biasOf } from "./bias";
+import { moveName } from "./moveName";
 import { DECLARED_SEVERITY_LABEL } from "../personal/declaredSeverity";
 import { DECLARED_SEVERITIES, MEASURED_LABELS } from "../../types";
-import type { ConfusionMatrix, MeasuredLabel } from "../../types";
+import type {
+  ConfusionMatrix,
+  DeclaredSeverity,
+  MeasuredLabel,
+  MoveReading,
+} from "../../types";
+
+/**
+ * **Which Moves a matrix cell is made of** — the server's own rule, restated
+ * once and used everywhere.
+ *
+ * The server fills the matrix for **every examined Move**, and `Good` is
+ * examined: it increments `matrix[declared][measured]` *before* deciding the
+ * verdict is unscorable. So a `Good` fills its cell and carries
+ * `unscored: "good"` — and a predicate that simply excluded everything
+ * unscored dropped the whole `good` row, which the table deliberately renders.
+ *
+ * The two derivations then agreed only where that row was empty. They agree by
+ * **construction** now: scored, or unscored *for the one reason that still
+ * counts as having looked*.
+ */
+function fillsMatrix(move: MoveReading): boolean {
+  return move.declared !== null && (move.term !== null || move.unscored === "good");
+}
+
+/** One cell of the matrix, as a pair rather than a string to be split apart. */
+interface Cell {
+  declared: DeclaredSeverity;
+  measured: MeasuredLabel;
+}
+
+/** Whether two cells are the same one. */
+function sameCell(a: Cell | null, b: Cell): boolean {
+  return a !== null && a.declared === b.declared && a.measured === b.measured;
+}
+
+/** The panel every cell's control points at — one open at a time, so one id. */
+const CELL_PANEL_ID = "confrontation-cell-moves";
 
 /** The four measured columns, in the Player's own terms. */
 const MEASURED_LABEL: Record<MeasuredLabel, string> = {
@@ -29,8 +68,45 @@ const MEASURED_LABEL: Record<MeasuredLabel, string> = {
  *
  * A cell off the diagonal is a **divergence** — where to look — never an error.
  */
-export function ConfusionMatrixTable({ matrix }: { matrix: ConfusionMatrix }) {
+export function ConfusionMatrixTable({
+  matrix,
+  moves = [],
+  onFocusMove,
+}: {
+  matrix: ConfusionMatrix;
+  /**
+   * The per-Move readings the cells are made of (ADR-0032). **This is the
+   * proof**, not a convenience: the Moves a cell unfolds *are* what filled it,
+   * because both come from the same list. A cell that had to go and look its
+   * Moves up somewhere else would be a second derivation, and the day the two
+   * disagreed the Player would have no way to tell which was lying.
+   */
+  moves?: MoveReading[];
+  /** Bring the board to one Move. Absent where there is no board to move. */
+  onFocusMove?: (ply: number) => void;
+}) {
   const bias = biasOf(matrix);
+  /**
+   * Which cell is unfolded, or `null`. **One at a time, and closed by
+   * default**: the enumeration this story spent slice 04 removing must not
+   * come back as sixteen open lists, and a Player who wants one cell is not
+   * asking for the other nineteen.
+   */
+  const [open, setOpen] = useState<Cell | null>(null);
+  /**
+   * The disclosure exists only where there is a board to jump to. The corpus
+   * screen renders this same table over a whole history, with no Game under
+   * it — offering to unfold there would reintroduce the enumeration slice 04
+   * removed, and, with no per-Move list to draw on, would unfold to nothing.
+   */
+  const unfoldable = onFocusMove !== undefined && moves.length > 0;
+  /**
+   * An unfolded cell belongs to the matrix it was opened on. After a change of
+   * Game the same cell holds different Moves, and leaving it open would show
+   * the new Game's Moves under the old Game's disclosure without anybody
+   * having asked.
+   */
+  useEffect(() => setOpen(null), [matrix]);
 
   return (
     <div data-part="matrix">
@@ -74,11 +150,15 @@ export function ConfusionMatrixTable({ matrix }: { matrix: ConfusionMatrix }) {
                         (agreement ? " — accord" : "")
                       }
                     >
-                      <span data-count>{count}</span>
-                      {/* The diagonal, marked by a GLYPH and not by a tint: a
-                          colour ramp on a matrix quietly replaces the very
-                          information the table exists to carry. */}
-                      {agreement && count > 0 && <span data-part="agreement-mark"> ✓</span>}
+                      <CellContent
+                        count={count}
+                        agreement={agreement}
+                        cell={{ declared, measured: label }}
+                        label={`${DECLARED_SEVERITY_LABEL[declared]} contre ${MEASURED_LABEL[label]}`}
+                        unfoldable={unfoldable}
+                        open={sameCell(open, { declared, measured: label })}
+                        onToggle={setOpen}
+                      />
                     </td>
                   );
                 })}
@@ -88,6 +168,16 @@ export function ConfusionMatrixTable({ matrix }: { matrix: ConfusionMatrix }) {
         </table>
       </div>
       <BiasSentence bias={bias} />
+      {/*
+        The unfolded cell, **below the table**. Not inside the `<td>`: a list
+        in a cell resizes its column, and the matrix's columns are what the
+        Player adds up. Below it, the unfolding also cannot move anything above
+        the matrix — which is ADR-0021 held by position, the matrix being the
+        last block of the panel.
+      */}
+      {open && (
+        <CellMoves cell={open} moves={moves} matrix={matrix} onFocusMove={onFocusMove} />
+      )}
     </div>
   );
 }
@@ -122,5 +212,113 @@ function BiasSentence({ bias }: { bias: ReturnType<typeof biasOf> }) {
       {over ? "plus sévères" : "moins sévères"} que la mesure, contre{" "}
       {over ? bias.under : bias.over} dans l'autre sens.
     </p>
+  );
+}
+
+
+/**
+ * A cell's count, and — when it has Moves behind it — the control that unfolds
+ * them.
+ *
+ * **An empty cell is not a button.** It has nothing to show, and a control that
+ * opens onto nothing teaches the Player that the affordance lies.
+ */
+function CellContent({
+  count,
+  agreement,
+  cell,
+  label,
+  unfoldable,
+  open,
+  onToggle,
+}: {
+  count: number;
+  agreement: boolean;
+  cell: Cell;
+  /** What the cell is, so the control's own name says it and not just "2". */
+  label: string;
+  unfoldable: boolean;
+  open: boolean;
+  onToggle: (next: Cell | null) => void;
+}) {
+  const mark = agreement && count > 0 && <span data-part="agreement-mark"> ✓</span>;
+
+  if (count === 0 || !unfoldable) {
+    return (
+      <>
+        <span data-count>{count}</span>
+        {mark}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* A real `<button>`, so it is reachable and operable by keyboard for
+          free, and `aria-expanded` says which state it is in — a disclosure
+          that does not announce itself is a disclosure only a mouse can find.
+          Named by its CELL: the count alone would have every control in the
+          table announce itself as a bare number. */}
+      <button
+        type="button"
+        data-part="cell-toggle"
+        aria-expanded={open}
+        aria-controls={CELL_PANEL_ID}
+        aria-label={`${label} : ${count} — voir les coups`}
+        onClick={() => onToggle(open ? null : cell)}
+      >
+        <span data-count>{count}</span>
+      </button>
+      {mark}
+    </>
+  );
+}
+
+/**
+ * The Moves behind one cell — **the proof that the figure and the board are
+ * one calculation** (ADR-0032).
+ *
+ * This is the exact gap the 25/08 feedback named: a Player reading "1 sur 4"
+ * could not find the other three. They are here, each named by its notation
+ * rather than merely numbered, and each a way back to the diagram.
+ *
+ * There is **no "unavailable" fallback**. There was one, and it was a mistake:
+ * it turned two real defects into a sentence the Player was invited to
+ * distrust. The count and the list now come from one predicate, so a cell that
+ * announces four has four — and if that ever stops being true, the test that
+ * checks every cell of the matrix goes red, which is where it should be said.
+ */
+function CellMoves({
+  cell,
+  moves,
+  matrix,
+  onFocusMove,
+}: {
+  cell: Cell;
+  moves: MoveReading[];
+  matrix: ConfusionMatrix;
+  onFocusMove?: (ply: number) => void;
+}) {
+  const inCell = moves.filter(
+    (move) =>
+      fillsMatrix(move) && move.declared === cell.declared && move.measured === cell.measured,
+  );
+
+  return (
+    <div data-part="cell-moves" id={CELL_PANEL_ID}>
+      <h4>
+        {DECLARED_SEVERITY_LABEL[cell.declared]} contre {MEASURED_LABEL[cell.measured]} —{" "}
+        {matrix[cell.declared][cell.measured]}
+      </h4>
+      <ul>
+        {inCell.map((move) => (
+          <li key={move.ply}>
+            <button type="button" onClick={() => onFocusMove?.(move.ply)}>
+              {moveName(move.ply, move.notation)}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

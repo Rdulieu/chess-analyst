@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, configure } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ConfrontationPage } from "../src/pages/ConfrontationPage";
 import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
@@ -22,7 +22,7 @@ import type { GameAnnotations, GameConfrontation, MoveAnnotation } from "../src/
  */
 
 /** A Game whose PGN the board can actually walk. Four half-moves is enough. */
-const PGN = "1. e4 e5 2. Nf3 Nc6";
+const PGN = "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. Nc3 Nf6";
 
 /** The Player's own Game, as `/api/games/:id` serves it. */
 const GAME = { id: 1, pgn: PGN, opponent: "opp", playerColor: "white" as const };
@@ -65,8 +65,15 @@ const ANNOTATIONS: GameAnnotations = {
     // Blunder on ply 1 — and the square must not show it.
     ply({ ply: 1, severity: "blunder", counted: { counted: true, reason: null }, chancesLost: 30 }),
     ply({ ply: 2 }),
-    ply({ ply: 3, counted: { counted: true, reason: null }, chancesLost: 0 }),
+    ply({ ply: 3, severity: "blunder", counted: { counted: true, reason: null }, chancesLost: 25 }),
     ply({ ply: 4 }),
+    // A fifth ply, so the "silence" case keeps a Move of its own while the
+    // matrix cell can hold TWO — a count of one could not tell "exactly the
+    // announced number" from "at least one".
+    ply({ ply: 5, counted: { counted: true, reason: null }, chancesLost: 0 }),
+    ply({ ply: 6 }),
+    ply({ ply: 7, counted: { counted: true, reason: null }, chancesLost: 0 }),
+    ply({ ply: 8 }),
   ],
 };
 
@@ -83,9 +90,9 @@ const CONFRONTATION: GameConfrontation = {
     matrix: {
       blunder: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
       mistake: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
-      inaccuracy: { blunder: 0, mistake: 0, inaccuracy: 1, none: 0 },
+      inaccuracy: { blunder: 2, mistake: 0, inaccuracy: 0, none: 0 },
       sound: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
-      good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 0 },
+      good: { blunder: 0, mistake: 0, inaccuracy: 0, none: 1 },
     },
     unscored: { good: 0, opponent: 0 },
   },
@@ -96,7 +103,14 @@ const CONFRONTATION: GameConfrontation = {
   moves: [
     { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: { case: "missed", lost: 30, nearest: null } },
     { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
-    { ply: 3, notation: "Nf3", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null },
+    { ply: 3, notation: "Nf3", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null },
+    { ply: 5, notation: "Bc4", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null },
+    // A `Good`: it FILLS its matrix cell (the server counts every examined
+    // Move) while carrying `unscored: "good"`. The row the table renders and
+    // never scores — and the one a naive "exclude everything unscored" filter
+    // silently emptied.
+    { ply: 7, notation: "Nc3", declared: "good", measured: "none", term: null, unscored: "good", keyMoment: null },
+    { ply: 6, notation: "Bc5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
     { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
   ],
   uncounted: [],
@@ -141,6 +155,20 @@ function renderPage() {
 }
 
 /**
+ * **Every wait in this file is given room, not just the board's.**
+ *
+ * This screen resolves three fetches and mounts sixty-four squares through
+ * `react-chessboard`; on a loaded machine that has repeatedly overrun the 1 s
+ * default, and every failure was a wait timing out rather than an assertion
+ * being wrong — the same tests pass alone, every time. Raising the helper's
+ * own timeout only moved the problem to the next `waitFor`, so it is set once
+ * here. A gate that reddens under load is a gate people learn to ignore, and
+ * the extra patience costs nothing when something is genuinely broken: the
+ * assertion still fails, just later.
+ */
+configure({ asyncUtilTimeout: 5000 });
+
+/**
  * The board, once it has mounted — the page loads three records before it can.
  *
  * **A longer wait than the default, and deliberately.** This screen resolves
@@ -154,9 +182,7 @@ function renderPage() {
  * genuinely broken.
  */
 async function board(container: HTMLElement) {
-  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull(), {
-    timeout: 5000,
-  });
+  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull());
   return container;
 }
 
@@ -219,7 +245,9 @@ describe("the board on the Confrontation route", () => {
 
     const list = screen.getByRole("list", { name: "moves" });
     const moves = [...list.querySelectorAll("button")].map((b) => b.textContent);
-    expect(moves).toEqual(["1.e4", "1…e5", "2.Nf3", "2…Nc6"]);
+    expect(moves).toEqual([
+      "1.e4", "1…e5", "2.Nf3", "2…Nc6", "3.Bc4", "3…Bc5", "4.Nc3", "4…Nf6",
+    ]);
 
     fireEvent.click(screen.getByRole("button", { name: "2.Nf3" }));
     await waitFor(() =>
@@ -315,7 +343,7 @@ describe("the board on the Confrontation route", () => {
     );
 
     // Silence, which is NOT the same fact as a `Good` and must not read as one.
-    fireEvent.click(screen.getByRole("button", { name: "2.Nf3" }));
+    fireEvent.click(screen.getByRole("button", { name: "3.Bc4" }));
     await waitFor(() =>
       expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe("Rien dit"),
     );
@@ -352,7 +380,7 @@ describe("the board on the Confrontation route", () => {
     const { container } = renderPage();
     await board(container);
 
-    fireEvent.click(screen.getByRole("button", { name: "2.Nf3" }));
+    fireEvent.click(screen.getByRole("button", { name: "3.Bc4" }));
 
     await waitFor(() =>
       expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe("Rien dit"),
@@ -372,9 +400,14 @@ describe("the board on the Confrontation route", () => {
       // measures a Blunder there — and that glyph must NOT be on the curve: the
       // curve already draws the engine's reading by its shape, and a second
       // copy would drown the handful of marks that are new.
-      expect(marks).toHaveLength(1);
-      expect(marks[0].getAttribute("data-mark-label")).toBe("sous-lecture");
-      expect(marks[0].textContent).toBe("▼");
+      // Two divergences among six plies — and the engine's severity on ply 1
+      // is NOT among them: the curve already draws the engine by its shape.
+      expect(marks).toHaveLength(2);
+      expect(marks.map((m) => m.getAttribute("data-mark-label"))).toEqual([
+        "sous-lecture",
+        "sous-lecture",
+      ]);
+      expect(marks.map((m) => m.textContent)).toEqual(["▼", "▼"]);
     });
 
     it("gives each curve mark its own tint and ink, so dark theme cannot swallow it", async () => {
@@ -500,6 +533,136 @@ describe("the board on the Confrontation route", () => {
 
       expect(container.querySelectorAll("[data-mark-label]")).toHaveLength(0);
       expect(container.querySelector('[data-part="divergence"]')).toBeNull();
+    });
+  });
+
+  describe("from the matrix to the Move", () => {
+    it("keeps every cell folded until asked, and says so", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const cell = container.querySelector('[data-part="matrix"] button[aria-expanded]')!;
+      // Folded by default: the enumeration slice 04 removed must not come back
+      // as twenty open lists.
+      expect(cell.getAttribute("aria-expanded")).toBe("false");
+      expect(container.querySelector('[data-part="cell-moves"]')).toBeNull();
+    });
+
+    it("does not pretend an empty cell has anything to show", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const zeroCells = [...container.querySelectorAll('[data-part="matrix"] td')].filter(
+        (td) => td.querySelector("[data-count]")!.textContent === "0",
+      );
+      expect(zeroCells.length).toBeGreaterThan(0);
+      // A control that opens onto nothing teaches the Player that the
+      // affordance lies.
+      for (const td of zeroCells) expect(td.querySelector("button")).toBeNull();
+    });
+
+    it("unfolds EXACTLY the Moves the cell announces, each named by its notation", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const cell = [...container.querySelectorAll('[data-part="matrix"] button[aria-expanded]')]
+        .find((b) => b.textContent === "2")!;
+      fireEvent.click(cell);
+
+      await waitFor(() =>
+        expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
+      );
+      const listed = [...container.querySelectorAll('[data-part="cell-moves"] li button')];
+      // « 1 sur 4 » must lead to the four. A count that does not match its
+      // list is the exact bug the Player would be right not to trust.
+      expect(listed).toHaveLength(2);
+      expect(listed.map((b) => b.textContent)).toEqual(["1.e4", "2.Nf3"]);
+      expect(cell.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("unfolds exactly what it announces on EVERY non-empty cell, the Good row included", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const toggles = [
+        ...container.querySelectorAll<HTMLButtonElement>('[data-part="cell-toggle"]'),
+      ];
+      expect(toggles.length).toBeGreaterThan(1);
+
+      // **One cell is not enough.** The count and the list used to agree only
+      // where the `good` row was empty — a coincidence that held on every
+      // fixture that happened to have no `Good`. Walking all of them is what
+      // turns ADR-0032 from a claim into a guard.
+      for (const toggle of toggles) {
+        const announced = Number(toggle.textContent);
+        fireEvent.click(toggle);
+        await waitFor(() =>
+          expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
+        );
+        const listed = container.querySelectorAll('[data-part="cell-moves"] li');
+        expect(listed, `cell announcing ${announced}`).toHaveLength(announced);
+        fireEvent.click(toggle);
+      }
+    });
+
+    it("brings the board to a Move clicked in the unfolded list", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const cell = [...container.querySelectorAll('[data-part="matrix"] button[aria-expanded]')]
+        .find((b) => b.textContent === "2")!;
+      fireEvent.click(cell);
+      await waitFor(() =>
+        expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
+      );
+
+      const second = [...container.querySelectorAll('[data-part="cell-moves"] li button')][1];
+      fireEvent.click(second);
+
+      await waitFor(() =>
+        expect(screen.getByLabelText("current move").textContent).toContain("2.Nf3"),
+      );
+      // And the cartouche belongs to the cell we came from: both are the same
+      // per-Move reading, which is what makes the unfolding a PROOF rather
+      // than a convenience (ADR-0032).
+      expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe(
+        "Bévue sous-estimée",
+      );
+    });
+
+    it("answers the same Move twice, even after the Player has stepped away", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const cell = [...container.querySelectorAll('[data-part="matrix"] button[aria-expanded]')]
+        .find((b) => b.textContent === "2")!;
+      fireEvent.click(cell);
+      await waitFor(() =>
+        expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
+      );
+      const first = [...container.querySelectorAll('[data-part="cell-moves"] li button')][0];
+
+      fireEvent.click(first);
+      await waitFor(() =>
+        expect(screen.getByLabelText("current move").textContent).toContain("1.e4"),
+      );
+
+      // Step away, then ask for the same Move again. A bare ply would look
+      // unchanged and do nothing — which is why the request carries an id.
+      fireEvent.click(screen.getByRole("button", { name: "1…e5" }));
+      await waitFor(() =>
+        expect(screen.getByLabelText("current move").textContent).toContain("1…e5"),
+      );
+      fireEvent.click(first);
+      await waitFor(() =>
+        expect(screen.getByLabelText("current move").textContent).toContain("1.e4"),
+      );
     });
   });
 
