@@ -3,8 +3,16 @@ import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
 import { MoveMarks } from "../personal/MoveMarks";
 import { MoveReadout } from "./MoveReadout";
-import { divergencesOf, DIVERGENCE_GLYPH, DIVERGENCE_LABEL } from "./divergence";
+import {
+  divergencesOf,
+  DIVERGENCE_GLYPH,
+  DIVERGENCE_LABEL,
+  DIVERGENCE_TINT,
+  DIVERGENCE_INK,
+  divergenceAt,
+} from "./divergence";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../personal/declaredSeverity";
+import type { Divergence } from "./divergence";
 import type { Game, GameAnnotations, MoveReading, PersonalAnalysis } from "../../types";
 
 /**
@@ -64,7 +72,20 @@ export function ConfrontationBoard({
       divergences.map((divergence) => ({
         ply: divergence.ply,
         glyph: DIVERGENCE_GLYPH[divergence.direction],
-        label: DIVERGENCE_LABEL[divergence.direction],
+        // The DIRECTION, as a slug: this is the sheet's and a driver's hook,
+        // not an accessible name. The curve as a whole is `aria-hidden` — the
+        // marks are a picture of what the list already says in words — so the
+        // sentence belongs on the list's glyph, where it is read aloud.
+        label: divergence.direction,
+        // **A constant pair, like the severity markers carry.** Left to
+        // inherit, the glyph took the theme's ink — and the curve's own fill
+        // is theme-INVARIANT, so in dark the mark measured 1.04:1 against it
+        // and three of five disappeared into the drawing. A mark on this curve
+        // straddles two grounds, so it needs its own ink and its own tint, and
+        // both have to come from the family that does not move with the theme
+        // (ADR-0013 — the same reason the board's square tints are constant).
+        tint: DIVERGENCE_TINT,
+        ink: DIVERGENCE_INK,
       })),
     [divergences],
   );
@@ -105,15 +126,7 @@ export function ConfrontationBoard({
               drawing. The glyph is the same one, and its accessible name says
               the direction in words: the shape carries it for the eye, the
               name for everyone else (ADR-0013). */}
-          {byPly.get(ply)?.term === "sous-lecture" || byPly.get(ply)?.term === "sur-lecture" ? (
-            <span
-              data-part="divergence"
-              data-direction={byPly.get(ply)!.term}
-              aria-label={DIVERGENCE_LABEL[byPly.get(ply)!.term as "sous-lecture" | "sur-lecture"]}
-            >
-              {DIVERGENCE_GLYPH[byPly.get(ply)!.term as "sous-lecture" | "sur-lecture"]}
-            </span>
-          ) : null}
+          <DivergenceMark direction={divergenceAt(byPly.get(ply))} />
         </>
       )}
       curveMarks={curveMarks}
@@ -144,5 +157,17 @@ export function ConfrontationBoard({
       // goes under the buttons the Player is clicking, never above them.
       controls={(ply) => <MoveReadout move={byPly.get(ply) ?? null} marks={reading.marks} />}
     />
+  );
+}
+
+
+/** The disagreement, in the move list — the same glyph the curve carries. */
+function DivergenceMark({ direction }: { direction: Divergence["direction"] | null }) {
+  if (direction === null) return null;
+
+  return (
+    <span data-part="divergence" data-direction={direction} aria-label={DIVERGENCE_LABEL[direction]}>
+      {DIVERGENCE_GLYPH[direction]}
+    </span>
   );
 }

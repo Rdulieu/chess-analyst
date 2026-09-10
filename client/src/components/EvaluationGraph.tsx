@@ -155,7 +155,6 @@ export function EvaluationGraph({
         <span
           key={marker.x}
           data-mark-label={marker.label}
-          aria-hidden="true"
           style={{
             left: `${(marker.x / span) * 100}%`,
             top: `${100 - marker.whiteShare}%`,

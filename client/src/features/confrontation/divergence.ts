@@ -35,11 +35,44 @@ export const DIVERGENCE_GLYPH: Record<Divergence["direction"], string> = {
   "sur-lecture": "▲",
 };
 
-/** What each direction is called, for the mark's accessible name. */
+/**
+ * The mark's own tint and ink on the curve — **constant in both themes**, like
+ * the board's square tints and for the same reason (ADR-0013).
+ *
+ * A mark on this curve **straddles two grounds**: White's share below it is a
+ * theme-invariant light fill, the region above it follows the theme. Left to
+ * inherit, the glyph took the theme's ink and measured **1.04:1** against the
+ * fill in dark — three of five marks disappeared into the drawing. The pair is
+ * what carries it over both grounds, which is exactly the bargain the engine's
+ * severity markers already make.
+ */
+export const DIVERGENCE_TINT = "var(--square-sound)";
+export const DIVERGENCE_INK = "var(--square-notation)";
+
+/**
+ * What each direction is called **out loud** — the mark's accessible name.
+ *
+ * It names the term *and* says what it means, because the term alone would be
+ * vocabulary the screen never shows: the cartouches speak of « Bévue ratée »
+ * and « Bévue surestimée », and a reader who only hears "sous-lecture" would
+ * be given a word with nothing to attach it to. `Sous-lecture` and
+ * `Sur-lecture` are the project's own terms (CONTEXT.md), so they are kept —
+ * and explained.
+ */
 export const DIVERGENCE_LABEL: Record<Divergence["direction"], string> = {
-  "sous-lecture": "sous-lecture",
-  "sur-lecture": "sur-lecture",
+  "sous-lecture": "sous-lecture : le danger était plus grand que vous ne l'aviez dit",
+  "sur-lecture": "sur-lecture : le danger était plus petit que vous ne l'aviez dit",
 };
+
+/**
+ * The divergence of one Move, or `null`. The narrowing lives here, beside the
+ * type it narrows, so a caller reading the list and a caller reading the curve
+ * cannot disagree about what counts as a disagreement.
+ */
+export function divergenceAt(move: MoveReading | undefined): Divergence["direction"] | null {
+  if (move?.term === "sous-lecture" || move?.term === "sur-lecture") return move.term;
+  return null;
+}
 
 /**
  * The divergences of one reading, in ply order.

@@ -438,7 +438,10 @@ describe("the board on the Confrontation route", () => {
       const divergence = container.querySelector('[data-part="divergence"]');
       expect(divergence!.textContent).toBe("▼");
       // The shape carries it for the eye; the accessible name for everyone else.
-      expect(divergence!.getAttribute("aria-label")).toBe("sous-lecture");
+      // The term AND what it means: "sous-lecture" alone would be vocabulary
+      // the screen never shows — the cartouches say « Bévue ratée ».
+      expect(divergence!.getAttribute("aria-label")).toMatch(/^sous-lecture : /);
+      expect(divergence!.getAttribute("aria-label")).toMatch(/plus grand/);
     });
 
     it("marks no agreement and nothing unscored — a forced Move is not a disagreement", async () => {

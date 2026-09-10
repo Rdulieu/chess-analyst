@@ -1100,6 +1100,14 @@ $move-authors-tracks: minmax(6rem, 1fr) 1fr 1fr;
 ol[data-columns="authors"] {
   display: flex;
   flex-direction: column;
+  // **`stretch`, and it is load-bearing.** The generic move list is a wrapping
+  // ROW with `align-items: baseline` (`_semantics`), which is the right cross-
+  // axis rule there. Turned on its side here, that same declaration makes every
+  // row shrink to its own content — measured at 1280 px: rows 296 px and
+  // 342 px wide under a 665 px heading, so « Ma lecture » landed over the
+  // engine's cell and the columns drifted between rows. `fr` tracks can only
+  // share a width if the rows share one.
+  align-items: stretch;
   // The intra-row gap, NOT the column gap. `_semantics` makes the two
   // deliberately unequal — a mark has to belong to the Move it judges, and with
   // both equal the glyph sat halfway between two Moves with nothing to attach
