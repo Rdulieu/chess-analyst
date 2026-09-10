@@ -4,6 +4,33 @@ import type { PhaseBand } from "../chess/phaseBands";
 import type { MoveAnnotation } from "../types";
 
 /**
+ * One mark a caller draws on the curve, in place of the engine's severities.
+ *
+ * `tint` and `ink` are **required, not optional**, and that is the lesson of
+ * the defect that shipped without them: a mark here **straddles two grounds**
+ * — White's share below it is a theme-invariant fill, the region above follows
+ * the theme — so a mark left to inherit measured **1.04:1** in dark and three
+ * of five vanished into the drawing. There is no sensible default: a caller
+ * that has not thought about both grounds has not finished the mark, so the
+ * type asks for the pair rather than letting `undefined` through.
+ */
+export interface CurveMark {
+  ply: number;
+  glyph: string;
+  /** What the mark means, for the sheet and for a driver — never a colour hook. */
+  label: string;
+  /** Its ground. Take it from a family that does not move with the theme. */
+  tint: string;
+  /** Its ink, paired with that ground and measured against both. */
+  ink: string;
+}
+
+/** Where a ply sits on the vertical axis, so a caller's mark lands on the line. */
+function whiteShareAt(annotations: MoveAnnotation[], ply: number): number {
+  return annotations[ply]?.whiteWinChances ?? 50;
+}
+
+/**
  * A Game's `Evaluation curve` (CONTEXT.md), drawn beside the board: the Game runs
  * left (the starting Position) to right (its last Move), and each side's ground
  * is its winning chances there — White's rising from the bottom, Black's from the
@@ -39,19 +66,6 @@ import type { MoveAnnotation } from "../types";
  * instead, which also lets them keep a legible ink colour on a light ground —
  * the tint reinforces, the glyph carries.
  */
-/** One mark a caller draws on the curve, in place of the engine's severities. */
-export interface CurveMark {
-  ply: number;
-  glyph: string;
-  /** What the mark means, for the sheet and for a driver — never a colour hook. */
-  label: string;
-}
-
-/** Where a ply sits on the vertical axis, so a caller's mark lands on the line. */
-function whiteShareAt(annotations: MoveAnnotation[], ply: number): number {
-  return annotations[ply]?.whiteWinChances ?? 50;
-}
-
 export function EvaluationGraph({
   annotations,
   currentPly,
@@ -89,8 +103,8 @@ export function EvaluationGraph({
         glyph: mark.glyph,
         label: mark.label,
         whiteShare: whiteShareAt(annotations, mark.ply),
-        tint: undefined as string | undefined,
-        ink: undefined as string | undefined,
+        tint: mark.tint,
+        ink: mark.ink,
       }))
     : severityMarks.map((marker) => ({
         x: marker.x,

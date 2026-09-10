@@ -140,9 +140,23 @@ function renderPage() {
   );
 }
 
-/** The board, once it has mounted — the page loads three records before it can. */
+/**
+ * The board, once it has mounted — the page loads three records before it can.
+ *
+ * **A longer wait than the default, and deliberately.** This screen resolves
+ * three fetches and then mounts sixty-four squares through `react-chessboard`;
+ * on a loaded machine that has exceeded `waitFor`'s 1 s more than once, and
+ * every failure was here rather than in the assertion that followed. The same
+ * lateness is recorded on the driving side — "the board mounts a beat AFTER
+ * the page text settles" — so this is the subject being slow, not the test
+ * being wrong. A gate that reddens under load is a gate people learn to
+ * ignore, and the cost of waiting longer is paid only when something is
+ * genuinely broken.
+ */
 async function board(container: HTMLElement) {
-  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull());
+  await waitFor(() => expect(container.querySelector("[data-square]")).not.toBeNull(), {
+    timeout: 5000,
+  });
   return container;
 }
 
@@ -179,15 +193,20 @@ describe("the board on the Confrontation route", () => {
     const { container } = renderPage();
     await board(container);
 
+    /*
+     * Asserted **synchronously**, with no `waitFor`. Stepping is a `setState`
+     * in the keydown handler, and `fireEvent` flushes it inside `act` — so
+     * there is nothing to wait for, and waiting anyway made this the one test
+     * in the suite that failed under load. It went red three times on a busy
+     * machine and passed alone every time: a `waitFor` on an already-settled
+     * value only ever measures how contended the box is. A gate that reddens
+     * under load is a gate people learn to ignore.
+     */
     fireEvent.keyDown(document, { key: "ArrowRight" });
-    await waitFor(() =>
-      expect(screen.getByLabelText("current move").textContent).toContain("1.e4"),
-    );
+    expect(screen.getByLabelText("current move").textContent).toContain("1.e4");
 
     fireEvent.keyDown(document, { key: "ArrowLeft" });
-    await waitFor(() =>
-      expect(screen.getByLabelText("current move").textContent).toContain("Start"),
-    );
+    expect(screen.getByLabelText("current move").textContent).toContain("Start");
 
     // A shortcut nothing on screen mentions does not exist (US-23, D6).
     expect(container.querySelector('[data-part="shortcuts"]')).not.toBeNull();
@@ -356,6 +375,22 @@ describe("the board on the Confrontation route", () => {
       expect(marks).toHaveLength(1);
       expect(marks[0].getAttribute("data-mark-label")).toBe("sous-lecture");
       expect(marks[0].textContent).toBe("▼");
+    });
+
+    it("gives each curve mark its own tint and ink, so dark theme cannot swallow it", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const mark = container.querySelector<HTMLElement>("[data-mark-label]")!;
+      // **This test exists because its absence shipped dead code.** The pair
+      // was set on the caller's side, `CurveMark` never declared it, and the
+      // excess properties were dropped in silence — leaving the glyph to
+      // inherit the theme's ink over a theme-INVARIANT curve fill, measured at
+      // 1.04:1 in dark, three of five marks gone into the drawing. The
+      // severity path has had this assertion all along; the new path did not.
+      expect(mark.style.backgroundColor || mark.style.background).toBeTruthy();
+      expect(mark.style.color).toBeTruthy();
     });
 
     it("tells the two directions apart by their SHAPE, not their colour", async () => {
