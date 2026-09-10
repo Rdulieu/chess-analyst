@@ -80,6 +80,45 @@
   > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
   > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
   > session de test dessus devrait précéder le grill, ou en faire partie.
+  >
+  > ### Grillée le 2026-09-10 — décisions
+  >
+  > Branche `integration/US-26-confrontation-per-move`. `CONTEXT.md` : trois termes ajoutés
+  > (**Bonne lecture**, **Sous-lecture**, **Sur-lecture**), posés sur **un coup** et non sur une case
+  > de la matrice. Deux ADR : **ADR-0032** (les chiffres d'une `Confrontation` sont le pli de ses
+  > lectures par coup) et **ADR-0033** (l'échiquier peint un auteur, la cartouche nomme la
+  > comparaison — c'est la dette qu'ADR-0022 avait nommée et laissée à cette story).
+  >
+  > - **La mesure préalable est tombée**, à la demande du demandeur et à raison : la base porte
+  >   **4** `personal_analyses` dont **3 scellées**, la plus riche (partie **715**) avec 63 marques,
+  >   42 `Sound`, 9 notes. Le coût de la note 3 se lit dans ces chiffres sans session de test.
+  > - **Écran** : la route existante `/analyse/:gameId/confrontation` gagne un échiquier. **Pas** un
+  >   quatrième `Review mode`, **pas** `GameViewer` (il porte le Sans aide d'US-28, qui n'a aucun
+  >   sens après le sceau) : `ConfrontationPage` compose **`Board`** directement, via les seams
+  >   `squareTint`, `moveMarks` et `controls` qu'il expose déjà.
+  > - **Disposition** : échiquier à gauche ; à droite, contrôles de pas et coup courant (ADR-0021 —
+  >   ils ne bougent jamais), puis la courbe portant les **seuls glyphes de désaccord**, puis le
+  >   texte du coup courant, puis l'agrégat et la matrice. Ordre actuel de `Board` accepté **à
+  >   titre provisoire** : sa refonte est **US-33**, et rien ici ne doit se lire comme une décision
+  >   d'organisation durable.
+  > - **Deux familles de cartouches**, jamais de légende (les libellés se suffisent) : la lecture
+  >   (vert `Bonne lecture` / rouge `… ratée`, `… sous-estimée` / jaune **`Fausse alerte`**,
+  >   `… surestimée` / gris nommant son cas) et le `Key moment`, préfixée **`◆`**, avec sa ligne
+  >   rouge **`Moment clé manqué`** qui n'existe pas encore côté serveur et se dérive des mêmes
+  >   données. Pas de cartouche `◆` là où il n'y a ni marqueur ni perte.
+  > - **Écart de degré = désaccord**, jamais un accord : `agrees()` est une égalité stricte, et
+  >   tolérer un cran serait la fenêtre de tolérance que le modèle refuse partout ailleurs.
+  > - **Entrée** : la matrice reste, chaque cellule **déplie** la liste de ses coups, repliée par
+  >   défaut, et cliquer un coup **focalise l'échiquier**. La matrice étant le dernier bloc, le
+  >   dépliage ne déplace rien au-dessus.
+  > - **Hors périmètre, dit** : la couche postérieure ne paraît pas sur cet écran (angle mort
+  >   volontaire — elle ne reste visible que sur la route de lecture) ; l'écran corpus
+  >   « Mes lectures » n'est pas touché ; le coût de pose de `Sound` part en **US-40**.
+  > - **Aucune migration due** : le par-coup est dérivé, pas stocké.
+  > - **FP sur fixture fabriquée**, semée pour couvrir les cas rares que le moteur ne produit pas
+  >   sur commande (forcé mesuré `Bévue` déclaré `Sound`, écarts de degré, `Good` non scoré, les
+  >   cinq libellés gris). À dire dans le scénario : elle prouve que l'écran rend ces cas, pas que
+  >   le moteur les produit — la 715 réelle est le témoin, à ouvrir en HP.
 
 - **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
   seulement par ouverture ou par position.
@@ -606,6 +645,32 @@
   > **Elle doit sa migration** (CLAUDE.md) : colonne nullable, backfill de ce qu'on sait, puis
   > resserrage. Les passes existantes n'ont pas de provenance connue et devront le dire —
   > « inconnu » est une réponse honnête, « WASM » serait une supposition.
+
+- **US-40**: Poser `Sound` sans que ça coûte vingt-deux clics — pour que la garantie qui rend la
+  `Confrontation` possible cesse d'être payée coup par coup.
+  > **Pas encore grillée.** Ouverte le 2026-09-10 pendant le grill d'US-26, qui l'a explicitement
+  > sortie de son périmètre : elle porte sur la **route de lecture**, avant le sceau, et pas sur
+  > l'écran de confrontation.
+  >
+  > Vient de la **note 3** du retour du 25/08 — *« devoir cocher chaque coup analysé mais non
+  > important est fastidieux »*. `CONTEXT.md` tient l'inverse et le tient fort : *« `Sound` est ce
+  > qui rend la confrontation possible. Sans lui, "je n'ai rien dit ici" et "je dis que ce coup est
+  > correct" seraient le même silence »*. La question n'est donc **pas** « faut-il garder `Sound` »
+  > mais **« comment le poser coûte-t-il moins cher »**.
+  >
+  > **Le coût, mesuré le 2026-09-10 sur la base** plutôt que sur une impression : la lecture la plus
+  > dense (partie 715) porte **42 `Sound` sur 63 marques** — les deux tiers des gestes du joueur
+  > servent à dire « rien à signaler ».
+  >
+  > **La note a vieilli, et c'est la première chose à vérifier** : **US-22** a depuis livré le
+  > verdict au clavier (`1`–`5`, flèches, inerte pendant la saisie d'une note). Le grill doit
+  > re-mesurer sur l'app **telle que mergée** avant de concevoir quoi que ce soit — il se peut que
+  > le coût ait déjà largement baissé et que la story se referme sur ce constat.
+  >
+  > Piste à ne pas préempter mais à ne pas perdre : un **geste de masse** (« tout le reste est
+  > `Sound` ») changerait la nature de la marque — un verdict posé en bloc n'est plus un verdict
+  > examiné coup par coup, et la couverture cesserait de vouloir dire ce qu'elle dit aujourd'hui.
+  > C'est le cœur du grill, pas un détail d'ergonomie.
 
 ## Doing
 

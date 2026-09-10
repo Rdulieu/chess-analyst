@@ -597,3 +597,19 @@ assumes the Player is right, which is exactly what is not established. So a disa
 careful human reader and our figures part ways is worth opening — and never a validation of anything.
 Any stronger claim would be one this method cannot keep.
 _Avoid_: Comparison (too vague), Correction, Grade, Score (there is no single one)
+
+**Bonne lecture** / **Sous-lecture** / **Sur-lecture**:
+The three terms a `Confrontation` puts on **one Move** — the vocabulary the aggregate figures never
+had. `Bonne lecture`: the Player's `Declared severity` and the measured one say the same thing
+(`Sound` against "nothing flagged" included — that is an agreement, not an absence).
+`Sous-lecture`: the Player read the Move as less flawed than measured, whether they said nothing at
+all or named a lesser band. `Sur-lecture`: they read it as more flawed. The three are **not** the
+four cells of a confusion matrix: they are the reading of one Move, and the matrix is their tally.
+Everything a Confrontation does not score — `Good`, the opponent's Moves, the Moves that are not
+`Counted Move`s — carries **none** of the three, and says which case it is instead; melting those
+into a single "not scored" would leave the Player unable to audit any of them.
+The band gap is a `Sous-lecture` or a `Sur-lecture` like any other: there is **no tolerance window**,
+for the same reason a `Key moment` marker one Move away earns no partial credit — the distance is
+shown instead, and no magic constant enters the score.
+_Avoid_: Faux positif / faux négatif (says nothing about which way), Erreur de lecture (a
+`Sur-lecture` is not an error about the Game), Accord / désaccord (the direction is the point)
