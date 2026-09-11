@@ -239,12 +239,22 @@ export function keyMomentLabel(reading: MoveKeyMoment, ply: number): ReadingLabe
         // The distance, NAMED — "your marker is on 21.Rd1, which cost nothing;
         // the loss is on 22.Nxe5" teaches where to have looked, where a silent
         // partial credit would teach nothing and hide the miss.
-        // The Move **and the distance** — the ticket asks for both, and the
-        // distance is the half that teaches: a marker one half-move from the
-        // loss and one six half-moves away are not the same near miss, and a
-        // sentence naming only the Move makes them read alike.
+        /*
+         * The Move **and the distance** — the ticket asks for both, and the
+         * distance is the half that teaches: a marker one half-move from the
+         * loss and one six away are not the same near miss.
+         *
+         * **« La perte LA PLUS PROCHE »**, and the adjective is load-bearing.
+         * The HP suite read « 0 % des dégâts trouvés — 0 points sur 109 »
+         * and, directly beneath, « la perte est sur 14…e5 (16 points) » — the
+         * definite article naming *the* loss of a Game whose 109 points are
+         * spread over five faulty Moves, the largest of them elsewhere. The
+         * sentence was always about the NEAREST fault, which is the useful
+         * thing to say to a misplaced marker; it simply did not say so, and
+         * left the reader to reconcile 109 with 16 by guessing.
+         */
         detail: reading.nearest
-          ? `Ce coup n'a rien coûté. La perte est sur ${moveName(reading.nearest.ply, reading.nearest.notation)} (${points(reading.nearest.lost)}), ${halfMoveGap(ply, reading.nearest.ply)} plus loin — c'est là qu'il fallait regarder.`
+          ? `Ce coup n'a rien coûté. La perte la plus proche est sur ${moveName(reading.nearest.ply, reading.nearest.notation)} (${points(reading.nearest.lost)}), ${halfMoveGap(ply, reading.nearest.ply)} plus loin.`
           : "Ce coup n'a rien coûté.",
       };
     case "no-target":

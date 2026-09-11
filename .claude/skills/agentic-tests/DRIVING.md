@@ -228,6 +228,13 @@ a helper is recognised as *this* returning, not as a new mystery.
   killing anything, so the app survives a run that believes it tore down. Measured 2026-09-10
   (US-26-05 FP), cost one retry. Same family as the `session.stop` trap: **helper signatures are
   read, not guessed.**
+- **The winning-chances bar is `data-bar="winning-chances"`, not a `data-part`.** A sweep of
+  `[data-part]` for `bar|share|chance` returns nothing on Analyse and on the Confrontation, and
+  "this screen has no winning-chances bar" is then one keystroke from being filed as a defect —
+  it happened on 2026-09-11 and was lifted by re-measuring against the real attribute. That is the
+  **fifth** near-finding in this family (`[data-square]`'s child div, `/stats`'s `aria-labelledby`,
+  the confrontation entry's anchor, `aria-current` on the `<button>`, now this): **resolve the
+  attribute that carries the thing, never the one its name suggests.**
 - **The Confrontation screen's own hooks, so the next run does not re-derive them** (2026-09-10):
   the per-Move panel is `[data-part="move-reading"]`, holding `[data-part="reading-term"]` (its
   register is `data-tone` — `agreement` / `missed` / `overcalled` / `unscored`, the last shared by

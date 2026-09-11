@@ -199,6 +199,38 @@ settle any of it.
 
 Answer these, and write the answers down:
 
+> **Audit of 2026-09-11 (US-26, four dispatches: path 0, then the three HPs at concurrency 2).**
+> The suite is **3/3 plus its prerequisite**, and **no scenario found a defect in the app** — every
+> finding raised was about the run or the driver. Two things this run settles, and one it costs.
+>
+> **Delivery: 4 of 4 unprompted, each arriving twice** — `SendMessage` then the completion
+> notification, identical content. §O1 stays closed across **nine** consecutive suites, and §O2
+> stays **unexercised a tenth time**. The relance was not needed once.
+>
+> **The concurrency rule was derived, not carried over**: `nproc` read as 8 → `min(3, floor(8/4))`
+> = **2**, path 0 alone first, then HP-01 + HP-02, then HP-03 when a slot freed. No page theft, no
+> port collision, and each scenario proved its own three ports free at teardown. The isolation
+> findings all still hold.
+>
+> **What it cost, and it was the dispatcher's fault, not a driver's.** During an earlier FP on the
+> same worktree the dispatcher **edited files while a scenario was driving the app from them**;
+> Vite hot-reloaded, a real bug stopped reproducing mid-run, and the agent — correctly reasoning
+> from what it could see — filed it as a read artefact. Only an independent code review caught it.
+> The rule and its corollary are now in `DRIVING.md`; the corollary is the one that matters,
+> because a driver can always re-measure and only the editor knows they are editing.
+>
+> **A fifth wrong-node near-finding.** HP-03 swept `[data-part]` for the winning-chances bar, found
+> nothing, and nearly filed "this screen has no bar" — the attribute is `data-bar`. Five now, in
+> one family. The remedy is in `DRIVING.md`, but the recurrence itself is the signal: **the suite's
+> most reliable source of false reds is a driver resolving the attribute a name suggests rather
+> than the one that carries the thing.**
+>
+> **Honest limit of this run.** The severity-glyph cue *still* has no subject in the 36-reading
+> pass (the documented US-28 hole: the pass audits Analyse as it lands, always `Sans aide`). Two
+> scenarios closed it by hand — HP-01 with four extra readings, HP-03 with twelve. That is evidence
+> the tints are fine; it is **not** evidence the suite watches them, and writing it down as a pass
+> would be the optimistic green this skill exists against.
+
 > **Audit of 2026-09-04, second pass (US-21+US-25, six dispatches: a fresh-agent trial with a
 > nested reviewer of its own, then path 0, then the full HP suite).** The suite is **3/3 plus its
 > prerequisite**, and the run is worth reading for two things nothing here had observed before.
