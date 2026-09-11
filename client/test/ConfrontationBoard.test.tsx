@@ -307,12 +307,14 @@ describe("the board on the Confrontation route", () => {
       // named as UNDERESTIMATED rather than missed: the Player saw the danger.
       expect(term!.textContent).toBe("Bévue sous-estimée");
     });
-    expect(container.querySelector('[data-part="reading-detail"]')!.textContent).toMatch(
-      /plus petit qu'il n'était/i,
-    );
+    // The label is the explanation now. The paragraph that used to restate it
+    // was redundant with the label and with the list's two titled columns, and
+    // under the diagram it was height paid on every ply — it moves to a
+    // tooltip in US-41.
+    expect(container.querySelector('[data-part="reading-detail"]')).toBeNull();
   });
 
-  it("puts the reading BELOW the step controls, which must never move (ADR-0021)", async () => {
+  it("puts the reading under the DIAGRAM, in the other pane from the controls (ADR-0021)", async () => {
     stub();
     const { container } = renderPage();
     await board(container);
@@ -323,9 +325,14 @@ describe("the board on the Confrontation route", () => {
 
     const stepper = container.querySelector('[data-part="stepper"]')!;
     const reading = container.querySelector('[data-part="move-reading"]')!;
-    // Document order is what holds the rule: a block that appears with the ply
-    // cannot displace the buttons if it comes after them.
-    expect(stepper.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // **A different guarantee, and a stronger one.** The readout used to sit in
+    // the side pane after the stepper, so the rule was "later in the document".
+    // It is under the DIAGRAM now, in the other pane entirely — which is why it
+    // can no longer push the move list either, the defect that moved it. ADR-0021
+    // is held by the panes being separate, not by an ordering within one.
+    expect(reading.closest('[data-pane="board"]')).not.toBeNull();
+    expect(stepper.closest('[data-pane="side"]')).not.toBeNull();
+    expect(reading.closest('[data-pane="side"]')).toBeNull();
   });
 
   it("says an unscored Move's case AT that Move, naming it rather than going grey and mute", async () => {

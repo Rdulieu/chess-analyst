@@ -156,10 +156,12 @@ export function ConfrontationBoard({
       // announce them, so working and announced cannot come apart (US-23, D6).
       keyboardStepping
       focusRequest={focusRequest}
-      // **Below the step controls**, which is where `Board` puts this slot and
-      // which is ADR-0021: everything that appears and disappears with the ply
-      // goes under the buttons the Player is clicking, never above them.
-      controls={(ply) => <MoveReadout move={byPly.get(ply) ?? null} marks={reading.marks} />}
+      // **Under the diagram**, not beside it. Read where the eye already is —
+      // and, crucially, out of the side pane: in `controls` this block pushed
+      // the move list down and shifted it on every ply, which is the opposite
+      // of what a list beside a board is for. The step controls are in the
+      // other pane, so ADR-0021 holds by construction here.
+      underBoard={(ply) => <MoveReadout move={byPly.get(ply) ?? null} marks={reading.marks} />}
     />
   );
 }

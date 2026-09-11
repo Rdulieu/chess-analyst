@@ -25,8 +25,21 @@ export type ReadingTone = "agreement" | "missed" | "overcalled" | "unscored";
 export interface ReadingLabel {
   tone: ReadingTone;
   label: string;
-  /** The sentence under the cartouche, when the label alone does not suffice. */
-  detail: string;
+  /**
+   * An extra **fact** the label cannot hold — and nothing else.
+   *
+   * These used to carry a sentence of explanation per case, and the requester
+   * was right that it was redundant: the label already names the case, and
+   * since slice 06 the move list shows both authors in titled columns, so a
+   * paragraph restating "you said X, the engine says Y" repeated what was
+   * already on screen twice. Worse, it was height — under the diagram it
+   * pushed everything below it on every ply.
+   *
+   * What survives is what the label genuinely cannot say: **the distance** to
+   * the loss a marker missed. The explanations belong in a tooltip, which is
+   * **US-41**, not in the column.
+   */
+  detail?: string;
 }
 
 /**
@@ -38,32 +51,22 @@ const UNSCORED: Record<NonNullable<MoveReading["unscored"]>, ReadingLabel> = {
   forced: {
     tone: "unscored",
     label: "Coup forcé — non compté",
-    detail:
-      "Il n'y avait pas d'autre coup légal : jouer le seul coup possible ne vaut ni crédit ni reproche, quoi que le moteur mesure ici.",
   },
   decided: {
     tone: "unscored",
     label: "Position déjà décidée — non comptée",
-    detail:
-      "Il ne restait plus assez à perdre pour qu'un coup dise quelque chose de votre jeu.",
   },
   opponent: {
     tone: "unscored",
     label: "Coup de l'adversaire",
-    detail:
-      "Gardé et montré, jamais noté — non faute de moyens, mais parce que cet outil porte sur votre propre progrès.",
   },
   good: {
     tone: "unscored",
     label: "Correct — rien à comparer",
-    detail:
-      "Le moteur ne flague que les coups fautifs et n'a aucune bande pour le mérite : il n'y a rien à opposer à ce verdict. Il compte dans ce que vous avez examiné, pas dans ce que vous avez vu juste.",
   },
   silence: {
     tone: "unscored",
     label: "Rien dit",
-    detail:
-      "Vous n'avez pas posé de verdict ici. Ce n'est ni juste ni faux : ce coup n'a pas été examiné.",
   },
 };
 
@@ -83,7 +86,6 @@ export function readingLabel(move: MoveReading): ReadingLabel {
     return {
       tone: "agreement",
       label: "Bonne lecture",
-      detail: agreementDetail(move),
     };
   }
 
@@ -109,13 +111,11 @@ export function readingLabel(move: MoveReading): ReadingLabel {
       return {
         tone: "missed",
         label: `${missed} ratée`,
-        detail: `Le moteur mesure ${article(missed)} ici, et vous ne l'aviez pas signalée.`,
       };
     }
     return {
       tone: "missed",
       label: `${missed} sous-estimée`,
-      detail: `Vous aviez dit « ${DECLARED_SEVERITY_LABEL[declared]} » ; le moteur mesure ${article(missed)}. Vous avez vu le danger, plus petit qu'il n'était.`,
     };
   }
 
@@ -132,7 +132,6 @@ export function readingLabel(move: MoveReading): ReadingLabel {
     return {
       tone: "unscored",
       label: "Rien dit",
-      detail: "Aucun verdict n'est enregistré pour ce coup.",
     };
   }
   const claimed = DECLARED_SEVERITY_LABEL[move.declared];
@@ -140,13 +139,11 @@ export function readingLabel(move: MoveReading): ReadingLabel {
     return {
       tone: "overcalled",
       label: "Fausse alerte",
-      detail: `Vous aviez dit « ${claimed} » ; le moteur ne signale rien sur ce coup. Sur-lire le danger est un défaut d'analyse comme un autre — et l'inverse du précédent.`,
     };
   }
   return {
     tone: "overcalled",
     label: `${claimed} surestimée`,
-    detail: `Vous aviez dit « ${claimed} » ; le moteur mesure ${article(MEASURED_NAME[move.measured])}. Vous avez dramatisé, pas halluciné.`,
   };
 }
 
@@ -167,24 +164,33 @@ export function readingLabel(move: MoveReading): ReadingLabel {
  */
 function unscoredLabel(move: MoveReading, unscored: NonNullable<MoveReading["unscored"]>): ReadingLabel {
   const base = UNSCORED[unscored];
+
+  /*
+   * **A `Good` the engine DID flag is not "nothing to compare".**
+   *
+   * `Good` is unscorable because the engine has no band for merit — true, and
+   * the reason it sits outside the accuracy denominator. But that reasoning
+   * holds only when the engine flagged **nothing**. On `19…Rf8` of the
+   * reference Game the Player declared `Good` and the engine measured a
+   * `Mistake` costing 25 points: the screen said "il n'y a rien à opposer à
+   * ce verdict" and then, two lines below, "ce coup vous a coûté des chances".
+   * One of those was false, and it was the first.
+   *
+   * So the label **names what the engine said** instead of denying it exists.
+   * The Move stays unscored — no figure moves, which US-26 requires — and the
+   * contradiction becomes visible rather than asserted away. Whether such a
+   * Move should be *scored* as a divergence is a question about the method,
+   * and it belongs to the requester, not to a label.
+   */
+  if (unscored === "good" && move.measured !== "none") {
+    return {
+      ...base,
+      label: `Correct — le moteur signale ${article(MEASURED_NAME[move.measured])}`,
+    };
+  }
+
   if (move.declared === null || unscored === "good" || unscored === "silence") return base;
-
-  return {
-    ...base,
-    detail: `${base.detail} Vous aviez dit « ${DECLARED_SEVERITY_LABEL[move.declared]} » — et ce n'est noté ni pour vous, ni contre vous.`,
-  };
-}
-
-/**
- * Why an agreement is an agreement. Worth a sentence of its own on the fourth
- * column: a Player who posed `Sound` and reads "Bonne lecture" should see that
- * the engine's **silence** is what they were right about — that is the entire
- * reason `Sound` is a value one poses.
- */
-function agreementDetail(move: MoveReading): string {
-  return move.measured === "none" || move.declared === null
-    ? "Vous aviez regardé et ne trouviez rien à reprocher ; le moteur ne signale rien non plus."
-    : `Vous aviez dit « ${DECLARED_SEVERITY_LABEL[move.declared]} », et c'est exactement ce que le moteur mesure.`;
+  return base;
 }
 
 /** The measured bands, in the Player's own words — the shared vocabulary. */
@@ -225,8 +231,6 @@ export function keyMomentLabel(reading: MoveKeyMoment, ply: number): ReadingLabe
       return {
         tone: "agreement",
         label: `${KEY_MOMENT_GLYPH} Moment clé trouvé`,
-        detail:
-          "Votre marqueur est sur un coup qui vous a réellement coûté des chances. C'est exactement ce qu'un moment clé doit désigner.",
       };
     case "aside":
       return {
@@ -249,30 +253,22 @@ export function keyMomentLabel(reading: MoveKeyMoment, ply: number): ReadingLabe
         label: `${KEY_MOMENT_GLYPH} Marqueur sans cible`,
         // Not a miss: there was nothing to find. Saying "beside the damage"
         // here would invent a mistake the Player did not make.
-        detail:
-          "Ce coup n'a rien coûté — et cette partie ne contient aucune faute comptée à trouver. Il n'y avait rien à désigner.",
       };
     case "on-opponent":
       return {
         tone: "unscored",
         label: `${KEY_MOMENT_GLYPH} Marqueur sur l'adversaire`,
-        detail:
-          "Repérer un tournant chez l'adversaire est une vraie lecture, mais la couverture des dégâts porte sur vos propres coups fautifs.",
       };
     case "on-uncounted":
       return {
         tone: "unscored",
         label: `${KEY_MOMENT_GLYPH} Marqueur sur un coup non compté`,
-        detail:
-          "Ce coup n'entre pas dans l'analyse — forcé, ou joué en position déjà décidée — donc il ne porte aucun dégât à trouver.",
       };
     case "missed":
       return {
         tone: "missed",
         label: `${KEY_MOMENT_GLYPH} Moment clé manqué`,
         // The 70% that had no Move to show. This is the whole point of the case.
-        detail:
-          "Ce coup vous a coûté des chances et aucun de vos marqueurs ne le désigne. C'est une part des dégâts que votre lecture n'a pas trouvée.",
       };
   }
 }

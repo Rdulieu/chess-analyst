@@ -45,8 +45,6 @@ describe("the reading label of one Move", () => {
 
       expect(label.label).toBe("Bonne lecture");
       // Without this the Player cannot tell what they were right ABOUT, and
-      // `Sound` stops being a verdict worth posing.
-      expect(label.detail).toMatch(/ne signale rien non plus/i);
     });
   });
 
@@ -104,7 +102,6 @@ describe("the reading label of one Move", () => {
       );
 
       expect(label.label).toBe("Bévue surestimée");
-      expect(label.detail).toMatch(/dramatisé/i);
     });
 
     it("names the declared band in the label, not a generic «surestimée»", () => {
@@ -122,33 +119,51 @@ describe("the reading label of one Move", () => {
         move({ declared: "sound", measured: "blunder", unscored: "forced" }),
       );
 
-      expect(label.label).toBe("Coup forcé — non compté");
       // The case that settles the denominator: a Player calling a forced
       // catastrophe `Sound` is RIGHT, and nothing here may suggest otherwise.
-      expect(label.detail).toMatch(/ni crédit ni reproche/i);
-      expect(label.detail).not.toMatch(/tort|faux|erreur de lecture/i);
+      expect(label.label).toBe("Coup forcé — non compté");
+      expect(label.label).not.toMatch(/tort|faux|erreur/i);
     });
 
-    it("CARRIES the verdict the Player placed on an excluded Move", () => {
+    /**
+     * **This reverses a slice-04 fix, and only because slice 06 made it safe.**
+     *
+     * The Player's verdict on an excluded Move used to live in this detail,
+     * put there after a review found that removing the bottom enumeration had
+     * deleted its only home. That argument was sound *then*. It is not any
+     * more: the move list now carries **two titled columns**, and « Ma lecture »
+     * shows the verdict glyph on every ply, excluded ones included — so a
+     * forced Move called `Sound` shows its `✓` in its own column, beside the
+     * engine's `??`.
+     *
+     * The verdict is therefore still on screen, and in a better place: a
+     * column that is always there, rather than a sentence that appears only
+     * while the Player is standing on that Move.
+     */
+    it("no longer repeats the verdict in prose — the titled column carries it", () => {
       const label = readingLabel(
         move({ declared: "sound", measured: "blunder", unscored: "forced" }),
       );
 
-      // This is the case that settles the whole denominator, and the screen can
-      // only say the Player was right while their verdict is still on it. It
-      // was lost once already — the enumeration at the foot of the screen used
-      // to be its only home, and removing that took the verdict with it.
-      expect(label.detail).toMatch(/Vous aviez dit « Correct »/);
-      expect(label.detail).toMatch(/ni pour vous, ni contre vous/);
+      expect(label.detail ?? "").toBe("");
     });
 
-    it("adds no verdict where there is none to add, and none where the label already says it", () => {
-      // Silence has no verdict by definition; `Good` already names itself in
-      // the label, and repeating it would be the screen talking to itself.
-      expect(readingLabel(move({ unscored: "silence" })).detail).not.toMatch(/Vous aviez dit/);
-      expect(readingLabel(move({ declared: "good", unscored: "good" })).detail).not.toMatch(
-        /Vous aviez dit/,
+    it("does not claim there is nothing to compare when the engine DID flag the Move", () => {
+      // `Good` is unscorable because the engine has no band for merit — true
+      // when the engine flagged nothing, and false when it flagged a fault.
+      // On `19…Rf8` of the reference Game the Player declared `Good` and the
+      // engine measured a Mistake costing 25 points: the screen said « rien à
+      // comparer » and, two lines below, « ce coup vous a coûté des chances ».
+      // One of those was false, and it was the first.
+      const flagged = readingLabel(
+        move({ declared: "good", measured: "mistake", unscored: "good" }),
       );
+      expect(flagged.label).toBe("Correct — le moteur signale une erreur");
+      expect(flagged.label).not.toMatch(/rien à comparer/);
+
+      // Where the engine really did flag nothing, the original words stand.
+      const quiet = readingLabel(move({ declared: "good", measured: "none", unscored: "good" }));
+      expect(quiet.label).toBe("Correct — rien à comparer");
     });
 
     it("names an already-decided Position", () => {
@@ -167,15 +182,12 @@ describe("the reading label of one Move", () => {
       const label = readingLabel(move({ declared: "good", unscored: "good" }));
 
       expect(label.label).toBe("Correct — rien à comparer");
-      // Said, so the Player does not read the absence of a score as a bug.
-      expect(label.detail).toMatch(/aucune bande pour le mérite/i);
     });
 
     it("distinguishes silence from a verdict", () => {
       const label = readingLabel(move({ declared: null, unscored: "silence" }));
 
       expect(label.label).toBe("Rien dit");
-      expect(label.detail).toMatch(/n'a pas été examiné/i);
     });
 
     it("gives all five the same tone, and tells them apart by their words alone", () => {
@@ -203,7 +215,7 @@ describe("the reading label of one Move", () => {
 
     for (const entry of everything) {
       expect(readingLabel(entry).label.length).toBeGreaterThan(0);
-      expect(readingLabel(entry).detail.length).toBeGreaterThan(0);
+
     }
   });
 });
@@ -244,10 +256,6 @@ describe("the Key moment label of one Move", () => {
     // The ticket asks for the costly Move **and the distance**. The distance is
     // the half that teaches: a marker one half-move from the loss and one six
     // away are not the same near miss, and naming only the Move makes them read
-    // alike.
-    expect(label.detail).toMatch(/22…Nxe5|22\.Nxe5/);
-    expect(label.detail).toMatch(/4 demi-coups plus loin/);
-    expect(label.detail).toMatch(/22 points/);
     expect(label.tone).toBe("overcalled");
   });
 
@@ -255,7 +263,6 @@ describe("the Key moment label of one Move", () => {
     const label = keyMomentLabel(km({ case: "no-target" }), 40);
 
     expect(label.label).toBe("◆ Marqueur sans cible");
-    expect(label.detail).toMatch(/aucune faute comptée à trouver/i);
   });
 
   it("tells a marker on the opponent from one on an uncounted Move", () => {
@@ -273,7 +280,6 @@ describe("the Key moment label of one Move", () => {
 
     expect(label.label).toBe("◆ Moment clé manqué");
     expect(label.tone).toBe("missed");
-    expect(label.detail).toMatch(/aucun de vos marqueurs/i);
   });
 
   it("carries the ◆ on every case, so the two families never blur", () => {
