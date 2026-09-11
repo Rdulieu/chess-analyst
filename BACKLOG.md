@@ -2,146 +2,6 @@
 
 ## To do
 
-- **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
-  verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
-  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
-  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md).
-  > US-23 avait **explicitement laissé ce sujet dehors** (« un sujet à part entière, à ouvrir comme
-  > tel ») ; c'est celui-ci.
-  >
-  > **Placée en tête de `To do` le 2026-09-02, sur décision du demandeur** — c'est la story qu'il veut
-  > traiter. À noter pour l'ordonnancement : US-28 recommande d'être tranchée **avant** celle-ci, la
-  > provenance « moteur vu » étant ce qui rend une `Confrontation` interprétable. La recommandation
-  > n'est pas retirée, elle est **arbitrée** : si US-26 passe d'abord, elle bâtira son écran de détail
-  > sur un drapeau dont on sait qu'il peut mentir, et devra le savoir en le faisant.
-  >
-  > ### Une seule story pour neuf notes
-  >
-  > Les **neuf** remarques du « compte rendu d'analyse » du 25/08 disent la même chose sous neuf
-  > angles : *pas très visuel* (1), *parcourir le board avec les flags* (2), *le verdict sur chacun
-  > des coups* (5), *quand j'ai dit « erreur » à tort* (6), *l'évaluation du moment clé peu visible*
-  > (7), *mettre en avant les divergences* (9), *ce que j'ai vu juste n'est pas clair* (4), plus les
-  > deux notes de contestation ci-dessous (3 et 8).
-  >
-  > **Le défaut est un seul** : la `Confrontation` est **agrégée**. Elle donne trois taux, une matrice
-  > (`ConfusionMatrixTable`) et des comptes, et ne dit **nulle part quel coup a produit quelle case**.
-  > Un joueur qui lit « 1 sur 4 » ne peut pas retrouver les trois autres. Relevé sur `develop` :
-  > `ConfrontationReadout`, `ConfusionMatrixTable`, `UnscoredReadout`, `KeyMomentReadout`, `Figure` —
-  > **aucun échiquier**, aucune entrée par ply.
-  >
-  > ### Deux notes contestent une décision documentée — c'est le cœur du grill
-  >
-  > Elles ne sont pas des défauts, ce sont des désaccords avec des choix pris exprès. Les traiter en
-  > passant reviendrait à défaire une garantie sans le savoir.
-  >
-  > **Note 3 — « Devoir cocher chaque coup analysé mais non important est fastidieux ».** `CONTEXT.md`
-  > tient l'inverse : *« `Sound` est ce qui rend la confrontation possible. Sans lui, "je n'ai rien dit
-  > ici" et "je dis que ce coup est correct" seraient le même silence »*. Le coût signalé **est le prix
-  > exact** de cette garantie — 22 coups posés pour n'en examiner que 4. La question n'est donc pas
-  > « faut-il garder `Sound` » mais **« comment le poser coûte-t-il moins cher »**.
-  > **Attention, la note a vieilli** : US-22 a depuis livré le verdict au clavier (`1`–`5`, flèches,
-  > inerte pendant la saisie d'une note). Le grill doit **re-mesurer le coût sur l'app telle que
-  > mergée** avant de concevoir quoi que ce soit — il a peut-être déjà largement baissé.
-  >
-  > **Note 8 — « La liste des éva sur position déjà décidée prend beaucoup de place alors qu'elle
-  > n'apporte rien ».** ADR-0017 exige l'inverse : une partie où le joueur a joué quatre bévues peut
-  > contribuer **zéro** erreur comptée, et *« un écran qui laisse cet écart illisible détruit la
-  > confiance exactement là où la divergence est la chose à expliquer »*. Mais **l'ADR exige la
-  > lisibilité, pas une liste** : sur la partie testée, 16 coups exclus étaient rendus un à un. Le
-  > volume vient du **rendu**, pas de la règle — un compte et une phrase tiendraient la décision en
-  > trois lignes. Distinguer la décision de son rendu est ici tout le travail.
-  >
-  > ### Un point à ne pas confondre au grill
-  >
-  > La note 2 demande **l'échiquier dans la `Confrontation`**. `ConfrontationPage` porte une décision
-  > voisine mais **différente** : la `Confrontation` est une route à part et **non un panneau sur la
-  > route de lecture**, parce que *« cette route est aveugle par nature et le reste — y montrer le
-  > moteur détruirait la seule chose qu'elle garantit »*. Cet argument protège la **lecture**, il ne
-  > dit rien contre un échiquier **sur la route de confrontation**, où le sceau est déjà tombé. Le
-  > second motif cité — la densité et le reflow — reste, lui, entièrement valable.
-  >
-  > ### Ce que le grill devra trancher
-  >
-  > - **Où vit le détail par coup** : une entrée dans la matrice qui mène aux coups, un échiquier
-  >   parcourable portant les deux lectures, ou les deux. La contrainte d'auditabilité d'US-15 vaut
-  >   ici aussi — la vue par coup et l'agrégat doivent être **le même calcul**.
-  > - **Nommer les quatre cases**, pas seulement les compter. « Ce que j'ai vu juste » (note 4) et
-  >   « quand j'ai crié à l'erreur pour rien » (note 6) sont deux cases de la matrice qui n'ont pas
-  >   de mots ; le faux positif n'en a aujourd'hui aucun.
-  > - **Le sort de la note 3**, une fois le coût re-mesuré : rien à faire, ou un geste de masse.
-  > - **Le rendu des exclus** (note 8) sans toucher à ADR-0017.
-  >
-  > **Garde-fou du projet** : aucun indice ne peut être **uniquement chromatique** — sur un écran qui
-  > oppose deux lectures, la tentation est maximale.
-  >
-  > ### Angle mort connu, à traiter avant ou pendant
-  >
-  > L'écran **« Mes lectures »** (`/confrontation`, le bilan sur tout l'historique) **n'a jamais été
-  > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
-  > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
-  > session de test dessus devrait précéder le grill, ou en faire partie.
-  >
-  > ### Grillée le 2026-09-10 — décisions
-  >
-  > Branche `integration/US-26-confrontation-per-move`. `CONTEXT.md` : trois termes ajoutés
-  > (**Bonne lecture**, **Sous-lecture**, **Sur-lecture**), posés sur **un coup** et non sur une case
-  > de la matrice. Deux ADR : **ADR-0032** (les chiffres d'une `Confrontation` sont le pli de ses
-  > lectures par coup) et **ADR-0033** (l'échiquier peint un auteur, la cartouche nomme la
-  > comparaison — c'est la dette qu'ADR-0022 avait nommée et laissée à cette story).
-  >
-  > - **La mesure préalable est tombée**, à la demande du demandeur et à raison : la base porte
-  >   **4** `personal_analyses` dont **3 scellées**, la plus riche (partie **715**) avec 63 marques,
-  >   42 `Sound`, 9 notes. Le coût de la note 3 se lit dans ces chiffres sans session de test.
-  > - **Écran** : la route existante `/analyse/:gameId/confrontation` gagne un échiquier. **Pas** un
-  >   quatrième `Review mode`, **pas** `GameViewer` (il porte le Sans aide d'US-28, qui n'a aucun
-  >   sens après le sceau) : `ConfrontationPage` compose **`Board`** directement, via les seams
-  >   `squareTint`, `moveMarks` et `controls` qu'il expose déjà.
-  > - **Disposition** : échiquier à gauche ; à droite, contrôles de pas et coup courant (ADR-0021 —
-  >   ils ne bougent jamais), puis la courbe portant les **seuls glyphes de désaccord**, puis le
-  >   texte du coup courant, puis l'agrégat et la matrice. Ordre actuel de `Board` accepté **à
-  >   titre provisoire** : sa refonte est **US-33**, et rien ici ne doit se lire comme une décision
-  >   d'organisation durable.
-  > - **Deux familles de cartouches**, jamais de légende (les libellés se suffisent) : la lecture
-  >   (vert `Bonne lecture` / rouge `… ratée`, `… sous-estimée` / jaune **`Fausse alerte`**,
-  >   `… surestimée` / gris nommant son cas) et le `Key moment`, préfixée **`◆`**, avec sa ligne
-  >   rouge **`Moment clé manqué`** qui n'existe pas encore côté serveur et se dérive des mêmes
-  >   données. Pas de cartouche `◆` là où il n'y a ni marqueur ni perte.
-  > - **Écart de degré = désaccord**, jamais un accord : `agrees()` est une égalité stricte, et
-  >   tolérer un cran serait la fenêtre de tolérance que le modèle refuse partout ailleurs.
-  > - **Entrée** : la matrice reste, chaque cellule **déplie** la liste de ses coups, repliée par
-  >   défaut, et cliquer un coup **focalise l'échiquier**. La matrice étant le dernier bloc, le
-  >   dépliage ne déplace rien au-dessus.
-  > - **Hors périmètre, dit** : la couche postérieure ne paraît pas sur cet écran (angle mort
-  >   volontaire — elle ne reste visible que sur la route de lecture) ; l'écran corpus
-  >   « Mes lectures » n'est pas touché ; le coût de pose de `Sound` part en **US-40**.
-  > - **Aucune migration due** : le par-coup est dérivé, pas stocké.
-  > - **FP sur fixture fabriquée**, semée pour couvrir les cas rares que le moteur ne produit pas
-  >   sur commande (forcé mesuré `Bévue` déclaré `Sound`, écarts de degré, `Good` non scoré, les
-  >   cinq libellés gris). À dire dans le scénario : elle prouve que l'écran rend ces cas, pas que
-  >   le moteur les produit — la 715 réelle est le témoin, à ouvrir en HP.
-  >
-  > ### Spécifiée et découpée le 2026-09-10
-  >
-  > Spec : `.scratch/confrontation-per-move/SPEC.md` (48 user stories). **Sept sous-tickets**,
-  > `ready-for-agent`, sous `.scratch/confrontation-per-move/tickets/`, tous implémentés sur
-  > `integration/US-26-confrontation-per-move` :
-  >
-  > | # | Ticket | Bloqué par |
-  > |---|---|---|
-  > | 01 | La fixture semée : une lecture scellée qui contient les cas rares | — |
-  > | 02 | L'échiquier sur la route de confrontation | 01 |
-  > | 03 | Le terme du coup courant (par-coup serveur + agrégat = somme, ADR-0032) | 02 |
-  > | 04 | Ce qui n'est pas scoré, dit à son coup (les cinq gris ; règle la note 8) | 03 |
-  > | 05 | Les moments clés coup par coup (cartouche `◆`, dont `Moment clé manqué`) | 03 |
-  > | 06 | Les divergences se voient (glyphes sur la courbe, liste à deux colonnes) | 03 |
-  > | 07 | De la matrice au coup (dépliage d'une cellule, focus sur l'échiquier) | 03 |
-  >
-  > **04 à 07 ne se bloquent pas entre elles** : quatre tranches parallélisables une fois 03 mergée.
-  > 03 est la tranche lourde et n'est **pas** découpée — le refactor serveur et la première
-  > cartouche doivent atterrir ensemble, sinon la part serveur n'est ni démontrable ni verticale.
-  > Son garde-fou : le test qui rejoue la vraie lecture scellée doit rendre les mêmes totaux **à
-  > l'unité près**.
-
 - **US-15 (EPIC)**: Savoir sur quoi travailler — identifier mes points faibles par **thèmes**, pas
   seulement par ouverture ou par position.
   > **Recadrage de l'objectif du produit** (2026-08-19). **Grillée** (2026-08-21) — état complet et
@@ -746,11 +606,258 @@
   > Troisième voie à ne pas oublier au grill : garder le coup hors du score **et** le compter
   > ailleurs, comme les `Key moment`s comptent les dégâts sans entrer dans l'exactitude.
 
+- **US-43**: Une porte qui ne peut pas mentir — fermer les trois façons dont la nôtre a dit « vert »
+  sans rien garantir, pendant US-26.
+  > **Pas encore grillée.** Ouverte le 2026-09-11 au sortir d'US-26, à partir de ce que cette story
+  > a **mesuré sur elle-même** — pas d'une intuition sur la qualité des tests.
+  >
+  > **Le chiffre qui ouvre le sujet.** Sur les sept tranches d'US-26, **onze findings bloquants** ;
+  > **aucun** attrapé par les tests. `tsc`, `lint` et une suite passée de 1 458 à 1 555 tests
+  > étaient verts au travers de tous. Ils ont été trouvés par une revue indépendante lisant le diff
+  > contre le ticket, par un agent pilotant l'écran, ou **par le demandeur sur sa propre base**.
+  > Ce n'est pas un plaidoyer pour « plus de tests » : c'est le constat que trois familles de
+  > défauts **passent structurellement** sous notre porte, et chacune a une signature.
+  >
+  > **Famille 1 — l'assertion qui ne peut pas échouer.** Quatre instances mesurées :
+  > `expect(undefined).not.toBeNull()` passait sur un cas *supprimé* (la revue l'a prouvé en
+  > effaçant la marque : 17/17 au vert) ; le témoin de non-régression n'asserait que des relations
+  > qu'une dérive d'une unité sur les quatre totaux aurait survécues ; un test de comptage ne
+  > s'accordait avec sa liste **que là où une ligne de la matrice était vide** ; et un test se
+  > fournissait à lui-même le terme qu'il prétendait vérifier. **Le demandeur a trouvé la
+  > quatrième en posant la question.** Piste à ne pas préempter : la discipline « vérifier que le
+  > test échoue sans le correctif » a fonctionné les trois fois où elle a été appliquée dans cette
+  > story — reste à savoir si elle doit être une habitude, un outil, ou une règle de revue.
+  >
+  > **Famille 2 — le correctif qui part au vert sans jamais atteindre l'écran.** Trois fois, par
+  > **trois mécanismes différents** : une règle CSS absente (`data-tone` émis, rien dans la
+  > feuille) ; des propriétés en excès sur un littéral non frais, **jetées en silence** par
+  > TypeScript (`tint`/`ink` sur `CurveMark`) ; une règle qui **perd la cascade** face à `:is()`
+  > (0,1,0 contre 0,1,1). Les trois avaient la même forme : **la source contient le correctif, la
+  > page ne l'a pas.** Cause commune établie : **jsdom n'a ni layout ni cascade**, donc la base de
+  > la pyramide ne peut pas les voir — et une FP qui lit `textContent` ne le peut pas davantage.
+  > Les trois ont été trouvées en lisant la géométrie ou `document.styleSheets` sur la page vivante.
+  >
+  > **Famille 3 — le contrôle qui n'a pas tourné et qui ressemble à un contrôle qui passe.** Trois
+  > fois le même jour, sur trois drapeaux différents : `npm test` sous le mauvais node (271 échecs
+  > ne mesurant rien) ; `vitest --reporter=basic` (meurt au démarrage, **sort en code 0**) ;
+  > `vitest --maxWorkers=2` dans `server/` (`Test Files no tests`, **code 0**). Et une quatrième,
+  > la mienne : un découpage de la suite en trois lots qui en a **oublié un fichier sur 44**, trois
+  > lots verts et un fichier jamais lancé. `CLAUDE.md` porte déjà la règle et le symptôme ; ce que
+  > la story n'a pas, c'est **quoi que ce soit qui l'applique**.
+  >
+  > **Ce que la story a fait en attendant, et qui n'est pas une solution** : consigner chaque piège
+  > dans `DRIVING.md` — huit entrées ajoutées en deux jours. Utile, et manifestement insuffisant :
+  > c'est la **cinquième** fausse-piste de la même famille (« un pilote qui résout l'attribut que
+  > le *nom* suggère au lieu de celui qui *porte* la chose ») malgré quatre entrées antérieures.
+  > Une documentation que l'on doit se rappeler de lire ne ferme pas une famille de défauts.
+  >
+  > **Un trou de couverture nommé et jamais comblé, à trancher aussi** : la passe de thème audite
+  > `Analyse` **telle qu'elle arrive**, donc toujours en `Sans aide` — les glyphes de sévérité, la
+  > courbe et la barre n'y ont **aucun sujet** depuis US-28. Deux scénarios l'ont fermé **à la
+  > main** pendant la HP d'US-26. C'est la preuve que les teintes vont bien, pas la preuve que la
+  > suite les surveille, et l'écrire comme un succès serait le vert optimiste que l'`agentic-tests`
+  > combat.
+  >
+  > **Et un point de méthode d'orchestration, mesuré à ses dépens** : éditer le worktree pendant
+  > qu'un scénario y pilote l'app fait recharger Vite à chaud, et **transforme un vrai bug en
+  > non-finding documenté** — l'agent avait raison sur ce qu'il voyait, le sol avait bougé. Seule
+  > une revue du code l'a rattrapé. La règle est dans `DRIVING.md` ; reste à savoir si elle doit
+  > être **tenue par autre chose qu'une phrase**.
+  >
+  > **Ce que le grill doit trancher, et qui n'est pas « écrire plus de tests »** : quelles de ces
+  > familles méritent un outil (mutation testing ? un garde-fou qui relit le compte et non `$?` ?
+  > une assertion de cascade ou de géométrie dans la passe de thème ?), lesquelles une règle de
+  > revue, et lesquelles on accepte de laisser à la couche agentique — laquelle les a effectivement
+  > toutes attrapées, mais **tard et cher**.
+
 ## Doing
 
 ## In review
 
 ## Done
+
+- **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
+  verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
+  > **LIVRÉE le 2026-09-11 — [PR #118](https://github.com/Rdulieu/chess-analyst/pull/118) MERGÉE
+  > dans `develop`** (`b45f890`, 40 commits). Branche d'intégration
+  > `integration/US-26-confrontation-per-move`, **dix PR de sous-travail** (#110 → #117, #119, #120).
+  > Gate à la livraison : build OK, **573 tests serveur + 982 client**, `lint` a **tourné et rendu
+  > 0**, **FP 01→07 vertes**, **suite HP 3/3 verte** (+ path 0), **aucun finding bloquant**.
+  >
+  > **Aucun changement de schéma, aucune migration due** (ADR-0015) : le par-coup est **dérivé**.
+  > Sortie de grill : `CONTEXT.md` (`Bonne lecture` / `Sous-lecture` / `Sur-lecture`), **ADR-0032**
+  > (les chiffres de la `Confrontation` sont le pli de ses lectures par coup) et **ADR-0033** (un
+  > échiquier peint un auteur, la cartouche nomme la comparaison).
+  >
+  > **Ce que la story a coûté en plus de son périmètre, et qui vaut d'être su** : sur sept tranches,
+  > **onze findings bloquants, aucun attrapé par les tests** — trouvés par la revue indépendante,
+  > par les passes agentiques, ou **par le demandeur sur sa vraie base**. Trois d'entre eux étaient
+  > des correctifs partis au vert **sans jamais atteindre l'écran**, par trois mécanismes
+  > différents. C'est le matériau d'**US-43**, ouverte pour ça.
+  >
+  > **Décision de méthode prise en cours de route, et qui déplace un chiffre** : un `Good` que le
+  > moteur flague n'est plus « rien à comparer » — c'est une `Sous-lecture`, rouge, **scorée**.
+  > Tranchée par le demandeur le 2026-09-11 sur la partie 715, où l'écran disait « rien à opposer à
+  > ce verdict » et, deux lignes plus bas, « ce coup vous a coûté des chances ». Sur cette partie
+  > l'exactitude passe de **74 % à 70 %**. **US-42 est close par cette décision**, pas reportée.
+  >
+  > **Réserve sur la couverture agentique** — même forme que celle d'US-15b : la suite HP a été
+  > jouée **avant** le dernier round de retours (PR #117, #119, #120). Elle ne connaît donc ni la
+  > colonne « Confrontation », ni le `Good` scoré, ni le focus qui suit le plateau, ni la cartouche
+  > passée sous l'échiquier. Son vert atteste du code de la veille, et **aucun agent n'a re-joué la
+  > forme livrée**.
+  >
+  > **Sept décisions produit laissées ouvertes** dans le corps de la PR #118 — dont la couche
+  > postérieure (que la SPEC dit absente et qu'aucun ticket ne retire, `OUVERT` daté dans la SPEC),
+  > `ErrorTallyReadout` qui compte le coup forcé sur l'écran fait pour séparer les deux lectures, et
+  > la densité des colonnes titrées (la liste passe de ~390 px à **963 px**, et
+  > `denseScreens.test.ts` garde les styles en ligne, **pas la hauteur**).
+  >
+  > **US ouvertes par cette story** : **US-40** (poser `Sound` sans vingt-deux clics), **US-41**
+  > (légende en infobulle), **US-42** (close par décision), **US-43** (la porte qui a dit vert sans
+  > rien garantir).
+  >
+  > <details><summary>Grill, spec et découpage — conservés</summary>
+  >
+  > **Pas encore grillée.** Ouverte le 2026-09-02 depuis
+  > [`docs/feedback/2026-08-25-us16-confrontation.md`](docs/feedback/2026-08-25-us16-confrontation.md).
+  > US-23 avait **explicitement laissé ce sujet dehors** (« un sujet à part entière, à ouvrir comme
+  > tel ») ; c'est celui-ci.
+  >
+  > **Placée en tête de `To do` le 2026-09-02, sur décision du demandeur** — c'est la story qu'il veut
+  > traiter. À noter pour l'ordonnancement : US-28 recommande d'être tranchée **avant** celle-ci, la
+  > provenance « moteur vu » étant ce qui rend une `Confrontation` interprétable. La recommandation
+  > n'est pas retirée, elle est **arbitrée** : si US-26 passe d'abord, elle bâtira son écran de détail
+  > sur un drapeau dont on sait qu'il peut mentir, et devra le savoir en le faisant.
+  >
+  > ### Une seule story pour neuf notes
+  >
+  > Les **neuf** remarques du « compte rendu d'analyse » du 25/08 disent la même chose sous neuf
+  > angles : *pas très visuel* (1), *parcourir le board avec les flags* (2), *le verdict sur chacun
+  > des coups* (5), *quand j'ai dit « erreur » à tort* (6), *l'évaluation du moment clé peu visible*
+  > (7), *mettre en avant les divergences* (9), *ce que j'ai vu juste n'est pas clair* (4), plus les
+  > deux notes de contestation ci-dessous (3 et 8).
+  >
+  > **Le défaut est un seul** : la `Confrontation` est **agrégée**. Elle donne trois taux, une matrice
+  > (`ConfusionMatrixTable`) et des comptes, et ne dit **nulle part quel coup a produit quelle case**.
+  > Un joueur qui lit « 1 sur 4 » ne peut pas retrouver les trois autres. Relevé sur `develop` :
+  > `ConfrontationReadout`, `ConfusionMatrixTable`, `UnscoredReadout`, `KeyMomentReadout`, `Figure` —
+  > **aucun échiquier**, aucune entrée par ply.
+  >
+  > ### Deux notes contestent une décision documentée — c'est le cœur du grill
+  >
+  > Elles ne sont pas des défauts, ce sont des désaccords avec des choix pris exprès. Les traiter en
+  > passant reviendrait à défaire une garantie sans le savoir.
+  >
+  > **Note 3 — « Devoir cocher chaque coup analysé mais non important est fastidieux ».** `CONTEXT.md`
+  > tient l'inverse : *« `Sound` est ce qui rend la confrontation possible. Sans lui, "je n'ai rien dit
+  > ici" et "je dis que ce coup est correct" seraient le même silence »*. Le coût signalé **est le prix
+  > exact** de cette garantie — 22 coups posés pour n'en examiner que 4. La question n'est donc pas
+  > « faut-il garder `Sound` » mais **« comment le poser coûte-t-il moins cher »**.
+  > **Attention, la note a vieilli** : US-22 a depuis livré le verdict au clavier (`1`–`5`, flèches,
+  > inerte pendant la saisie d'une note). Le grill doit **re-mesurer le coût sur l'app telle que
+  > mergée** avant de concevoir quoi que ce soit — il a peut-être déjà largement baissé.
+  >
+  > **Note 8 — « La liste des éva sur position déjà décidée prend beaucoup de place alors qu'elle
+  > n'apporte rien ».** ADR-0017 exige l'inverse : une partie où le joueur a joué quatre bévues peut
+  > contribuer **zéro** erreur comptée, et *« un écran qui laisse cet écart illisible détruit la
+  > confiance exactement là où la divergence est la chose à expliquer »*. Mais **l'ADR exige la
+  > lisibilité, pas une liste** : sur la partie testée, 16 coups exclus étaient rendus un à un. Le
+  > volume vient du **rendu**, pas de la règle — un compte et une phrase tiendraient la décision en
+  > trois lignes. Distinguer la décision de son rendu est ici tout le travail.
+  >
+  > ### Un point à ne pas confondre au grill
+  >
+  > La note 2 demande **l'échiquier dans la `Confrontation`**. `ConfrontationPage` porte une décision
+  > voisine mais **différente** : la `Confrontation` est une route à part et **non un panneau sur la
+  > route de lecture**, parce que *« cette route est aveugle par nature et le reste — y montrer le
+  > moteur détruirait la seule chose qu'elle garantit »*. Cet argument protège la **lecture**, il ne
+  > dit rien contre un échiquier **sur la route de confrontation**, où le sceau est déjà tombé. Le
+  > second motif cité — la densité et le reflow — reste, lui, entièrement valable.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Où vit le détail par coup** : une entrée dans la matrice qui mène aux coups, un échiquier
+  >   parcourable portant les deux lectures, ou les deux. La contrainte d'auditabilité d'US-15 vaut
+  >   ici aussi — la vue par coup et l'agrégat doivent être **le même calcul**.
+  > - **Nommer les quatre cases**, pas seulement les compter. « Ce que j'ai vu juste » (note 4) et
+  >   « quand j'ai crié à l'erreur pour rien » (note 6) sont deux cases de la matrice qui n'ont pas
+  >   de mots ; le faux positif n'en a aujourd'hui aucun.
+  > - **Le sort de la note 3**, une fois le coût re-mesuré : rien à faire, ou un geste de masse.
+  > - **Le rendu des exclus** (note 8) sans toucher à ADR-0017.
+  >
+  > **Garde-fou du projet** : aucun indice ne peut être **uniquement chromatique** — sur un écran qui
+  > oppose deux lectures, la tentation est maximale.
+  >
+  > ### Angle mort connu, à traiter avant ou pendant
+  >
+  > L'écran **« Mes lectures »** (`/confrontation`, le bilan sur tout l'historique) **n'a jamais été
+  > exercé à l'échelle** : une seule lecture scellée le jour du test, alors qu'il existe pour des
+  > dizaines. Aucune note ne le concerne, et ce silence n'est **pas** un signe qu'il va bien. Une
+  > session de test dessus devrait précéder le grill, ou en faire partie.
+  >
+  > ### Grillée le 2026-09-10 — décisions
+  >
+  > Branche `integration/US-26-confrontation-per-move`. `CONTEXT.md` : trois termes ajoutés
+  > (**Bonne lecture**, **Sous-lecture**, **Sur-lecture**), posés sur **un coup** et non sur une case
+  > de la matrice. Deux ADR : **ADR-0032** (les chiffres d'une `Confrontation` sont le pli de ses
+  > lectures par coup) et **ADR-0033** (l'échiquier peint un auteur, la cartouche nomme la
+  > comparaison — c'est la dette qu'ADR-0022 avait nommée et laissée à cette story).
+  >
+  > - **La mesure préalable est tombée**, à la demande du demandeur et à raison : la base porte
+  >   **4** `personal_analyses` dont **3 scellées**, la plus riche (partie **715**) avec 63 marques,
+  >   42 `Sound`, 9 notes. Le coût de la note 3 se lit dans ces chiffres sans session de test.
+  > - **Écran** : la route existante `/analyse/:gameId/confrontation` gagne un échiquier. **Pas** un
+  >   quatrième `Review mode`, **pas** `GameViewer` (il porte le Sans aide d'US-28, qui n'a aucun
+  >   sens après le sceau) : `ConfrontationPage` compose **`Board`** directement, via les seams
+  >   `squareTint`, `moveMarks` et `controls` qu'il expose déjà.
+  > - **Disposition** : échiquier à gauche ; à droite, contrôles de pas et coup courant (ADR-0021 —
+  >   ils ne bougent jamais), puis la courbe portant les **seuls glyphes de désaccord**, puis le
+  >   texte du coup courant, puis l'agrégat et la matrice. Ordre actuel de `Board` accepté **à
+  >   titre provisoire** : sa refonte est **US-33**, et rien ici ne doit se lire comme une décision
+  >   d'organisation durable.
+  > - **Deux familles de cartouches**, jamais de légende (les libellés se suffisent) : la lecture
+  >   (vert `Bonne lecture` / rouge `… ratée`, `… sous-estimée` / jaune **`Fausse alerte`**,
+  >   `… surestimée` / gris nommant son cas) et le `Key moment`, préfixée **`◆`**, avec sa ligne
+  >   rouge **`Moment clé manqué`** qui n'existe pas encore côté serveur et se dérive des mêmes
+  >   données. Pas de cartouche `◆` là où il n'y a ni marqueur ni perte.
+  > - **Écart de degré = désaccord**, jamais un accord : `agrees()` est une égalité stricte, et
+  >   tolérer un cran serait la fenêtre de tolérance que le modèle refuse partout ailleurs.
+  > - **Entrée** : la matrice reste, chaque cellule **déplie** la liste de ses coups, repliée par
+  >   défaut, et cliquer un coup **focalise l'échiquier**. La matrice étant le dernier bloc, le
+  >   dépliage ne déplace rien au-dessus.
+  > - **Hors périmètre, dit** : la couche postérieure ne paraît pas sur cet écran (angle mort
+  >   volontaire — elle ne reste visible que sur la route de lecture) ; l'écran corpus
+  >   « Mes lectures » n'est pas touché ; le coût de pose de `Sound` part en **US-40**.
+  > - **Aucune migration due** : le par-coup est dérivé, pas stocké.
+  > - **FP sur fixture fabriquée**, semée pour couvrir les cas rares que le moteur ne produit pas
+  >   sur commande (forcé mesuré `Bévue` déclaré `Sound`, écarts de degré, `Good` non scoré, les
+  >   cinq libellés gris). À dire dans le scénario : elle prouve que l'écran rend ces cas, pas que
+  >   le moteur les produit — la 715 réelle est le témoin, à ouvrir en HP.
+  >
+  > ### Spécifiée et découpée le 2026-09-10
+  >
+  > Spec : `.scratch/confrontation-per-move/SPEC.md` (48 user stories). **Sept sous-tickets**,
+  > `ready-for-agent`, sous `.scratch/confrontation-per-move/tickets/`, tous implémentés sur
+  > `integration/US-26-confrontation-per-move` :
+  >
+  > | # | Ticket | Bloqué par |
+  > |---|---|---|
+  > | 01 | La fixture semée : une lecture scellée qui contient les cas rares | — |
+  > | 02 | L'échiquier sur la route de confrontation | 01 |
+  > | 03 | Le terme du coup courant (par-coup serveur + agrégat = somme, ADR-0032) | 02 |
+  > | 04 | Ce qui n'est pas scoré, dit à son coup (les cinq gris ; règle la note 8) | 03 |
+  > | 05 | Les moments clés coup par coup (cartouche `◆`, dont `Moment clé manqué`) | 03 |
+  > | 06 | Les divergences se voient (glyphes sur la courbe, liste à deux colonnes) | 03 |
+  > | 07 | De la matrice au coup (dépliage d'une cellule, focus sur l'échiquier) | 03 |
+  >
+  > **04 à 07 ne se bloquent pas entre elles** : quatre tranches parallélisables une fois 03 mergée.
+  > 03 est la tranche lourde et n'est **pas** découpée — le refactor serveur et la première
+  > cartouche doivent atterrir ensemble, sinon la part serveur n'est ni démontrable ni verticale.
+  > Son garde-fou : le test qui rejoue la vraie lecture scellée doit rendre les mêmes totaux **à
+  > l'unité près**.
+  >
+  > </details>
 
 - **US-15b**: La pression du temps — savoir où le temps consommé explique mes fautes, et sur quels
   coups l'horloge basse coïncide avec la dérive.
