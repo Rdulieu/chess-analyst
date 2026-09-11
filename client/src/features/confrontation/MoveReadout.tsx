@@ -50,7 +50,12 @@ export function MoveReadout({
       <p data-part="reading-term" data-tone={tone}>
         {label}
       </p>
-      <p data-part="reading-detail">{detail}</p>
+      {/* A fact the label cannot hold — today only the distance to a loss a
+          marker missed. The explanations that used to sit here were redundant
+          with the label and with the move list's two titled columns, and under
+          the diagram they were height paid on every ply. They move to a
+          tooltip in US-41. */}
+      {detail && <p data-part="reading-detail">{detail}</p>}
       {/*
         The SECOND family — what the Player's `Key moment`s were worth here.
         Two cartouches, never fused: judging a Move well and looking in the
@@ -95,7 +100,7 @@ function KeyMomentCartouche({ reading, ply }: { reading: MoveKeyMoment; ply: num
       <p data-part="reading-term" data-family="key-moment" data-tone={tone}>
         {label}
       </p>
-      <p data-part="reading-detail">{detail}</p>
+      {detail && <p data-part="reading-detail">{detail}</p>}
     </>
   );
 }

@@ -50,6 +50,7 @@ export function Board({
   controls,
   keyboardStepping = false,
   moveMarks,
+  underBoard,
   moveListHeadings,
   focusRequest,
   curveMarks,
@@ -106,6 +107,20 @@ export function Board({
    * show one author, and a title over a single column would name a distinction
    * that is not there.
    */
+  /**
+   * A caller's own readout, **under the diagram** rather than beside it.
+   *
+   * `controls` puts a caller's block in the side pane, above the move list —
+   * which is right for something the Player *acts on* and wrong for something
+   * they *read about the current Move*: it pushed the list down and moved it
+   * on every ply. Under the board the block sits where the eye already is,
+   * and the list keeps its place.
+   *
+   * It cannot disturb the step controls either: those live in the other pane,
+   * so ADR-0021 is held by the panes being separate rather than by this block
+   * being small.
+   */
+  underBoard?: (ply: number) => ReactNode;
   moveListHeadings?: ReactNode;
   /**
    * A caller's request to bring the board to one ply — the matrix's cells
@@ -371,6 +386,7 @@ export function Board({
           {currentAnnotation && (
             <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />
           )}
+          {underBoard?.(index)}
         </div>
         <div data-pane="side">
           {/*

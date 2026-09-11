@@ -694,6 +694,58 @@
   > examiné coup par coup, et la couverture cesserait de vouloir dire ce qu'elle dit aujourd'hui.
   > C'est le cœur du grill, pas un détail d'ergonomie.
 
+- **US-41**: Lire une légende sans la payer en hauteur d'écran — une infobulle plutôt qu'un
+  paragraphe sous chaque cartouche.
+  > **Pas encore grillée.** Ouverte le 2026-09-11 par le demandeur en relisant US-26 sur sa vraie
+  > base, partie 715.
+  >
+  > **Le constat.** Chaque cartouche de l'écran de `Confrontation` portait sous elle une phrase
+  > d'explication — « Gardé et montré, jamais noté — non faute de moyens, mais parce que cet outil
+  > porte sur votre propre progrès… ». Le demandeur l'a jugée **redondante** : le libellé nomme
+  > déjà le cas, et depuis la tranche 06 la liste des coups montre les deux auteurs en colonnes
+  > titrées, donc la phrase répétait ce qui était à l'écran deux fois par ailleurs.
+  >
+  > **Et elle coûtait.** Sous le diagramme, ce paragraphe est de la hauteur payée à **chaque coup**,
+  > et il déplaçait la liste des coups en changeant de ply. US-26 l'a donc **retirée** plutôt que
+  > déplacée — retirer était la moitié gratuite, et livrer une infobulle à la sauvette au milieu
+  > d'une story sur la confrontation aurait été exactement le genre d'élargissement qu'on refuse.
+  >
+  > **Ce que la story doit trancher**, et qui n'est pas qu'un choix de composant : une infobulle au
+  > survol est invisible au clavier et sur tactile, donc le mécanisme doit être **atteignable
+  > autrement** — c'est la même exigence qu'ADR-0013 pose aux couleurs, appliquée à l'aide. Une
+  > légende que seule la souris peut lire n'est pas une légende.
+  >
+  > Périmètre naturel : les cartouches de la `Confrontation` d'abord, mais le besoin est
+  > **transverse** — les mêmes explications existent sur la route de lecture et sur `Analyse`. À
+  > décider au grill : un dispositif partagé, ou le premier usage seulement.
+
+- **US-42**: Un `Good` que le moteur flague n'est pas « rien à comparer » — décider si c'est une
+  divergence, et laquelle.
+  > **Pas encore grillée.** Ouverte le 2026-09-11, trouvée par le demandeur sur sa vraie base.
+  >
+  > **Le fait.** Sur la partie 715, `6…f5` et `19…Rf8` portent un verdict `Good` du joueur et une
+  > sévérité **mesurée** par le moteur — une `Imprécision` à 5,6 points, une `Erreur` à 24,9. Le
+  > joueur a dit *« meilleur qu'il n'y paraît »* là où le moteur voit une faute qui coûte.
+  >
+  > **Ce qu'US-26 a corrigé, et qui s'arrête là.** L'écran affichait « Correct — rien à comparer »
+  > en même temps que « ◆ Moment clé manqué : ce coup vous a coûté des chances ». La première
+  > phrase était **fausse** — il y avait tout à comparer. Le libellé nomme désormais ce que le
+  > moteur a mesuré. **Aucun chiffre n'a bougé**, US-26 l'interdisant explicitement.
+  >
+  > **La question qui reste est une question de méthode.** `Good` est hors du dénominateur
+  > d'exactitude parce que *« le moteur ne flague que les coups fautifs et n'a aucune bande pour le
+  > mérite »* (US-16b) — raisonnement juste quand le moteur ne signale **rien**, et faux quand il
+  > signale une faute. Un `Good` sur une `Bévue` est la **sous-lecture la plus forte possible** :
+  > le joueur n'a pas seulement manqué le danger, il a vu du mérite à sa place.
+  >
+  > **Conséquence à assumer si on tranche dans ce sens** : le taux d'exactitude bouge, et c'est la
+  > raison pour laquelle US-26 ne l'a pas fait. Sur la base actuelle l'effet est mesuré et petit —
+  > **2 coups sur 9 verdicts `Good`**, tous deux sur la partie 715 — mais il est réel, et un taux
+  > déjà montré au joueur ne change pas sans qu'on le dise.
+  >
+  > Troisième voie à ne pas oublier au grill : garder le coup hors du score **et** le compter
+  > ailleurs, comme les `Key moment`s comptent les dégâts sans entrer dans l'exactitude.
+
 ## Doing
 
 ## In review
