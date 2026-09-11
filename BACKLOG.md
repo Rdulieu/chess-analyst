@@ -746,6 +746,70 @@
   > Troisième voie à ne pas oublier au grill : garder le coup hors du score **et** le compter
   > ailleurs, comme les `Key moment`s comptent les dégâts sans entrer dans l'exactitude.
 
+- **US-43**: Une porte qui ne peut pas mentir — fermer les trois façons dont la nôtre a dit « vert »
+  sans rien garantir, pendant US-26.
+  > **Pas encore grillée.** Ouverte le 2026-09-11 au sortir d'US-26, à partir de ce que cette story
+  > a **mesuré sur elle-même** — pas d'une intuition sur la qualité des tests.
+  >
+  > **Le chiffre qui ouvre le sujet.** Sur les sept tranches d'US-26, **onze findings bloquants** ;
+  > **aucun** attrapé par les tests. `tsc`, `lint` et une suite passée de 1 458 à 1 555 tests
+  > étaient verts au travers de tous. Ils ont été trouvés par une revue indépendante lisant le diff
+  > contre le ticket, par un agent pilotant l'écran, ou **par le demandeur sur sa propre base**.
+  > Ce n'est pas un plaidoyer pour « plus de tests » : c'est le constat que trois familles de
+  > défauts **passent structurellement** sous notre porte, et chacune a une signature.
+  >
+  > **Famille 1 — l'assertion qui ne peut pas échouer.** Quatre instances mesurées :
+  > `expect(undefined).not.toBeNull()` passait sur un cas *supprimé* (la revue l'a prouvé en
+  > effaçant la marque : 17/17 au vert) ; le témoin de non-régression n'asserait que des relations
+  > qu'une dérive d'une unité sur les quatre totaux aurait survécues ; un test de comptage ne
+  > s'accordait avec sa liste **que là où une ligne de la matrice était vide** ; et un test se
+  > fournissait à lui-même le terme qu'il prétendait vérifier. **Le demandeur a trouvé la
+  > quatrième en posant la question.** Piste à ne pas préempter : la discipline « vérifier que le
+  > test échoue sans le correctif » a fonctionné les trois fois où elle a été appliquée dans cette
+  > story — reste à savoir si elle doit être une habitude, un outil, ou une règle de revue.
+  >
+  > **Famille 2 — le correctif qui part au vert sans jamais atteindre l'écran.** Trois fois, par
+  > **trois mécanismes différents** : une règle CSS absente (`data-tone` émis, rien dans la
+  > feuille) ; des propriétés en excès sur un littéral non frais, **jetées en silence** par
+  > TypeScript (`tint`/`ink` sur `CurveMark`) ; une règle qui **perd la cascade** face à `:is()`
+  > (0,1,0 contre 0,1,1). Les trois avaient la même forme : **la source contient le correctif, la
+  > page ne l'a pas.** Cause commune établie : **jsdom n'a ni layout ni cascade**, donc la base de
+  > la pyramide ne peut pas les voir — et une FP qui lit `textContent` ne le peut pas davantage.
+  > Les trois ont été trouvées en lisant la géométrie ou `document.styleSheets` sur la page vivante.
+  >
+  > **Famille 3 — le contrôle qui n'a pas tourné et qui ressemble à un contrôle qui passe.** Trois
+  > fois le même jour, sur trois drapeaux différents : `npm test` sous le mauvais node (271 échecs
+  > ne mesurant rien) ; `vitest --reporter=basic` (meurt au démarrage, **sort en code 0**) ;
+  > `vitest --maxWorkers=2` dans `server/` (`Test Files no tests`, **code 0**). Et une quatrième,
+  > la mienne : un découpage de la suite en trois lots qui en a **oublié un fichier sur 44**, trois
+  > lots verts et un fichier jamais lancé. `CLAUDE.md` porte déjà la règle et le symptôme ; ce que
+  > la story n'a pas, c'est **quoi que ce soit qui l'applique**.
+  >
+  > **Ce que la story a fait en attendant, et qui n'est pas une solution** : consigner chaque piège
+  > dans `DRIVING.md` — huit entrées ajoutées en deux jours. Utile, et manifestement insuffisant :
+  > c'est la **cinquième** fausse-piste de la même famille (« un pilote qui résout l'attribut que
+  > le *nom* suggère au lieu de celui qui *porte* la chose ») malgré quatre entrées antérieures.
+  > Une documentation que l'on doit se rappeler de lire ne ferme pas une famille de défauts.
+  >
+  > **Un trou de couverture nommé et jamais comblé, à trancher aussi** : la passe de thème audite
+  > `Analyse` **telle qu'elle arrive**, donc toujours en `Sans aide` — les glyphes de sévérité, la
+  > courbe et la barre n'y ont **aucun sujet** depuis US-28. Deux scénarios l'ont fermé **à la
+  > main** pendant la HP d'US-26. C'est la preuve que les teintes vont bien, pas la preuve que la
+  > suite les surveille, et l'écrire comme un succès serait le vert optimiste que l'`agentic-tests`
+  > combat.
+  >
+  > **Et un point de méthode d'orchestration, mesuré à ses dépens** : éditer le worktree pendant
+  > qu'un scénario y pilote l'app fait recharger Vite à chaud, et **transforme un vrai bug en
+  > non-finding documenté** — l'agent avait raison sur ce qu'il voyait, le sol avait bougé. Seule
+  > une revue du code l'a rattrapé. La règle est dans `DRIVING.md` ; reste à savoir si elle doit
+  > être **tenue par autre chose qu'une phrase**.
+  >
+  > **Ce que le grill doit trancher, et qui n'est pas « écrire plus de tests »** : quelles de ces
+  > familles méritent un outil (mutation testing ? un garde-fou qui relit le compte et non `$?` ?
+  > une assertion de cascade ou de géométrie dans la passe de thème ?), lesquelles une règle de
+  > revue, et lesquelles on accepte de laisser à la couche agentique — laquelle les a effectivement
+  > toutes attrapées, mais **tard et cher**.
+
 ## Doing
 
 ## In review
