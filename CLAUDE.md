@@ -48,6 +48,45 @@ nothing in the gate ran the command. **A check that cannot run has not passed** 
 run and a linter that parses nothing are red, not green. And when a slice touches
 `docs/test-scenarios/tools/`, "tests" is **two** commands: `npm test` *and* `npm run test:tools`.
 
+### Node 22, par `nvm` — sinon la suite ne tourne pas du tout
+
+**Avant toute commande `npm` sur ce dépôt :**
+
+```bash
+source ~/.nvm/nvm.sh && nvm use 22
+```
+
+`better-sqlite3` est compilé pour **NODE_MODULE_VERSION 127** (node 22). Sous le node par défaut
+de la machine (v26, NODE_MODULE_VERSION 147) le module ne se charge pas et `npm test` rend **271
+échecs** qui disent tous `Module did not self-register` — pas une régression, un binaire natif
+qui n'est pas celui de ce node. Sous node 22 la même suite passe.
+
+C'est le cas d'école de la règle ci-dessus : **la suite ne mesurait rien**, et rien dans son
+rouge ne le disait.
+
+**Et le symptôme à reconnaître : un zéro silencieux, pas une erreur.** Trois fois le 2026-09-10,
+sur trois drapeaux différents, une commande de test n'a rien lancé *et est sortie en code 0* :
+
+| Ce qui a été lancé | Ce qu'elle a affiché | Code |
+|---|---|---|
+| `npm test` sous node 26 | 271 échecs `Module did not self-register` | 1 |
+| `npx vitest run --reporter=basic` | une erreur de démarrage, aucun test | **0** |
+| `npx vitest run --maxWorkers=2` dans `server/` | `Test Files no tests` | **0** |
+
+Les deux derniers passent une porte qui ne regarde que `$?`. **Lire le compte, pas seulement le
+code de sortie** : une suite verte annonce ses centaines de tests, et `no tests` n'est pas un
+résultat, c'est une absence. Et n'ajoutez pas de drapeau à `vitest` sans revérifier qu'il tourne
+encore quelque chose — les deux drapeaux ci-dessus avaient l'air inoffensifs.
+
+> **L'espace est porteur** : `nvm use 22>/dev/null` (sans espace) est lu comme une redirection du
+> descripteur 22 et echoue sur « No .nvmrc file found ». `nvm use 22 >/dev/null` marche. Consigne
+> ici plutot que dans les pieges du pilote parce que ca **echoue bruyamment** — les pieges qui
+> meritent une entree ailleurs sont ceux qui rendent une reponse plausible et fausse.
+
+Ne **pas** recompiler (`npm rebuild`) pour s'en sortir : `node_modules` est un symlink partagé
+entre le dépôt principal et tous les worktrees (voir `git-flow/WORKTREES.md`), et recompiler le
+casse pour les autres agents qui travaillent en parallèle. Changer de node, pas de binaire.
+
 ## Dev workflow
 
 **`/implement` is the entry point of a slice.** For a `ready-for-agent` ticket: branch per Git

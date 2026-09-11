@@ -59,6 +59,33 @@ describe("Confrontation — a real reading of a real Game", () => {
     expect(confronted().severity.countedMoves).toBe(recap!.countedMoves);
   });
 
+  /**
+   * **The regression guard the story's Out of Scope demands, and which this
+   * file did not actually carry.**
+   *
+   * US-26 says in as many words that no figure already displayed may change,
+   * and that *"une divergence d'une unité est un bug, pas une amélioration"*.
+   * The assertions around this one are about **relationships** — sums and
+   * orderings — and every one of them would survive all four totals drifting
+   * by a unit together. The claim had no automated guard; it has one now.
+   *
+   * These four numbers are deliberately **literal**. Everywhere else in this
+   * file that would be wrong, because the engine side is re-derived and
+   * retuning a threshold legitimately moves the figures (ADR-0009). Here it is
+   * the point: this reading is FIXED — a real Game, really analysed, sealed
+   * before the engine was shown — so if one of these moves, either a threshold
+   * moved (and the change is deliberate, and this line is updated with it) or
+   * something broke.
+   */
+  it("pins the totals of the real reading — a unit of drift here is a bug", () => {
+    const { severity } = confronted();
+
+    expect(severity.examined).toBe(4);
+    expect(severity.scorable).toBe(4);
+    expect(severity.agreed).toBe(1);
+    expect(severity.unscored).toEqual({ good: 0, opponent: 1 });
+  });
+
   it("adds up: the scorable cells of the matrix ARE the accuracy denominator", () => {
     const { severity } = confronted();
 

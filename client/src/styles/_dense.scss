@@ -1072,6 +1072,225 @@ $drift-inset: $drift-frame + $drift-headroom;
 // The Confrontation (US-16b): a sealed reading set against what the engine found.
 // ---------------------------------------------------------------------------
 
+// **The move list's two titled columns** (US-26, ADR-0033) — the one place on
+// this screen where the Player's reading and the engine's sit side by side.
+//
+// A square has neither a column nor a title, only a colour, so it cannot hold
+// two authors. A list can — but only as **one row per Move**. Everywhere else
+// this `ol` is a wrapping flow of chips (`_semantics`), several Moves to a
+// line, which is what lets a whole Game sit beside the board; a grid laid on
+// those chips aligns nothing, because each chip sizes to its own content.
+// Here the flow becomes a column, and that cost is deliberate: a titled column
+// that does not line up is worse than no title at all.
+//
+// **The tracks are `fr`, never `auto`.** `auto` sizes to content, so every row
+// would resolve its own widths and the headings would sit over nothing. Shared
+// fractions of one full-width row are what actually makes a column a column.
+// **Four tracks now**, the fourth carrying the comparison — and still `fr`,
+// never `auto`: `auto` sizes to content, so every row would resolve its own
+// widths and the headings would sit over nothing. The comparison gets the
+// widest share because it holds a sentence («
+// Position déjà décidée — non comptée ») where the others hold a glyph or two.
+$move-authors-tracks: minmax(4.5rem, 0.8fr) 0.5fr 0.7fr minmax(7rem, 2fr);
+
+[data-part="move-list-headings"] {
+  display: grid;
+  grid-template-columns: $move-authors-tracks;
+  gap: var(--space-1);
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+  margin-block-end: var(--space-1);
+}
+
+ol[data-columns="authors"] {
+  display: flex;
+  flex-direction: column;
+  // **`stretch`, and it is load-bearing.** The generic move list is a wrapping
+  // ROW with `align-items: baseline` (`_semantics`), which is the right cross-
+  // axis rule there. Turned on its side here, that same declaration makes every
+  // row shrink to its own content — measured at 1280 px: rows 296 px and
+  // 342 px wide under a 665 px heading, so « Ma lecture » landed over the
+  // engine's cell and the columns drifted between rows. `fr` tracks can only
+  // share a width if the rows share one.
+  align-items: stretch;
+  // The intra-row gap, NOT the column gap. `_semantics` makes the two
+  // deliberately unequal — a mark has to belong to the Move it judges, and with
+  // both equal the glyph sat halfway between two Moves with nothing to attach
+  // it to (measured 2026-08-28). A column list has no second Move on the line,
+  // but the rule that a row is tighter than the space around it still holds.
+  gap: var(--space-1);
+}
+
+// Phase boundaries are announcements between Moves, not rows of the table, so
+// they keep their own shape rather than being forced into three tracks.
+ol[data-columns="authors"] > li:not([data-part="phase-start"]) {
+  display: grid;
+  grid-template-columns: $move-authors-tracks;
+  gap: var(--space-1);
+  align-items: baseline;
+}
+
+// Each author's marks are ONE cell, so a row emits three grid items whatever
+// happened on that Move — between two and six children would drift the columns
+// on every line.
+ol[data-columns="authors"] [data-cell] {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+// The disagreement, in the list. Its FORM carries the direction — a reader who
+// sees no colour still reads the lean (ADR-0013) — and its accessible name
+// says it in words.
+[data-part="divergence"] {
+  font-family: var(--mono);
+}
+
+// The comparison's own cell: the curve's glyph and the cartouche's words, in
+// the cartouche's register. Tinted by ink alone rather than by a filled chip —
+// eighty rows of filled chips would read as a wall, and the cartouche under the
+// board is where the case is *stated*; here it only has to be scannable.
+[data-part="confrontation-cell"] {
+  font-size: var(--text-s);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+[data-part="confrontation-cell"][data-tone="agreement"] { color: var(--tint-ok-ink); }
+[data-part="confrontation-cell"][data-tone="missed"] { color: var(--tint-fail-ink); }
+[data-part="confrontation-cell"][data-tone="overcalled"] { color: var(--tint-inaccuracy-ink); }
+[data-part="confrontation-cell"][data-tone="unscored"] { color: var(--ink-muted); }
+
+// **The matrix's cells became controls** (US-26, slice 07), and a control is
+// given a border, a background and generous padding by `_controls`. Left as
+// they came, every figure in the table would grow into a box and widen the
+// very columns the Player is meant to add up — which is the same argument that
+// keeps the unfolded list out of the `<td>`. So the toggle is stripped back to
+// its number, exactly as the move list strips its own chips.
+// **Scoped, and that is a specificity point, not decoration.** Written bare,
+// `[data-part="cell-toggle"]` is (0,1,0) and loses to `_controls`'
+// `:is(button, a[data-action])` at (0,1,1) — `:is()` takes the specificity of
+// its most specific argument. The rule then shipped, sat in the stylesheet,
+// and applied only its unopposed properties: the border, the background and
+// the padding still came from `_controls`, and every clickable figure stayed a
+// 43×34 box against a 9×22 count. Measured on the live page 2026-09-10; the
+// unfolded Move chips below render correctly because their selector is nested
+// and therefore (0,1,1), which is the same file getting it right two rules
+// later.
+[data-part="matrix"] [data-part="cell-toggle"] {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+// The unfolded cell. Its entries are Moves, so they are chips like the move
+// list's — not full-height form controls.
+[data-part="cell-moves"] {
+  margin-block-start: var(--space-2);
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  li button {
+    border: none;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    font-family: var(--mono);
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+  }
+}
+
+// **The cartouche of the current Move** (US-26, ADR-0033) — what the Player's
+// reading was worth right here.
+//
+// It takes the **semantic tint family**, not the board family. The board tints
+// are constant across themes because a piece is painted on top of them and its
+// ink must not move; nothing is painted on top of a cartouche, so it takes the
+// pairs that DO follow the theme and stay legible in both by construction.
+//
+// The colour is never the only cue (ADR-0013): the label names its case in full
+// words, and the sentence under it explains. The tone only makes the case
+// findable at a glance — a Player scanning a Game for their misses should not
+// have to read sixty labels.
+// **The row owns the space between the two cartouches.** They used to be two
+// `inline-block` siblings relying on the whitespace between two JSX elements —
+// which JSX does not guarantee — so at some widths they touched and overlapped.
+// A gap on the container cannot be lost that way, and `wrap` stacks them on a
+// narrow panel instead of letting them collide.
+[data-part="reading-terms"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  margin-block: var(--space-2) var(--space-1);
+}
+
+[data-part="reading-term"] {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+  margin-block-end: var(--space-1);
+}
+
+// The `Key moment` family shares the four tones with the reading family — the
+// colour says the quality, the glyph says which question is answered, the
+// label says the case (ADR-0033). What keeps them from blurring is the `◆` in
+// the label plus this slightly lighter weight: two cartouches in a column
+// should read as two ANSWERS, not as one statement continued.
+[data-part="reading-term"][data-family="key-moment"] {
+  font-weight: 600;
+}
+
+// Written out rather than generated from an `@each`, for the reason the verdict
+// chips above give: the token-consistency audit reads this file as source, and a
+// token name assembled by interpolation is a name the audit cannot see.
+[data-part="reading-term"][data-tone="agreement"] {
+  background: var(--tint-ok);
+  color: var(--tint-ok-ink);
+}
+
+[data-part="reading-term"][data-tone="missed"] {
+  background: var(--tint-fail);
+  color: var(--tint-fail-ink);
+}
+
+[data-part="reading-term"][data-tone="overcalled"] {
+  background: var(--tint-inaccuracy);
+  color: var(--tint-inaccuracy-ink);
+}
+
+// One neutral for the five unscored cases (ADR-0033) — which is exactly why
+// each of them carries its own words: the tone cannot tell them apart, and it
+// is not asked to.
+[data-part="reading-term"][data-tone="unscored"] {
+  background: var(--tint-wait);
+  color: var(--tint-wait-ink);
+}
+
+// The Player's own words, set apart from the app's. Quiet rather than boxed:
+// it is the one thing on this screen nobody generated.
+[data-part="reading-note"] [data-part="note-label"] {
+  color: var(--ink-muted);
+}
+
 // The two figures, SIDE BY SIDE and never stacked into a ranking. A grid of two
 // equal columns says they are two answers to two questions; one above the other
 // would invite reading the first as the headline and the second as its detail —
@@ -1194,9 +1413,14 @@ $drift-inset: $drift-frame + $drift-headroom;
   background: var(--ground-sunk);
 }
 
-// The Good row is shown and never scored. Muted, and said in words beside its
-// label rather than only implied by the tint.
-tr[data-scored="false"] {
+// Shown and not scored — muted, and said in words beside the label rather than
+// only implied by the tint.
+//
+// **Per CELL, not per row.** The `Good` row used to be muted whole; a `Good`
+// the engine flagged is scored now (it is the widest disagreement the two
+// scales hold), so only its « Rien de flagué » cell is outside the count, and
+// only that cell is muted.
+[data-cell][data-scored="false"] {
   color: var(--ink-muted);
 }
 
@@ -1245,12 +1469,17 @@ tr[data-scored="false"] {
 }
 
 // One exclusion reason, with its own count and its own explanation. The two
-// reasons never share a block: they say different things, and a Player who
+// reasons never share a line: they say different things, and a Player who
 // cannot tell them apart can audit neither.
+//
+// **A paragraph, not a flex column.** This was `display: flex` while the block
+// was a `<section>` of an `<h4>`, a `<p>` and a `<ul>`. US-26 slice 04 dropped
+// the enumeration and the element became one `<p>` of inline runs — on which
+// flex promotes each contiguous run to an anonymous flex item and stacks the
+// sentence into pieces, swallowing the spaces between them. Nothing in the
+// suite could catch that: jsdom has no layout.
 [data-uncounted] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  margin-block: var(--space-1);
 }
 
 // The layer written after the reveal — separated by a rule rather than a tint,

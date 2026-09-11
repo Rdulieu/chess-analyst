@@ -2,18 +2,22 @@ import { PHASE_RIBBON_LABEL } from "../chess/phase";
 import type { PhaseBand } from "../chess/phaseBands";
 
 /**
- * The `Phase`s named in **real text**, on the axis both drawings share — one
- * ribbon for the two, since they share that axis. It is the reading distance the
- * boundary rules alone cannot give: a rule says a boundary happened, the ribbon
- * says **which** Phase is which.
+ * The `Phase`s named in **real text**, on the axis of the curve. It is the
+ * reading distance the boundary rules alone cannot give: a rule says a boundary
+ * happened, the ribbon says **which** Phase is which.
  *
- * Between the two drawings rather than above them, so it reads as belonging to
- * both. Its widths are the bands' own spans, so a label sits over the Moves it
- * names.
+ * **It belongs to the curve, and appears wherever the curve does.** It used to
+ * sit inside the `Détaillé` guard, described here as living "between the two
+ * drawings" — true only at that one level, and false the moment US-26 needed
+ * the ribbon on a screen that must not carry the record and the recap. Below
+ * the curve at `Annoté`, between the two drawings at `Détaillé`: one rule,
+ * whose wording no longer assumes the second drawing exists.
  *
- * Deliberately **not** `aria-hidden`, unlike the drawings it sits between: this
+ * Its widths are the bands' own spans, so a label sits over the Moves it names.
+ *
+ * Deliberately **not** `aria-hidden`, unlike the drawings it accompanies: this
  * is text, it is the only place the Phases are named on this axis, and the move
- * list's transition marks (slice 03) are the other, unrelated reading.
+ * list's transition marks are the other, unrelated reading.
  */
 export function PhaseRibbon({ bands, lastX }: { bands: PhaseBand[]; lastX: number }) {
   if (bands.length === 0) return null;

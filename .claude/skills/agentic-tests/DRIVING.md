@@ -191,6 +191,76 @@ a helper is recognised as *this* returning, not as a new mystery.
   a false red on the exact assertion that the entry appears only after the seal. The probe that
   answers it is `[data-part="confrontation-entry"]` (measured 2026-09-04). General shape: **a
   selector that matches the nav matches every page**.
+- **`aria-current` is on the move-list `<button>`, not on its `<li>`.** A probe reading
+  `li[aria-current]` reports "no current Move marked" on a list that marks it perfectly — measured
+  2026-09-10 on the FP of US-26-02, a false red lifted by re-reading the DOM. This is the **fourth**
+  time a driver reading the wrong node or attribute has produced a near-finding on this suite
+  (`[data-square]`'s child div, the `/stats` `aria-labelledby`, the confrontation entry's anchor,
+  now this): **resolve the node that carries the property, do not guess which one should.**
+- **The Confrontation route redirects to `/profiles` when no `Profile` is current.** Expected
+  behaviour, not a defect — but a fresh private browser has none, so a scenario that navigates
+  straight to `/analyse/<id>/confrontation` lands on the Profile picker and looks like a broken
+  route. Select the Profile first (minding the `selectProfile` quirk just below). Measured
+  2026-09-10.
+- **Before writing off an unreproducible finding, read `git log -1` and `git status`.** The Vite
+  dev server hot-reloads the worktree, so a defect that stops reproducing may be somebody else's
+  fix landing *inside your session*. Measured 2026-09-10 on the US-26-07 FP: two true readings of
+  a real bug (a matrix row unfolding to nothing), then five clean re-measurements against code
+  that had changed underneath — and the agent correctly filed a non-finding from sound evidence.
+  Only an independent review of the source caught the bug. This is the mirror of "re-measure
+  before calling anything a defect", and it is the **more expensive** of the two to get wrong:
+  that one costs a false red, this one converts a real bug into a documented non-finding.
+  Corollary for whoever dispatched the run: **do not edit the worktree while a scenario drives
+  the app from it.**
+- **On a re-measure after a fix: reload ignoring cache, and assert a marker the fix introduced.**
+  A partially-new bundle looks exactly like a partially-working fix. Measured 2026-09-10 on the
+  US-26-06 FP: the served bundle carried one change from a commit (`aria-hidden` removed) while
+  missing another from the *same* commit, so "some of the new code is here" proved nothing and a
+  geometry pass had to be thrown away. `Page.reload {ignoreCache: true}`, then throw by name on a
+  structural attribute the slice added (there, `ol[aria-label="moves"][data-columns="authors"]`)
+  before measuring anything.
+- **`attach()` wants a PAGE target, not the browser endpoint.** `/json/version`'s
+  `webSocketDebuggerUrl` is browser-level; `attach()` then calls `Page.enable` on it and gets
+  `'Page.enable' wasn't found (CDP -32601)`, which reads like a broken helper rather than a wrong
+  endpoint. Use `GET /json/list` and take the entry with `type === "page"`. Measured 2026-09-10.
+  Companion to the `.stop()` note below — same situation, driving in phases across shell calls.
+- **`stopApp` takes `repoRoot`, not `root`.** A teardown written with the wrong key throws before
+  killing anything, so the app survives a run that believes it tore down. Measured 2026-09-10
+  (US-26-05 FP), cost one retry. Same family as the `session.stop` trap: **helper signatures are
+  read, not guessed.**
+- **The winning-chances bar is `data-bar="winning-chances"`, not a `data-part`.** A sweep of
+  `[data-part]` for `bar|share|chance` returns nothing on Analyse and on the Confrontation, and
+  "this screen has no winning-chances bar" is then one keystroke from being filed as a defect —
+  it happened on 2026-09-11 and was lifted by re-measuring against the real attribute. That is the
+  **fifth** near-finding in this family (`[data-square]`'s child div, `/stats`'s `aria-labelledby`,
+  the confrontation entry's anchor, `aria-current` on the `<button>`, now this): **resolve the
+  attribute that carries the thing, never the one its name suggests.**
+- **The Confrontation screen's own hooks, so the next run does not re-derive them** (2026-09-10):
+  the per-Move panel is `[data-part="move-reading"]`, holding `[data-part="reading-term"]` (its
+  register is `data-tone` — `agreement` / `missed` / `overcalled` / `unscored`, the last shared by
+  all five non-scored cases), `[data-part="reading-detail"]` and `[data-part="reading-note"]`. The
+  block at the foot is `[data-part="unscored-section"]`, one `[data-uncounted]` / `[data-unscored]`
+  `<p>` per reason.
+- **`textContent` cannot see a flex-stacking regression, and this one shipped past 955 tests.**
+  A rule written for a `<section>` of block children (`display: flex; flex-direction: column`) left
+  on an element that becomes a `<p>` of inline runs promotes **each run to an anonymous flex item**
+  and stacks one sentence into fragments, swallowing the spaces — while `textContent` reads exactly
+  the same either way, and jsdom has no layout to fail on. Measured 2026-09-10 on US-26-04.
+  **Measure the geometry**: the computed `display`, and whether a `<strong>` and the text node
+  after it share a `y`. A stacked paragraph gives one line *per run*; a healthy one gives one line,
+  or a normal wrap.
+- **`[data-part="confrontation-entry"]` is a `<p>` WRAPPING the anchor**, so `.click()` on the
+  element itself does nothing and the URL does not change — which reads exactly like a dead link.
+  Click `[data-part="confrontation-entry"] a`. Measured 2026-09-10 on the FP of US-26-01, where it
+  cost a false "URL did not change". Same family as the tint-on-a-child-div trap: **the named node
+  and the actionable node are two different questions.**
+- **`selectProfile` times out on a Profile that is ALREADY current.** It takes its
+  "nothing navigated" branch and waits on `matcherFor("/profiles")`, which never satisfies even
+  while the walk is on `/profiles` (last reading `{"path":"/profiles","text":258,"quiet":true}`).
+  The first call, on a Profile not yet current, works. Measured 2026-09-10 (US-26-01 FP).
+  **Driver quirk, not the app** — guard the call on the Profile not already being the current one
+  until the helper grows that branch.
+
 - **The review control and the curve are not named what a driver guesses.** Measured 2026-09-04,
   where a first probe reported `curve:false` at the `Annoté` level and it was a **false red**: the
   review control is `[data-part="review-mode"]` (not `review-level`), and the curve is

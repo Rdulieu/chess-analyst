@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { arrowStep, isCommandKeystroke } from "./keyboard";
 import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
 import { formatEvaluation } from "../chess/formatEvaluation";
 import { WinningChancesBar } from "./WinningChancesBar";
-import { EvaluationGraph } from "./EvaluationGraph";
+import { EvaluationGraph, type CurveMark } from "./EvaluationGraph";
 import { DriftGraph } from "./DriftGraph";
 import { PhaseRibbon } from "./PhaseRibbon";
 import { phaseBands } from "../chess/phaseBands";
@@ -50,6 +50,11 @@ export function Board({
   controls,
   keyboardStepping = false,
   moveMarks,
+  moveConfrontation,
+  underBoard,
+  moveListHeadings,
+  focusRequest,
+  curveMarks,
   squareTint,
 }: {
   pgn: string;
@@ -95,6 +100,54 @@ export function Board({
    */
   moveMarks?: (ply: number) => ReactNode;
   /**
+   * Column titles for the move list — the one place on a screen where **two
+   * authors may legitimately coexist**, because a list has columns and a square
+   * has none (ADR-0022, ADR-0033).
+   *
+   * A slot, and absent everywhere else: `Analyse` and the reading route each
+   * show one author, and a title over a single column would name a distinction
+   * that is not there.
+   */
+  /**
+   * A caller's own readout, **under the diagram** rather than beside it.
+   *
+   * `controls` puts a caller's block in the side pane, above the move list —
+   * which is right for something the Player *acts on* and wrong for something
+   * they *read about the current Move*: it pushed the list down and moved it
+   * on every ply. Under the board the block sits where the eye already is,
+   * and the list keeps its place.
+   *
+   * It cannot disturb the step controls either: those live in the other pane,
+   * so ADR-0021 is held by the panes being separate rather than by this block
+   * being small.
+   */
+  underBoard?: (ply: number) => ReactNode;
+  /**
+   * A third cell per row, beside the two authors' — what the comparison of
+   * them was worth (US-26). Rendered only where the caller titles the columns,
+   * for the same reason the two author cells are: a column with no title is a
+   * mark nobody can attribute.
+   */
+  moveConfrontation?: (ply: number) => ReactNode;
+  moveListHeadings?: ReactNode;
+  /**
+   * A caller's request to bring the board to one ply — the matrix's cells
+   * reaching the diagram (US-26, slice 07).
+   *
+   * A **request with an id**, not a plain ply, and that is the whole design:
+   * where the Player is remains this component's own state, so a caller cannot
+   * pin them to a Move. Asking twice for the same ply — clicking the same
+   * entry after having stepped away — must work, and a bare number would look
+   * unchanged and do nothing. The id says *asked again*, which a value cannot.
+   */
+  focusRequest?: { ply: number; id: number };
+  /**
+   * Marks for the evaluation curve, **replacing** the engine's severity glyphs.
+   * The `Confrontation` screen carries only the Player's divergences there;
+   * every other caller keeps the severities. See `EvaluationGraph`.
+   */
+  curveMarks?: CurveMark[];
+  /**
    * The tint for one ply's destination square, or nothing — **the caller's
    * verdict, not this component's** (US-23, ADR-0022).
    *
@@ -137,6 +190,8 @@ export function Board({
   // number, so numbering from 1. would name every Move of it wrongly.
   const start = useMemo(() => startingPoint(startFen), [startFen]);
   const [index, setIndex] = useState(0);
+  /** The board's own pane, so a focus request can land the keyboard on it. */
+  const boardRef = useRef<HTMLDivElement>(null);
   /**
    * A Position shown **temporarily**, while the Player points at (or focuses) a
    * ply inside a `Best line`. Deliberately a second, separate piece of state:
@@ -207,6 +262,31 @@ export function Board({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [keyboardStepping, plies.length]);
+
+  /**
+   * Answers a caller's focus request. Keyed on the request's **id** so that
+   * asking for the same ply twice still moves — and so that a re-render with
+   * an unchanged request never yanks the Player back to where they were sent
+   * ten Moves ago.
+   */
+  useEffect(() => {
+    if (!focusRequest) return;
+    setIndex(Math.min(Math.max(focusRequest.ply, 0), plies.length));
+    setPreview({ focus: null, hover: null });
+    // **And the keyboard comes too.** A request arrives from elsewhere on the
+    // page, so the Player is not looking at the board when it answers; moving
+    // the Position without moving focus leaves them pressing the arrow keys at
+    // a control that no longer has anything to do with what changed.
+    boardRef.current?.focus();
+    // **The id alone.** `ply` is absent because the id is what says "asked",
+    // and including it would fire again on a re-render that merely re-created
+    // the object. `plies.length` is absent for a sharper reason: it changes
+    // when the Game does, and with it in the deps a stale request re-fired the
+    // moment a new PGN parsed — sending the Player to a ply of the Game they
+    // had just left. It is only read to clamp, which the id-keyed run already
+    // does correctly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest?.id]);
 
   /** Reports one channel's preview without disturbing the other's. */
   const previewVia = (fen: string | null, via: "focus" | "hover") =>
@@ -294,7 +374,22 @@ export function Board({
         the fold, behind the whole height of the diagram.
       */}
       <div data-row="board">
-        <div data-pane="board">
+        {/*
+          Focusable, and only programmatically (`tabIndex={-1}`): nothing should
+          meet it while tabbing through the page, but a caller that sends the
+          Player here — a Move unfolded from the matrix, three screens down —
+          has to bring the keyboard with them. Leaving focus on the control they
+          clicked stranded them at the far end of the document from the thing
+          that had just changed. It is named, so arriving somewhere is announced
+          rather than silent.
+        */}
+        <div
+          data-pane="board"
+          ref={boardRef}
+          tabIndex={-1}
+          role="group"
+          aria-label="Échiquier"
+        >
           <Chessboard
             options={{
               ...BOARD_SQUARES,
@@ -321,6 +416,7 @@ export function Board({
           {currentAnnotation && (
             <WinningChancesBar whiteWinChances={currentAnnotation.whiteWinChances} />
           )}
+          {underBoard?.(index)}
         </div>
         <div data-pane="side">
           {/*
@@ -400,8 +496,29 @@ export function Board({
                   is not `aria-hidden`. */}
               <p data-part="graph-label">Avantage au fil de la partie</p>
               <div data-part="curve">
-                <EvaluationGraph annotations={annotations} currentPly={index} bands={bands} />
+                <EvaluationGraph
+                  annotations={annotations}
+                  currentPly={index}
+                  bands={bands}
+                  marks={curveMarks}
+                />
               </div>
+              {/*
+                The ribbon belongs to the CURVE, so it appears wherever the curve
+                does — not only in Detailed, where it used to sit because the
+                second drawing was the only thing it was thought to serve. It
+                reads the same axis as the curve above it, and it is the one
+                device on this pane that is deliberately NOT `aria-hidden`.
+
+                Moved out of the Detailed guard by US-26, whose Confrontation
+                screen needs the ribbon and must not take the record and the
+                recap with it. The adjustment is made **for both screens**, as
+                the story's own spec requires — a `Board` bent for one caller is
+                how two boards start diverging. Analyse therefore gains the
+                ribbon at the Annoté level: no figure changes, a ribbon is not a
+                figure.
+              */}
+              <PhaseRibbon bands={bands} lastX={annotations.length - 1} />
               {/*
                 The second drawing is Detailed-only, and that is not a layout
                 preference: it is `aria-hidden` on the grounds that every figure in
@@ -411,9 +528,6 @@ export function Board({
               */}
               {detailed && (
                 <>
-                  {/* One ribbon for the two drawings, since they share the axis —
-                      and between them, so it reads as belonging to both. */}
-                  <PhaseRibbon bands={bands} lastX={annotations.length - 1} />
                   <p data-part="graph-label">Chances perdues (cumul)</p>
                   <div data-part="drift">
                     <DriftGraph annotations={annotations} currentPly={index} bands={bands} />
@@ -469,7 +583,8 @@ export function Board({
           {time?.absence && (
             <p data-part="time-absence">{CLOCK_ABSENCE[time.absence]}</p>
           )}
-          <ol aria-label="moves">
+          {moveListHeadings}
+          <ol aria-label="moves" data-columns={moveListHeadings ? "authors" : undefined}>
             {plies.flatMap((ply, i) => {
               const annotation = annotations?.[i + 1];
               const phaseStart = phaseStartAt.get(i + 1);
@@ -498,6 +613,48 @@ export function Board({
                     {plyNumber(i + 1, start)}
                     {ply.san}
                   </button>
+                  {/*
+                    **Two cells, one per author** — but only where a caller has
+                    titled them (US-26, ADR-0022). A list is the one place two
+                    authors may coexist, and it can only do so if each side's
+                    marks are ONE grid item: a row emits between two and six
+                    children depending on what happened on that Move, and a
+                    column that counts children drifts on every row.
+
+                    Absent everywhere else, so `Analyse` and the reading route
+                    keep the chip flow that lets a whole Game sit beside the
+                    board.
+                  */}
+                  {moveListHeadings ? (
+                    <>
+                      <span data-cell="player">{moveMarks?.(i + 1)}</span>
+                      <span data-cell="engine">
+                        {annotation?.severity && (
+                          <span data-severity={annotation.severity} aria-label={annotation.severity}>
+                            {SEVERITY_GLYPH[annotation.severity]}
+                          </span>
+                        )}
+                        {annotation && marksUncounted(annotation) && annotation.counted?.reason && (
+                          <span
+                            data-part="uncounted"
+                            aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
+                          >
+                            {UNCOUNTED_MARK[annotation.counted.reason].text}
+                          </span>
+                        )}
+                        {annotation && (
+                          <span aria-label="evaluation">
+                            {formatEvaluation(annotation.whiteEval)}
+                          </span>
+                        )}
+                      </span>
+                      {/* The comparison, AFTER the two authors — it is what
+                          their disagreement is worth, so it cannot come before
+                          them. */}
+                      <span data-cell="confrontation">{moveConfrontation?.(i + 1)}</span>
+                    </>
+                  ) : (
+                    <>
                   {moveMarks?.(i + 1)}
                   {annotation?.severity && (
                     // The glyph is the signal; `data-severity` only lets the sheet
@@ -525,7 +682,8 @@ export function Board({
                   {annotation && (
                     <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
                   )}
-
+                    </>
+                  )}
                 </li>,
               ].filter(Boolean);
             })}

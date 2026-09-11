@@ -27,6 +27,10 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       matrix: MATRIX,
       unscored: { good: 0, opponent: 0 },
     },
+    // This file exercises the AGGREGATE readout, which reads none of the
+    // per-Move list — empty rather than fabricated, so nothing here can be
+    // mistaken for a claim about what the list contains.
+    moves: [],
     keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
     uncounted: [],
     posterior: [],
@@ -145,10 +149,13 @@ describe("Confrontation — how I get it wrong", () => {
   it("lets the Player add up the scorable cells and land on the accuracy denominator", () => {
     render(<ConfrontationReadout confrontation={confrontation()} />);
 
-    const scorable = screen
-      .getAllByRole("row")
-      .filter((row) => row.getAttribute("data-scored") === "true")
-      .flatMap((row) => Array.from(row.querySelectorAll("[data-count]")))
+    // **Cell by cell, not row by row.** The `good` row used to be unscored
+    // whole; a `Good` the engine flagged is scored now — it is the widest
+    // disagreement the two scales can hold — so the scored set is every cell
+    // except `Good` × « Rien de flagué ».
+    const scorable = Array.from(
+      document.querySelectorAll('[data-cell][data-scored="true"] [data-count]'),
+    )
       .map((cell) => Number(cell.textContent))
       .reduce((a, b) => a + b, 0);
 

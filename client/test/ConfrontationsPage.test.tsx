@@ -165,4 +165,17 @@ describe("The Confrontation summary", () => {
     await waitFor(() => expect(screen.getAllByRole("group").length).toBeGreaterThan(0));
     expect(container.textContent).toMatch(/arrondis/i);
   });
+
+  it("offers no unfolding on the corpus matrix — there is no Game under it", async () => {
+    stub(summary());
+    const { container } = renderPage();
+
+    await waitFor(() => expect(container.querySelector('[data-part="matrix"]')).not.toBeNull());
+
+    // This screen folds a whole history; it has no per-Move list and no board
+    // to jump to. A disclosure here would offer to open onto nothing — and
+    // would bring back the enumeration slice 04 removed, at corpus scale.
+    expect(container.querySelectorAll('[data-part="cell-toggle"]')).toHaveLength(0);
+    expect(container.querySelector('[data-part="cell-moves"]')).toBeNull();
+  });
 });

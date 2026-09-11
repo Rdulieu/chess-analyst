@@ -26,6 +26,8 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
       unscored: { good: 1, opponent: 2 },
     },
     keyMoments: { marked: 0, damageFound: 0, damageTotal: 0, drift: 0, misses: [] },
+    /* The unscored block reads no per-Move entry — this file makes no claim about the list. */
+    moves: [],
     uncounted: [
       { ply: 7, notation: "Nf3", reason: "forced", declared: "sound" },
       { ply: 41, notation: "Rd1", reason: "decided", declared: null },
@@ -42,10 +44,13 @@ describe("What the Confrontation shows without scoring it", () => {
 
     // "Forced" and "already decided" say different things, and a Player who
     // cannot tell them apart can audit neither.
+    // The count NEXT TO ITS REASON, not merely a digit somewhere in the prose:
+    // `/1/` alone would pass on a paragraph that had lost its count entirely,
+    // since the sentence around it is full of other characters.
     const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
-    expect(forced?.textContent).toMatch(/1/);
+    expect(forced?.textContent).toMatch(/Coup forcé — 1/);
     const decided = screen.getByText(/déjà décidée|déjà décidé/i).closest("[data-uncounted]");
-    expect(decided?.textContent).toMatch(/2/);
+    expect(decided?.textContent).toMatch(/Position déjà décidée — 2/);
   });
 
   it("says why a Good is not scored, rather than dropping it silently", () => {
@@ -65,14 +70,14 @@ describe("What the Confrontation shows without scoring it", () => {
     expect(opponent?.textContent).toMatch(/votre|vos propres|progrès/i);
   });
 
-  it("shows the verdict the Player put on a forced Move, and that it was not held against them", () => {
+  it("still says WHY a forced Move is not counted, which is the reason that survives", () => {
     render(<UnscoredReadout confrontation={confrontation()} />);
 
-    // The case that settles the denominator: `Sound` on a forced catastrophe is
-    // RIGHT, and a naive matrix would count it wrong.
+    // The verdict the Player put there has moved to the Move's own cartouche
+    // (slice 03/04, asserted in `ConfrontationBoard.test.tsx`). What stays here
+    // is the reason — the half of ADR-0017 an aggregate block can carry.
     const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
-    expect(forced?.textContent).toMatch(/correct/i);
-    expect(forced?.textContent).toMatch(/pas noté|non noté|n'est pas compté/i);
+    expect(forced?.textContent).toMatch(/ni crédit ni reproche|pas d'autre coup légal/i);
   });
 
   it("shows nothing at all when there is nothing unscored to show", () => {
@@ -118,25 +123,38 @@ describe("What the Confrontation shows without scoring it", () => {
     expect(layer?.textContent).toMatch(/hors|n'entre dans|ne compte pas|jamais compt/i);
   });
 
-  it("names the Moves it lists, like every other paragraph on the screen", () => {
-    // The screen must name Moves everywhere or nowhere: naming one paragraph and
-    // numbering the next reads as a rendering bug, because it is one.
+  /**
+   * **This reverses two assertions of US-16b, and the reversal is the slice.**
+   *
+   * The excluded Moves used to be enumerated here, one line each — sixteen of
+   * them on the Game the requester tested, which is the volume complaint of the
+   * 25/08 feedback. ADR-0017 asked for the gap to be **readable**, never for a
+   * list; said at its own Move (slice 03), each exclusion occupies no space
+   * anywhere, and the counts below keep the gap readable at a glance.
+   *
+   * What is asserted now is the opposite: the Moves are **not** listed here.
+   */
+  it("no longer enumerates the excluded Moves — each is said at its own Move now", () => {
     render(<UnscoredReadout confrontation={confrontation()} />);
 
     const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
-    expect(forced?.textContent).toMatch(/4\.Nf3/);
+    // The notation of an excluded Move has no business here any more.
+    expect(forced?.textContent).not.toMatch(/4\.Nf3/);
+    expect(forced?.querySelector("ul")).toBeNull();
   });
 
-  it("falls back to the Move number when no notation came through", () => {
-    render(
-      <UnscoredReadout
-        confrontation={confrontation({
-          uncounted: [{ ply: 7, notation: null, reason: "forced", declared: null }],
-        })}
-      />,
-    );
+  it("keeps the gap readable all the same — the COUNT survives the list", () => {
+    render(<UnscoredReadout confrontation={confrontation()} />);
 
+    // ADR-0017's actual requirement. A Player who cannot see that 16 Moves
+    // played produced 14 counted reads the discrepancy as a bug — and the
+    // per-Move cartouche only speaks when they are standing on that Move.
+    // The count NEXT TO ITS REASON, not merely a digit somewhere in the prose:
+    // `/1/` alone would pass on a paragraph that had lost its count entirely,
+    // since the sentence around it is full of other characters.
     const forced = screen.getByText(/forcé/i).closest("[data-uncounted]");
-    expect(forced?.textContent).toMatch(/4\./);
+    expect(forced?.textContent).toMatch(/Coup forcé — 1/);
+    const decided = screen.getByText(/déjà décidée|déjà décidé/i).closest("[data-uncounted]");
+    expect(decided?.textContent).toMatch(/Position déjà décidée — 2/);
   });
 });

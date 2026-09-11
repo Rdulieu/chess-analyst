@@ -1,11 +1,6 @@
 import { moveName } from "./moveName";
+import { halfMoveGap, points } from "./distance";
 import type { KeyMomentMiss, KeyMomentReading } from "../../types";
-
-
-/** Points of winning chances, as they are written everywhere else in the app. */
-function points(value: number): string {
-  return `${Math.round(value)} points`;
-}
 
 /**
  * **Where the Player looked** — the `Confrontation`'s second reading, and never
@@ -94,14 +89,13 @@ function Miss({ miss }: { miss: KeyMomentMiss }) {
     );
   }
 
-  const gap = Math.abs(miss.nearest.ply - miss.ply);
   return (
     <p data-part="miss">
       Votre marqueur est sur <strong>{moveName(miss.ply, miss.notation)}</strong>, qui n'a rien
-      coûté — la perte est sur{" "}
+      coûté — la perte la plus proche est sur{" "}
       <strong>{moveName(miss.nearest.ply, miss.nearest.notation)}</strong> (
       {points(miss.nearest.lost)}),{" "}
-      {gap === 1 ? "un demi-coup" : `${gap} demi-coups`} plus loin.
+      {halfMoveGap(miss.ply, miss.nearest.ply)} plus loin.
     </p>
   );
 }
