@@ -148,18 +148,37 @@ describe("the reading label of one Move", () => {
       expect(label.detail ?? "").toBe("");
     });
 
-    it("does not claim there is nothing to compare when the engine DID flag the Move", () => {
+    it("scores a Good the engine flagged as the strongest miss there is", () => {
       // `Good` is unscorable because the engine has no band for merit — true
       // when the engine flagged nothing, and false when it flagged a fault.
       // On `19…Rf8` of the reference Game the Player declared `Good` and the
       // engine measured a Mistake costing 25 points: the screen said « rien à
       // comparer » and, two lines below, « ce coup vous a coûté des chances ».
       // One of those was false, and it was the first.
+      // **The requester's decision, 2026-09-11**, on their own Game 715: a
+      // `Good` where the engine signals a fault must come back RED and read
+      // « ratée ». It is not an under-estimate — someone calling a `Mistake` a
+      // good Move did not see a smaller danger, they saw the opposite of one —
+      // so it is the strongest `Sous-lecture` the scales can express, and it
+      // is **scored**, not excused.
+      /*
+       * **This file tests the TABLE, and it hands itself the term.** That is
+       * deliberate and it is also its limit: it proves « Erreur ratée » is the
+       * right words for a `sous-lecture` declared `Good`, and it would stay
+       * green if the server stopped producing that term tomorrow.
+       *
+       * The **decision** — that a `Good` on a flagged Move is scored at all —
+       * is proved where it is made: `server/test/confrontation.test.ts`
+       * ("scores a Good the engine flagged"), on an anchored fixture, and again
+       * on the seeded one in `confrontation-per-move.test.ts`. Saying so here
+       * so the split is a choice rather than a gap nobody noticed.
+       */
       const flagged = readingLabel(
-        move({ declared: "good", measured: "mistake", unscored: "good" }),
+        move({ declared: "good", measured: "mistake", term: "sous-lecture" }),
       );
-      expect(flagged.label).toBe("Correct — le moteur signale une erreur");
-      expect(flagged.label).not.toMatch(/rien à comparer/);
+      expect(flagged.label).toBe("Erreur ratée");
+      expect(flagged.tone).toBe("missed");
+      expect(flagged.label).not.toMatch(/rien à comparer|sous-estimée/);
 
       // Where the engine really did flag nothing, the original words stand.
       const quiet = readingLabel(move({ declared: "good", measured: "none", unscored: "good" }));

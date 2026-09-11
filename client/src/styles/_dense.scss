@@ -1086,7 +1086,12 @@ $drift-inset: $drift-frame + $drift-headroom;
 // **The tracks are `fr`, never `auto`.** `auto` sizes to content, so every row
 // would resolve its own widths and the headings would sit over nothing. Shared
 // fractions of one full-width row are what actually makes a column a column.
-$move-authors-tracks: minmax(6rem, 1fr) 1fr 1fr;
+// **Four tracks now**, the fourth carrying the comparison — and still `fr`,
+// never `auto`: `auto` sizes to content, so every row would resolve its own
+// widths and the headings would sit over nothing. The comparison gets the
+// widest share because it holds a sentence («
+// Position déjà décidée — non comptée ») where the others hold a glyph or two.
+$move-authors-tracks: minmax(4.5rem, 0.8fr) 0.5fr 0.7fr minmax(7rem, 2fr);
 
 [data-part="move-list-headings"] {
   display: grid;
@@ -1140,6 +1145,22 @@ ol[data-columns="authors"] [data-cell] {
 [data-part="divergence"] {
   font-family: var(--mono);
 }
+
+// The comparison's own cell: the curve's glyph and the cartouche's words, in
+// the cartouche's register. Tinted by ink alone rather than by a filled chip —
+// eighty rows of filled chips would read as a wall, and the cartouche under the
+// board is where the case is *stated*; here it only has to be scannable.
+[data-part="confrontation-cell"] {
+  font-size: var(--text-s);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+[data-part="confrontation-cell"][data-tone="agreement"] { color: var(--tint-ok-ink); }
+[data-part="confrontation-cell"][data-tone="missed"] { color: var(--tint-fail-ink); }
+[data-part="confrontation-cell"][data-tone="overcalled"] { color: var(--tint-inaccuracy-ink); }
+[data-part="confrontation-cell"][data-tone="unscored"] { color: var(--ink-muted); }
 
 // **The matrix's cells became controls** (US-26, slice 07), and a control is
 // given a border, a background and generous padding by `_controls`. Left as
@@ -1208,6 +1229,19 @@ ol[data-columns="authors"] [data-cell] {
 // words, and the sentence under it explains. The tone only makes the case
 // findable at a glance — a Player scanning a Game for their misses should not
 // have to read sixty labels.
+// **The row owns the space between the two cartouches.** They used to be two
+// `inline-block` siblings relying on the whitespace between two JSX elements —
+// which JSX does not guarantee — so at some widths they touched and overlapped.
+// A gap on the container cannot be lost that way, and `wrap` stacks them on a
+// narrow panel instead of letting them collide.
+[data-part="reading-terms"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  margin-block: var(--space-2) var(--space-1);
+}
+
 [data-part="reading-term"] {
   display: inline-block;
   font-weight: 700;
@@ -1379,9 +1413,14 @@ ol[data-columns="authors"] [data-cell] {
   background: var(--ground-sunk);
 }
 
-// The Good row is shown and never scored. Muted, and said in words beside its
-// label rather than only implied by the tint.
-tr[data-scored="false"] {
+// Shown and not scored — muted, and said in words beside the label rather than
+// only implied by the tint.
+//
+// **Per CELL, not per row.** The `Good` row used to be muted whole; a `Good`
+// the engine flagged is scored now (it is the widest disagreement the two
+// scales hold), so only its « Rien de flagué » cell is outside the count, and
+// only that cell is muted.
+[data-cell][data-scored="false"] {
   color: var(--ink-muted);
 }
 

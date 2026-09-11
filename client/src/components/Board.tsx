@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { arrowStep, isCommandKeystroke } from "./keyboard";
 import { Chessboard } from "react-chessboard";
 import { parseGame } from "../chess/history";
@@ -50,6 +50,7 @@ export function Board({
   controls,
   keyboardStepping = false,
   moveMarks,
+  moveConfrontation,
   underBoard,
   moveListHeadings,
   focusRequest,
@@ -121,6 +122,13 @@ export function Board({
    * being small.
    */
   underBoard?: (ply: number) => ReactNode;
+  /**
+   * A third cell per row, beside the two authors' — what the comparison of
+   * them was worth (US-26). Rendered only where the caller titles the columns,
+   * for the same reason the two author cells are: a column with no title is a
+   * mark nobody can attribute.
+   */
+  moveConfrontation?: (ply: number) => ReactNode;
   moveListHeadings?: ReactNode;
   /**
    * A caller's request to bring the board to one ply — the matrix's cells
@@ -182,6 +190,8 @@ export function Board({
   // number, so numbering from 1. would name every Move of it wrongly.
   const start = useMemo(() => startingPoint(startFen), [startFen]);
   const [index, setIndex] = useState(0);
+  /** The board's own pane, so a focus request can land the keyboard on it. */
+  const boardRef = useRef<HTMLDivElement>(null);
   /**
    * A Position shown **temporarily**, while the Player points at (or focuses) a
    * ply inside a `Best line`. Deliberately a second, separate piece of state:
@@ -263,6 +273,11 @@ export function Board({
     if (!focusRequest) return;
     setIndex(Math.min(Math.max(focusRequest.ply, 0), plies.length));
     setPreview({ focus: null, hover: null });
+    // **And the keyboard comes too.** A request arrives from elsewhere on the
+    // page, so the Player is not looking at the board when it answers; moving
+    // the Position without moving focus leaves them pressing the arrow keys at
+    // a control that no longer has anything to do with what changed.
+    boardRef.current?.focus();
     // **The id alone.** `ply` is absent because the id is what says "asked",
     // and including it would fire again on a re-render that merely re-created
     // the object. `plies.length` is absent for a sharper reason: it changes
@@ -359,7 +374,22 @@ export function Board({
         the fold, behind the whole height of the diagram.
       */}
       <div data-row="board">
-        <div data-pane="board">
+        {/*
+          Focusable, and only programmatically (`tabIndex={-1}`): nothing should
+          meet it while tabbing through the page, but a caller that sends the
+          Player here — a Move unfolded from the matrix, three screens down —
+          has to bring the keyboard with them. Leaving focus on the control they
+          clicked stranded them at the far end of the document from the thing
+          that had just changed. It is named, so arriving somewhere is announced
+          rather than silent.
+        */}
+        <div
+          data-pane="board"
+          ref={boardRef}
+          tabIndex={-1}
+          role="group"
+          aria-label="Échiquier"
+        >
           <Chessboard
             options={{
               ...BOARD_SQUARES,
@@ -618,6 +648,10 @@ export function Board({
                           </span>
                         )}
                       </span>
+                      {/* The comparison, AFTER the two authors — it is what
+                          their disagreement is worth, so it cannot come before
+                          them. */}
+                      <span data-cell="confrontation">{moveConfrontation?.(i + 1)}</span>
                     </>
                   ) : (
                     <>

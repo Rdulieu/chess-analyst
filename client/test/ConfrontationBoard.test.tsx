@@ -457,7 +457,7 @@ describe("the board on the Confrontation route", () => {
       expect(new Set(glyphs)).toEqual(new Set(["▼", "▲"]));
     });
 
-    it("titles the two authors' columns in the move list", async () => {
+    it("titles the two authors' columns, and the comparison's, in the move list", async () => {
       stub();
       const { container } = renderPage();
       await board(container);
@@ -465,9 +465,10 @@ describe("the board on the Confrontation route", () => {
       const headings = container.querySelector('[data-part="move-list-headings"]');
       expect(headings!.textContent).toContain("Ma lecture");
       expect(headings!.textContent).toContain("Le moteur");
+      expect(headings!.textContent).toContain("Confrontation");
     });
 
-    it("gives every row EXACTLY three cells, whatever happened on that Move", async () => {
+    it("gives every row EXACTLY four cells, whatever happened on that Move", async () => {
       stub();
       const { container } = renderPage();
       await board(container);
@@ -484,9 +485,10 @@ describe("the board on the Confrontation route", () => {
       // marks into one cell is the invariant the titles rest on; jsdom has no
       // layout, so this count is the only thing that can guard it here.
       for (const row of rows) {
-        expect(row.children).toHaveLength(3);
+        expect(row.children).toHaveLength(4);
         expect(row.querySelector('[data-cell="player"]')).not.toBeNull();
         expect(row.querySelector('[data-cell="engine"]')).not.toBeNull();
+        expect(row.querySelector('[data-cell="confrontation"]')).not.toBeNull();
       }
     });
 
@@ -500,9 +502,37 @@ describe("the board on the Confrontation route", () => {
       // and its evaluation on the other. A mark in the wrong cell would sit
       // under the wrong title, which is worse than no title at all.
       expect(first.querySelector('[data-cell="player"] [data-part="move-marks"]')).not.toBeNull();
-      expect(first.querySelector('[data-cell="player"] [data-part="divergence"]')).not.toBeNull();
       expect(first.querySelector('[data-cell="engine"] [data-severity]')).not.toBeNull();
       expect(first.querySelector('[data-cell="engine"] [aria-label="evaluation"]')).not.toBeNull();
+      // The disagreement belongs to **neither** author: it is what their two
+      // readings are worth against each other, so it sits in its own column
+      // and not under « Ma lecture », where it used to.
+      expect(first.querySelector('[data-cell="player"] [data-part="divergence"]')).toBeNull();
+      expect(
+        first.querySelector('[data-cell="confrontation"] [data-part="divergence"]'),
+      ).not.toBeNull();
+    });
+
+    it("carries ONE fact three times — curve glyph, list glyph, cartouche words", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      // The curve's mark, the list's glyph and the cartouche's label are the
+      // same divergence seen three ways. Sourced from the same two modules, so
+      // they cannot drift — which is the point of the column existing at all.
+      const onCurve = container.querySelector("[data-mark-label]")!;
+      fireEvent.click(screen.getByRole("button", { name: "1.e4" }));
+      await waitFor(() =>
+        expect(container.querySelector('[data-part="reading-term"]')).not.toBeNull(),
+      );
+      const cell = container.querySelector('[data-part="confrontation-cell"]')!;
+      const cartouche = container.querySelector('[data-part="reading-term"]')!;
+
+      expect(onCurve.textContent).toBe("▼");
+      expect(cell.querySelector('[data-part="divergence"]')!.textContent).toBe("▼");
+      expect(cell.textContent).toContain(cartouche.textContent);
+      expect(cell.getAttribute("data-tone")).toBe(cartouche.getAttribute("data-tone"));
     });
 
     it("carries the disagreement glyph in the list too, named in words", async () => {
@@ -510,7 +540,7 @@ describe("the board on the Confrontation route", () => {
       const { container } = renderPage();
       await board(container);
 
-      const divergence = container.querySelector('[data-part="divergence"]');
+      const divergence = container.querySelector('[data-cell="confrontation"] [data-part="divergence"]');
       expect(divergence!.textContent).toBe("▼");
       // The shape carries it for the eye; the accessible name for everyone else.
       // The term AND what it means: "sous-lecture" alone would be vocabulary
@@ -604,12 +634,17 @@ describe("the board on the Confrontation route", () => {
       // where the `good` row was empty — a coincidence that held on every
       // fixture that happened to have no `Good`. Walking all of them is what
       // turns ADR-0032 from a claim into a guard.
+      /*
+       * Asserted **synchronously**. Unfolding is a `setState` in the toggle's
+       * own handler and `fireEvent` flushes it inside `act`, so there is
+       * nothing to wait for — and eight `waitFor`s in a loop made this the one
+       * test in the file that failed under load while passing alone, three
+       * times. A wait on an already-settled value only measures how contended
+       * the machine is.
+       */
       for (const toggle of toggles) {
         const announced = Number(toggle.textContent);
         fireEvent.click(toggle);
-        await waitFor(() =>
-          expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
-        );
         const listed = container.querySelectorAll('[data-part="cell-moves"] li');
         expect(listed, `cell announcing ${announced}`).toHaveLength(announced);
         fireEvent.click(toggle);
@@ -640,6 +675,36 @@ describe("the board on the Confrontation route", () => {
       expect(container.querySelector('[data-part="reading-term"]')!.textContent).toBe(
         "Bévue sous-estimée",
       );
+    });
+
+    it("brings the KEYBOARD to the board, not just the Position", async () => {
+      stub();
+      const { container } = renderPage();
+      await board(container);
+
+      const cell = [...container.querySelectorAll('[data-part="matrix"] button[aria-expanded]')]
+        .find((b) => b.textContent === "2")!;
+      fireEvent.click(cell);
+      await waitFor(() =>
+        expect(container.querySelector('[data-part="cell-moves"]')).not.toBeNull(),
+      );
+      const entry = container.querySelectorAll<HTMLButtonElement>('[data-part="cell-moves"] li button')[1];
+      entry.focus();
+      expect(document.activeElement).toBe(entry);
+
+      fireEvent.click(entry);
+
+      // **The matrix is at the far end of the document from the board.** Moving
+      // the Position without moving focus leaves a Player pressing ← and → at a
+      // control that has nothing to do with what just changed — and a screen
+      // reader with no idea anything happened. The pane is focusable only
+      // programmatically, so nothing meets it while tabbing.
+      await waitFor(() =>
+        expect(screen.getByLabelText("current move").textContent).toContain("2.Nf3"),
+      );
+      const pane = container.querySelector('[data-pane="board"]')!;
+      expect(document.activeElement).toBe(pane);
+      expect(pane.getAttribute("tabindex")).toBe("-1");
     });
 
     it("answers the same Move twice, even after the Player has stepped away", async () => {

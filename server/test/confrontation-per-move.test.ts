@@ -154,6 +154,19 @@ describe("the per-Move reading of a Confrontation", () => {
       });
     });
 
+    it("scores a Good the engine flagged — it is not «nothing to compare»", () => {
+      const { flaggedGood } = CONFRONTATION_FIXTURE_CASES;
+
+      // The requester's decision, on the seeded fixture rather than on a
+      // hand-built entry: the term has to be *produced*, not supplied.
+      expect(at(flaggedGood)).toMatchObject({
+        declared: "good",
+        measured: "blunder",
+        term: "sous-lecture",
+        unscored: null,
+      });
+    });
+
     it("keeps silence and Good apart — they are not the same fact", () => {
       const { silence, good } = CONFRONTATION_FIXTURE_CASES;
 

@@ -3,6 +3,7 @@ import { Board } from "../../components/Board";
 import { markKinds } from "../personal/progress";
 import { MoveMarks } from "../personal/MoveMarks";
 import { MoveReadout } from "./MoveReadout";
+import { readingLabel } from "./readingLabel";
 import {
   divergencesOf,
   DIVERGENCE_GLYPH,
@@ -12,7 +13,6 @@ import {
   divergenceAt,
 } from "./divergence";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../personal/declaredSeverity";
-import type { Divergence } from "./divergence";
 import type { Game, GameAnnotations, MoveReading, PersonalAnalysis } from "../../types";
 
 /**
@@ -87,8 +87,8 @@ export function ConfrontationBoard({
         // straddles two grounds, so it needs its own ink and its own tint, and
         // both have to come from the family that does not move with the theme
         // (ADR-0013 — the same reason the board's square tints are constant).
-        tint: DIVERGENCE_TINT,
-        ink: DIVERGENCE_INK,
+        tint: DIVERGENCE_TINT[divergence.direction],
+        ink: DIVERGENCE_INK[divergence.direction],
       })),
     [divergences],
   );
@@ -121,17 +121,15 @@ export function ConfrontationBoard({
       // colonne ou son titre »*. Slice 06 pays it, with two titled columns —
       // « Ma lecture » and « Le moteur ». Declared here rather than left to be
       // discovered, because the slices auto-merge (ADR-0027).
-      moveMarks={(ply) => (
-        <>
-          <MoveMarks marks={reading.marks} ply={ply} />
-          {/* The disagreement, in the list as well as on the curve — so it is
-              findable by scanning the Moves and not only by reading the
-              drawing. The glyph is the same one, and its accessible name says
-              the direction in words: the shape carries it for the eye, the
-              name for everyone else (ADR-0013). */}
-          <DivergenceMark direction={divergenceAt(byPly.get(ply))} />
-        </>
-      )}
+      moveMarks={(ply) => <MoveMarks marks={reading.marks} ply={ply} />}
+      /*
+       * **The comparison, in its own column.** The glyph is the curve's and the
+       * words are the cartouche's, both imported rather than retyped: a Player
+       * who spots a `▼` on the drawing, finds the same `▼` in the list and
+       * reads the same « Bévue ratée » on the cartouche is looking at one fact
+       * three times, and it has to *be* one fact.
+       */
+      moveConfrontation={(ply) => <ConfrontationCell move={byPly.get(ply)} />}
       curveMarks={curveMarks}
       // **The one place two authors may coexist** (ADR-0022): a list has
       // columns, a square has none. The titles are what make the pairing
@@ -142,6 +140,7 @@ export function ConfrontationBoard({
           <span>Coup</span>
           <span>Ma lecture</span>
           <span>Le moteur</span>
+          <span>Confrontation</span>
         </p>
       }
       // The PLAYER's verdict on the square (ADR-0022). Resolved by `markKinds`,
@@ -167,13 +166,36 @@ export function ConfrontationBoard({
 }
 
 
-/** The disagreement, in the move list — the same glyph the curve carries. */
-function DivergenceMark({ direction }: { direction: Divergence["direction"] | null }) {
-  if (direction === null) return null;
+/**
+ * **What the comparison was worth on one Move**, in the list — the curve's
+ * glyph and the cartouche's words, from the modules that own them.
+ *
+ * Sourced, never retyped. The glyph comes from `DIVERGENCE_GLYPH`, which the
+ * curve reads; the words from `readingLabel`, which the cartouche reads; the
+ * register from the same `tone`, so the row is tinted like the chip under the
+ * board. A second copy of any of the three would drift, and the day it did the
+ * screen would say two things about one Move — which is the whole defect this
+ * story exists to remove.
+ *
+ * Nothing at ply 0, and nothing on a Move with no reading: a column that
+ * repeats "rien" on sixty rows buries the ones that speak.
+ */
+function ConfrontationCell({ move }: { move: MoveReading | undefined }) {
+  if (!move) return null;
+
+  const direction = divergenceAt(move);
+  const { tone, label } = readingLabel(move);
 
   return (
-    <span data-part="divergence" data-direction={direction} aria-label={DIVERGENCE_LABEL[direction]}>
-      {DIVERGENCE_GLYPH[direction]}
+    <span data-part="confrontation-cell" data-tone={tone}>
+      {direction && (
+        // The shape carries the direction for the eye, the accessible name for
+        // everyone else (ADR-0013) — exactly as on the curve.
+        <span data-part="divergence" data-direction={direction} aria-label={DIVERGENCE_LABEL[direction]}>
+          {DIVERGENCE_GLYPH[direction]}
+        </span>
+      )}
+      {label}
     </span>
   );
 }

@@ -28,6 +28,20 @@ function fillsMatrix(move: MoveReading): boolean {
   return move.declared !== null && (move.term !== null || move.unscored === "good");
 }
 
+/**
+ * Whether a cell is **scored** — and it is a question about the cell, not about
+ * its row.
+ *
+ * The `good` row used to be unscored whole, on the argument that the engine has
+ * no band for merit. That holds for its « Rien de flagué » column and nowhere
+ * else: a `Good` on a measured `Blunder` is the widest disagreement the two
+ * scales can express, and it is scored now. So the row is scored **except** on
+ * the column where the engine said nothing.
+ */
+function isScoredCell(declared: DeclaredSeverity, measured: MeasuredLabel): boolean {
+  return declared !== "good" || measured !== "none";
+}
+
 /** One cell of the matrix, as a pair rather than a string to be split apart. */
 interface Cell {
   declared: DeclaredSeverity;
@@ -126,22 +140,33 @@ export function ConfusionMatrixTable({
           </thead>
           <tbody>
             {DECLARED_SEVERITIES.map((declared) => (
-              <tr key={declared} data-scored={declared !== "good"}>
+              <tr key={declared}>
                 <th scope="row">
                   {DECLARED_SEVERITY_LABEL[declared]}
-                  {declared === "good" && <span data-part="unscored"> (jamais noté)</span>}
+                  {/* The qualification belongs to the COLUMN it is true of. It
+                      used to sit on the row and say "jamais noté" of cells that
+                      are scored — a `Good` the engine flagged among them. */}
+                  {declared === "good" && (
+                    <span data-part="unscored"> (non noté face à « Rien de flagué »)</span>
+                  )}
                 </th>
                 {MEASURED_LABELS.map((label) => {
                   // `Sound` and "nothing flagged" both say *nothing wrong here*,
                   // which is why they meet on the diagonal.
+                  // `Sound` and "nothing flagged" both say *nothing wrong
+                  // here*, which is why they meet on the diagonal. `Good`
+                  // against "nothing flagged" is not an agreement — it is not
+                  // scored at all.
                   const agreement =
                     declared !== "good" &&
                     (declared === label || (declared === "sound" && label === "none"));
                   const count = matrix[declared][label];
+                  const scored = isScoredCell(declared, label);
                   return (
                     <td
                       key={label}
                       data-cell
+                      data-scored={scored}
                       data-agreement={agreement}
                       // Said in words, so the diagonal survives a screen reader
                       // and a monochrome eye alike.

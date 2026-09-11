@@ -147,6 +147,52 @@ describe("confrontGame — the Player's reading against the engine's", () => {
     expect(result.severity).toMatchObject({ examined: 1, agreed: 0 });
   });
 
+  /**
+   * **The requester's decision of 2026-09-11, found on their own Game 715.**
+   *
+   * `Good` sat outside the accuracy denominator unconditionally, on the ground
+   * that the engine has no band for merit. That is true where the engine flags
+   * **nothing** — and false where it flags a fault: the screen read « Correct —
+   * rien à comparer » on `19…Rf8`, a Move the engine measured a `Mistake`
+   * costing 25 points, and said two lines below that it had cost chances. One
+   * of those was false.
+   *
+   * A `Good` on a flagged Move is the **widest** gap the two scales express:
+   * the Player did not see a smaller danger, they saw the opposite of one.
+   */
+  it("scores a Good the engine flagged, and calls it a Sous-lecture", () => {
+    const flagged = annotationsOf([30, -20, 10, -40, 20, 480, -460, 450, -470]);
+    // Anchored, exactly as the `sound` case above is: were the fixture to stop
+    // flagging this Move, the assertion below would hold for the wrong reason.
+    expect(flagged.plies[5].severity).not.toBeNull();
+
+    const result = confronted(sealed([{ ply: 5, declaredSeverity: "good" }]), flagged);
+
+    expect(result.severity).toMatchObject({ examined: 1, scorable: 1, agreed: 0 });
+    expect(result.severity.unscored.good).toBe(0);
+    expect(result.moves.find((move) => move.ply === 5)).toMatchObject({
+      declared: "good",
+      term: "sous-lecture",
+      unscored: null,
+    });
+  });
+
+  it("still refuses to score a Good the engine says nothing about — the boundary", () => {
+    // The other half, and the half that keeps the original reasoning true: with
+    // nothing flagged there is genuinely nothing to set the verdict against.
+    const quiet = annotationsOf();
+    expect(quiet.plies[5].severity).toBeNull();
+
+    const result = confronted(sealed([{ ply: 5, declaredSeverity: "good" }]), quiet);
+
+    expect(result.severity).toMatchObject({ examined: 1, scorable: 0 });
+    expect(result.severity.unscored.good).toBe(1);
+    expect(result.moves.find((move) => move.ply === 5)).toMatchObject({
+      term: null,
+      unscored: "good",
+    });
+  });
+
   it("confronts the sealed layer only — what was written after the reveal never counts", () => {
     const cps = [30, -20, 10, -40, 20, 480, -460, 450, -470];
     // Sealed: one verdict, and it is wrong. Then, having seen the engine, the
