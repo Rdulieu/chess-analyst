@@ -166,6 +166,19 @@ describe("the seeded Confrontation fixture", () => {
       expect(declared(ply)?.declaredSeverity).toBe("sound");
     });
 
+    it("a Good the engine FLAGS — the case the requester found on their own Game", () => {
+      const { flaggedGood: ply } = CONFRONTATION_FIXTURE_CASES;
+
+      // Until 2026-09-11 no fixture held one, so the decision that such a Move
+      // is scored could only ever be exercised by a unit test handing itself
+      // the answer. A Feature Path could not reach it at all.
+      expect(measured(ply)).toMatchObject({
+        severity: "blunder",
+        counted: { counted: true },
+      });
+      expect(declared(ply)?.declaredSeverity).toBe("good");
+    });
+
     it("a written note, so the screen has one to render beside a verdict", () => {
       const { note: ply } = CONFRONTATION_FIXTURE_CASES;
 

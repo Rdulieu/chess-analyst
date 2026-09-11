@@ -74,6 +74,16 @@ export const CONFRONTATION_FIXTURE_CASES = {
   markerOnOpponent: 14,
   /** A flagged `Inaccuracy` the Player called `Sound` — a lesser miss. */
   inaccuracyMissed: 25,
+  /**
+   * **A `Good` on a Move the engine flags** — the case that had no instance
+   * anywhere until the requester found two on their own Game (2026-09-11).
+   *
+   * It is scored, and it is a `Sous-lecture`: the Player did not read a smaller
+   * danger, they read the opposite of one. Without an instance here, the whole
+   * decision was exercised only by unit tests feeding themselves the answer,
+   * and no Feature Path could ever reach it.
+   */
+  flaggedGood: 27,
 } as const;
 
 
@@ -138,7 +148,7 @@ const FIXTURE_GAME_URL = "fixture://confrontation/us-26";
  */
 const WHITE_RELATIVE_CP: number[] = [
   0, 0, 0, 0, 0, -20, 20, -110, 150, -300, 50, -310, -700, -700, -100, -450, 0, -400, 100, 80,
-  80, 70, 70, 65, 65, -45, -45, -45, -45, -45, -45, -45, -45, -45, -45, -45,
+  80, 70, 70, 65, 65, -45, 100, -380, -380, -380, -380, -380, -380, -380, -380, -380,
 ];
 
 /** One ply of the sealed reading. Absent plies were left untouched by the Player. */
@@ -173,6 +183,7 @@ const FIXTURE_MARKS: FixtureMark[] = [
     note: "je consolide avant d'ouvrir le centre — c'est le plan que j'avais en tête depuis e3.",
   },
   { ply: 25, declaredSeverity: "sound" },
+  { ply: 27, declaredSeverity: "good" },
 ];
 
 /**

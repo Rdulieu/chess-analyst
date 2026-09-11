@@ -161,6 +161,18 @@ describe("the reading label of one Move", () => {
       // good Move did not see a smaller danger, they saw the opposite of one —
       // so it is the strongest `Sous-lecture` the scales can express, and it
       // is **scored**, not excused.
+      /*
+       * **This file tests the TABLE, and it hands itself the term.** That is
+       * deliberate and it is also its limit: it proves « Erreur ratée » is the
+       * right words for a `sous-lecture` declared `Good`, and it would stay
+       * green if the server stopped producing that term tomorrow.
+       *
+       * The **decision** — that a `Good` on a flagged Move is scored at all —
+       * is proved where it is made: `server/test/confrontation.test.ts`
+       * ("scores a Good the engine flagged"), on an anchored fixture, and again
+       * on the seeded one in `confrontation-per-move.test.ts`. Saying so here
+       * so the split is a choice rather than a gap nobody noticed.
+       */
       const flagged = readingLabel(
         move({ declared: "good", measured: "mistake", term: "sous-lecture" }),
       );
