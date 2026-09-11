@@ -1208,6 +1208,19 @@ ol[data-columns="authors"] [data-cell] {
 // words, and the sentence under it explains. The tone only makes the case
 // findable at a glance — a Player scanning a Game for their misses should not
 // have to read sixty labels.
+// **The row owns the space between the two cartouches.** They used to be two
+// `inline-block` siblings relying on the whitespace between two JSX elements —
+// which JSX does not guarantee — so at some widths they touched and overlapped.
+// A gap on the container cannot be lost that way, and `wrap` stacks them on a
+// narrow panel instead of letting them collide.
+[data-part="reading-terms"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  margin-block: var(--space-2) var(--space-1);
+}
+
 [data-part="reading-term"] {
   display: inline-block;
   font-weight: 700;
@@ -1379,9 +1392,14 @@ ol[data-columns="authors"] [data-cell] {
   background: var(--ground-sunk);
 }
 
-// The Good row is shown and never scored. Muted, and said in words beside its
-// label rather than only implied by the tint.
-tr[data-scored="false"] {
+// Shown and not scored — muted, and said in words beside the label rather than
+// only implied by the tint.
+//
+// **Per CELL, not per row.** The `Good` row used to be muted whole; a `Good`
+// the engine flagged is scored now (it is the widest disagreement the two
+// scales hold), so only its « Rien de flagué » cell is outside the count, and
+// only that cell is muted.
+[data-cell][data-scored="false"] {
   color: var(--ink-muted);
 }
 

@@ -32,6 +32,9 @@ export function MoveReadout({
   if (!move) return null;
 
   const { tone, label, detail } = readingLabel(move);
+  const keyMomentDetail = move.keyMoment
+    ? keyMomentLabel(move.keyMoment, move.ply).detail
+    : undefined;
   /*
    * The **sealed** note, and only that one. `markKinds` answers whether a note
    * exists, not what it says, and it deliberately merges the two layers — right
@@ -44,29 +47,26 @@ export function MoveReadout({
 
   return (
     <div data-part="move-reading">
-      {/* The label is the accessible name of the cartouche, because the label
-          IS the explanation — that is why the table is parameterised by case
-          and why the screen carries no legend. */}
-      <p data-part="reading-term" data-tone={tone}>
-        {label}
-      </p>
-      {/* A fact the label cannot hold — today only the distance to a loss a
-          marker missed. The explanations that used to sit here were redundant
-          with the label and with the move list's two titled columns, and under
-          the diagram they were height paid on every ply. They move to a
-          tooltip in US-41. */}
-      {detail && <p data-part="reading-detail">{detail}</p>}
       {/*
-        The SECOND family — what the Player's `Key moment`s were worth here.
-        Two cartouches, never fused: judging a Move well and looking in the
-        right place are two different abilities, and a Player strong at one and
-        weak at the other learns exactly that from seeing them apart.
-
-        Absent entirely where there is neither a marker nor a loss — the great
-        majority of a Game. Sixty cartouches reading "nothing here" would bury
-        the six that speak.
+        **The two cartouches share one row, and the row owns the space between
+        them.** They were two `inline-block` siblings relying on the whitespace
+        between two JSX elements — which JSX does not guarantee, so at some
+        widths they touched and overlapped (requester, 2026-09-11). A flex row
+        with a gap cannot: the space is a property of the container, not an
+        accident of the markup. It wraps, so a narrow panel stacks them instead
+        of overlapping them.
       */}
-      {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} ply={move.ply} />}
+      <p data-part="reading-terms">
+        <span data-part="reading-term" data-tone={tone}>
+          {label}
+        </span>
+        {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} ply={move.ply} />}
+      </p>
+      {detail && <p data-part="reading-detail">{detail}</p>}
+      {/* The `◆` family's own fact — today only the distance to the loss a
+          misplaced marker missed. Below the row rather than inside the chip:
+          a chip holds a name, and this is a sentence. */}
+      {keyMomentDetail && <p data-part="reading-detail">{keyMomentDetail}</p>}
       {note && (
         /* The Player's own words, in front of the engine's verdict. This is the
            reason the reading is written down at all: re-reading one's reasoning
@@ -93,14 +93,11 @@ export function MoveReadout({
 function KeyMomentCartouche({ reading, ply }: { reading: MoveKeyMoment; ply: number }) {
   // The ply is needed for the DISTANCE: "six half-moves further" cannot be
   // derived from the target alone.
-  const { tone, label, detail } = keyMomentLabel(reading, ply);
+  const { tone, label } = keyMomentLabel(reading, ply);
 
   return (
-    <>
-      <p data-part="reading-term" data-family="key-moment" data-tone={tone}>
-        {label}
-      </p>
-      {detail && <p data-part="reading-detail">{detail}</p>}
-    </>
+    <span data-part="reading-term" data-family="key-moment" data-tone={tone}>
+      {label}
+    </span>
   );
 }

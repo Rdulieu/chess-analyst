@@ -107,7 +107,14 @@ export function readingLabel(move: MoveReading): ReadingLabel {
      * `unscored: "silence"` — and it is handled rather than asserted away.
      */
     const declared = move.declared;
-    if (declared === null || declared === "sound") {
+    /*
+     * **`Good` counts as blind, and that is the point of the case.** Nothing
+     * said, `Sound`, or `Good` all mean the Player reported no danger — so the
+     * severity was *missed*, not under-estimated. Melting `Good` into
+     * "sous-estimée" would be gentler and false: someone who calls a `Blunder`
+     * a good Move did not see a smaller danger, they saw the opposite of one.
+     */
+    if (declared === null || declared === "sound" || declared === "good") {
       return {
         tone: "missed",
         label: `${missed} ratée`,
@@ -166,30 +173,10 @@ function unscoredLabel(move: MoveReading, unscored: NonNullable<MoveReading["uns
   const base = UNSCORED[unscored];
 
   /*
-   * **A `Good` the engine DID flag is not "nothing to compare".**
-   *
-   * `Good` is unscorable because the engine has no band for merit — true, and
-   * the reason it sits outside the accuracy denominator. But that reasoning
-   * holds only when the engine flagged **nothing**. On `19…Rf8` of the
-   * reference Game the Player declared `Good` and the engine measured a
-   * `Mistake` costing 25 points: the screen said "il n'y a rien à opposer à
-   * ce verdict" and then, two lines below, "ce coup vous a coûté des chances".
-   * One of those was false, and it was the first.
-   *
-   * So the label **names what the engine said** instead of denying it exists.
-   * The Move stays unscored — no figure moves, which US-26 requires — and the
-   * contradiction becomes visible rather than asserted away. Whether such a
-   * Move should be *scored* as a divergence is a question about the method,
-   * and it belongs to the requester, not to a label.
+   * A `Good` reaches here only when the engine flagged **nothing** — the one
+   * case where "rien à comparer" is true. A `Good` on a measured fault is
+   * scored now, as the strongest `Sous-lecture` there is, and never arrives.
    */
-  if (unscored === "good" && move.measured !== "none") {
-    return {
-      ...base,
-      label: `Correct — le moteur signale ${article(MEASURED_NAME[move.measured])}`,
-    };
-  }
-
-  if (move.declared === null || unscored === "good" || unscored === "silence") return base;
   return base;
 }
 
@@ -202,11 +189,6 @@ const MEASURED_NAME: Record<MoveReading["measured"], string> = {
   // false-alarm case, which has its own words.
   none: "rien",
 };
-
-/** French wants the article agreed; all three names happen to be feminine. */
-function article(name: string): string {
-  return `une ${name.toLowerCase()}`;
-}
 
 
 /**

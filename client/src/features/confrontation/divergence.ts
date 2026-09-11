@@ -36,18 +36,33 @@ export const DIVERGENCE_GLYPH: Record<Divergence["direction"], string> = {
 };
 
 /**
- * The mark's own tint and ink on the curve — **constant in both themes**, like
- * the board's square tints and for the same reason (ADR-0013).
+ * The mark's tint and ink on the curve — **the cartouche's own pair, per
+ * direction**, so the drawing and the label of one divergence are the same
+ * colour (requester, 2026-09-11). A `Sous-lecture` is red on the curve because
+ * it is red in the cartouche; a `Sur-lecture` is yellow in both. A reader who
+ * spots a mark and walks to it must not meet a different colour on arrival.
  *
- * A mark on this curve **straddles two grounds**: White's share below it is a
- * theme-invariant light fill, the region above it follows the theme. Left to
- * inherit, the glyph took the theme's ink and measured **1.04:1** against the
- * fill in dark — three of five marks disappeared into the drawing. The pair is
- * what carries it over both grounds, which is exactly the bargain the engine's
- * severity markers already make.
+ * **A pair, and not a single ink**, because a mark here **straddles two
+ * grounds**: White's share below it is a theme-invariant light fill, the region
+ * above follows the theme. Left to inherit, a glyph measured **1.04:1** against
+ * the fill in dark and three of five disappeared into the drawing. The tint
+ * carries it over one ground and the border — `currentColor`, so this ink —
+ * over the other, which is exactly the bargain the engine's severity markers
+ * already make.
+ *
+ * These are the **semantic** tints, which follow the theme. That is right for
+ * something nothing is painted on top of, and it is what keeps the pairing with
+ * the cartouche true in both themes rather than only in one.
  */
-export const DIVERGENCE_TINT = "var(--square-sound)";
-export const DIVERGENCE_INK = "var(--square-notation)";
+export const DIVERGENCE_TINT: Record<Divergence["direction"], string> = {
+  "sous-lecture": "var(--tint-fail)",
+  "sur-lecture": "var(--tint-inaccuracy)",
+};
+
+export const DIVERGENCE_INK: Record<Divergence["direction"], string> = {
+  "sous-lecture": "var(--tint-fail-ink)",
+  "sur-lecture": "var(--tint-inaccuracy-ink)",
+};
 
 /**
  * What each direction is called **out loud** — the mark's accessible name.

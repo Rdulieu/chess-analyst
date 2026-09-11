@@ -480,7 +480,7 @@ export function confrontGame(
     // Filled for every examined Move, `Good` included: the matrix shows what the
     // Player said. What it does NOT do is score the `good` row.
     reading.matrix[declared][measured] += 1;
-    if (!isScorable(declared)) {
+    if (!isScorable(declared, measured)) {
       entry.unscored = "good";
       reading.unscored.good += 1;
       continue;
@@ -555,8 +555,18 @@ function sealedVerdicts(analysis: PersonalAnalysis): Map<number, DeclaredSeverit
 }
 
 /** Whether the engine has any band to set this verdict against. */
-function isScorable(declared: DeclaredSeverity): boolean {
-  return declared !== "good";
+function isScorable(declared: DeclaredSeverity, measured: MeasuredLabel): boolean {
+  // `Good` against **nothing flagged** has nothing on the other side: the engine
+  // reports faults only and has no band for merit, so the verdict can be
+  // neither right nor wrong. That is why `Good` sits outside the denominator.
+  //
+  // **But that reasoning ends where the engine speaks.** A `Good` on a Move the
+  // engine measures a `Blunder` is not incomparable — it is the widest gap the
+  // two scales can hold, and the Player is plainly wrong about it. Found on the
+  // requester's own Game 715 (`19…Rf8`, declared `Good`, measured a `Mistake`
+  // costing 25 points), where the screen said "rien à comparer" and, two lines
+  // below, "ce coup vous a coûté des chances". One of those was false.
+  return declared !== "good" || measured !== "none";
 }
 
 /**
@@ -568,12 +578,19 @@ function isScorable(declared: DeclaredSeverity): boolean {
  * `Sound` scorable at all, and it is the same one `agrees()` encoded — read as
  * a position on a scale rather than as a special case.
  *
- * `good` is absent: the engine has **no band for merit**, so a `Good` has
- * nothing to be above or below and is never given a term.
+ * `good` shares the floor with `sound` and `none`. It is only ever *given* a
+ * term when the engine flagged the Move — `isScorable` keeps the quiet case
+ * out — and on a flagged Move its floor position is exactly right: the Player
+ * claimed no danger at all where the engine measured some.
  */
-const DANGER_ORDER: Record<Exclude<DeclaredSeverity, "good"> | MeasuredLabel, number> = {
+const DANGER_ORDER: Record<DeclaredSeverity | MeasuredLabel, number> = {
   none: 0,
   sound: 0,
+  // `Good` claims *less* danger than `Sound` — "better than it looks" — but the
+  // scale has no rung below "nothing wrong", so it shares the floor. What
+  // matters is that it is **below** every flagged band: a `Good` on a fault is
+  // therefore a `Sous-lecture`, and the strongest one there is.
+  good: 0,
   inaccuracy: 1,
   mistake: 2,
   blunder: 3,
@@ -595,7 +612,7 @@ const DANGER_ORDER: Record<Exclude<DeclaredSeverity, "good"> | MeasuredLabel, nu
  * partial credit would be exactly the magic constant this project refuses.
  */
 function termFor(declared: DeclaredSeverity, measured: MeasuredLabel): ReadingTerm {
-  const claimed = DANGER_ORDER[declared as Exclude<DeclaredSeverity, "good">];
+  const claimed = DANGER_ORDER[declared];
   const actual = DANGER_ORDER[measured];
   if (claimed === actual) return "bonne-lecture";
   return claimed < actual ? "sous-lecture" : "sur-lecture";

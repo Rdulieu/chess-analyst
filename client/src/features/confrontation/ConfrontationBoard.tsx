@@ -87,8 +87,8 @@ export function ConfrontationBoard({
         // straddles two grounds, so it needs its own ink and its own tint, and
         // both have to come from the family that does not move with the theme
         // (ADR-0013 — the same reason the board's square tints are constant).
-        tint: DIVERGENCE_TINT,
-        ink: DIVERGENCE_INK,
+        tint: DIVERGENCE_TINT[divergence.direction],
+        ink: DIVERGENCE_INK[divergence.direction],
       })),
     [divergences],
   );
