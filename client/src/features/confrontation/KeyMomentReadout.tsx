@@ -92,7 +92,7 @@ function Miss({ miss }: { miss: KeyMomentMiss }) {
   return (
     <p data-part="miss">
       Votre marqueur est sur <strong>{moveName(miss.ply, miss.notation)}</strong>, qui n'a rien
-      coûté — la perte est sur{" "}
+      coûté — la perte la plus proche est sur{" "}
       <strong>{moveName(miss.nearest.ply, miss.nearest.notation)}</strong> (
       {points(miss.nearest.lost)}),{" "}
       {halfMoveGap(miss.ply, miss.nearest.ply)} plus loin.
