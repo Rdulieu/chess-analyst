@@ -7,6 +7,7 @@ const of = (...phases: MoveAnnotation["phase"][]): MoveAnnotation[] =>
   phases.map((phase, ply) => ({
     counted: null,
     chancesLost: null,
+    opportunity: null,
     ply,
     whiteEval: { cp: 0, mate: null },
     whiteWinChances: 50,

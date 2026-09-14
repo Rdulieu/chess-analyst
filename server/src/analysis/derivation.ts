@@ -41,6 +41,26 @@ export interface MoveAnnotation {
    * stated beside it.
    */
   chancesLost: number | null;
+  /**
+   * What the **opponent's** Move offered, when it offered anything (CONTEXT.md
+   * `Opportunity`, ADR-0034). `null` for ply 0, for the Player's own Moves, and
+   * for an opponent Move that offered nothing.
+   *
+   * **Beside `severity`, never inside it.** The measurement is the same band;
+   * the subject is not. Filling `severity` here would be three lines cheaper and
+   * would silently change what `Danger position`, "vos erreurs" and the weak
+   * openings are about — which is the entire reason this field exists.
+   */
+  opportunity: Opportunity | null;
+}
+
+/**
+ * What one of the opponent's Moves left on the table (CONTEXT.md `Opportunity`).
+ * Its severity is a **property** of it — *an `Opportunity` the size of a
+ * `Blunder`* — read off the Player's own band, not a competing vocabulary.
+ */
+export interface Opportunity {
+  severity: MoveSeverity;
 }
 
 /** One analyzed Game's per-Position FEN, raw `Evaluation` and win% (ply 0 = initial Position). */
@@ -106,6 +126,56 @@ export function moveSeverities(plies: Ply[], playerColor: Game["playerColor"]): 
   return severities;
 }
 
+/** The other side. */
+function opponentOf(playerColor: Game["playerColor"]): Game["playerColor"] {
+  return playerColor === "white" ? "black" : "white";
+}
+
+/**
+ * What each of the opponent's Moves **offered** the Player (CONTEXT.md
+ * `Opportunity`). Index-aligned with `plies` like `countedMoves`: entry `i` is
+ * about the Move that led to ply `i`. `null` for ply 0, for the Player's own
+ * Moves, and wherever nothing was offered.
+ *
+ * **The band is the Player's own**, read off the very same `classifyMove` with
+ * the very same perspective flip (`100 -`), applied to the opponent's colour.
+ * No second threshold exists, and none may be introduced: one threshold, always.
+ *
+ * **The `Counted Move` exclusions are mirrored only halfway, and that asymmetry
+ * is deliberate — do not "fix" it.** They are reused verbatim by asking
+ * `countedMoves` about the opponent's colour, and then only one of the two
+ * answers is honoured:
+ *
+ * - **already decided** discards the `Opportunity`: with the opponent's chances
+ *   under `DECIDED_FLOOR` the Position had nothing left to give, so there was
+ *   nothing there to take;
+ * - **forced** does **not**. `forced` exists so that nobody is *blamed* for a
+ *   Move they had no choice in, and here nobody is being blamed — the subject is
+ *   what the Player was handed. The opponent's lack of choice does not make the
+ *   piece they had to give any less takeable, and mirroring this exclusion would
+ *   throw away the clearest opportunities there are.
+ */
+export function moveOpportunities(
+  plies: Ply[],
+  playerColor: Game["playerColor"],
+): (Opportunity | null)[] {
+  const opponent = opponentOf(playerColor);
+  // `severities[i]` is the Move from `plies[i]` to `plies[i + 1]`; `counted[i]`
+  // is the Move that led to `plies[i]`. Both are `null` off the opponent's plies.
+  const severities = moveSeverities(plies, opponent);
+  const counted = countedMoves(plies, opponent);
+
+  return plies.map((_, i) => {
+    if (i === 0) return null;
+    const severity = severities[i - 1];
+    if (severity === null) return null;
+    const move = counted[i];
+    if (move === null) return null;
+    if (move.reason === "decided") return null;
+    return { severity };
+  });
+}
+
 /** Who is to move at the given ply index (ply 0 = start, White to move). */
 function moverAt(ply: number): Game["playerColor"] {
   return ply % 2 === 0 ? "white" : "black";
@@ -140,6 +210,7 @@ export function gameAnnotations(
   const phaseOf = phases(plies.map((ply) => ply.fen));
   const counted = countedMoves(plies, game.playerColor);
   const lost = chancesLostByMove(plies, game.playerColor);
+  const opportunities = moveOpportunities(plies, game.playerColor);
 
   return plies.map((ply, i) => {
     const mover = moverAt(i);
@@ -152,6 +223,7 @@ export function gameAnnotations(
       phase: phaseOf[i],
       counted: counted[i],
       chancesLost: lost[i],
+      opportunity: opportunities[i],
     };
   });
 }
