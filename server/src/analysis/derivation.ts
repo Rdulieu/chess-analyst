@@ -2,7 +2,7 @@ import type { Game } from "../db/schema";
 import { winningChances, type CpOrMate } from "../danger/winning-chances";
 import { classifyMove, type MoveSeverity } from "../danger/move-quality";
 import { phases, type Phase } from "./phase";
-import { chancesLostByMove, countedMoves, type MoveCount } from "./counted";
+import { chancesLostByMove, countedMoves, DECIDED_FLOOR, type MoveCount } from "./counted";
 
 /** One half-move's annotation (US-7): the `Evaluation` and win% converted to
  *  White-relative (CONTEXT.md — stored values are side-to-move relative), and
@@ -142,36 +142,44 @@ function opponentOf(playerColor: Game["playerColor"]): Game["playerColor"] {
  * No second threshold exists, and none may be introduced: one threshold, always.
  *
  * **The `Counted Move` exclusions are mirrored only halfway, and that asymmetry
- * is deliberate — do not "fix" it.** They are reused verbatim by asking
- * `countedMoves` about the opponent's colour, and then only one of the two
- * answers is honoured:
+ * is deliberate — do not "fix" it.**
  *
  * - **already decided** discards the `Opportunity`: with the opponent's chances
  *   under `DECIDED_FLOOR` the Position had nothing left to give, so there was
- *   nothing there to take;
+ *   nothing there to take.
  * - **forced** does **not**. `forced` exists so that nobody is *blamed* for a
  *   Move they had no choice in, and here nobody is being blamed — the subject is
  *   what the Player was handed. The opponent's lack of choice does not make the
  *   piece they had to give any less takeable, and mirroring this exclusion would
  *   throw away the clearest opportunities there are.
+ *
+ * **Why the level is read here and not `countedMoves`' `reason`.** Reusing that
+ * verdict is the tempting shape, and it is wrong: `classify()` answers `forced`
+ * *before* it looks at the floor — "there was nothing to choose" being the
+ * stronger statement about a Player's Move — so a Move that is **both** forced
+ * and played in a decided Position comes back `"forced"`, and reading the reason
+ * would hand it an `Opportunity` the ticket forbids. The two exclusions are
+ * independent here, so each is asked its own question: the floor is a property
+ * of the **Position** (nothing left to take), and it holds whether or not the
+ * side to move had a choice. `DECIDED_FLOOR` is imported rather than restated —
+ * no threshold is introduced.
  */
 export function moveOpportunities(
   plies: Ply[],
   playerColor: Game["playerColor"],
 ): (Opportunity | null)[] {
-  const opponent = opponentOf(playerColor);
-  // `severities[i]` is the Move from `plies[i]` to `plies[i + 1]`; `counted[i]`
-  // is the Move that led to `plies[i]`. Both are `null` off the opponent's plies.
-  const severities = moveSeverities(plies, opponent);
-  const counted = countedMoves(plies, opponent);
+  // `severities[i]` is the Move from `plies[i]` to `plies[i + 1]`, and is `null`
+  // everywhere but the opponent's own plies — which is also what says whose Move
+  // entry `i` of the result is about.
+  const severities = moveSeverities(plies, opponentOf(playerColor));
 
   return plies.map((_, i) => {
     if (i === 0) return null;
     const severity = severities[i - 1];
     if (severity === null) return null;
-    const move = counted[i];
-    if (move === null) return null;
-    if (move.reason === "decided") return null;
+    // Strictly **under** the floor, exactly as `countedMoves` draws it: the floor
+    // itself is still a Position with something left to give.
+    if (plies[i - 1].winChances < DECIDED_FLOOR) return null;
     return { severity };
   });
 }

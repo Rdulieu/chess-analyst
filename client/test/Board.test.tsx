@@ -132,9 +132,9 @@ describe("Board", () => {
     // "1. e4 e5": ply 1 is White's Move (e4, flagged a blunder here), ply 2 is
     // Black's reply (e5, never flagged regardless of its own Evaluation).
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 2, whiteEval: { cp: -380, mate: null }, whiteWinChances: 6, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     render(<Board pgn="1. e4 e5" annotations={annotations} />);
 
@@ -148,8 +148,8 @@ describe("Board", () => {
 
   it("shows the current Position's formatted Evaluation next to the status line, updating on navigation", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
@@ -163,8 +163,8 @@ describe("Board", () => {
 
   it("renders a winning-chances balance bar for the current Position, updating on navigation", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     const user = userEvent.setup();
     render(<Board pgn="1. e4" annotations={annotations} />);
@@ -178,9 +178,9 @@ describe("Board", () => {
 
   it("tints the destination square of the current Position's flawed Move, distinctly per severity", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 2, whiteEval: { cp: -50, mate: null }, whiteWinChances: 45, severity: "inaccuracy", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     const user = userEvent.setup();
     // The engine's table, supplied the way `Analyse` supplies it since ADR-0022:
@@ -213,8 +213,8 @@ describe("Board", () => {
     // NAME: it verifies the wiring, which is what can break, rather than a hue
     // that was judged once on the pilot (ADR-0013).
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     const user = userEvent.setup();
     const { container } = render(
@@ -242,9 +242,9 @@ describe("Board", () => {
 
   it("tints no square when the current Position follows a clean Move, an opponent's Move, or is the start", async () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null}, // clean
-      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null}, // opponent's Move, never flagged
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: 10, mate: null }, whiteWinChances: 52, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null }, // clean
+      { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null }, // opponent's Move, never flagged
     ];
     const user = userEvent.setup();
     const { container } = render(<Board pgn="1. e4 e5" annotations={annotations} />);
@@ -292,9 +292,9 @@ describe("Evaluation curve", () => {
   }
 
   const three: MoveAnnotation[] = [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+    { ply: 1, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
   ];
 
   it("draws the Game's curve beside the board once the Game has Evaluations", () => {
@@ -420,8 +420,8 @@ describe("Evaluation curve", () => {
 
   it("says so in text when the Player made no flawed Move, rather than showing nothing", () => {
     const clean: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: 20, mate: null }, whiteWinChances: 53, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     render(<Board pgn="1. e4" annotations={clean} />);
 
@@ -479,7 +479,7 @@ describe("Board orientation", () => {
 describe("the error tally's wording", () => {
   function annotationsWith(severities: MoveAnnotation["severity"][]): MoveAnnotation[] {
     return [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
       ...severities.map((severity, i) => ({
         ply: i + 1,
         whiteEval: { cp: -100, mate: null },
@@ -557,9 +557,9 @@ describe("Board — the Moves that do not count", () => {
     severity: MoveAnnotation["severity"],
     counted: MoveAnnotation["counted"],
   ): MoveAnnotation[] => [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "middlegame", counted: null, chancesLost: null, opportunity: null},
-    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 10, severity, bestLine: [], phase: "middlegame", counted, chancesLost: 0, opportunity: null},
-    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 10, severity: null, bestLine: [], phase: "middlegame", counted: null, chancesLost: null, opportunity: null},
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "middlegame", counted: null, chancesLost: null, opportunity: null },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 10, severity, bestLine: [], phase: "middlegame", counted, chancesLost: 0, opportunity: null },
+    { ply: 2, whiteEval: { cp: -400, mate: null }, whiteWinChances: 10, severity: null, bestLine: [], phase: "middlegame", counted: null, chancesLost: null, opportunity: null },
   ];
 
   const firstMove = () =>
@@ -801,14 +801,13 @@ describe("Board — the Game's recap", () => {
     flaggedUncounted: { forced: 0, decided: 0 },
     countedErrors: 1,
     chancesLost: 30,
-    opportunity: null,
     flaggedLoss: 20,
     drift: 10,
     regime: { depth: 16, lines: 2 },
   };
   const annotated: MoveAnnotation[] = [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: true, reason: null }, chancesLost: 0, opportunity: null},
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: true, reason: null }, chancesLost: 0, opportunity: null },
   ];
 
   it("reads at the HEAD of the panel: it is the claim, and everything below it is the proof", () => {
@@ -849,7 +848,7 @@ describe("Board — the reviewed Move's record", () => {
       bestLine: ["d2d4", "d7d5"],
       phase: "early",
       counted: null,
-      chancesLost: null, opportunity: null    },
+      chancesLost: null, opportunity: null },
     {
       ply: 1,
       whiteEval: { cp: -400, mate: null },
@@ -858,7 +857,7 @@ describe("Board — the reviewed Move's record", () => {
       bestLine: ["e7e5", "g1f3"],
       phase: "early",
       counted: null,
-      chancesLost: null, opportunity: null    },
+      chancesLost: null, opportunity: null },
     {
       ply: 2,
       whiteEval: { cp: -380, mate: null },
@@ -867,7 +866,7 @@ describe("Board — the reviewed Move's record", () => {
       bestLine: ["g1f3", "b8c6"],
       phase: "early",
       counted: null,
-      chancesLost: null, opportunity: null    },
+      chancesLost: null, opportunity: null },
   ];
 
   const record = () => screen.getByRole("region", { name: /relevé/i });
@@ -1061,7 +1060,7 @@ describe("Board — the reviewed Move's record", () => {
   it("says whether the reviewed Move counts, and names the reason in words when it does not", async () => {
     const user = userEvent.setup();
     const forced = annotations.map((a, i) =>
-      i === 1 ? { ...a, counted: { counted: false, reason: "forced" as const }, chancesLost: 0, opportunity: null} : a,
+      i === 1 ? { ...a, counted: { counted: false, reason: "forced" as const }, chancesLost: 0, opportunity: null } : a,
     );
     render(<Board pgn="1. e4 e5" annotations={forced} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i })); // e4
@@ -1075,7 +1074,7 @@ describe("Board — the reviewed Move's record", () => {
   it("says a Move counts, rather than staying silent about the denominator", async () => {
     const user = userEvent.setup();
     const counted = annotations.map((a, i) =>
-      i === 1 ? { ...a, counted: { counted: true, reason: null }, chancesLost: 0, opportunity: null} : a,
+      i === 1 ? { ...a, counted: { counted: true, reason: null }, chancesLost: 0, opportunity: null } : a,
     );
     render(<Board pgn="1. e4 e5" annotations={counted} detailed />);
     await user.click(screen.getByRole("button", { name: /next/i }));
@@ -1120,8 +1119,8 @@ describe("the rule that travels with US-22's glyph reversal", () => {
    */
   it("gives a declared verdict and a measured severity different names on the same Move", () => {
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -120, mate: null }, whiteWinChances: 40, severity: "mistake", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 25, mate: null }, whiteWinChances: 55, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -120, mate: null }, whiteWinChances: 40, severity: "mistake", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
 
     render(
@@ -1251,8 +1250,8 @@ describe("Board — the list's existing marks are untouched (US-23)", () => {
     // `annotations[i + 1]` is the Move at `plies[i]`, so index 0 is the starting
     // Position and nobody's Move.
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: false, reason: "forced" }, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: { counted: false, reason: "forced" }, chancesLost: null, opportunity: null },
     ];
     render(<Board pgn={OPERA_PGN} annotations={annotations} />);
 
@@ -1392,8 +1391,8 @@ describe("Board — the current-Move readout carries its number (US-23, F3)", ()
     // ADR-0021: this readout sits above the caller's controls and below the
     // stepper, and it displaces nothing because it never wraps to a second line.
     const annotations: MoveAnnotation[] = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null},
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ];
     render(<Board pgn="1. e4" annotations={annotations} />);
 

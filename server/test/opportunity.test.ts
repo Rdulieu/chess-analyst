@@ -102,6 +102,14 @@ describe("Opportunity — the Counted Move exclusions are mirrored only halfway"
     expect(severities(opponentMove(9, 2))).toEqual([null, null, null]);
   });
 
+  it("offers nothing in a decided Position even when the Move there was forced", () => {
+    // The case the two exclusions meet. `countedMoves` answers `forced` here —
+    // it resolves that reason first, and rightly so for the Player's denominator
+    // — so an implementation that read its verdict instead of the level would
+    // hand this an `Opportunity`. The Position offered nothing: no `Opportunity`.
+    expect(severities(opponentMove(9, 2, SOLE_LEGAL))).toEqual([null, null, null]);
+  });
+
   it("still offers an Opportunity from the floor itself", () => {
     // Strictly *under* the floor is decided; the floor itself still has
     // something left to lose — the same boundary `countedMoves` draws.
@@ -151,5 +159,22 @@ describe("gameAnnotations — the Opportunity travels beside the severity, never
     expect(annotations.map((a) => a.severity)).toEqual([null, null, null]);
     expect(annotations.map((a) => a.counted)).toEqual([null, null, { counted: true, reason: null }]);
     expect(annotations.map((a) => a.chancesLost)).toEqual([null, null, 0]);
+  });
+});
+
+describe("Opportunity — the same reading with the Player on the other side", () => {
+  // Every case above fixes the Player as Black so that the two subjects never
+  // share an index. That leaves the parity arithmetic exercised in one direction
+  // only, and a transposed `opponentOf` would survive it.
+  it("measures Black's Moves when the Player is White", () => {
+    // Ply 1 is White's — the Player's own — and ply 2 is Black's, the opponent's.
+    // Both drop 40 points from their own side.
+    const plies = [ply(OPEN, 60), ply(OPEN_BLACK, 80), ply(OPEN, 80)];
+
+    const opportunities = moveOpportunities(plies, "white");
+
+    expect(opportunities[0]).toBeNull();
+    expect(opportunities[1]).toBeNull(); // the Player's own — measured as `severity`
+    expect(opportunities[2]).toEqual({ severity: "blunder" }); // the opponent's
   });
 });
