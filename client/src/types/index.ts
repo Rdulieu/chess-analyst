@@ -54,5 +54,6 @@ export type {
   UnscoredCase,
   KeyMomentCase,
   MoveKeyMoment,
+  OpportunityReading,
 } from "./confrontation";
 export { MEASURED_LABELS } from "./confrontation";

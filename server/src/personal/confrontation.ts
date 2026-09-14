@@ -144,6 +144,12 @@ export interface MoveKeyMoment {
  * `term` and `unscored` are **mutually exclusive and jointly exhaustive**:
  * exactly one is non-null. A Move is scored, or it is excused for a stated
  * reason; it is never both and never neither.
+ *
+ * The opponent's half of the board is read in **`opportunity` and
+ * `opportunityTerm`**, a couple of its own. It does not disturb the pair above:
+ * an opponent ply stays `unscored: "opponent"`, because "this is not your Move"
+ * remains true whatever the Player's verdict on it turns out to be worth
+ * (ADR-0034).
  */
 export interface MoveReading {
   ply: number;
@@ -163,6 +169,68 @@ export interface MoveReading {
    * cartouches saying "nothing" would bury the six that say something.
    */
   keyMoment: MoveKeyMoment | null;
+  /**
+   * The size of the `Opportunity` the opponent's Move left on the table
+   * (CONTEXT.md, ADR-0034), read straight off the annotation — never re-derived
+   * here, a `Confrontation` being a join (ADR-0019).
+   *
+   * `null` on the Player's own Moves, and on an opponent Move that offered
+   * nothing — including one played in an **already decided** Position, where
+   * there was nothing left to take. A **forced** opponent Move keeps its
+   * `Opportunity`: the asymmetry is the derivation's, and it is deliberate.
+   */
+  opportunity: MoveSeverity | null;
+  /**
+   * What the Player's verdict on that `Opportunity` was worth — the **same
+   * three terms** as `term`, from the **same function**, so there is no second
+   * vocabulary to learn for the other half of the board.
+   *
+   * `null` wherever nothing scores it: no `Opportunity` measured here, or no
+   * verdict written on it. **Never written into `term`**, which is the Player's
+   * reading of their own play and must stay so.
+   */
+  opportunityTerm: ReadingTerm | null;
+}
+
+/**
+ * What the Player's verdicts on the **opponent's** Moves were worth — the
+ * `Confrontation`'s own pair of figures, on the exact model of the coverage /
+ * accuracy couple beside it and **never fused with it** (ADR-0034).
+ *
+ * Judging one's own play and spotting what the opponent offers are two
+ * different abilities, and their disagreement is the diagnosis worth having:
+ * strong on oneself and weak on the opponent describes a Player absorbed in
+ * their own plan. Fused into one rate, that reading disappears.
+ *
+ * Undivided, like everything else here: numerator and denominator travel
+ * together so the reader can judge the sample rather than be handed a rate that
+ * hides it.
+ */
+export interface OpportunityReading {
+  /**
+   * Every `Opportunity` this Game held — the denominator. A fact about the
+   * Game, not about the reading: it is there whether the Player looked or not.
+   */
+  offered: number;
+  /**
+   * Those the Player wrote a **verdict** on — the coverage numerator, and the
+   * accuracy denominator. A `Note` is not a verdict and a `Key moment` is not
+   * one either, exactly as on the Player's own side: **silence stays silence**.
+   */
+  examined: number;
+  /** Among the examined, those read on the band — a `Bonne lecture`. */
+  agreed: number;
+  /**
+   * The `Opportunity`s carrying **no verdict at all**. Counted apart because it
+   * is a **different failure** from a badly read one: invisible to the reading
+   * rather than misjudged by it, and on the requester's own base the larger of
+   * the two (8 of 19 opponent faults, 42%).
+   *
+   * It is `offered - examined`, and it is still counted in the fold rather than
+   * subtracted at the screen: the figure the ticket asks for is a **count of
+   * Moves**, and counting them is what lets the per-Move list answer for it.
+   */
+  unseen: number;
 }
 
 /** Verdicts shown and never scored, by the reason nothing scores them. */
@@ -215,6 +283,11 @@ export interface GameConfrontation {
   /** The `Search regime` behind the engine's figures — one per Game. */
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /**
+   * The reading of the **opponent's** Moves — beside `severity`, never inside
+   * it (ADR-0034). Its figures are the fold of `moves` (ADR-0032).
+   */
+  opportunities: OpportunityReading;
   /**
    * **The reading of every Move**, from ply 1 (ply 0 is nobody's Move) —
    * the Player's own and the opponent's alike (ADR-0032).
@@ -409,6 +482,12 @@ export function confrontGame(
     unscored: { good: 0, opponent: 0 },
   };
 
+  /**
+   * The opponent's half, filled by the very same pass. Nothing extra is walked
+   * and nothing is re-derived: the `Opportunity` arrives on the annotation.
+   */
+  const opportunities: OpportunityReading = { offered: 0, examined: 0, agreed: 0, unseen: 0 };
+
   const uncounted: UncountedMove[] = [];
   /**
    * What the derivation now KEEPS (ADR-0032). Filled by the same single pass
@@ -439,6 +518,8 @@ export function confrontGame(
       term: null,
       unscored: null,
       keyMoment: keyMomentOf(move, marked, lostAt, faults, notations),
+      opportunity: move.opportunity?.severity ?? null,
+      opportunityTerm: null,
     };
     moves.push(entry);
 
@@ -448,6 +529,26 @@ export function confrontGame(
     // standing on one needs to know why their verdict is not scored there.
     if (move.counted === null) {
       entry.unscored = "opponent";
+      // **The grey stays, and the score is added beside it.** Before US-30 this
+      // branch absorbed every verdict the Player wrote on the opponent's half —
+      // 40% of their sealed marks on the requester's own base — and said
+      // nothing about any of them. It says something now wherever there was an
+      // `Opportunity` to read, and it still says "this is not your Move".
+      if (entry.opportunity !== null) {
+        opportunities.offered += 1;
+        if (declared === null) {
+          // Never looked at: a failure of a different kind from a misread one,
+          // and the one the Player cannot see without being told.
+          opportunities.unseen += 1;
+        } else {
+          opportunities.examined += 1;
+          // **The same function as the Player's own side.** An `Opportunity`
+          // always carries a band, so `isScorable`'s one exclusion — `Good`
+          // against nothing flagged — cannot arise here.
+          entry.opportunityTerm = termFor(declared, entry.opportunity);
+          if (entry.opportunityTerm === "bonne-lecture") opportunities.agreed += 1;
+        }
+      }
       // Counted HERE, in the one pass, rather than in a pre-pass of its own as
       // it used to be — the pre-pass existed only because the main loop walked
       // the Player's counted Moves alone. It walks every ply now, so a second
@@ -500,6 +601,7 @@ export function confrontGame(
     provenance: analysis.engineSeenBeforeSeal ? "informed" : "unaided",
     regime: annotations.regime,
     severity: reading,
+    opportunities,
     moves,
     keyMoments: {
       marked: marked.size,
@@ -722,6 +824,7 @@ export interface ConfrontationSummary {
   keyMoments: Omit<KeyMomentReading, "misses">;
 }
 
+
 /**
  * **The aggregate IS the sum** (ADR-0017). Not a query of its own: two
  * implementations of a method agree only by luck and diverge in silence, and the
@@ -733,6 +836,12 @@ export interface ConfrontationSummary {
  * averaged: a reading of three Moves must not weigh as much as one of sixty.
  * The division still belongs where it is read, so an empty corpus yields empty
  * denominators and the screen says **no score** rather than printing `0 %`.
+ *
+ * **No opponent reading is folded here, and that is a decision rather than an
+ * oversight.** US-30 lays the per-Game record the aggregate will be the fold of
+ * (ADR-0017); folding it across the corpus is US-15c/US-33 territory and
+ * explicitly out of that story's scope. Adding the field with no screen asking
+ * for it would freeze a shape nobody has yet had to read.
  */
 export function foldConfrontations(games: GameConfrontation[]): ConfrontationSummary {
   const summary: ConfrontationSummary = {

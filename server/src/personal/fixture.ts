@@ -84,6 +84,33 @@ export const CONFRONTATION_FIXTURE_CASES = {
    * and no Feature Path could ever reach it.
    */
   flaggedGood: 27,
+  /**
+   * **An `Opportunity` seen and read right** (US-30): the opponent's Move
+   * measures a `Blunder`, the Player declared `Blunder`. The first case on this
+   * half of the board that anything scores at all.
+   */
+  opportunitySeenWellRead: 16,
+  /** An `Opportunity` the size of a `Blunder`, called an `Inaccuracy` — read milder than it was. */
+  opportunitySeenUnderRead: 18,
+  /**
+   * An `Opportunity` with **no verdict on it at all** — invisible to the
+   * reading. On the requester's base this is 8 of 19 opponent faults, and it is
+   * a different failure from a misread one.
+   */
+  opportunityNeverLooked: 8,
+  /**
+   * **A forced opponent Move that still offers an `Opportunity`.** `forced`
+   * exists so nobody is blamed, and nobody is blamed here — the piece the
+   * opponent had to give is no less takeable. The exclusion is mirrored only
+   * halfway, and this is the ply that says so.
+   */
+  opportunityForced: 46,
+  /**
+   * An opponent Move whose drop clears the band but which was played in an
+   * **already decided** Position: nothing was left to take, so nothing is
+   * offered. The Player's verdict on it stays grey.
+   */
+  opportunityInDecidedPosition: 48,
 } as const;
 
 
@@ -93,7 +120,7 @@ export const CONFRONTATION_FIXTURE_CASES = {
  * `Evaluation` per Position (`plies + 1`, the starting Position included)
  * rather than counting rows against a literal that drifts.
  */
-export const CONFRONTATION_FIXTURE_PLIES = 35;
+export const CONFRONTATION_FIXTURE_PLIES = 48;
 
 /**
  * The Game itself. The Player is **White**, and the line is not decorative:
@@ -104,7 +131,12 @@ export const CONFRONTATION_FIXTURE_PLIES = 35;
 const FIXTURE_PGN =
   "1. g3 e6 2. a4 d5 3. h4 Nf6 4. Na3 Bc5 5. Nb5 Bxf2+ 6. Kxf2 Nh5 7. Kg2 Qg5 " +
   "8. d3 Nf6 9. Nh3 Kd7 10. Kg1 Qxc1 11. Kf2 g6 12. e3 Rg8 13. Ke1 c5 " +
-  "14. Nf2 Ne4 15. Ng4 Ke7 16. a5 Kf8 17. Ra2 Nd6 18. Nc3";
+  "14. Nf2 Ne4 15. Ng4 Ke7 16. a5 Kf8 17. Ra2 Nd6 18. Nc3 " +
+  // US-30's tail, **appended and never inserted**: every ply up to 35 keeps its
+  // Position, so the cases above keep theirs. `23. Rxf7+` leaves Black exactly
+  // one legal Move (`23... Kxf7`), which is what makes a **forced opponent
+  // Move** reachable — the mirror of `5... Bxf2+ 6. Kxf2` on the other side.
+  "Ne4 19. Nb5 h6 20. Nc7 a6 21. Bg2 b6 22. Rf1 c4 23. Rxf7+ Kxf7 24. Nb5 Kg7";
 
 /**
  * The Game's identity in the database. The seed is keyed on it — `games` is
@@ -142,13 +174,39 @@ const FIXTURE_GAME_URL = "fixture://confrontation/us-26";
  * |  23 |  0.45 | —          | `Sound` + note | a note to read back |
  * |  25 | 10.09 | inaccuracy | `Sound`       | an Inaccuracy missed |
  *
- * The swings on the opponent's plies are large and deliberately so — they are
- * what brings White back above the decided floor after the dive, and nothing
- * scores the opponent, so no figure depends on their plausibility.
+ * The swings on the opponent's plies were once arbitrary. **They are not any
+ * more** (US-30): the same band read from the opponent's side turns them into
+ * `Opportunity`s, so the table above has a second reading — plies 8, 10, 14,
+ * 16, 18 and 26 are what the opponent left on the table.
+ *
+ * **Every `Opportunity` the fixture holds**, so `offered` (7), `examined` (3)
+ * and `unseen` (4) can be read off this table rather than taken on trust:
+ *
+ * | ply | Black's drop | `Opportunity` | declared     | the case |
+ * |-----|--------------|---------------|--------------|----------|
+ * |   8 |  23.5        | mistake       | *(nothing)*  | **never looked at** |
+ * |  10 |  29.7        | mistake       | *(nothing)*  | never looked at |
+ * |  14 |  33.8        | blunder       | *(nothing)*  | never looked at — a `Key moment` is not a verdict |
+ * |  16 |  34.0        | blunder       | `Blunder`    | **seen and read right** |
+ * |  18 |  40.5        | blunder       | `Inaccuracy` | **seen and under-read** |
+ * |  26 |  13.2        | inaccuracy    | *(nothing)*  | never looked at |
+ * |  46 |   6.0        | inaccuracy    | `Inaccuracy` | **forced — and it counts** |
+ * |  48 |   6.0        | *(none)*      | `Blunder`    | **already decided — nothing offered** |
+ *
+ * **The tail (plies 36–48) leaves the Player's figures alone, by construction.**
+ * White sits under `DECIDED_FLOOR` at every Position they move from there, so
+ * every one of those Moves is excluded and the counted denominator, the error
+ * tally and the recap's loss are exactly what they were before US-30. The only
+ * thing the tail adds is the opponent's half of the board.
  */
 const WHITE_RELATIVE_CP: number[] = [
   0, 0, 0, 0, 0, -20, 20, -110, 150, -300, 50, -310, -700, -700, -100, -450, 0, -400, 100, 80,
   80, 70, 70, 65, 65, -45, 100, -380, -380, -380, -380, -380, -380, -380, -380, -380,
+  // The tail. `-700` keeps White at ~7% — under the floor, so none of their
+  // Moves here counts. Then, on Black's side: 97% before the forced `Kxf7` and
+  // 91% after (a drop of 6, an `Inaccuracy`-sized `Opportunity` that counts),
+  // and 9% before the last Move (under the floor: nothing left to offer).
+  -700, -700, -700, -700, -700, -700, -700, -700, -700, -944, -628, 628, 944,
 ];
 
 /** One ply of the sealed reading. Absent plies were left untouched by the Player. */
@@ -184,6 +242,12 @@ const FIXTURE_MARKS: FixtureMark[] = [
   },
   { ply: 25, declaredSeverity: "sound" },
   { ply: 27, declaredSeverity: "good" },
+  // US-30 — the opponent's half of the board. Written the way the requester
+  // writes it: a verdict on some of what was offered, and silence on the rest.
+  { ply: 16, declaredSeverity: "blunder" },
+  { ply: 18, declaredSeverity: "inaccuracy" },
+  { ply: 46, declaredSeverity: "inaccuracy" },
+  { ply: 48, declaredSeverity: "blunder" },
 ];
 
 /**
