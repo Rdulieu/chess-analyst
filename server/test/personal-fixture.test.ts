@@ -10,9 +10,12 @@ import {
   CONFRONTATION_FIXTURE_PLIES,
   CONFRONTATION_FIXTURE_MARKS,
 } from "../src/personal/fixture";
-import { gameNotations } from "../src/chess/positions";
+import { gameNotations, gamePositions } from "../src/chess/positions";
 import { seedProfile } from "./fixtures";
 import { games, evaluations, personalAnalyses, personalMarks } from "../src/db/schema";
+import { Chess } from "cm-chess";
+import { DECIDED_FLOOR } from "../src/analysis/counted";
+import { INACCURACY_DROP } from "../src/danger/move-quality";
 
 /**
  * The seeded fixture US-26 runs its Feature Paths on: **one analysed Game with a
@@ -54,7 +57,7 @@ describe("the seeded Confrontation fixture", () => {
       const game = db.select().from(games).where(eq(games.id, gameId)).get()!;
       const result = confrontGame(analysis, annotations, gameNotations(game.pgn));
       if (result instanceof ConfrontationRefusal) throw new Error(`refused: ${result.reason}`);
-      return { db, profileId, gameId, annotations, analysis, confrontation: result };
+      return { db, profileId, gameId, game, annotations, analysis, confrontation: result };
     }
     return () => (cached ??= build());
   })();
@@ -75,6 +78,11 @@ describe("the seeded Confrontation fixture", () => {
       const { annotations } = confrontation();
       const move = annotations.plies[ply];
       return { severity: move.severity, counted: move.counted };
+    }
+
+    /** What the opponent's Move at one ply offered (US-30, ADR-0034). */
+    function opportunityAt(ply: number) {
+      return confrontation().annotations.plies[ply].opportunity;
     }
 
     /** What the Player declared on one ply, in the sealed layer. */
@@ -177,6 +185,58 @@ describe("the seeded Confrontation fixture", () => {
         counted: { counted: true },
       });
       expect(declared(ply)?.declaredSeverity).toBe("good");
+    });
+
+    it("an Opportunity SEEN AND READ RIGHT — the opponent's half of the board", () => {
+      const { opportunitySeenWellRead: ply } = CONFRONTATION_FIXTURE_CASES;
+
+      // `severity` stays `null` on the opponent's plies and always will
+      // (ADR-0034): the measurement lives beside it, never inside it.
+      expect(measured(ply).severity).toBeNull();
+      expect(opportunityAt(ply)).toEqual({ severity: "blunder" });
+      expect(declared(ply)?.declaredSeverity).toBe("blunder");
+    });
+
+    it("an Opportunity SEEN AND UNDER-READ", () => {
+      const { opportunitySeenUnderRead: ply } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(opportunityAt(ply)).toEqual({ severity: "blunder" });
+      expect(declared(ply)?.declaredSeverity).toBe("inaccuracy");
+    });
+
+    it("an Opportunity NEVER LOOKED AT — measured, and not a mark on it", () => {
+      const { opportunityNeverLooked: ply } = CONFRONTATION_FIXTURE_CASES;
+
+      expect(opportunityAt(ply)).not.toBeNull();
+      expect(declared(ply)).toBeNull();
+    });
+
+    it("a FORCED opponent Move that still offers an Opportunity", () => {
+      const { opportunityForced: ply } = CONFRONTATION_FIXTURE_CASES;
+      const { game } = confrontation();
+
+      // Forced is asserted from the Position itself — one legal Move — rather
+      // than from any flag, because it is the chess that makes the case.
+      const before = gamePositions(game.pgn)[ply - 1];
+      expect(new Chess({ fen: before }).moves()).toHaveLength(1);
+      expect(opportunityAt(ply)).toEqual({ severity: "inaccuracy" });
+      expect(declared(ply)?.declaredSeverity).toBe("inaccuracy");
+    });
+
+    it("an opponent Move in an ALREADY DECIDED Position — a drop, and nothing offered", () => {
+      const { opportunityInDecidedPosition: ply } = CONFRONTATION_FIXTURE_CASES;
+      const { annotations } = confrontation();
+
+      // The drop clears the band; the Position was under the floor, so nothing
+      // was there to take. Both halves asserted, or the case proves nothing.
+      const before = annotations.plies[ply - 1];
+      const opponentChancesBefore = 100 - before.whiteWinChances;
+      expect(opponentChancesBefore).toBeLessThan(DECIDED_FLOOR);
+      expect(opponentChancesBefore - (100 - annotations.plies[ply].whiteWinChances)).toBeGreaterThanOrEqual(
+        INACCURACY_DROP,
+      );
+      expect(opportunityAt(ply)).toBeNull();
+      expect(declared(ply)?.declaredSeverity).toBe("blunder");
     });
 
     it("a written note, so the screen has one to render beside a verdict", () => {

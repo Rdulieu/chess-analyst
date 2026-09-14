@@ -9,7 +9,11 @@ import {
   type GameConfrontation,
   type MoveReading,
 } from "../src/personal/confrontation";
-import { seedConfrontationFixture, CONFRONTATION_FIXTURE_CASES } from "../src/personal/fixture";
+import {
+  seedConfrontationFixture,
+  CONFRONTATION_FIXTURE_CASES,
+  CONFRONTATION_FIXTURE_PLIES,
+} from "../src/personal/fixture";
 import { DECLARED_SEVERITIES } from "../src/personal/severity";
 import { gameNotations } from "../src/chess/positions";
 import { seedProfile } from "./fixtures";
@@ -58,8 +62,11 @@ describe("the per-Move reading of a Confrontation", () => {
       // Ply 0 is nobody's Move. Every other ply has an entry — including the
       // opponent's, which is what lets the screen say "coup de l'adversaire"
       // rather than going silent on a Move the Player is standing on.
+      // Read from the fixture, never a literal: the Game grew by a tail in
+      // US-30 and a hand-kept 35 would have been "fixed" to 48 without anyone
+      // checking the list still had no holes in it.
       expect(moves.map((move) => move.ply)).toEqual(
-        Array.from({ length: 35 }, (_, i) => i + 1),
+        Array.from({ length: CONFRONTATION_FIXTURE_PLIES }, (_, i) => i + 1),
       );
     });
 

@@ -23,6 +23,8 @@ function move(over: Partial<MoveReading>): MoveReading {
     term: null,
     unscored: null,
     keyMoment: null,
+    opportunity: null,
+    opportunityTerm: null,
     ...over,
   };
 }
