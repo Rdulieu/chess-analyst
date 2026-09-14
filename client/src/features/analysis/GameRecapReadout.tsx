@@ -1,5 +1,7 @@
 import type { UncountedReason } from "../../chess/counted";
-import type { GameRecap } from "../../types";
+import { OPPORTUNITY_TERM } from "../../chess/opportunity";
+import { SEVERITY_LABEL } from "../../chess/severity";
+import type { GameRecap, Opportunity } from "../../types";
 
 /** A chances figure, in points, always to one decimal — enough to add up on
  *  screen, not so much as to claim a precision the heuristics do not have.
@@ -46,7 +48,44 @@ const UNCOUNTED_REASONS: UncountedReason[] = ["forced", "decided"];
 /** One decimal, as a number — so the parts can be added before being printed. */
 const round = (value: number) => Math.round(value * 10) / 10;
 
-export function GameRecapReadout({ recap }: { recap: GameRecap }) {
+/** The order the severities are always listed in — worst last, the glossary's
+ *  own order, so two Games read alike and nothing has to be re-sorted by eye. */
+const OPPORTUNITY_SEVERITIES: Opportunity["severity"][] = ["inaccuracy", "mistake", "blunder"];
+
+/**
+ * The breakdown, **in the words the bands already own**. Lower-cased from
+ * `SEVERITY_LABEL` for the same reason `opportunityName` does it: the severity is
+ * a *property* of the `Opportunity` — *une `Opportunity` de la taille d'une
+ * bévue* — and the three capitalised names stay reserved for the Player's own
+ * Moves. A second table here would be free to drift the day one of the three is
+ * renamed.
+ *
+ * The term itself stays **invariable in the plural** (« 3 `Opportunity` »): it is
+ * a defined term of this project's vocabulary, not a French common noun.
+ */
+function breakdown(bySeverity: GameRecap["opportunities"]["bySeverity"]): string {
+  return OPPORTUNITY_SEVERITIES.filter((severity) => bySeverity[severity] > 0)
+    .map((severity) => {
+      const count = bySeverity[severity];
+      const word = SEVERITY_LABEL[severity].toLowerCase();
+      return `${count} de la taille d'une ${word}`;
+    })
+    .join(", ");
+}
+
+export function GameRecapReadout({
+  recap,
+  showOpportunities = false,
+}: {
+  recap: GameRecap;
+  /**
+   * Whether this recap also states what the **opponent** offered (US-30,
+   * ADR-0034). **Off by default**, like `Board`'s prop of the same name and for
+   * the same reason: the screen asks, the payload never decides. A caller that
+   * says nothing gets a recap about the Player and only the Player.
+   */
+  showOpportunities?: boolean;
+}) {
   // The gap, **as the server broke it down** — not recomputed from the two
   // totals. A subtraction gives a number and no reason, and a number is exactly
   // what this sentence must not be reduced to.
@@ -99,6 +138,35 @@ export function GameRecapReadout({ recap }: { recap: GameRecap }) {
         signalées et <strong>{points(drift)}</strong> de dérive (ce qu'aucune erreur signalée
         n'explique).
       </p>
+      {/*
+        **Beside the Player's counts, and in none of them** (ADR-0034). Its own
+        paragraph, its own hook, its own sentence: a count of the opponent's flaws
+        added to « Erreurs comptées » is the exact contamination the whole story
+        exists against, and the separation has to be visible on screen and not
+        only true in the model.
+
+        Its subject is named in words before any figure — the reader is told whose
+        Moves are being counted *before* being given a number. `data-opportunity`
+        is deliberately absent here: there is no severity to hook, and the
+        attribute that would carry one is the one the sheet tints in the Player's
+        fault colours.
+
+        Always rendered once opted in, zero included. « Aucune » is a fact about
+        the Game; a paragraph that comes and goes would make the panel's height
+        depend on the Game (ADR-0021) and would leave the Player unable to tell
+        « none » from « not measured ».
+      */}
+      {showOpportunities && (
+        <p data-part="recap-opportunities">
+          Ce que l'adversaire a laissé sur la table :{" "}
+          <strong>{recap.opportunities.total}</strong> {OPPORTUNITY_TERM}
+          {recap.opportunities.total === 0 ? (
+            " — la partie n'en a offert aucune."
+          ) : (
+            <> — {breakdown(recap.opportunities.bySeverity)}.</>
+          )}
+        </p>
+      )}
       <p data-part="regime">
         {recap.regime
           ? `Analyse : profondeur ${recap.regime.depth}, ${recap.regime.lines} ligne${

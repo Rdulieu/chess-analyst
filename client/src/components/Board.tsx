@@ -41,6 +41,91 @@ import type { GameRecap, GameTime, MoveAnnotation } from "../types";
  * flawed Move. Absent (Unaided, or a not-yet-analyzed Game) renders
  * exactly as without US-7: no glyph, no Evaluation, no bar, no tint.
  */
+/**
+ * **What the engine says about one ply**, in the move list — the severity's
+ * glyph, whether the analysis holds the Player to it, what the opponent offered,
+ * and the `Evaluation`.
+ *
+ * One component for the list's **two layouts**. The row is a chip flow on
+ * `Analyse` and the reading route, and a titled two-author grid on the
+ * `Confrontation` (ADR-0022, ADR-0033) — a difference of *placement*, never of
+ * content. Written twice, the two copies drifted the moment US-30 added a mark:
+ * the `Opportunity` reached the grid and not the flow, so the very screen the
+ * measurement exists for was the one that could not show it, and nothing but a
+ * reader's eye could have caught that. One definition, two frames.
+ */
+function EngineMarks({
+  annotation,
+  showOpportunities,
+}: {
+  annotation: MoveAnnotation | undefined;
+  /**
+   * Whether the engine's cell also says what the **opponent's** Move offered.
+   * Passed down rather than defaulted here: the opt-in is the screen's, and a
+   * default in this component would be a second place able to answer it
+   * (ADR-0034).
+   */
+  showOpportunities: boolean;
+}) {
+  if (!annotation) return null;
+  return (
+    <>
+      {annotation.severity && (
+        // The glyph is the signal; `data-severity` only lets the sheet reinforce
+        // it with the severity's own tint and ink. Naming the severity on the
+        // element keeps the stylesheet off the accessible name, which is a
+        // label, not a hook.
+        <span data-severity={annotation.severity} aria-label={annotation.severity}>
+          {SEVERITY_GLYPH[annotation.severity]}
+        </span>
+      )}
+      {marksUncounted(annotation) && annotation.counted?.reason && (
+        // Beside the severity glyph, which keeps carrying the fault: this says
+        // the analysis does not hold the Player to it. In text, with its own
+        // accessible name — a tint alone could only ever mean "something", not
+        // "not counted" (ADR-0013) — and naming the REASON, because the two
+        // reasons are kept apart everywhere, this surface included.
+        <span
+          data-part="uncounted"
+          aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
+        >
+          {UNCOUNTED_MARK[annotation.counted.reason].text}
+        </span>
+      )}
+      {/*
+        **What the opponent offered**, on the opponent's own ply — and only where
+        the screen asked for it.
+
+        It sits among the engine's marks because it is the engine's measurement;
+        what keeps it from reading as one of the Player's faults is that it
+        carries a WORD beside the glyph, and an accessible name that names the
+        `Opportunity` rather than a band. The Player's own severity beside it is
+        a bare `??` called "blunder": the two can be told apart by eye, by ear,
+        and without any colour (ADR-0013).
+      */}
+      {showOpportunities && annotation.opportunity && (
+        <span
+          data-part="opportunity"
+          /*
+           * **`data-opportunity`, never `data-severity`.** The severity hook is
+           * the ENGINE's glyph's, and `_semantics` tints *any* element carrying
+           * it into a filled chip in the Player's fault colours — measured at
+           * `--tint-mistake` behind `--ink-muted`, 3.5:1 in the light theme and,
+           * worse than the contrast, the one colour on this screen that means
+           * « your fault ». Reusing the attribute for its value would have said
+           * the opposite of what this whole story is for.
+           */
+          data-opportunity={annotation.opportunity.severity}
+          aria-label={opportunityName(annotation.opportunity.severity)}
+        >
+          {opportunityGlyph(annotation.opportunity.severity)} {OPPORTUNITY_TERM}
+        </span>
+      )}
+      <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
+    </>
+  );
+}
+
 export function Board({
   pgn,
   annotations,
@@ -641,58 +726,10 @@ export function Board({
                     <>
                       <span data-cell="player">{moveMarks?.(i + 1)}</span>
                       <span data-cell="engine">
-                        {annotation?.severity && (
-                          <span data-severity={annotation.severity} aria-label={annotation.severity}>
-                            {SEVERITY_GLYPH[annotation.severity]}
-                          </span>
-                        )}
-                        {annotation && marksUncounted(annotation) && annotation.counted?.reason && (
-                          <span
-                            data-part="uncounted"
-                            aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
-                          >
-                            {UNCOUNTED_MARK[annotation.counted.reason].text}
-                          </span>
-                        )}
-                        {/*
-                          **What the opponent offered**, on the opponent's own
-                          ply — and only where the screen asked for it.
-
-                          It sits in the engine's cell because it is the
-                          engine's measurement; what keeps it from reading as
-                          one of the Player's faults is that it carries a WORD
-                          beside the glyph, and an accessible name that names
-                          the `Opportunity` rather than a band. The Player's own
-                          severity two rows up is a bare `??` called "blunder":
-                          the two can be told apart by eye, by ear, and without
-                          any colour (ADR-0013).
-                        */}
-                        {showOpportunities && annotation?.opportunity && (
-                          <span
-                            data-part="opportunity"
-                            /*
-                             * **`data-opportunity`, never `data-severity`.** The
-                             * severity hook is the ENGINE's glyph's, and
-                             * `_semantics` tints *any* element carrying it into
-                             * a filled chip in the Player's fault colours —
-                             * measured here at `--tint-mistake` behind
-                             * `--ink-muted`, 3.5:1 in the light theme and, worse
-                             * than the contrast, the one colour on this screen
-                             * that means « your fault ». Reusing the attribute
-                             * for its value would have said the opposite of what
-                             * this whole story is for.
-                             */
-                            data-opportunity={annotation.opportunity.severity}
-                            aria-label={opportunityName(annotation.opportunity.severity)}
-                          >
-                            {opportunityGlyph(annotation.opportunity.severity)} {OPPORTUNITY_TERM}
-                          </span>
-                        )}
-                        {annotation && (
-                          <span aria-label="evaluation">
-                            {formatEvaluation(annotation.whiteEval)}
-                          </span>
-                        )}
+                        <EngineMarks
+                          annotation={annotation}
+                          showOpportunities={showOpportunities}
+                        />
                       </span>
                       {/* The comparison, AFTER the two authors — it is what
                           their disagreement is worth, so it cannot come before
@@ -702,32 +739,7 @@ export function Board({
                   ) : (
                     <>
                   {moveMarks?.(i + 1)}
-                  {annotation?.severity && (
-                    // The glyph is the signal; `data-severity` only lets the sheet
-                    // reinforce it with the severity's own tint and ink. Naming the
-                    // severity on the element keeps the stylesheet off the accessible
-                    // name, which is a label, not a hook.
-                    <span data-severity={annotation.severity} aria-label={annotation.severity}>
-                      {SEVERITY_GLYPH[annotation.severity]}
-                    </span>
-                  )}
-                  {annotation && marksUncounted(annotation) && annotation.counted?.reason && (
-                    // Beside the severity glyph, which keeps carrying the fault:
-                    // this says the analysis does not hold the Player to it. In
-                    // text, with its own accessible name — a tint alone could
-                    // only ever mean "something", not "not counted" (ADR-0013) —
-                    // and naming the REASON, because the two reasons are kept
-                    // apart everywhere, this surface included.
-                    <span
-                      data-part="uncounted"
-                      aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
-                    >
-                      {UNCOUNTED_MARK[annotation.counted.reason].text}
-                    </span>
-                  )}
-                  {annotation && (
-                    <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
-                  )}
+                  <EngineMarks annotation={annotation} showOpportunities={showOpportunities} />
                     </>
                   )}
                 </li>,
@@ -770,7 +782,16 @@ export function Board({
           </section>
         )
       )}
-      {annotations && detailed && recap && <GameRecapReadout recap={recap} />}
+      {/*
+        The recap's opponent block rides the SAME opt-in as the move list's chip
+        (ADR-0034), and not on `detailed` alone. A payload that grew a field must
+        never change what an existing view is about: a caller that has not asked
+        for the opponent gets the recap it has always had, with the Player's
+        figures and nothing else.
+      */}
+      {annotations && detailed && recap && (
+        <GameRecapReadout recap={recap} showOpportunities={showOpportunities} />
+      )}
       {annotations && detailed && (
         <MoveRecord
           record={record}

@@ -40,9 +40,13 @@ export function DeclaredSeverityControl({
   posed: DeclaredSeverity | null;
   /**
    * Whether the Move is the Player's own. A verdict on the **opponent's** Move is
-   * taken all the same — nothing in the model distinguishes the side — but the
-   * screen says it will not be scored, so the Player is not left believing they
-   * are being marked on it.
+   * taken all the same — nothing in the model distinguishes the side — and the
+   * legend names the side so that the two are never confused on re-reading.
+   *
+   * It used to add that such a verdict would **not be scored**. Since US-30 it
+   * is, against the `Opportunity` the engine measured, and the legend no longer
+   * says either thing: this route is blind, and telling the Player what the
+   * engine will make of their verdict is not this screen's to tell.
    */
   playersOwnMove: boolean;
   disabled?: boolean;
@@ -166,6 +170,26 @@ export function DeclaredSeverityControl({
  *
  * Said less often, **never less clearly**: this is the wording, not an icon and
  * not a tooltip.
+ *
+ * **The opponent clause is NEUTRALISED, and both halves of that word matter**
+ * (US-30, slice 05). It read « coups adverses non notés », and US-30 made that
+ * false: a verdict posed on an opponent's ply is now confronted with the
+ * `Opportunity` the engine measured, in the `Confrontation`'s own pair of
+ * figures. A legend asserting the opposite would tell the Player their work here
+ * is thrown away — the very 40% of their marks this story exists to stop
+ * discarding.
+ *
+ * And the repair is **not** to say the new truth. The reading route is **blind by
+ * nature**: it is where a reading is made before the engine is consulted, and the
+ * moment its legend mentions an `Opportunity`, it tells the Player that a
+ * measurement of the opponent's Moves exists — and, worse, invites the reading of
+ * whether *this* ply carries one. The legend can never be what betrays the
+ * route. So it states the one thing already on screen — **whose Move this is** —
+ * and makes no claim about scoring at all. What becomes of the verdict is the
+ * `Confrontation`'s to say, after the seal, where saying it costs nothing.
+ *
+ * It also stays one line at 1400, 900 and 380 px, which is what ADR-0021 asks of
+ * this fieldset: the new clause is shorter than the one it replaces.
  */
 export function legendFor({
   posterior,
@@ -175,6 +199,6 @@ export function legendFor({
   playersOwnMove: boolean;
 }): string {
   if (posterior) return "Mon verdict, après le scellement";
-  if (!playersOwnMove) return "Mon verdict — coups adverses non notés";
+  if (!playersOwnMove) return "Mon verdict — coup adverse";
   return "Mon verdict";
 }

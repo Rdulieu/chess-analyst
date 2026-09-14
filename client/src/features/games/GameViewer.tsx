@@ -143,6 +143,23 @@ export function GameViewer({
           const severity = annotations?.[ply]?.severity;
           return severity ? SEVERITY_SQUARE_TINT[severity] : undefined;
         }}
+        // **What the opponent offered** — the `Opportunity` (US-30, ADR-0034),
+        // opted into by THIS screen and at the engine's levels only.
+        //
+        // The gate is the `Review mode`, exactly like the square's tint and the
+        // annotations above: the measurement is the engine's, so it appears when
+        // the Player asks the engine and not before. `Unaided` is blind **by
+        // decision** — it is what lets a reading be sealed as honestly unaided
+        // (`engineSeen.ts`) — and leaking the other half of the board into it
+        // would empty that promise, on the one screen a Player opens before
+        // reading.
+        //
+        // It is belt AND braces on purpose: at `Unaided` the board receives no
+        // `annotations` at all, so nothing could be drawn anyway. Saying it twice
+        // costs a boolean, and the day someone loosens the line above — the far
+        // likelier edit, since annotations feed the move list — the prohibition
+        // is still stated where the prohibition lives.
+        showOpportunities={mode !== "unaided"}
         detailed={mode === "detailed"}
         recap={recap}
         // The time follows NO Review mode: it is not something the engine said

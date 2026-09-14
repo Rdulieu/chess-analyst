@@ -170,3 +170,60 @@ describe("The Game's recap — the figures add up ON SCREEN", () => {
     expect(text()).toContain("144.0 %");
   });
 });
+
+describe("the Opportunity block — beside the Player's counts, and opted into (US-30)", () => {
+  const OFFERED: GameRecap = {
+    ...RECAP,
+    opportunities: { total: 3, bySeverity: { inaccuracy: 1, mistake: 0, blunder: 2 } },
+  };
+
+  it("says nothing of the opponent unless the screen ASKS — off by default", () => {
+    const { container } = render(<GameRecapReadout recap={OFFERED} />);
+
+    // The payload carries three, and a caller that did not opt in gets a recap
+    // about the Player and only the Player (ADR-0034).
+    expect(OFFERED.opportunities.total).toBe(3);
+    expect(container.querySelector('[data-part="recap-opportunities"]')).toBeNull();
+    expect(container.innerHTML).not.toContain("Opportunity");
+  });
+
+  it("states the total and its breakdown by severity when asked", () => {
+    const { container } = render(<GameRecapReadout recap={OFFERED} showOpportunities />);
+
+    const block = container.querySelector('[data-part="recap-opportunities"]')!;
+    expect(block).not.toBeNull();
+    expect(block.textContent).toContain("3 Opportunity");
+    // The words of the bands, lower-cased because the severity is a PROPERTY of
+    // the Opportunity — and the two that are zero are not listed.
+    expect(block.textContent).toContain("1 de la taille d'une imprécision");
+    expect(block.textContent).toContain("2 de la taille d'une bévue");
+    expect(block.textContent).not.toContain("erreur");
+  });
+
+  it("never adds the opponent's count into the Player's errors", () => {
+    render(<GameRecapReadout recap={OFFERED} showOpportunities />);
+
+    // 3 counted errors and 3 Opportunities: a sum would read 6, and the two
+    // sentences are told apart by their hooks, not by the reader's goodwill.
+    const own = screen
+      .getByRole("region", { name: /ce que cette partie apporte/i })
+      .textContent!.replace(
+        document.querySelector('[data-part="recap-opportunities"]')!.textContent!,
+        "",
+      );
+    expect(own).toContain(`Erreurs comptées : ${OFFERED.countedErrors}`);
+    expect(own).not.toContain("Opportunity");
+  });
+
+  it("states ZERO as a fact rather than vanishing", () => {
+    // A paragraph that came and went would make the panel's height depend on the
+    // Game (ADR-0021), and would leave « none » indistinguishable from « not
+    // measured ».
+    const { container } = render(<GameRecapReadout recap={RECAP} showOpportunities />);
+
+    expect(RECAP.opportunities.total).toBe(0);
+    const block = container.querySelector('[data-part="recap-opportunities"]')!;
+    expect(block).not.toBeNull();
+    expect(block.textContent).toMatch(/aucune/i);
+  });
+});
