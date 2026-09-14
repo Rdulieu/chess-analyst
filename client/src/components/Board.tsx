@@ -670,7 +670,19 @@ export function Board({
                         {showOpportunities && annotation?.opportunity && (
                           <span
                             data-part="opportunity"
-                            data-severity={annotation.opportunity.severity}
+                            /*
+                             * **`data-opportunity`, never `data-severity`.** The
+                             * severity hook is the ENGINE's glyph's, and
+                             * `_semantics` tints *any* element carrying it into
+                             * a filled chip in the Player's fault colours —
+                             * measured here at `--tint-mistake` behind
+                             * `--ink-muted`, 3.5:1 in the light theme and, worse
+                             * than the contrast, the one colour on this screen
+                             * that means « your fault ». Reusing the attribute
+                             * for its value would have said the opposite of what
+                             * this whole story is for.
+                             */
+                            data-opportunity={annotation.opportunity.severity}
                             aria-label={opportunityName(annotation.opportunity.severity)}
                           >
                             {opportunityGlyph(annotation.opportunity.severity)} {OPPORTUNITY_TERM}

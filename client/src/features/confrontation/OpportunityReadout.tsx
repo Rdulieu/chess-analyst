@@ -1,5 +1,6 @@
 import { Figure } from "./Figure";
 import { OPPORTUNITY_TERM } from "../../chess/opportunity";
+import { READING_TERM_LABEL } from "./readingLabel";
 import type { OpportunityReading } from "../../types";
 
 /**
@@ -19,6 +20,13 @@ import type { OpportunityReading } from "../../types";
  * two is not 50 % of anything worth comparing between Games, and the requester
  * asked to judge the sample size themselves rather than be handed a rate that
  * hides it.
+ *
+ * **The term stays invariable in the plural** — « 7 `Opportunity` offertes »,
+ * never « Opportunitys ». It is a defined term of this project's vocabulary,
+ * borrowed whole, and the agreement is carried by the adjective beside it. The
+ * alternative spellings each break something: an `s` welded to it makes a word
+ * the glossary does not contain, and translating it would produce one of the
+ * three phrasings US-31 reserves against.
  */
 export function OpportunityReadout({ opportunities }: { opportunities: OpportunityReading }) {
   const { offered, examined, agreed, unseen } = opportunities;
@@ -33,20 +41,25 @@ export function OpportunityReadout({ opportunities }: { opportunities: Opportuni
       </p>
       <div data-part="opportunities-figures">
         <Figure
-          name={`Ce que j'ai regardé chez l'adversaire`}
+          name={"Ce que j'ai regardé chez l'adversaire"}
           of={offered}
           count={examined}
-          unit={`${OPPORTUNITY_TERM}s offertes`}
+          unit={`${OPPORTUNITY_TERM} offertes`}
           singular={`${OPPORTUNITY_TERM} offerte`}
           note={note(unseen)}
         />
         <Figure
-          name={`Ce que j'ai lu juste chez l'adversaire`}
+          name={"Ce que j'ai lu juste chez l'adversaire"}
           of={examined}
           count={agreed}
-          unit={`${OPPORTUNITY_TERM}s examinées`}
+          unit={`${OPPORTUNITY_TERM} examinées`}
           singular={`${OPPORTUNITY_TERM} examinée`}
-          note="Sur celles que vous avez regardées. Les trois mêmes termes que pour vos propres coups — Bonne lecture, Sous-lecture, Sur-lecture."
+          // The three terms spelled from the table that owns them: naming them
+          // here by hand would put a fourth copy of the vocabulary on the one
+          // screen whose promise is that there is only one.
+          note={`Sur celles que vous avez regardées. Les trois mêmes termes que pour vos propres coups — ${Object.values(
+            READING_TERM_LABEL,
+          ).join(", ")}.`}
         />
       </div>
     </section>
@@ -64,9 +77,9 @@ export function OpportunityReadout({ opportunities }: { opportunities: Opportuni
  */
 function note(unseen: number): string {
   if (unseen === 0) {
-    return `Sur les ${OPPORTUNITY_TERM}s que la partie a offertes. Vous les avez toutes regardées.`;
+    return `Sur les ${OPPORTUNITY_TERM} que la partie a offertes. Vous les avez toutes regardées.`;
   }
-  return `Sur les ${OPPORTUNITY_TERM}s que la partie a offertes. ${unseen} ${
+  return `Sur les ${OPPORTUNITY_TERM} que la partie a offertes. ${unseen} ${
     unseen === 1 ? "n'a jamais été regardée" : "n'ont jamais été regardées"
   } : invisible à votre lecture, ce qui n'est pas la même chose que mal jugée.`;
 }

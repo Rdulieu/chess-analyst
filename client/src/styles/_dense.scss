@@ -1179,6 +1179,15 @@ ol[data-columns="authors"] [data-cell] {
   white-space: nowrap;
 }
 
+// The severity is carried on `data-opportunity` and **not** on `data-severity`,
+// so nothing tints it: the attribute exists for a driver and for a future sheet,
+// and this rule's only job is to say out loud that the absence of a colour here
+// is a decision, not an omission.
+[data-part="opportunity"][data-opportunity] {
+  background: none;
+  font-weight: inherit;
+}
+
 // **The matrix's cells became controls** (US-26, slice 07), and a control is
 // given a border, a background and generous padding by `_controls`. Left as
 // they came, every figure in the table would grow into a box and widen the

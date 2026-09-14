@@ -87,7 +87,7 @@ export function readingLabel(move: MoveReading): ReadingLabel {
   if (move.term === "bonne-lecture") {
     return {
       tone: "agreement",
-      label: "Bonne lecture",
+      label: READING_TERM_LABEL["bonne-lecture"],
     };
   }
 
@@ -195,7 +195,6 @@ const MEASURED_NAME: Record<MoveReading["measured"], string> = {
   none: "rien",
 };
 
-
 /**
  * **The second family of cartouches** — what the Player's `Key moment`s were
  * worth here (ADR-0033).
@@ -297,6 +296,12 @@ export function opportunityLabel(severity: NonNullable<MoveReading["opportunity"
 }
 
 /**
+ * **The three terms, in one table** — the Player's own agreement reads it, and
+ * so does the `Opportunity`'s verdict (US-30). There is no second vocabulary for
+ * the other half of the board, and there must be no second copy of this one
+ * either: the whole point of « les trois mêmes termes » is that they are the
+ * same strings, which two literals could never promise.
+ *
  * What the Player's verdict on an `Opportunity` was worth — **the three same
  * terms**, so there is no second vocabulary to learn for the other half of the
  * board (SPEC, US-13).
@@ -307,7 +312,7 @@ export function opportunityLabel(severity: NonNullable<MoveReading["opportunity"
  * a sentence about the opponent. The term itself carries the lesson here, and
  * the chip beside it already says how big the `Opportunity` was.
  */
-export const OPPORTUNITY_TERM_LABEL: Record<ReadingTerm, string> = {
+export const READING_TERM_LABEL: Record<ReadingTerm, string> = {
   "bonne-lecture": "Bonne lecture",
   "sous-lecture": "Sous-lecture",
   "sur-lecture": "Sur-lecture",
@@ -327,6 +332,6 @@ export function opportunityReadingLabel(
     tone: OPPORTUNITY_TERM_TONE[term],
     // The same glyph as the chip beside it: it is what says *which* question
     // this answer belongs to, exactly as `◆` does for the `Key moment` family.
-    label: `${opportunityGlyph(severity)} ${OPPORTUNITY_TERM_LABEL[term]}`,
+    label: `${opportunityGlyph(severity)} ${READING_TERM_LABEL[term]}`,
   };
 }

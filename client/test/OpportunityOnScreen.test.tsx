@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent, configure } from "@testing-library/
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ConfrontationPage } from "../src/pages/ConfrontationPage";
 import { CurrentProfileProvider } from "../src/features/profiles/CurrentProfileContext";
-import { OPPORTUNITY_TERM, opportunityName, opportunityGlyph } from "../src/chess/opportunity";
+import { OPPORTUNITY_TERM } from "../src/chess/opportunity";
 import { DECLARED_SEVERITY_SQUARE_TINT } from "../src/features/personal/declaredSeverity";
 import { stubConfrontation, NO_CLOCK } from "./support/confrontationStub";
 import type { GameAnnotations, GameConfrontation, MoveAnnotation } from "../src/types";
@@ -184,8 +184,11 @@ describe("site 1 — the « Le moteur » column", () => {
     expect(mark).not.toBeNull();
     // The rendered TEXT, not the payload: the word and the glyph, both from the
     // modules that own them.
-    expect(mark!.textContent).toContain(OPPORTUNITY_TERM);
-    expect(mark!.textContent).toContain(opportunityGlyph("blunder"));
+    // Literals, not the functions the component itself calls: an expectation
+    // computed by `opportunityGlyph` would agree with any word that module
+    // produced, which is the tautology US-26 was burned by. These are the words
+    // the ticket asks for, written down.
+    expect(mark!.textContent).toBe("?? Opportunity");
   });
 
   it("gives it an accessible name that tells it from a fault of the Player's", async () => {
@@ -194,12 +197,31 @@ describe("site 1 — the « Le moteur » column", () => {
     await board(container);
 
     const opportunity = rowFor(container, "1…e5").querySelector('[data-part="opportunity"]');
-    expect(opportunity!.getAttribute("aria-label")).toBe(opportunityName("blunder"));
+    expect(opportunity!.getAttribute("aria-label")).toBe(
+      "Opportunity de la taille d'une bévue",
+    );
     // The Player's own Blunder on ply 1 keeps the name it always had. Two
     // subjects, two names — read aloud, they cannot be confused.
     const own = rowFor(container, "1.e4").querySelector('[data-cell="engine"] [data-severity]');
     expect(own!.getAttribute("aria-label")).toBe("blunder");
-    expect(own!.getAttribute("aria-label")).not.toBe(opportunityName("blunder"));
+    expect(own!.getAttribute("aria-label")).not.toBe(
+      "Opportunity de la taille d'une bévue",
+    );
+  });
+
+  it("does not wear the Player's own severity hook, which the sheet fills", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    const mark = rowFor(container, "1…e5").querySelector('[data-part="opportunity"]')!;
+    // `_semantics` tints ANY `[data-severity]` into a filled chip in the fault
+    // colours. Measured in the browser before this assertion existed: the
+    // `Opportunity` rendered on `--tint-mistake` behind `--ink-muted`, the one
+    // colour on this screen that means « your fault ». jsdom loads no sheet, so
+    // what is testable here is the hook, and the hook is the cause.
+    expect(mark.getAttribute("data-severity")).toBeNull();
+    expect(mark.getAttribute("data-opportunity")).toBe("blunder");
   });
 
   it("says nothing on an opponent Move that offered nothing", async () => {
@@ -239,7 +261,7 @@ describe("site 2 — the cartouche under the board", () => {
     expect(chip.textContent).toContain(OPPORTUNITY_TERM);
     expect(inList!.textContent).toContain(OPPORTUNITY_TERM);
     // And the cartouche, which has the room, spells the size out.
-    expect(chip.textContent).toContain(opportunityName("blunder"));
+    expect(chip.textContent).toBe("?? Opportunity de la taille d'une bévue");
   });
 
   it("says what the reading was worth there, in the three shared terms", async () => {

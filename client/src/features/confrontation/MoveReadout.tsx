@@ -88,7 +88,6 @@ export function MoveReadout({
   );
 }
 
-
 /**
  * The `Key moment` cartouche, told from the reading one by its **glyph** and
  * not by its colour (ADR-0033).
@@ -109,7 +108,6 @@ function KeyMomentCartouche({ reading, ply }: { reading: MoveKeyMoment; ply: num
     </span>
   );
 }
-
 
 /**
  * **What the opponent offered here, and what the Player made of it** (US-30,
