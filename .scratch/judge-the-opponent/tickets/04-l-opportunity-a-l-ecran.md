@@ -34,18 +34,18 @@ Implémenté sur la branche d'intégration `integration/US-30-judge-the-opponent
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent, done
 
-- [ ] La colonne « Le moteur » rend l'`Opportunity` sur les plis adverses
-- [ ] La cartouche sous l'échiquier la nomme, et nomme ce que la lecture y a valu quand il y a un
+- [x] La colonne « Le moteur » rend l'`Opportunity` sur les plis adverses
+- [x] La cartouche sous l'échiquier la nomme, et nomme ce que la lecture y a valu quand il y a un
       verdict
-- [ ] Le bloc de figures montre la paire adverse, séparée, avec son dénominateur
-- [ ] La courbe n'a **aucun** glyphe nouveau — test ancré
-- [ ] La teinte des cases de l'échiquier est **inchangée** — test ancré
-- [ ] Chaque indication porte un mot et un nom accessible ; aucune ne repose sur la seule couleur
-- [ ] Le mot et le glyphe sont **importés** des modules qui les possèdent (aucune chaîne dupliquée)
-- [ ] Les deux cartouches ne se superposent à aucune largeur testée
-- [ ] Un test de rendu part d'une réponse d'API fabriquée et vérifie le **texte rendu**
+- [x] Le bloc de figures montre la paire adverse, séparée, avec son dénominateur
+- [x] La courbe n'a **aucun** glyphe nouveau — test ancré
+- [x] La teinte des cases de l'échiquier est **inchangée** — test ancré
+- [x] Chaque indication porte un mot et un nom accessible ; aucune ne repose sur la seule couleur
+- [x] Le mot et le glyphe sont **importés** des modules qui les possèdent (aucune chaîne dupliquée)
+- [x] Les deux cartouches ne se superposent à aucune largeur testée
+- [x] Un test de rendu part d'une réponse d'API fabriquée et vérifie le **texte rendu**
 
 ### Feature Path (FP)
 
@@ -61,3 +61,30 @@ Implémenté sur la branche d'intégration `integration/US-30-judge-the-opponent
 
 Verify: par l'interface, et **en regardant le rendu** (capture / styles calculés), pas la réponse
 réseau. C'est le piège qui a coûté trois findings sur US-26.
+
+---
+
+**done** — 2026-09-15, mergée dans `integration/US-30-judge-the-opponent` (PR #PRNUM, `MERGEREF`).
+
+Porte : build vert · suite verte (**626** tests serveur + **1005** tests client, 112 fichiers) ·
+`npm run lint` sorti **0** sur **338** fichiers réellement lintés · **FP verte, 5 étapes sur 5** ·
+aucun finding bloquant ouvert.
+
+Seams déclarés (ADR-0027) : un module pur neuf, `client/src/chess/opportunity.ts` (le mot et le
+glyphe) ; et trois seams **existants** — le rendu de `ConfrontationPage` sur une réponse d'API
+fabriquée (les trois sites et les trois interdits), la table de libellés de `readingLabel.ts`, et
+la liste des coups de `Board` via son opt-in `showOpportunities`.
+
+Le finding bloquant de la relecture indépendante était **le piège nommé par le ticket** : la puce
+portait `data-severity`, que `_semantics` teinte en pastille pleine aux couleurs de la faute du
+joueur — invisible aux 1 005 tests (jsdom ne charge pas la feuille), mesuré au navigateur
+(`--tint-mistake` derrière `--ink-muted`, 3,5:1 en thème clair). Corrigé, et le crochet est
+désormais `data-opportunity`.
+
+Deux constats laissés ouverts, tous deux **antérieurs** à cette tranche :
+- `KeyMomentReadout` écrit « une bévue de l'adversaire » et « manquer un cadeau » — deux des
+  formulations que la SPEC réserve (US-31). Hors des critères de ce ticket ; à trancher avant le
+  MR `integration → develop`.
+- La liste des coups déborde horizontalement entre 700 et 768 px sur cet écran. Mesuré à 805 px de
+  large sans cette tranche contre 797 px avec : le débordement est antérieur et cette tranche le
+  réduit.
