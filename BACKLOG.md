@@ -266,7 +266,16 @@
   >
   > Sur la partie 715, en recalculant hors application avec **la bande publiée du projet**
   > (`classifyMove` : ≥ 10 imprécision, ≥ 20 erreur, ≥ 30 bévue) :
-  > - l'adversaire a commis **7 fautes réelles** ;
+  >
+  > > **⚠ Mesure périmée, constatée au grill du 2026-09-14.** La bande d'`Inaccuracy` est passée de
+  > > **10 à 5** depuis (`INACCURACY_DROP = 5` ; `CONTEXT.md` raconte la séparation d'avec le
+  > > plancher `DECIDED_FLOOR`, resté à 10). Les chiffres ci-dessous sont donc **sous-estimés** :
+  > > re-mesurés sur la vraie base avec la bande actuelle, la 715 porte **11** fautes adverses et
+  > > non 7, et les trois lectures scellées en portent **19** au total dont **8 jamais regardées**.
+  > > La mesure d'origine est conservée telle quelle — elle dit ce qui était vrai quand la story a
+  > > été ouverte, et le fait qu'un seuil ait bougé **sous** une mesure est exactement ce qui se
+  > > reproduira.
+  > - l'adversaire a commis **7 fautes réelles** *(11 avec la bande actuelle)* ;
   > - le joueur en a jugé 14 coups : **8 justes, 2 manques lourds** (`20.b3` à −27,9 et `35.Qd4` à
   >   −22,0 — deux cadeaux non ramassés), **3 fausses alertes**, 1 rangée une bande trop haut ;
   > - **3 fautes adverses réelles** (`22.Kh1`, `23.hxg4`, `25.Ree1`, ~−12 chacune) n'ont même pas été
