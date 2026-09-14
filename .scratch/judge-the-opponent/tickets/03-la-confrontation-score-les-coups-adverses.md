@@ -28,19 +28,25 @@ Implémenté sur la branche d'intégration `integration/US-30-judge-the-opponent
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-15 · PR #124, merge `5ddb957` · gate: build vert, `npm run lint` sorti 0,
+tests verts (serveur 626 / 46 fichiers, client 982 / 64 fichiers), Feature Path 4/4 verte — la
+liste repliée à la main donne `{offered: 7, examined: 3, agreed: 2, unseen: 4}` sur la fixture et
+`{11, 6, 1, 5}` sur la partie 715, où **6 marques adverses sont désormais scorées** contre zéro
+avant ; aucun finding bloquant (revue indépendante : 8 constats, tous non bloquants, 4 corrigés
+dans `d7f7420`)
 
-- [ ] Un verdict sur un pli adverse mesuré produit un des trois `ReadingTerm`s
-- [ ] Ce terme vit dans ses propres champs ; `term` et les quatre compteurs du joueur sont
+- [x] Un verdict sur un pli adverse mesuré produit un des trois `ReadingTerm`s
+- [x] Ce terme vit dans ses propres champs ; `term` et les quatre compteurs du joueur sont
       **inchangés** sur la même lecture — test de non-régression ancré
-- [ ] Un pli adverse sans mesure **et** sans verdict reste non scoré
-- [ ] Les deux figures adverses existent, séparées, avec leur dénominateur
-- [ ] Le compte des `Opportunity`s **jamais regardées** est rendu à part
-- [ ] Les figures égalent la somme des `MoveReading`s — vérifié par un test qui replie la liste
+- [x] Un pli adverse sans mesure **et** sans verdict reste non scoré
+- [x] Les deux figures adverses existent, séparées, avec leur dénominateur
+- [x] Le compte des `Opportunity`s **jamais regardées** est rendu à part
+- [x] Les figures égalent la somme des `MoveReading`s — vérifié par un test qui replie la liste
       lui-même, pas par recopie
-- [ ] La fixture porte les cinq nouveaux cas, et un test vérifie qu'ils y sont (sinon un cas
+- [x] La fixture porte les cinq nouveaux cas, et un test vérifie qu'ils y sont (sinon un cas
       disparaît en silence et une FP passe au vert sans rien exercer)
-- [ ] Les tests partent d'une lecture scellée d'entrée et vérifient le terme produit — **jamais**
+- [x] Les tests partent d'une lecture scellée d'entrée et vérifient le terme produit — **jamais**
       en se fournissant eux-mêmes le terme
 
 ### Feature Path (FP)
