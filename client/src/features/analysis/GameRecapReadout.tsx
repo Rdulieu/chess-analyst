@@ -1,7 +1,11 @@
 import type { UncountedReason } from "../../chess/counted";
-import { OPPORTUNITY_TERM } from "../../chess/opportunity";
-import { SEVERITY_LABEL } from "../../chess/severity";
-import type { GameRecap, Opportunity } from "../../types";
+import {
+  OPPORTUNITY_OFFERED_PHRASE,
+  OPPORTUNITY_TERM,
+  opportunitySize,
+} from "../../chess/opportunity";
+import { SEVERITIES } from "../../chess/severity";
+import type { GameRecap } from "../../types";
 
 /** A chances figure, in points, always to one decimal — enough to add up on
  *  screen, not so much as to claim a precision the heuristics do not have.
@@ -48,28 +52,23 @@ const UNCOUNTED_REASONS: UncountedReason[] = ["forced", "decided"];
 /** One decimal, as a number — so the parts can be added before being printed. */
 const round = (value: number) => Math.round(value * 10) / 10;
 
-/** The order the severities are always listed in — worst last, the glossary's
- *  own order, so two Games read alike and nothing has to be re-sorted by eye. */
-const OPPORTUNITY_SEVERITIES: Opportunity["severity"][] = ["inaccuracy", "mistake", "blunder"];
-
 /**
- * The breakdown, **in the words the bands already own**. Lower-cased from
- * `SEVERITY_LABEL` for the same reason `opportunityName` does it: the severity is
- * a *property* of the `Opportunity` — *une `Opportunity` de la taille d'une
- * bévue* — and the three capitalised names stay reserved for the Player's own
- * Moves. A second table here would be free to drift the day one of the three is
- * renamed.
+ * The breakdown, **in the words the bands already own** — the size said by
+ * `opportunitySize`, the one place that grammatical role is written, and the
+ * order by `SEVERITIES`, the one place the three are ordered. Neither is retyped
+ * here: a second copy of either would be free to drift the day one of the bands
+ * is renamed or re-ordered, and the two screens that say this would then say it
+ * differently.
  *
  * The term itself stays **invariable in the plural** (« 3 `Opportunity` »): it is
  * a defined term of this project's vocabulary, not a French common noun.
+ *
+ * Bands with a count of zero are left out: « 0 de la taille d'une erreur » is
+ * noise, and the total beside it already closes the arithmetic.
  */
 function breakdown(bySeverity: GameRecap["opportunities"]["bySeverity"]): string {
-  return OPPORTUNITY_SEVERITIES.filter((severity) => bySeverity[severity] > 0)
-    .map((severity) => {
-      const count = bySeverity[severity];
-      const word = SEVERITY_LABEL[severity].toLowerCase();
-      return `${count} de la taille d'une ${word}`;
-    })
+  return SEVERITIES.filter((severity) => bySeverity[severity] > 0)
+    .map((severity) => `${bySeverity[severity]} ${opportunitySize(severity)}`)
     .join(", ");
 }
 
@@ -158,7 +157,7 @@ export function GameRecapReadout({
       */}
       {showOpportunities && (
         <p data-part="recap-opportunities">
-          Ce que l'adversaire a laissé sur la table :{" "}
+          {OPPORTUNITY_OFFERED_PHRASE} :{" "}
           <strong>{recap.opportunities.total}</strong> {OPPORTUNITY_TERM}
           {recap.opportunities.total === 0 ? (
             " — la partie n'en a offert aucune."

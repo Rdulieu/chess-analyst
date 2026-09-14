@@ -197,7 +197,28 @@ describe("the Opportunity block — beside the Player's counts, and opted into (
     // the Opportunity — and the two that are zero are not listed.
     expect(block.textContent).toContain("1 de la taille d'une imprécision");
     expect(block.textContent).toContain("2 de la taille d'une bévue");
+    // A band with no Opportunity is left out rather than printed as a zero —
+    // and the assertion is anchored on a fixture where `mistake` is 0 while the
+    // other two are not, so it is the OMISSION that is being read.
+    expect(OFFERED.opportunities.bySeverity.mistake).toBe(0);
     expect(block.textContent).not.toContain("erreur");
+  });
+
+  it("names the middle band too, when the Game actually offered one", () => {
+    // The companion of the assertion above: without it, "erreur is absent" would
+    // also pass on a component that simply never says the word.
+    const { container } = render(
+      <GameRecapReadout
+        recap={{
+          ...RECAP,
+          opportunities: { total: 1, bySeverity: { inaccuracy: 0, mistake: 1, blunder: 0 } },
+        }}
+        showOpportunities
+      />,
+    );
+
+    const block = container.querySelector('[data-part="recap-opportunities"]')!;
+    expect(block.textContent).toContain("1 de la taille d'une erreur");
   });
 
   it("never adds the opponent's count into the Player's errors", () => {

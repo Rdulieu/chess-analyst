@@ -195,11 +195,24 @@ describe("Analyse — at the engine levels, the Opportunity is visible on the op
     const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
     await chooseLevel(/détaillé/i);
 
-    await waitFor(() =>
-      expect(container.querySelector('[data-part="opportunity"]')).not.toBeNull(),
-    );
-    const curve = container.querySelector("svg");
-    if (curve) expect(curve.innerHTML).not.toContain(OPPORTUNITY_TERM);
+    const curve = await waitFor(() => {
+      const found = container.querySelector('[data-part="curve"]');
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    // Anchored on a COUNT, not on the absence of a word: an added glyph would be
+    // written `??`/`?!` — the same notation the Player's own severities use —
+    // so searching for « Opportunity » here could never fail, whatever the curve
+    // drew. The curve marks the Player's flawed Moves; the payload has exactly
+    // one of those and one Opportunity, so a curve that grew a mark counts two.
+    const flawed = PLIES.filter((ply) => ply.severity !== null).length;
+    expect(flawed).toBe(1);
+    expect(PLIES.filter((ply) => ply.opportunity !== null).length).toBe(1);
+    // The curve's marks are `[data-mark-label]` — the attribute that actually
+    // carries them, not the one their name suggests.
+    expect(curve.querySelectorAll("[data-mark-label]").length).toBe(flawed);
+    expect(curve.querySelector("[data-opportunity]")).toBeNull();
+    expect(curve.querySelector('[data-part="opportunity"]')).toBeNull();
   });
 
   it("never writes any of the three phrasings the vocabulary refuses", async () => {
