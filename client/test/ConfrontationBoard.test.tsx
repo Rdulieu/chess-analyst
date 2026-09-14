@@ -54,6 +54,7 @@ const ANNOTATIONS: GameAnnotations = {
     chancesLost: 30,
     flaggedLoss: 30,
     drift: 0,
+    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
     regime: { depth: 16, lines: 2 },
   },
   // A Game with no Clock recorded: the time block is not what this slice is

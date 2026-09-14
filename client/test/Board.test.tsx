@@ -803,6 +803,7 @@ describe("Board — the Game's recap", () => {
     chancesLost: 30,
     flaggedLoss: 20,
     drift: 10,
+    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
     regime: { depth: 16, lines: 2 },
   };
   const annotated: MoveAnnotation[] = [
