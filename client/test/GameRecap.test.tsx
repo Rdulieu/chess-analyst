@@ -13,6 +13,7 @@ const RECAP: GameRecap = {
   chancesLost: 62.5,
   flaggedLoss: 48,
   drift: 14.5,
+  opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
   regime: { depth: 16, lines: 2 },
 };
 
@@ -129,6 +130,7 @@ describe("The Game's recap — what it states", () => {
           chancesLost: 0,
           flaggedLoss: 0,
           drift: 0,
+          opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
           regime: { depth: 16, lines: 2 },
         }}
       />,
@@ -151,6 +153,7 @@ describe("The Game's recap — the figures add up ON SCREEN", () => {
           chancesLost: 60.610029825,
           flaggedLoss: 28.351291273,
           drift: 32.258738552,
+          opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
         }}
       />,
     );

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gameReport, type StoredLine } from "../src/review/report";
+import { gameReport, reconciles, type StoredLine } from "../src/review/report";
 import { parseThresholds } from "../src/review/signals";
 import { gameRecap } from "../src/analysis/recap";
 import { gamePositions } from "../src/chess/positions";
@@ -95,6 +95,7 @@ describe("The replayable report — one line per Player Move", () => {
       chancesLost: report.recap.chancesLost,
       flaggedLoss: report.recap.flaggedLoss,
       drift: report.recap.drift,
+      opportunities: report.recap.opportunities,
     });
   });
 });
@@ -366,5 +367,56 @@ describe("Guarding the dial, and the reference that nothing derives", () => {
     // The verdict a reader trusts most used to be computed in the untested
     // envelope. It is the promise of ADR-0017; it belongs where the promise is.
     expect(gameReport({ playerColor: "white", pgn: TRADE }, level(TRADE)).reconciles).toBe(true);
+  });
+});
+
+describe("The Opportunities the report reconciles (US-30)", () => {
+  /**
+   * Black (the opponent here) starts each of their Moves from an even Position
+   * and leaves White at +300, then +900, then +100 — a `Mistake`, a `Blunder`
+   * and an `Inaccuracy` by the single band, far from every edge. Same rows as
+   * `recap.test.ts`, deliberately.
+   */
+  const OFFERED = [0, 0, 300, 0, 900, 0, 100, 0, 0];
+
+  it("lists one line per Opportunity, NAMED as the Player can find it on the board", () => {
+    const report = gameReport({ playerColor: "white", pgn: PGN }, stored(PGN, OFFERED));
+
+    expect(report.opportunities).toEqual([
+      { ply: 2, san: "e5", severity: "mistake" },
+      { ply: 4, san: "Nc6", severity: "blunder" },
+      { ply: 6, san: "Bc5", severity: "inaccuracy" },
+    ]);
+  });
+
+  it("folds those lines into the recap's own block, and says so", () => {
+    const report = gameReport({ playerColor: "white", pgn: PGN }, stored(PGN, OFFERED));
+
+    // Non-vacuous first: a fold that reconciles because both sides are empty
+    // would prove nothing at all.
+    expect(report.totals.opportunities.total).toBe(3);
+    expect(report.totals.opportunities).toEqual(report.recap.opportunities);
+    expect(report.reconciles).toBe(true);
+  });
+
+  it("FAILS to reconcile when the block and the fold disagree — the drift it exists to catch", () => {
+    const report = gameReport({ playerColor: "white", pgn: PGN }, stored(PGN, OFFERED));
+
+    // One Opportunity dropped from the recap, every Player figure left alone:
+    // without the block in the comparison this passes, which is the silent
+    // drift the ticket asks to close.
+    const drifted = {
+      ...report.recap,
+      opportunities: { total: 2, bySeverity: { inaccuracy: 0, mistake: 1, blunder: 1 } },
+    };
+    expect(reconciles(report.totals, drifted)).toBe(false);
+    // And a total that still matches while the breakdown moved is a divergence too.
+    const reshuffled = {
+      ...report.recap,
+      opportunities: { total: 3, bySeverity: { inaccuracy: 0, mistake: 2, blunder: 1 } },
+    };
+    expect(reconciles(report.totals, reshuffled)).toBe(false);
+    // The untouched recap is the control: the predicate is not simply false.
+    expect(reconciles(report.totals, report.recap)).toBe(true);
   });
 });
