@@ -26,20 +26,26 @@ elle et y merger, **pas** vers `develop`.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-15 · PR #122, merge `7cb1593` · gate: build vert, tests verts (serveur 45
+fichiers / 591 tests, client 64 fichiers / 982 tests, 0 échec), `npm run lint` exécuté et sorti 0,
+Feature Path verte 3/3, no blocking finding — un finding bloquant trouvé par la revue indépendante
+(l'exclusion « déjà décidée » lisait le verdict de `countedMoves` au lieu du niveau, donc un coup
+adverse forcé **et** en position décidée gardait son `Opportunity`) corrigé en `8ce48c5` avant le
+merge.
 
-- [ ] L'annotation de coup porte l'`Opportunity` dans un champ **distinct** de `severity`
-- [ ] `severity` reste `null` sur tout pli adverse — un test l'ancre explicitement
-- [ ] La mesure passe par **la même** fonction de classement que côté joueur (aucun second seuil)
-- [ ] Le retournement de perspective est correct : un test part d'`Evaluation`s connues et vérifie
+- [x] L'annotation de coup porte l'`Opportunity` dans un champ **distinct** de `severity`
+- [x] `severity` reste `null` sur tout pli adverse — un test l'ancre explicitement
+- [x] La mesure passe par **la même** fonction de classement que côté joueur (aucun second seuil)
+- [x] Le retournement de perspective est correct : un test part d'`Evaluation`s connues et vérifie
       la bande attendue, sans se fournir la réponse
-- [ ] Un coup adverse **forcé** et fautif porte bien une `Opportunity`
-- [ ] Un coup adverse en position **déjà décidée** n'en porte **aucune**
-- [ ] Les deux côtés de chaque frontière de bande sont testés (juste en dessous / juste au-dessus)
-- [ ] `Danger position`, le compte d'erreurs du joueur et les ouvertures faibles rendent **exactement**
+- [x] Un coup adverse **forcé** et fautif porte bien une `Opportunity`
+- [x] Un coup adverse en position **déjà décidée** n'en porte **aucune**
+- [x] Les deux côtés de chaque frontière de bande sont testés (juste en dessous / juste au-dessus)
+- [x] `Danger position`, le compte d'erreurs du joueur et les ouvertures faibles rendent **exactement**
       les mêmes valeurs qu'avant sur la même entrée — test de non-régression ancré
-- [ ] Aucun changement de schéma, aucune migration
-- [ ] L'asymétrie `forced` / `decided` est commentée au site du code
+- [x] Aucun changement de schéma, aucune migration
+- [x] L'asymétrie `forced` / `decided` est commentée au site du code
 
 ### Feature Path (FP)
 
