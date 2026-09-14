@@ -15,6 +15,7 @@ const move = (
   phase,
   counted: chancesLost === null ? null : { counted: true, reason: null },
   chancesLost,
+  opportunity: null,
 });
 
 describe("The cumulative trace of what the Player lost", () => {

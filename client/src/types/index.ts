@@ -22,6 +22,7 @@ export type {
 export type { AnalysisStatus } from "./analysis";
 export type {
   MoveAnnotation,
+  Opportunity,
   GameAnnotations,
   GameRecap,
   SearchRegime,
