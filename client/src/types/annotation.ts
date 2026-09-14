@@ -98,7 +98,8 @@ export interface GameRecap {
    */
   opportunities: {
     total: number;
-    bySeverity: { inaccuracy: number; mistake: number; blunder: number };
+    /** Keyed off `Opportunity`'s own severity, so the two cannot drift apart. */
+    bySeverity: Record<Opportunity["severity"], number>;
   };
   regime: SearchRegime | null;
 }

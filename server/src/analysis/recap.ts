@@ -90,6 +90,19 @@ export interface OpportunityCount {
   bySeverity: Record<MoveSeverity, number>;
 }
 
+/** A block with nothing in it yet — the one place the three buckets are named,
+ *  so a fourth severity is one edit rather than a hunt through the callers. */
+export function noOpportunities(): OpportunityCount {
+  return { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } };
+}
+
+/** One `Opportunity` added to a block, total and bucket together — which is why
+ *  the breakdown sums to the total by construction rather than by care. */
+export function countOpportunity(into: OpportunityCount, severity: MoveSeverity): void {
+  into.total += 1;
+  into.bySeverity[severity] += 1;
+}
+
 /**
  * The recap of one Game, from the same stored rows every other read path uses.
  * No engine call and nothing persisted (ADR-0009): retuning a threshold retunes
@@ -122,7 +135,7 @@ export function gameRecap(
     chancesLost: 0,
     flaggedLoss: 0,
     drift: 0,
-    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+    opportunities: noOpportunities(),
     regime,
   };
 
@@ -131,8 +144,7 @@ export function gameRecap(
   // through it is how one subject ends up in the other's figures.
   for (const offered of opportunities) {
     if (offered === null) continue;
-    recap.opportunities.total += 1;
-    recap.opportunities.bySeverity[offered.severity] += 1;
+    countOpportunity(recap.opportunities, offered.severity);
   }
 
   for (let i = 1; i < plies.length; i++) {

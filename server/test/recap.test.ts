@@ -212,7 +212,13 @@ describe("gameRecap — what the opponent offered, beside the Player's counts", 
     expect(recap.flaggedUncounted).toEqual({ forced: 0, decided: 0 });
     // The invariant the whole fold rests on, on a Game that now also has a block.
     expect(recap.flaggedLoss + recap.drift).toBeCloseTo(recap.chancesLost, 9);
+    // And the loss figures are pinned, not merely positive: White's only losing
+    // Moves ARE the three flagged ones (their first Move loses nothing), so the
+    // whole loss is flagged and the residual is zero. A change that moved the
+    // figures while keeping the invariant would slip past a `> 0`.
     expect(recap.chancesLost).toBeGreaterThan(0);
+    expect(recap.flaggedLoss).toBe(recap.chancesLost);
+    expect(recap.drift).toBe(0);
   });
 
   it("reads the SAME source as the annotations, rather than counting a second time", () => {

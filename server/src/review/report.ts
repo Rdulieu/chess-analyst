@@ -1,6 +1,12 @@
 import type { Game } from "../db/schema";
 import { gameNotations } from "../chess/positions";
-import { gameRecap, type GameRecap, type OpportunityCount } from "../analysis/recap";
+import {
+  countOpportunity,
+  gameRecap,
+  noOpportunities,
+  type GameRecap,
+  type OpportunityCount,
+} from "../analysis/recap";
 import { phases, type Phase } from "../analysis/phase";
 import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, gamePlies, moveSeverities } from "../analysis/derivation";
@@ -326,12 +332,11 @@ function fold(
     chancesLost: 0,
     flaggedLoss: 0,
     drift: 0,
-    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+    opportunities: noOpportunities(),
   };
 
   for (const offered of opportunities) {
-    totals.opportunities.total += 1;
-    totals.opportunities.bySeverity[offered.severity] += 1;
+    countOpportunity(totals.opportunities, offered.severity);
   }
 
   for (const row of rows) {
