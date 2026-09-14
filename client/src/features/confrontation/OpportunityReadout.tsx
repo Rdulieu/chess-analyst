@@ -1,5 +1,5 @@
 import { Figure } from "./Figure";
-import { OPPORTUNITY_TERM } from "../../chess/opportunity";
+import { OPPORTUNITY_OFFERED_PHRASE, OPPORTUNITY_TERM } from "../../chess/opportunity";
 import { READING_TERM_LABEL } from "./readingLabel";
 import type { OpportunityReading } from "../../types";
 
@@ -35,7 +35,7 @@ export function OpportunityReadout({ opportunities }: { opportunities: Opportuni
     <section data-part="confrontation-opportunities" aria-label="Ce qui m'a été offert">
       <h3>Ce qui m'a été offert</h3>
       <p data-part="opportunities-lede">
-        Ce que l'adversaire a laissé sur la table, mesuré avec <strong>votre bande</strong> — et
+        {OPPORTUNITY_OFFERED_PHRASE}, mesuré avec <strong>votre bande</strong> — et
         ce que votre lecture en a dit. Des chiffres <strong>à part</strong> : lire son propre jeu
         et voir ce qu'on vous offre sont deux aptitudes différentes.
       </p>

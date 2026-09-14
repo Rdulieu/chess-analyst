@@ -176,14 +176,14 @@ describe("the reading route", () => {
 
     await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
     await user.click(screen.getByRole("button", { name: "Next" }));
-    // The warning is the fieldset's own accessible NAME since US-22 — it warns
+    // The side is the fieldset's own accessible NAME since US-22 — it is read
     // before the verdict can be posed instead of appearing above the radios and
     // pushing everything below it (ADR-0021). Said less often, never less
     // clearly: the wording is still there and still in words.
-    expect(screen.queryByRole("group", { name: /non notés/i })).toBeNull();
+    expect(screen.queryByRole("group", { name: /coup adverse/i })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Next" })); // 1... e5, the opponent's
-    expect(screen.getByRole("group", { name: /coups adverses non notés/i })).not.toBeNull();
+    expect(screen.getByRole("group", { name: /coup adverse/i })).not.toBeNull();
 
     await user.click(
       within(screen.getByRole("group", { name: /mon verdict/i })).getByRole("radio", {
@@ -1193,7 +1193,7 @@ describe("what the Player clicks never moves (ADR-0021)", () => {
     // why it was 33 of the 45 displacements: as a paragraph above the radios it
     // appeared and vanished under the Player's own stepping.
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(legendOf()?.textContent).toBe("Mon verdict — coups adverses non notés");
+    expect(legendOf()?.textContent).toBe("Mon verdict — coup adverse");
   });
 });
 
@@ -1596,5 +1596,51 @@ describe("PersonalReading — the sealed verdict is readable in the sealed secti
     const full = screen.getByRole("group", { name: /ma lecture scellée de ce coup/i });
     expect(within(full).getByText(/ce que j'avais écrit/)).toBeTruthy();
     expect(within(full).getByText(/moment clé/i)).toBeTruthy();
+  });
+});
+
+describe("the reading route stays blind — its legend cannot be what betrays it (US-30)", () => {
+  /**
+   * The route is blind **by nature**: it is where a reading is made before the
+   * engine is consulted. US-30 gave the opponent's Moves a measurement, and the
+   * one place on this screen that could mention it is the verdict's legend —
+   * which is read on every opponent ply, before the verdict can be posed.
+   */
+  it("says nothing of the Opportunity, on the opponent's ply where the legend is read", async () => {
+    const user = userEvent.setup();
+    stubReading();
+    const { container } = render(
+      // Analysed on purpose: the Game whose engine record EXISTS is the one a
+      // leak would have something to leak about.
+      <PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />,
+    );
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // 1. e4 — the Player's
+    await user.click(screen.getByRole("button", { name: "Next" })); // 1… e5 — the opponent's
+
+    const legend = container.querySelector('[data-part="declared-severity"] legend');
+    expect(legend).not.toBeNull();
+    expect(legend!.textContent).toBe("Mon verdict — coup adverse");
+    // It names the SIDE, which the move list already shows, and makes no claim
+    // at all about what will be done with the verdict.
+    expect(legend!.textContent).not.toMatch(/Opportunity|notés?\b|compt|adversaire a/i);
+  });
+
+  it("leaks nothing of the engine anywhere in the route's markup", async () => {
+    // Not only the legend: the whole route. An information rendered invisible in
+    // CSS is still a leak, so this reads `innerHTML` and not the screen.
+    const user = userEvent.setup();
+    stubReading();
+    const { container } = render(
+      <PersonalReading game={{ ...OPERA_GAME, analyzed: true }} profileId={1} />,
+    );
+    await waitFor(() => expect(moveItems().length).toBeGreaterThan(20));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(container.innerHTML).not.toContain("Opportunity");
+    expect(container.querySelector('[data-part="opportunity"]')).toBeNull();
+    expect(container.querySelector("[data-opportunity]")).toBeNull();
   });
 });
