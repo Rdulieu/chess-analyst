@@ -1,4 +1,4 @@
-import type { SearchRegime } from "./annotation";
+import type { Opportunity, SearchRegime } from "./annotation";
 import type { DeclaredSeverity } from "./personal";
 
 /**
@@ -77,7 +77,7 @@ export interface MoveReading {
    * (CONTEXT.md, ADR-0034). `null` on the Player's own Moves, and on an
    * opponent Move that offered nothing.
    */
-  opportunity: OpportunitySeverity | null;
+  opportunity: Opportunity["severity"] | null;
   /**
    * What the Player's verdict on that `Opportunity` was worth — the **same
    * three terms**, in a field of their own. Never in `term`, which stays the
@@ -85,9 +85,6 @@ export interface MoveReading {
    */
   opportunityTerm: ReadingTerm | null;
 }
-
-/** The band an `Opportunity` is read on — the Player's own, never a second one. */
-export type OpportunitySeverity = "inaccuracy" | "mistake" | "blunder";
 
 /**
  * What the Player's verdicts on the **opponent's** Moves were worth, undivided

@@ -55,6 +55,5 @@ export type {
   KeyMomentCase,
   MoveKeyMoment,
   OpportunityReading,
-  OpportunitySeverity,
 } from "./confrontation";
 export { MEASURED_LABELS } from "./confrontation";

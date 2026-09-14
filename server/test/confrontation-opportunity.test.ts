@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { openDb } from "../src/db";
-import { getGameAnnotations } from "../src/annotations/repository";
+import { getGameAnnotations, type GameAnnotations } from "../src/annotations/repository";
 import { getPersonalAnalysis } from "../src/personal/repository";
 import {
   confrontGame,
@@ -24,6 +24,9 @@ import { eq } from "drizzle-orm";
  * blocking findings through US-26, and it is the one thing this suite may not do.
  */
 describe("the opponent side of a Confrontation", () => {
+  /** The engine side's own recap, kept so a figure can be set against it. */
+  let recap: GameAnnotations["recap"] = null;
+
   const confronted = (() => {
     let cached: GameConfrontation | null = null;
     return () => {
@@ -36,6 +39,7 @@ describe("the opponent side of a Confrontation", () => {
       const game = db.select().from(games).where(eq(games.id, gameId)).get()!;
       const result = confrontGame(analysis, annotations, gameNotations(game.pgn));
       if (result instanceof ConfrontationRefusal) throw new Error(`refused: ${result.reason}`);
+      recap = annotations.recap;
       return (cached = result);
     };
   })();
@@ -229,6 +233,35 @@ describe("the opponent side of a Confrontation", () => {
       const { offered, examined, unseen } = confronted().opportunities;
 
       expect(examined + unseen).toBe(offered);
+    });
+
+    /**
+     * **An oracle from outside the pass.** Every assertion above folds the list
+     * the same pass produced, so they prove internal consistency and not
+     * correctness: a `moveOpportunities` whose floor comparison was inverted
+     * would move the list and the four counters *together* and stay green.
+     *
+     * These four numbers were computed by hand from `WHITE_RELATIVE_CP`, the
+     * published bands (5 / 20 / 30) and `DECIDED_FLOOR`, and re-derived
+     * independently twice — the fixture's own table of cases says which ply is
+     * which. They are the fixture's, not the code's.
+     */
+    it("lands on the figures the fixture's Evaluations imply, computed apart from it", () => {
+      expect(confronted().opportunities).toEqual({
+        offered: 7,
+        examined: 3,
+        agreed: 2,
+        unseen: 4,
+      });
+    });
+
+    it("counts the same Opportunities the Game's own recap does", () => {
+      // Two derivations of one number live in this payload — the recap's, from
+      // `moveOpportunities` directly, and this one, folded from the per-Move
+      // list per ADR-0032. Nothing but this line ties them together, and two
+      // implementations that agree only by luck diverge in silence.
+      confronted();
+      expect(recap!.opportunities.total).toBe(confronted().opportunities.offered);
     });
 
     it("scores no Opportunity twice, and none of the Player's own Moves", () => {

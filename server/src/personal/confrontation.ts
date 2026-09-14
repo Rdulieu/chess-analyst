@@ -824,13 +824,6 @@ export interface ConfrontationSummary {
   keyMoments: Omit<KeyMomentReading, "misses">;
 }
 
-/**
- * **No opponent reading here, and that is a decision rather than an oversight.**
- * US-30 lays the per-Game record the aggregate will be the fold of (ADR-0017);
- * folding it across the corpus is US-15c/US-33 territory and is explicitly out
- * of this story's scope. Adding the field here without a screen asking for it
- * would freeze a shape nobody has yet had to read.
- */
 
 /**
  * **The aggregate IS the sum** (ADR-0017). Not a query of its own: two
@@ -843,6 +836,12 @@ export interface ConfrontationSummary {
  * averaged: a reading of three Moves must not weigh as much as one of sixty.
  * The division still belongs where it is read, so an empty corpus yields empty
  * denominators and the screen says **no score** rather than printing `0 %`.
+ *
+ * **No opponent reading is folded here, and that is a decision rather than an
+ * oversight.** US-30 lays the per-Game record the aggregate will be the fold of
+ * (ADR-0017); folding it across the corpus is US-15c/US-33 territory and
+ * explicitly out of that story's scope. Adding the field with no screen asking
+ * for it would freeze a shape nobody has yet had to read.
  */
 export function foldConfrontations(games: GameConfrontation[]): ConfrontationSummary {
   const summary: ConfrontationSummary = {

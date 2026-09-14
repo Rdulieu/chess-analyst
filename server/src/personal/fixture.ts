@@ -179,13 +179,19 @@ const FIXTURE_GAME_URL = "fixture://confrontation/us-26";
  * `Opportunity`s, so the table above has a second reading — plies 8, 10, 14,
  * 16, 18 and 26 are what the opponent left on the table.
  *
+ * **Every `Opportunity` the fixture holds**, so `offered` (7), `examined` (3)
+ * and `unseen` (4) can be read off this table rather than taken on trust:
+ *
  * | ply | Black's drop | `Opportunity` | declared     | the case |
  * |-----|--------------|---------------|--------------|----------|
- * |   8 |  ~21         | mistake       | *(nothing)*  | **never looked at** |
- * |  16 |  ~34         | blunder       | `Blunder`    | **seen and read right** |
- * |  18 |  ~22         | blunder       | `Inaccuracy` | **seen and under-read** |
- * |  46 |    6         | inaccuracy    | `Inaccuracy` | **forced — and it counts** |
- * |  48 |    6         | *(none)*      | `Blunder`    | **already decided — nothing offered** |
+ * |   8 |  23.5        | mistake       | *(nothing)*  | **never looked at** |
+ * |  10 |  29.7        | mistake       | *(nothing)*  | never looked at |
+ * |  14 |  33.8        | blunder       | *(nothing)*  | never looked at — a `Key moment` is not a verdict |
+ * |  16 |  34.0        | blunder       | `Blunder`    | **seen and read right** |
+ * |  18 |  40.5        | blunder       | `Inaccuracy` | **seen and under-read** |
+ * |  26 |  13.2        | inaccuracy    | *(nothing)*  | never looked at |
+ * |  46 |   6.0        | inaccuracy    | `Inaccuracy` | **forced — and it counts** |
+ * |  48 |   6.0        | *(none)*      | `Blunder`    | **already decided — nothing offered** |
  *
  * **The tail (plies 36–48) leaves the Player's figures alone, by construction.**
  * White sits under `DECIDED_FLOOR` at every Position they move from there, so
