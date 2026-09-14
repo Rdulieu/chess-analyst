@@ -19,18 +19,22 @@ Implémenté sur la branche d'intégration `integration/US-30-judge-the-opponent
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-15 · PR #123, merge `cae7b2f` · gate: build vert, tests verts (serveur 600 /
+45 fichiers, client 982 / 64 fichiers), `npm run lint` sorti 0 (333 fichiers lintés), Feature Path
+3/3 verte sur la partie 709 (7 `Opportunity`s recomptées à la main : 3 imprécisions, 1 erreur,
+3 bévues), aucun finding bloquant (revue indépendante : 10 constats, tous non bloquants, 4 corrigés)
 
-- [ ] `GameRecap` porte un bloc d'`Opportunity`s : total + ventilation par gravité
-- [ ] `playerMoves`, `countedMoves`, `flaggedMoves`, `countedErrors`, `excluded`,
+- [x] `GameRecap` porte un bloc d'`Opportunity`s : total + ventilation par gravité
+- [x] `playerMoves`, `countedMoves`, `flaggedMoves`, `countedErrors`, `excluded`,
       `flaggedUncounted`, `chancesLost`, `flaggedLoss`, `drift` sont **inchangés** sur la même
       entrée — test de non-régression ancré sur des `Evaluation`s fabriquées
-- [ ] L'invariant `flaggedLoss + drift === chancesLost` tient toujours
-- [ ] La somme de la ventilation par gravité égale le total — vérifié par le test, pas par l'œil
-- [ ] Le rapport de revue réconcilie le nouveau bloc et **échoue** si les deux calculs divergent
-- [ ] Le récap est cohérent avec ce que la tranche 01 met sur les annotations : même source, pas un
+- [x] L'invariant `flaggedLoss + drift === chancesLost` tient toujours
+- [x] La somme de la ventilation par gravité égale le total — vérifié par le test, pas par l'œil
+- [x] Le rapport de revue réconcilie le nouveau bloc et **échoue** si les deux calculs divergent
+- [x] Le récap est cohérent avec ce que la tranche 01 met sur les annotations : même source, pas un
       second calcul
-- [ ] Aucune persistance, aucune migration
+- [x] Aucune persistance, aucune migration
 
 ### Feature Path (FP)
 
