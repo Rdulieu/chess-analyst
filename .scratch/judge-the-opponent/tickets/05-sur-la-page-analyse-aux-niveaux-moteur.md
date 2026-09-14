@@ -40,7 +40,7 @@ reste une fuite.
 
 ---
 
-**done** — 2026-09-15, mergée dans `integration/US-30-judge-the-opponent` (PR #127, `MERGE_REF`).
+**done** — 2026-09-15, mergée dans `integration/US-30-judge-the-opponent` (PR #127, `821dd40`).
 
 Porte : build **0**, suite **verte** (serveur 626/626, client 1021/1021), `npm run lint` sorti
 **0**, FP **verte 5/5**, aucun finding bloquant ouvert.
