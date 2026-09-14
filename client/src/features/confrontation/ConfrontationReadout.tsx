@@ -1,6 +1,7 @@
 import { ConfusionMatrixTable } from "./ConfusionMatrixTable";
 import { Figure } from "./Figure";
 import { KeyMomentReadout } from "./KeyMomentReadout";
+import { OpportunityReadout } from "./OpportunityReadout";
 import type { GameConfrontation } from "../../types";
 
 /**
@@ -68,6 +69,10 @@ export function ConfrontationReadout({
             *what* happens. A single figure would have erased that. */}
         <KeyMomentReadout keyMoments={confrontation.keyMoments} />
       </div>
+      {/* The opponent's half of the board — **beside** the grid above and not a
+          cell of it (ADR-0034). Put inside, it would read as a fourth answer to
+          the same question; the whole point is that it answers another one. */}
+      <OpportunityReadout opportunities={confrontation.opportunities} />
       {/* HOW the Player is wrong, UNDER the figures and not beside them: the two
           rates answer *how much*, and the matrix is what explains them. */}
       <ConfusionMatrixTable

@@ -1091,7 +1091,12 @@ $drift-inset: $drift-frame + $drift-headroom;
 // widths and the headings would sit over nothing. The comparison gets the
 // widest share because it holds a sentence («
 // Position déjà décidée — non comptée ») where the others hold a glyph or two.
-$move-authors-tracks: minmax(4.5rem, 0.8fr) 0.5fr 0.7fr minmax(7rem, 2fr);
+// **The engine's track gained a word** (US-30): on the opponent's plies it
+// carries « ?? Opportunity » where it used to carry a glyph and an evaluation,
+// and at `0.7fr` that wrapped to three lines on a narrow panel. Widened with a
+// `minmax` floor rather than switched to `auto`, for the reason above: `auto`
+// resolves per row, and per-row widths are how a column stops being one.
+$move-authors-tracks: minmax(4.5rem, 0.8fr) 0.5fr minmax(6rem, 1.1fr) minmax(7rem, 2fr);
 
 [data-part="move-list-headings"] {
   display: grid;
@@ -1161,6 +1166,18 @@ ol[data-columns="authors"] [data-cell] {
 [data-part="confrontation-cell"][data-tone="missed"] { color: var(--tint-fail-ink); }
 [data-part="confrontation-cell"][data-tone="overcalled"] { color: var(--tint-inaccuracy-ink); }
 [data-part="confrontation-cell"][data-tone="unscored"] { color: var(--ink-muted); }
+
+// **What the opponent offered, in the list** (US-30). Deliberately NOT one of
+// the severity tints: those say « your fault », and this is the opposite
+// subject. A quiet muted register plus the word itself — the tint here is
+// decoration, the word and the accessible name are the signal (ADR-0013), which
+// is exactly why no new colour token is owed for it.
+[data-part="opportunity"] {
+  font-size: var(--text-s);
+  font-family: var(--mono);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
 
 // **The matrix's cells became controls** (US-26, slice 07), and a control is
 // given a border, a background and generous padding by `_controls`. Left as
@@ -1277,6 +1294,25 @@ ol[data-columns="authors"] [data-cell] {
   color: var(--tint-inaccuracy-ink);
 }
 
+// **The `Opportunity`'s own register** (US-30). Neither green nor red: what the
+// opponent left on the table is not a success or a failure of the Player's, and
+// tinting it as one would have the app blame them for somebody else's Move. The
+// two chips of this family are told from the other two by their **glyph** — the
+// severity's own sign — not by this background.
+[data-part="reading-term"][data-tone="offered"] {
+  background: var(--ground-sunk);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+// Both `Opportunity` chips are set a shade lighter than the Player's own
+// cartouche, as the `◆` family already is: two answers to two questions must
+// not read as one statement continued.
+[data-part="reading-term"][data-family="opportunity"],
+[data-part="reading-term"][data-family="opportunity-reading"] {
+  font-weight: 600;
+}
+
 // One neutral for the five unscored cases (ADR-0033) — which is exactly why
 // each of them carries its own words: the tone cannot tell them apart, and it
 // is not asked to.
@@ -1337,6 +1373,37 @@ ol[data-columns="authors"] [data-cell] {
   margin-block: 0;
   font-size: var(--text-s);
   color: var(--ink-muted);
+}
+
+// **The opponent's block — beside the Player's grid, never a cell of it**
+// (ADR-0034). It has its own heading and its own surface precisely so the eye
+// reads a change of subject; dropped into `confrontation-severity` it would be
+// sized as a fourth column and read as a fourth answer to the same question.
+[data-part="confrontation-opportunities"] {
+  margin-block: var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--ground-sunk);
+
+  h3 {
+    margin-block: 0 var(--space-1);
+    font-size: var(--text-m);
+  }
+}
+
+[data-part="opportunities-lede"] {
+  margin-block: 0 var(--space-2);
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// The pair, side by side and folding rather than crushing — the same rule the
+// Player's own pair follows, because they are the same kind of figure.
+[data-part="opportunities-figures"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-3);
 }
 
 // What the comparison is worth, ABOVE the figures: a comparison with no

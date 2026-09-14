@@ -130,6 +130,11 @@ export function ConfrontationBoard({
        * three times, and it has to *be* one fact.
        */
       moveConfrontation={(ply) => <ConfrontationCell move={byPly.get(ply)} />}
+      // **This screen opts in to the opponent's reading** (ADR-0034). The field
+      // has been on the annotation since slice 01 and nothing rendered it: a
+      // view says something about the opponent only by asking, never by
+      // inheriting a payload that grew.
+      showOpportunities
       curveMarks={curveMarks}
       // **The one place two authors may coexist** (ADR-0022): a list has
       // columns, a square has none. The titles are what make the pairing

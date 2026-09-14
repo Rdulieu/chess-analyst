@@ -16,6 +16,7 @@ import { TimeGraph } from "./TimeGraph";
 import { formatClock, formatDuration, formatShare } from "../chess/moveTime";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
+import { OPPORTUNITY_TERM, opportunityGlyph, opportunityName } from "../chess/opportunity";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { moveName, plyNumber, startingPoint } from "../features/confrontation/moveName";
@@ -51,6 +52,7 @@ export function Board({
   keyboardStepping = false,
   moveMarks,
   moveConfrontation,
+  showOpportunities = false,
   underBoard,
   moveListHeadings,
   focusRequest,
@@ -129,6 +131,16 @@ export function Board({
    * mark nobody can attribute.
    */
   moveConfrontation?: (ply: number) => ReactNode;
+  /**
+   * Whether the « Le moteur » cell also says what the **opponent's** Move
+   * offered — the `Opportunity` (US-30, CONTEXT.md).
+   *
+   * **Opt-in, and off by default** (ADR-0034). The measurement is the same and
+   * the subject is not, so a screen that does not ask for it says nothing about
+   * the opponent *by construction* rather than by anyone's discipline: adding a
+   * field to the payload can never change what an existing view is about.
+   */
+  showOpportunities?: boolean;
   moveListHeadings?: ReactNode;
   /**
    * A caller's request to bring the board to one ply — the matrix's cells
@@ -640,6 +652,28 @@ export function Board({
                             aria-label={UNCOUNTED_MARK[annotation.counted.reason].name}
                           >
                             {UNCOUNTED_MARK[annotation.counted.reason].text}
+                          </span>
+                        )}
+                        {/*
+                          **What the opponent offered**, on the opponent's own
+                          ply — and only where the screen asked for it.
+
+                          It sits in the engine's cell because it is the
+                          engine's measurement; what keeps it from reading as
+                          one of the Player's faults is that it carries a WORD
+                          beside the glyph, and an accessible name that names
+                          the `Opportunity` rather than a band. The Player's own
+                          severity two rows up is a bare `??` called "blunder":
+                          the two can be told apart by eye, by ear, and without
+                          any colour (ADR-0013).
+                        */}
+                        {showOpportunities && annotation?.opportunity && (
+                          <span
+                            data-part="opportunity"
+                            data-severity={annotation.opportunity.severity}
+                            aria-label={opportunityName(annotation.opportunity.severity)}
+                          >
+                            {opportunityGlyph(annotation.opportunity.severity)} {OPPORTUNITY_TERM}
                           </span>
                         )}
                         {annotation && (
