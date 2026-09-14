@@ -12,6 +12,8 @@ const RECAP: GameRecap = {
   flaggedUncounted: { forced: 1, decided: 0 },
   chancesLost: 62.5,
   flaggedLoss: 48,
+  opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+
   drift: 14.5,
   regime: { depth: 16, lines: 2 },
 };
@@ -128,6 +130,8 @@ describe("The Game's recap — what it states", () => {
           countedErrors: 0,
           chancesLost: 0,
           flaggedLoss: 0,
+          opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+
           drift: 0,
           regime: { depth: 16, lines: 2 },
         }}
@@ -150,6 +154,8 @@ describe("The Game's recap — the figures add up ON SCREEN", () => {
           ...RECAP,
           chancesLost: 60.610029825,
           flaggedLoss: 28.351291273,
+          opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+
           drift: 32.258738552,
         }}
       />,

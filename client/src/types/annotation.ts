@@ -90,6 +90,16 @@ export interface GameRecap {
   flaggedLoss: number;
   /** The residual: `flaggedLoss + drift === chancesLost`, on every Game. */
   drift: number;
+  /**
+   * What the **opponent** offered (CONTEXT.md `Opportunity`, ADR-0034): a total
+   * and its breakdown by severity, **beside** the Player's counts above and in
+   * none of them. A screen opts into showing it; nothing here changes subject by
+   * reading the fields it already read.
+   */
+  opportunities: {
+    total: number;
+    bySeverity: { inaccuracy: number; mistake: number; blunder: number };
+  };
   regime: SearchRegime | null;
 }
 

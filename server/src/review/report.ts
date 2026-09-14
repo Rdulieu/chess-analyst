@@ -1,6 +1,6 @@
 import type { Game } from "../db/schema";
 import { gameNotations } from "../chess/positions";
-import { gameRecap, type GameRecap } from "../analysis/recap";
+import { gameRecap, type GameRecap, type OpportunityCount } from "../analysis/recap";
 import { phases, type Phase } from "../analysis/phase";
 import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, gamePlies, moveSeverities } from "../analysis/derivation";
@@ -48,6 +48,15 @@ export interface MoveReportRow {
    * *I collapsed* from *he was too strong*, which are opposite conclusions about
    * what to work on, and US-15d should inherit a figure rather than a worry.
    *
+   * **Not the same reading as an `Opportunity`, and deliberately so.** This
+   * field mirrors **both** `Counted Move` exclusions onto the opponent, because
+   * the question it answers is *how well did he play* — a judgement, which a
+   * forced Move cannot support. An `Opportunity` (ADR-0034) asks the other
+   * question — *what was I handed* — and so keeps forced Moves in. The two
+   * denominators therefore differ on purpose; they are carried apart (here and
+   * in `opportunities` below) and neither is derived from the other. Folding
+   * them into one figure is the error to avoid.
+   *
    * Its `severity` is stated **only where the analysis would count the Move for
    * them** — the same denominator rule, applied to the other colour. That is the
    * requester's own reserve: no mistake in a Position won since Move 12 proves
@@ -57,6 +66,18 @@ export interface MoveReportRow {
    * means "not measured", and the reason says which.
    */
   opponentReply: { severity: MoveSeverity | null; counted: MoveCount } | null;
+}
+
+/**
+ * One `Opportunity` the Game offered, as the review reads it — one line per
+ * opponent half-move that left something on the table, named so a human can go
+ * and look at it. Kept apart from `MoveReportRow`, which is one line per
+ * **Player** Move: the two have different subjects and different denominators.
+ */
+export interface OpportunityReportRow {
+  ply: number;
+  san: string;
+  severity: MoveSeverity;
 }
 
 /**
@@ -75,6 +96,8 @@ export interface ReportTotals {
   chancesLost: number;
   flaggedLoss: number;
   drift: number;
+  /** The opponent's block, folded from the `Opportunity` lines. */
+  opportunities: OpportunityCount;
 }
 
 /**
@@ -108,6 +131,8 @@ export interface Attention {
 /** The report of one Game: its lines, and what they add up to. */
 export interface GameReport {
   rows: MoveReportRow[];
+  /** What the opponent offered, one line each — the fold's own evidence. */
+  opportunities: OpportunityReportRow[];
   /** The Moves worth a human's attention, in both directions. */
   attention: Attention;
   /** The recap the app shows for this Game — **called**, never recomputed. */
@@ -186,10 +211,20 @@ export function gameReport(
       opponentReply: reply(opponentSeverities, opponentCounted, i),
     });
   });
+  // The opponent's half-moves that offered something, read off the very same
+  // annotations the screen reads — so the block below is a fold of what is
+  // shown, and comparing it to the recap is a check rather than a coincidence.
+  const opportunities: OpportunityReportRow[] = [];
+  annotations.forEach((annotation, i) => {
+    if (annotation.opportunity === null) return;
+    opportunities.push({ ply: i, san: san[i], severity: annotation.opportunity.severity });
+  });
+
   const recap = gameRecap(game, evals, options.regime ?? null);
-  const totals = fold(rows);
+  const totals = fold(rows, opportunities);
   return {
     rows,
+    opportunities,
     attention: attention(rows, options.flaggedElsewhere),
     recap,
     totals,
@@ -227,7 +262,7 @@ function attention(rows: MoveReportRow[], flaggedElsewhere?: number[]): Attentio
  * shows and far short of the last bit of a float, which two orders of summation
  * can legitimately differ on.
  */
-function reconciles(totals: ReportTotals, recap: GameRecap): boolean {
+export function reconciles(totals: ReportTotals, recap: GameRecap): boolean {
   const close = (a: number, b: number) => a.toFixed(6) === b.toFixed(6);
   return (
     totals.playerMoves === recap.playerMoves &&
@@ -240,7 +275,14 @@ function reconciles(totals: ReportTotals, recap: GameRecap): boolean {
     totals.flaggedUncounted.decided === recap.flaggedUncounted.decided &&
     close(totals.chancesLost, recap.chancesLost) &&
     close(totals.flaggedLoss, recap.flaggedLoss) &&
-    close(totals.drift, recap.drift)
+    close(totals.drift, recap.drift) &&
+    // The opponent's block, on the same terms: without it, an Opportunity lost
+    // between the annotations and the recap would drift in silence, and this
+    // predicate would keep saying the Game reconciles.
+    totals.opportunities.total === recap.opportunities.total &&
+    totals.opportunities.bySeverity.inaccuracy === recap.opportunities.bySeverity.inaccuracy &&
+    totals.opportunities.bySeverity.mistake === recap.opportunities.bySeverity.mistake &&
+    totals.opportunities.bySeverity.blunder === recap.opportunities.bySeverity.blunder
   );
 }
 
@@ -270,7 +312,10 @@ function from(evals: StoredLine[], ply: number): StoredLine {
  * folded — which is what makes the comparison with `gameRecap` a check and not a
  * coincidence.
  */
-function fold(rows: MoveReportRow[]): ReportTotals {
+function fold(
+  rows: MoveReportRow[],
+  opportunities: OpportunityReportRow[],
+): ReportTotals {
   const totals: ReportTotals = {
     playerMoves: 0,
     countedMoves: 0,
@@ -281,7 +326,13 @@ function fold(rows: MoveReportRow[]): ReportTotals {
     chancesLost: 0,
     flaggedLoss: 0,
     drift: 0,
+    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
   };
+
+  for (const offered of opportunities) {
+    totals.opportunities.total += 1;
+    totals.opportunities.bySeverity[offered.severity] += 1;
+  }
 
   for (const row of rows) {
     totals.playerMoves += 1;

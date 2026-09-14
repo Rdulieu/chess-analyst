@@ -53,6 +53,8 @@ const ANNOTATIONS: GameAnnotations = {
     flaggedUncounted: { forced: 0, decided: 0 },
     chancesLost: 30,
     flaggedLoss: 30,
+    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+
     drift: 0,
     regime: { depth: 16, lines: 2 },
   },

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { gameRecap } from "../src/analysis/recap";
 import { gamePositions } from "../src/chess/positions";
-import type { StoredEvaluation } from "../src/analysis/derivation";
+import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 
 /**
  * Stored rows for a Game whose Positions come from its own PGN, with the
@@ -33,6 +33,7 @@ describe("gameRecap — what this Game contributes", () => {
         "flaggedLoss",
         "flaggedMoves",
         "flaggedUncounted",
+        "opportunities",
         "playerMoves",
         "regime",
       ].sort(),
@@ -163,5 +164,107 @@ describe("gameRecap — the recap IS the sum of what the Moves carry", () => {
     // Not "close enough": the aggregate is this sum, so it is the same number or
     // the reconciliation ADR-0017 rests on is already broken at one Game.
     expect(carried).toBe(recap.chancesLost);
+  });
+});
+
+/**
+ * The opponent's block (US-30, ADR-0034). Every figure below is anchored on the
+ * stored rows the test hands in — never on a number read back from the app.
+ *
+ * `OFFERED` is built so each of the three severities is reached from a fresh
+ * even Position, far from both band edges: Black (the opponent) is at 50 before
+ * each of their Moves, and leaves White at +300 (a 25-point drop for Black — a
+ * `Mistake`), then +900 (46 points — a `Blunder`), then +100 (9 points — an
+ * `Inaccuracy`), then nothing at all.
+ */
+const OFFERED = [0, 0, 300, 0, 900, 0, 100, 0, 0];
+
+describe("gameRecap — what the opponent offered, beside the Player's counts", () => {
+  it("carries a named block of Opportunities: a total and its breakdown by severity", () => {
+    const recap = gameRecap({ playerColor: "white" }, stored(PGN, OFFERED), REGIME);
+
+    expect(recap.opportunities).toEqual({
+      total: 3,
+      bySeverity: { inaccuracy: 1, mistake: 1, blunder: 1 },
+    });
+  });
+
+  it("has a breakdown that sums to its own total — checked, never eyeballed", () => {
+    const recap = gameRecap({ playerColor: "white" }, stored(PGN, OFFERED), REGIME);
+    const { inaccuracy, mistake, blunder } = recap.opportunities.bySeverity;
+
+    expect(inaccuracy + mistake + blunder).toBe(recap.opportunities.total);
+  });
+
+  it("leaves EVERY Player figure untouched on the very same rows", () => {
+    // The contamination ADR-0034 exists to prevent: a count of opponent flaws
+    // reaching `countedErrors`. Asserted on the same input that produces three
+    // Opportunities, so the two subjects are provably beside each other.
+    const recap = gameRecap({ playerColor: "white" }, stored(PGN, OFFERED), REGIME);
+
+    // White plays four Moves; the first loses nothing, the other three are the
+    // mirror of Black's own drops and are all counted.
+    expect(recap.playerMoves).toBe(4);
+    expect(recap.countedMoves).toBe(4);
+    expect(recap.flaggedMoves).toBe(3);
+    expect(recap.countedErrors).toBe(3);
+    expect(recap.excluded).toEqual({ forced: 0, decided: 0 });
+    expect(recap.flaggedUncounted).toEqual({ forced: 0, decided: 0 });
+    // The invariant the whole fold rests on, on a Game that now also has a block.
+    expect(recap.flaggedLoss + recap.drift).toBeCloseTo(recap.chancesLost, 9);
+    expect(recap.chancesLost).toBeGreaterThan(0);
+  });
+
+  it("reads the SAME source as the annotations, rather than counting a second time", () => {
+    const game = { playerColor: "white" as const };
+    const evals = stored(PGN, OFFERED);
+
+    const recap = gameRecap(game, evals, REGIME);
+    const onAnnotations = gameAnnotations(game, evals).filter((a) => a.opportunity !== null);
+
+    expect(onAnnotations.length).toBe(recap.opportunities.total);
+    for (const severity of ["inaccuracy", "mistake", "blunder"] as const) {
+      expect(onAnnotations.filter((a) => a.opportunity?.severity === severity).length).toBe(
+        recap.opportunities.bySeverity[severity],
+      );
+    }
+  });
+
+  it("counts a FORCED opponent Move, which no Player figure would count", () => {
+    // White is in check and `Kxg1` is their only legal Move — and it collapses.
+    // The Player is Black here, so this is the opponent's Move: forced, and
+    // still an Opportunity (CONTEXT.md — the asymmetry is the point).
+    const SOLE_LEGAL = "7k/8/8/8/8/8/5PPP/6rK w - - 0 1";
+    const AFTER = "7k/8/8/8/8/8/5PPP/6K1 b - - 0 1";
+    const evals: StoredEvaluation[] = [
+      { ply: 0, fen: SOLE_LEGAL, cp: 120, mate: null, pv: "" },
+      { ply: 1, fen: AFTER, cp: 900, mate: null, pv: "" },
+    ];
+
+    const recap = gameRecap({ playerColor: "black" }, evals, REGIME);
+
+    expect(recap.opportunities).toEqual({
+      total: 1,
+      bySeverity: { inaccuracy: 0, mistake: 0, blunder: 1 },
+    });
+    // And nothing of the Player's moved: they have not played yet.
+    expect(recap.playerMoves).toBe(0);
+    expect(recap.flaggedMoves).toBe(0);
+    expect(recap.countedErrors).toBe(0);
+  });
+
+  it("offers nothing on a Position already decided against the opponent", () => {
+    // Black (the opponent) is at cp -900 before their Move: under the decided
+    // floor, there was nothing left there to take.
+    const recap = gameRecap(
+      { playerColor: "white" },
+      stored(PGN, [0, -900, 900, 0, 0, 0, 0, 0, 0]),
+      REGIME,
+    );
+
+    expect(recap.opportunities).toEqual({
+      total: 0,
+      bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 },
+    });
   });
 });

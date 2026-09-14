@@ -1,7 +1,8 @@
 import type { Game } from "../db/schema";
 import type { SearchRegime } from "../engine/types";
 import { chancesLostByMove, countedMoves, type UncountedReason } from "./counted";
-import { gamePlies, moveSeverities, type StoredEvaluation } from "./derivation";
+import { gamePlies, moveOpportunities, moveSeverities, type StoredEvaluation } from "./derivation";
+import type { MoveSeverity } from "../danger/move-quality";
 
 /**
  * What one Game **contributes** to the analysis — the reconciliation point
@@ -60,8 +61,33 @@ export interface GameRecap {
    * as surely as one `Blunder`.
    */
   drift: number;
+  /**
+   * What the **opponent** offered over this Game (CONTEXT.md `Opportunity`,
+   * ADR-0034) — **beside** the Player's counts above and never summed into any
+   * of them. Adding it to `countedErrors` is exactly the contamination ADR-0034
+   * exists to prevent: "vos erreurs" must keep talking about the Player.
+   *
+   * It lives here rather than only in the `Confrontation` because an
+   * `Opportunity` exists whether or not the Player ever read the Game, exactly
+   * like `flaggedLoss` — 77 Games are analysed on the requester's base against 3
+   * sealed readings, and the aggregate ADR-0017 describes folds the **per-Game**
+   * record.
+   */
+  opportunities: OpportunityCount;
   /** The `Search regime` behind the figures — one per Game, never one per Move. */
   regime: SearchRegime | null;
+}
+
+/**
+ * The opponent's `Opportunity`s over one Game: how many, and of what size.
+ *
+ * The breakdown is not decoration — *three `Inaccuracy`-sized gifts* and *three
+ * `Blunder`-sized ones* are different Games — and `bySeverity` sums to `total`
+ * by construction, since the total is only ever incremented beside its bucket.
+ */
+export interface OpportunityCount {
+  total: number;
+  bySeverity: Record<MoveSeverity, number>;
 }
 
 /**
@@ -81,6 +107,10 @@ export function gameRecap(
   // recomputed, so the trace drawn from those Moves and this total cannot
   // disagree (ADR-0017).
   const lostByMove = chancesLostByMove(plies, game.playerColor);
+  // The SAME function the annotations read (ADR-0034): the recap totals what the
+  // Moves carry and never asks the question a second time, so the block and the
+  // glyphs on the Moves cannot say two different things.
+  const opportunities = moveOpportunities(plies, game.playerColor);
 
   const recap: GameRecap = {
     playerMoves: 0,
@@ -92,8 +122,18 @@ export function gameRecap(
     chancesLost: 0,
     flaggedLoss: 0,
     drift: 0,
+    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
     regime,
   };
+
+  // Its own pass over the plies, deliberately: the Player's loop below is about
+  // the Player's Moves and skips everything else, and threading a second subject
+  // through it is how one subject ends up in the other's figures.
+  for (const offered of opportunities) {
+    if (offered === null) continue;
+    recap.opportunities.total += 1;
+    recap.opportunities.bySeverity[offered.severity] += 1;
+  }
 
   for (let i = 1; i < plies.length; i++) {
     const move = counted[i];

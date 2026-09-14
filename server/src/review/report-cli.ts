@@ -133,6 +133,14 @@ function print(id: number, opponent: string, report: GameReport): void {
         : missedBySignals.map((row) => `${row.ply} ${row.san}`).join(", ") || "none"
     }`,
   );
+  // The opponent's block, printed apart from the Player's lines above because
+  // that is what it is: beside them, never inside (ADR-0034).
+  const offered = report.opportunities;
+  console.log(
+    `-- opportunities offered (the opponent's, never the Player's): ${
+      offered.map((row) => `${row.ply} ${row.san} ${row.severity}`).join(", ") || "none"
+    }`,
+  );
   // The reconciliation of ADR-0017. The VERDICT comes from the report, which is
   // where a test can hold it; this line only prints it.
   console.log(
