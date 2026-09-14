@@ -64,7 +64,7 @@ réseau. C'est le piège qui a coûté trois findings sur US-26.
 
 ---
 
-**done** — 2026-09-15, mergée dans `integration/US-30-judge-the-opponent` (PR #PRNUM, `MERGEREF`).
+**done** — 2026-09-15, mergée dans `integration/US-30-judge-the-opponent` (PR #125, `1d5374d`).
 
 Porte : build vert · suite verte (**626** tests serveur + **1005** tests client, 112 fichiers) ·
 `npm run lint` sorti **0** sur **338** fichiers réellement lintés · **FP verte, 5 étapes sur 5** ·
