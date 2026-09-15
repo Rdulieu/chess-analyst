@@ -57,9 +57,18 @@ export function MoveReadout({
         of overlapping them.
       */}
       <p data-part="reading-terms">
-        <span data-part="reading-term" data-tone={tone}>
-          {label}
-        </span>
+        {/*
+          **One chip per statement, never the same one twice.** On a ply the
+          derivation scored on the opponent's half, `readingLabel` already
+          returns that verdict — it is what the move list's column shows — and
+          `OpportunityCartouches` below renders it from the same function. So
+          the Player's own chip is rendered only where it says something else.
+        */}
+        {move.opportunityTerm === null && (
+          <span data-part="reading-term" data-tone={tone}>
+            {label}
+          </span>
+        )}
         {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} ply={move.ply} />}
         {/*
           **The opponent's half of the board** (US-30), in the same row and

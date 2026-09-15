@@ -82,6 +82,23 @@ const UNSCORED: Record<NonNullable<MoveReading["unscored"]>, ReadingLabel> = {
  * were merely imprecise.
  */
 export function readingLabel(move: MoveReading): ReadingLabel {
+  /*
+   * **The opponent's half, scored** (US-30) — and it comes FIRST, because it is
+   * the only branch that can be true at the same time as the grey used to be.
+   *
+   * The payload holds `unscored` and the term mutually exclusive on both halves
+   * of the board since slice 06, so this branch and the one below can no longer
+   * both fire. It is written in this order anyway, and stated rather than left
+   * to the server: the module the move list's column and the cartouche under
+   * the board **share** is the one place that can promise they say the same
+   * thing, and the defect HP-03 found was exactly the two disagreeing.
+   *
+   * The words come from `opportunityReadingLabel` — the same function the
+   * cartouche calls — so there is no second spelling of them here.
+   */
+  if (move.opportunity !== null && move.opportunityTerm !== null) {
+    return opportunityReadingLabel(move.opportunity, move.opportunityTerm);
+  }
   if (move.unscored) return unscoredLabel(move, move.unscored);
 
   if (move.term === "bonne-lecture") {

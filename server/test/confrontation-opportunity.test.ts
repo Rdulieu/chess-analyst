@@ -96,13 +96,55 @@ describe("the opponent side of a Confrontation", () => {
       }
     });
 
-    it("keeps the grey «coup de l'adversaire» on the very plies it now scores", () => {
+    it("**drops the grey on the very plies it now scores** — scored is not unscored", () => {
       const { opportunitySeenWellRead, opportunitySeenUnderRead } = CONFRONTATION_FIXTURE_CASES;
 
-      // Scored and still not the Player's Move: the two facts are not rivals,
-      // and the screen needs both.
-      expect(at(opportunitySeenWellRead).unscored).toBe("opponent");
-      expect(at(opportunitySeenUnderRead).unscored).toBe("opponent");
+      // The doctrine this US exists to retire: a verdict the derivation has
+      // just put a term on may not also be filed under «jamais noté». The two
+      // ARE rivals — `unscored` means "nothing scores this", and something does.
+      expect(at(opportunitySeenWellRead).opportunityTerm).not.toBeNull();
+      expect(at(opportunitySeenWellRead).unscored).toBeNull();
+      expect(at(opportunitySeenUnderRead).opportunityTerm).not.toBeNull();
+      expect(at(opportunitySeenUnderRead).unscored).toBeNull();
+    });
+
+    it("holds `unscored` and the term MUTUALLY EXCLUSIVE on every opponent ply", () => {
+      // The contract `MoveReading` already states for the Player's couple,
+      // asserted for the opponent's — on the whole list, so no case escapes it.
+      for (const move of confronted().moves) {
+        if (move.opportunityTerm !== null) {
+          expect(move.unscored, `ply ${move.ply}`).toBeNull();
+        }
+        if (move.unscored !== null) {
+          expect(move.opportunityTerm, `ply ${move.ply}`).toBeNull();
+          expect(move.term, `ply ${move.ply}`).toBeNull();
+        }
+      }
+    });
+
+    it("counts among «jamais notés» only the opponent verdicts nothing scored", () => {
+      // Re-derived from the list, not copied from the served figure: the block
+      // under the figures says «n'entre dans aucun des chiffres ci-dessus», and
+      // that sentence is only true of verdicts with no term.
+      const mute = confronted().moves.filter(
+        (move) =>
+          move.unscored === "opponent" && move.declared !== null && move.opportunityTerm === null,
+      );
+
+      expect(confronted().severity.unscored.opponent).toBe(mute.length);
+
+      // And the partition is exhaustive: every verdict the Player wrote on the
+      // opponent's half is either scored or mute, never both and never neither.
+      const allOpponentVerdicts = confronted().moves.filter(
+        (move) => move.declared !== null && move.term === null && move.unscored !== "forced" &&
+          move.unscored !== "decided" && move.unscored !== "good" &&
+          (move.unscored === "opponent" || move.opportunityTerm !== null),
+      );
+
+      expect(allOpponentVerdicts).toHaveLength(
+        mute.length + confronted().opportunities.examined,
+      );
+      expect(confronted().opportunities.examined).toBeGreaterThan(0);
     });
 
     it("**non-regression**: the Player's four counters are what they were", () => {
@@ -188,8 +230,13 @@ describe("the opponent side of a Confrontation", () => {
 
       // Se juger soi-même et repérer ce qu'on vous offre sont deux aptitudes
       // différentes: not one ply may sit in both denominators.
+      // An `Opportunity` ply is never in the Player's own denominator: it
+      // carries no `term`, and none of the four Player-side unscored cases.
       const both = moves.filter(
-        (move) => move.opportunity !== null && move.unscored !== "opponent",
+        (move) =>
+          move.opportunity !== null &&
+          (move.term !== null ||
+            (move.unscored !== null && move.unscored !== "opponent")),
       );
 
       expect(both).toHaveLength(0);
@@ -268,7 +315,10 @@ describe("the opponent side of a Confrontation", () => {
       for (const move of confronted().moves) {
         if (move.opportunityTerm !== null) {
           expect(move.opportunity, `ply ${move.ply}`).not.toBeNull();
-          expect(move.unscored, `ply ${move.ply}`).toBe("opponent");
+          // Not the Player's Move either way — and no longer filed as unscored,
+          // because a term is exactly what scoring it means.
+          expect(move.term, `ply ${move.ply}`).toBeNull();
+          expect(move.unscored, `ply ${move.ply}`).toBeNull();
         }
       }
     });

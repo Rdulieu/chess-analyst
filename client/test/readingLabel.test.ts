@@ -321,3 +321,56 @@ describe("the Key moment label of one Move", () => {
     }
   });
 });
+
+/**
+ * **A scored verdict on the opponent's Move** (US-30, slice 06).
+ *
+ * The defect HP-03 found had two faces and one root: the `Confrontation` told
+ * the Player their verdicts on the opponent's Moves fall into a mute grey on
+ * the very plies it had just scored, and the move list's Confrontation column
+ * printed « Coup de l'adversaire » beside a cartouche reading « ?! Sur-lecture »
+ * three centimetres away.
+ *
+ * The root is the payload — `unscored` and the term are mutually exclusive now,
+ * on both halves of the board — and this is the consequence that must hold in
+ * the module **the column and the cartouche share**: asked to name a ply the
+ * derivation scored, it names the verdict, never the grey and never "Rien dit".
+ */
+describe("a verdict on an Opportunity, in the module both surfaces read", () => {
+  it("names the term instead of the grey, with the Opportunity's own glyph", () => {
+    const label = readingLabel(
+      move({ declared: "inaccuracy", opportunity: "blunder", opportunityTerm: "sous-lecture" }),
+    );
+
+    expect(label.label).toBe("?? Sous-lecture");
+    expect(label.tone).toBe("missed");
+  });
+
+  it("carries the three terms into their three registers", () => {
+    const tones = (["bonne-lecture", "sous-lecture", "sur-lecture"] as const).map(
+      (term) =>
+        readingLabel(move({ declared: "blunder", opportunity: "mistake", opportunityTerm: term }))
+          .tone,
+    );
+
+    expect(tones).toEqual(["agreement", "missed", "overcalled"]);
+  });
+
+  it("never says «Rien dit» of a ply something scored", () => {
+    const label = readingLabel(
+      move({ declared: "blunder", opportunity: "blunder", opportunityTerm: "bonne-lecture" }),
+    );
+
+    expect(label.label).not.toBe("Rien dit");
+    expect(label.label).not.toBe("Coup de l'adversaire");
+  });
+
+  it("keeps the grey where nothing scored the ply — an Opportunity nobody read", () => {
+    // The other half of the exclusion: no verdict, so no term, so the case is
+    // still named rather than left blank (ADR-0033).
+    const label = readingLabel(move({ opportunity: "blunder", unscored: "opponent" }));
+
+    expect(label.label).toBe("Coup de l'adversaire");
+    expect(label.tone).toBe("unscored");
+  });
+});

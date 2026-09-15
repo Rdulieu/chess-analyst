@@ -146,10 +146,15 @@ export interface MoveKeyMoment {
  * reason; it is never both and never neither.
  *
  * The opponent's half of the board is read in **`opportunity` and
- * `opportunityTerm`**, a couple of its own. It does not disturb the pair above:
- * an opponent ply stays `unscored: "opponent"`, because "this is not your Move"
- * remains true whatever the Player's verdict on it turns out to be worth
- * (ADR-0034).
+ * `opportunityTerm`**, a couple of its own, and **the exclusion holds there
+ * too**: an opponent ply carrying a term is scored, so its `unscored` is `null`.
+ * `unscored: "opponent"` is what remains where nothing scored the ply — no
+ * `Opportunity` measured, or none read.
+ *
+ * Saying both at once is the pre-US-30 doctrine: it told the Player their
+ * verdicts on the opponent's Moves fall into a mute grey, on the very plies the
+ * pass had just scored, and it double-counted them into a block headed « n'entre
+ * dans aucun des chiffres ci-dessus » (ADR-0034).
  */
 export interface MoveReading {
   ply: number;
@@ -528,12 +533,19 @@ export function confrontGame(
     // all. Said at their own Move rather than left blank, because the Player
     // standing on one needs to know why their verdict is not scored there.
     if (move.counted === null) {
-      entry.unscored = "opponent";
-      // **The grey stays, and the score is added beside it.** Before US-30 this
-      // branch absorbed every verdict the Player wrote on the opponent's half —
-      // 40% of their sealed marks on the requester's own base — and said
+      // **The grey is what is left when nothing scores this ply.** Before US-30
+      // this branch absorbed every verdict the Player wrote on the opponent's
+      // half — 40% of their sealed marks on the requester's own base — and said
       // nothing about any of them. It says something now wherever there was an
-      // `Opportunity` to read, and it still says "this is not your Move".
+      // `Opportunity` to read.
+      //
+      // So the grey is assigned **after** the term, not before it: a verdict the
+      // pass has just scored is not "jamais noté", and saying both was the
+      // pre-US-30 doctrine surviving beside its own replacement. `unscored` and
+      // the term are mutually exclusive on this half of the board exactly as
+      // `MoveReading` already promises for the Player's couple — **one place**,
+      // so the move list's column, the cartouche and the block of figures all
+      // follow from it rather than each repairing it.
       if (entry.opportunity !== null) {
         opportunities.offered += 1;
         if (declared === null) {
@@ -549,12 +561,22 @@ export function confrontGame(
           if (entry.opportunityTerm === "bonne-lecture") opportunities.agreed += 1;
         }
       }
-      // Counted HERE, in the one pass, rather than in a pre-pass of its own as
-      // it used to be — the pre-pass existed only because the main loop walked
-      // the Player's counted Moves alone. It walks every ply now, so a second
-      // traversal would be a second derivation of a figure this list already
-      // holds, which is the very thing ADR-0032 is against.
-      if (declared !== null) reading.unscored.opponent += 1;
+      if (entry.opportunityTerm === null) {
+        // Nothing scored this ply: it keeps the grey, and the grey keeps naming
+        // its case rather than saying "NA" (ADR-0033).
+        entry.unscored = "opponent";
+        // Counted HERE, in the one pass, rather than in a pre-pass of its own as
+        // it used to be — the pre-pass existed only because the main loop walked
+        // the Player's counted Moves alone. It walks every ply now, so a second
+        // traversal would be a second derivation of a figure this list already
+        // holds, which is the very thing ADR-0032 is against.
+        //
+        // And it counts only the **mute** verdicts, which is what makes the
+        // block's own sentence — « n'entre dans aucun des chiffres ci-dessus » —
+        // true: a verdict already standing in the `Opportunity` figures cannot
+        // also be one that entered none of them.
+        if (declared !== null) reading.unscored.opponent += 1;
+      }
       continue;
     }
     if (!move.counted.counted) {
