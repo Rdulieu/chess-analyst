@@ -52,20 +52,21 @@ Implémenté sur la branche d'intégration `integration/US-30-judge-the-opponent
 
 **Blocked by:** None — 01 à 05 sont mergées.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-15 · PR #129 · merge `2d25b5f` · gate: build ✅, tests ✅ (628 serveur + 1034 client), `npm run lint` sorti 0 ✅, Feature Path verte ✅ (les deux parties d'HP-03, 8/8 lectures de l'audit à 380 px à `problems=0`), aucun finding bloquant
 
-- [ ] Un verdict adverse scoré n'est plus compté parmi les « jamais notés » — les deux comptes sont
+- [x] Un verdict adverse scoré n'est plus compté parmi les « jamais notés » — les deux comptes sont
       justes sur les deux parties du rapport HP-03
-- [ ] `unscored` et le terme sont **mutuellement exclusifs** sur les plis adverses, comme sur ceux
+- [x] `unscored` et le terme sont **mutuellement exclusifs** sur les plis adverses, comme sur ceux
       du joueur ; un test ancre l'exclusion, sur une lecture d'entrée
-- [ ] Le chapeau « n'entre dans aucun des chiffres ci-dessus » est vrai de ce qu'il couvre
-- [ ] La colonne Confrontation de la liste et la cartouche sous l'échiquier disent **la même chose**
+- [x] Le chapeau « n'entre dans aucun des chiffres ci-dessus » est vrai de ce qu'il couvre
+- [x] La colonne Confrontation de la liste et la cartouche sous l'échiquier disent **la même chose**
       sur le même pli — un test ancre l'accord des deux
-- [ ] Le relevé de la page `Analyse` nomme l'`Opportunity` au lieu de « Rien à signaler »
-- [ ] À 380 px, la `Confrontation` rend `problems=0` dans les deux thèmes ; aucune boîte plus large
+- [x] Le relevé de la page `Analyse` nomme l'`Opportunity` au lieu de « Rien à signaler »
+- [x] À 380 px, la `Confrontation` rend `problems=0` dans les deux thèmes ; aucune boîte plus large
       que son conteneur hors défileur déclaré
-- [ ] La page `Analyse` à 380 px reste à `problems=0`
-- [ ] Aucune régression sur les figures du joueur, la matrice, le pli de « Mes lectures »
+- [x] La page `Analyse` à 380 px reste à `problems=0`
+- [x] Aucune régression sur les figures du joueur, la matrice, le pli de « Mes lectures »
 
 ### Feature Path (FP)
 
