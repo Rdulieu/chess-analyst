@@ -1156,6 +1156,22 @@ ol[data-columns="authors"] [data-cell] {
   flex-wrap: wrap;
 }
 
+// **And the wrap has to reach the glyphs, not stop at their wrapper.**
+// `[data-part="move-marks"]` is ONE `inline-flex` child of the `player` cell, so
+// letting the cell wrap wrapped nothing: a ply carrying a verdict, a note and a
+// key moment (`??✎◆`) measured 67 px inside a 31 px track and overflowed — the
+// second half of the 380 px assertion, on nine plies of one Game, in both
+// themes. Found by the Feature Path after the `engine` cell was fixed, which is
+// the useful lesson: the audit names the box that overflows, and the box that
+// overflows is not always the one whose content grew.
+//
+// Scoped to this list. Everywhere else the marks sit in a wrapping flow that
+// gives them a whole line, and there the single row is right.
+ol[data-columns="authors"] [data-part="move-marks"] {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 // The disagreement, in the list. Its FORM carries the direction — a reader who
 // sees no colour still reads the lean (ADR-0013) — and its accessible name
 // says it in words.

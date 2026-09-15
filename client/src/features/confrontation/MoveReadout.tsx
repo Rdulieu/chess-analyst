@@ -1,4 +1,10 @@
-import { readingLabel, keyMomentLabel, opportunityLabel, opportunityReadingLabel } from "./readingLabel";
+import {
+  readingLabel,
+  keyMomentLabel,
+  opportunityLabel,
+  opportunityReadingLabel,
+  scoredOpportunity,
+} from "./readingLabel";
 import type { MoveKeyMoment, MoveReading, PersonalMark } from "../../types";
 
 /**
@@ -64,7 +70,7 @@ export function MoveReadout({
           `OpportunityCartouches` below renders it from the same function. So
           the Player's own chip is rendered only where it says something else.
         */}
-        {move.opportunityTerm === null && (
+        {!scoredOpportunity(move) && (
           <span data-part="reading-term" data-tone={tone}>
             {label}
           </span>
@@ -134,9 +140,10 @@ function OpportunityCartouches({ move }: { move: MoveReading }) {
   if (!severity) return null;
 
   const offered = opportunityLabel(severity);
-  const read = move.opportunityTerm
-    ? opportunityReadingLabel(severity, move.opportunityTerm)
-    : null;
+  // The SAME predicate the chip above is suppressed on, so the verdict is
+  // rendered exactly where the other site stops rendering its own.
+  const scored = scoredOpportunity(move);
+  const read = scored ? opportunityReadingLabel(scored.severity, scored.term) : null;
 
   return (
     <>
