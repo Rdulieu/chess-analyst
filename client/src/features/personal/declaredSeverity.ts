@@ -1,4 +1,4 @@
-import { SEVERITY_GLYPH, SEVERITY_SQUARE_TINT } from "../../chess/severity";
+import { SEVERITY_GLYPH, SEVERITY_LABEL, SEVERITY_SQUARE_TINT } from "../../chess/severity";
 import type { DeclaredSeverity } from "../../types";
 
 /**
@@ -8,9 +8,13 @@ import type { DeclaredSeverity } from "../../types";
  * measured one is only meaningful on identical labels.
  */
 export const DECLARED_SEVERITY_LABEL: Record<DeclaredSeverity, string> = {
-  blunder: "Bévue",
-  mistake: "Erreur",
-  inaccuracy: "Imprécision",
+  // Taken from the engine's own table, not re-typed — exactly as the glyphs
+  // below are, and for the same reason: a declared verdict beside a measured one
+  // is only meaningful on **identical** labels, and two literals cannot promise
+  // that.
+  blunder: SEVERITY_LABEL.blunder,
+  mistake: SEVERITY_LABEL.mistake,
+  inaccuracy: SEVERITY_LABEL.inaccuracy,
   sound: "Correct",
   good: "Bon",
 };

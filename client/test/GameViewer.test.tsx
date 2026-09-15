@@ -71,8 +71,8 @@ afterEach(() => {
 describe("GameViewer", () => {
   /** "1. e4 e5" annotated so that e4 is a Blunder with a line to report. */
   const ANNOTATED = [
-    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early", counted: null, chancesLost: null },
-    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early", counted: null, chancesLost: null },
+    { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early", counted: null, chancesLost: null, opportunity: null },
+    { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early", counted: null, chancesLost: null, opportunity: null },
   ] satisfies MoveAnnotation[];
 
   const moveItems = () =>
@@ -509,8 +509,8 @@ describe("GameViewer — recording that the engine was shown", () => {
 
 /** "1. e4 e5" annotated, for the provenance tests above. */
 const ANNOTATED_FOR_PROVENANCE = [
-  { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early", counted: null, chancesLost: null },
-  { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early", counted: null, chancesLost: null },
+  { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: ["d2d4"], phase: "early", counted: null, chancesLost: null, opportunity: null },
+  { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: ["e7e5"], phase: "early", counted: null, chancesLost: null, opportunity: null },
 ] satisfies MoveAnnotation[];
 
 describe("GameViewer — Analyse steps from the keyboard (US-23, D6)", () => {
@@ -787,8 +787,8 @@ describe("GameViewer — the time per Move", () => {
     // The requester's layout call, 2026-09-09: the analysis graph comes first.
     // Its own annotated fixture: `ANNOTATED` belongs to another describe block.
     const annotated = [
-      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null },
-      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null },
+      { ply: 0, whiteEval: { cp: 0, mate: null }, whiteWinChances: 50, severity: null, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
+      { ply: 1, whiteEval: { cp: -400, mate: null }, whiteWinChances: 5, severity: "blunder", bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null },
     ] satisfies MoveAnnotation[];
     stubAnnotations(annotated, TIMED);
 

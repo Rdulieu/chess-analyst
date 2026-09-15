@@ -11,6 +11,22 @@ export const SEVERITY_GLYPH: Record<Severity, string> = {
   blunder: "??",
 };
 
+/** What each measured severity is **called**, in the Player's own words — the
+ *  one table those three words live in.
+ *
+ *  It sits beside the glyph deliberately: `DECLARED_SEVERITY_LABEL` already
+ *  borrows the glyphs from this module rather than retyping them, and the words
+ *  are the same shared vocabulary one layer up (CONTEXT.md — "the shared
+ *  vocabulary is deliberate"). US-30 gave it a third reader, the `Opportunity`,
+ *  whose severity is a *property* said in the same words; three literals of
+ *  « Bévue » in three files is exactly how a shared vocabulary stops being
+ *  shared. */
+export const SEVERITY_LABEL: Record<Severity, string> = {
+  inaccuracy: "Imprécision",
+  mistake: "Erreur",
+  blunder: "Bévue",
+};
+
 /** Distinct per-severity tint for the app's **chrome** — the move list's glyph,
  *  the curve's markers. Always supplementary to the glyph, never the only signal
  *  (the rule since US-3's accessibility finding).

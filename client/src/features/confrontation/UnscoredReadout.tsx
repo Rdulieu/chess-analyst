@@ -83,11 +83,26 @@ export function UnscoredReadout({ confrontation }: { confrontation: GameConfront
         </p>
       )}
 
+      {/*
+        **Only the verdicts nothing scored** (US-30, slice 06).
+
+        This line used to count every verdict the Player wrote on the opponent's
+        half and call all of them « jamais notés », under a lead saying they
+        enter none of the figures above — while some of them WERE the figures
+        above: one Game read « 0 % — 0 sur 1 Opportunity examinée » with that
+        same verdict filed here as never noted. The count comes from the
+        derivation, which stopped putting a ply in both places; what this
+        paragraph owes is the true reason for the ones that remain, and it is no
+        longer « cet outil porte sur votre propre progrès » — it is that the
+        engine measured no `Opportunity` there, so there is nothing to compare
+        the verdict against.
+      */}
       {opponent > 0 && (
         <p data-unscored="opponent">
-          <strong>Verdicts sur les coups de l'adversaire</strong> : {opponent}. Gardés et montrés,
-          jamais notés — non faute de moyens, mais parce que cet outil porte sur votre propre
-          progrès.
+          <strong>Verdicts sur les coups de l'adversaire sans Opportunity</strong> : {opponent}.
+          Le moteur n'a mesuré aucune Opportunity sur ces coups-là : il n'y a rien à opposer à
+          votre verdict. Ceux que vous avez posés sur une Opportunity, eux, sont notés — ils sont
+          dans les deux chiffres de la lecture adverse ci-dessus.
         </p>
       )}
 

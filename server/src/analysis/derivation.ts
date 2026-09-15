@@ -2,7 +2,7 @@ import type { Game } from "../db/schema";
 import { winningChances, type CpOrMate } from "../danger/winning-chances";
 import { classifyMove, type MoveSeverity } from "../danger/move-quality";
 import { phases, type Phase } from "./phase";
-import { chancesLostByMove, countedMoves, type MoveCount } from "./counted";
+import { chancesLostByMove, countedMoves, DECIDED_FLOOR, type MoveCount } from "./counted";
 
 /** One half-move's annotation (US-7): the `Evaluation` and win% converted to
  *  White-relative (CONTEXT.md — stored values are side-to-move relative), and
@@ -41,6 +41,26 @@ export interface MoveAnnotation {
    * stated beside it.
    */
   chancesLost: number | null;
+  /**
+   * What the **opponent's** Move offered, when it offered anything (CONTEXT.md
+   * `Opportunity`, ADR-0034). `null` for ply 0, for the Player's own Moves, and
+   * for an opponent Move that offered nothing.
+   *
+   * **Beside `severity`, never inside it.** The measurement is the same band;
+   * the subject is not. Filling `severity` here would be three lines cheaper and
+   * would silently change what `Danger position`, "vos erreurs" and the weak
+   * openings are about — which is the entire reason this field exists.
+   */
+  opportunity: Opportunity | null;
+}
+
+/**
+ * What one of the opponent's Moves left on the table (CONTEXT.md `Opportunity`).
+ * Its severity is a **property** of it — *an `Opportunity` the size of a
+ * `Blunder`* — read off the Player's own band, not a competing vocabulary.
+ */
+export interface Opportunity {
+  severity: MoveSeverity;
 }
 
 /** One analyzed Game's per-Position FEN, raw `Evaluation` and win% (ply 0 = initial Position). */
@@ -106,6 +126,64 @@ export function moveSeverities(plies: Ply[], playerColor: Game["playerColor"]): 
   return severities;
 }
 
+/** The other side. */
+function opponentOf(playerColor: Game["playerColor"]): Game["playerColor"] {
+  return playerColor === "white" ? "black" : "white";
+}
+
+/**
+ * What each of the opponent's Moves **offered** the Player (CONTEXT.md
+ * `Opportunity`). Index-aligned with `plies` like `countedMoves`: entry `i` is
+ * about the Move that led to ply `i`. `null` for ply 0, for the Player's own
+ * Moves, and wherever nothing was offered.
+ *
+ * **The band is the Player's own**, read off the very same `classifyMove` with
+ * the very same perspective flip (`100 -`), applied to the opponent's colour.
+ * No second threshold exists, and none may be introduced: one threshold, always.
+ *
+ * **The `Counted Move` exclusions are mirrored only halfway, and that asymmetry
+ * is deliberate — do not "fix" it.**
+ *
+ * - **already decided** discards the `Opportunity`: with the opponent's chances
+ *   under `DECIDED_FLOOR` the Position had nothing left to give, so there was
+ *   nothing there to take.
+ * - **forced** does **not**. `forced` exists so that nobody is *blamed* for a
+ *   Move they had no choice in, and here nobody is being blamed — the subject is
+ *   what the Player was handed. The opponent's lack of choice does not make the
+ *   piece they had to give any less takeable, and mirroring this exclusion would
+ *   throw away the clearest opportunities there are.
+ *
+ * **Why the level is read here and not `countedMoves`' `reason`.** Reusing that
+ * verdict is the tempting shape, and it is wrong: `classify()` answers `forced`
+ * *before* it looks at the floor — "there was nothing to choose" being the
+ * stronger statement about a Player's Move — so a Move that is **both** forced
+ * and played in a decided Position comes back `"forced"`, and reading the reason
+ * would hand it an `Opportunity` the ticket forbids. The two exclusions are
+ * independent here, so each is asked its own question: the floor is a property
+ * of the **Position** (nothing left to take), and it holds whether or not the
+ * side to move had a choice. `DECIDED_FLOOR` is imported rather than restated —
+ * no threshold is introduced.
+ */
+export function moveOpportunities(
+  plies: Ply[],
+  playerColor: Game["playerColor"],
+): (Opportunity | null)[] {
+  // `severities[i]` is the Move from `plies[i]` to `plies[i + 1]`, and is `null`
+  // everywhere but the opponent's own plies — which is also what says whose Move
+  // entry `i` of the result is about.
+  const severities = moveSeverities(plies, opponentOf(playerColor));
+
+  return plies.map((_, i) => {
+    if (i === 0) return null;
+    const severity = severities[i - 1];
+    if (severity === null) return null;
+    // Strictly **under** the floor, exactly as `countedMoves` draws it: the floor
+    // itself is still a Position with something left to give.
+    if (plies[i - 1].winChances < DECIDED_FLOOR) return null;
+    return { severity };
+  });
+}
+
 /** Who is to move at the given ply index (ply 0 = start, White to move). */
 function moverAt(ply: number): Game["playerColor"] {
   return ply % 2 === 0 ? "white" : "black";
@@ -140,6 +218,7 @@ export function gameAnnotations(
   const phaseOf = phases(plies.map((ply) => ply.fen));
   const counted = countedMoves(plies, game.playerColor);
   const lost = chancesLostByMove(plies, game.playerColor);
+  const opportunities = moveOpportunities(plies, game.playerColor);
 
   return plies.map((ply, i) => {
     const mover = moverAt(i);
@@ -152,6 +231,7 @@ export function gameAnnotations(
       phase: phaseOf[i],
       counted: counted[i],
       chancesLost: lost[i],
+      opportunity: opportunities[i],
     };
   });
 }

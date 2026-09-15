@@ -325,6 +325,13 @@ a helper is recognised as *this* returning, not as a new mystery.
   mechanism; none disagrees about the remedy: **keep one session alive for the whole pass, and
   assert the theme inside the audited script.** That assertion caught every one of these cases;
   nothing else did.
+- **On a dev server, searching a string in `outerHTML` finds the stylesheet, not the content.**
+  Measured twice on 2026-09-15 (US-30 gate, HP-01 and HP-03): a check that the `unaided` level leaks
+  nothing of the engine reported hits for `opportunity`, which turned out to be the CSS Vite injects
+  into `<head>` — a rule name, not an element, an attribute, a class or a datum. **Sweep the `body`
+  cloned without `style`, `script` and `link`**, over attribute *names* as well as values and text.
+  Both agents re-measured and dropped it before reporting; an agent that did not would have filed a
+  leak that does not exist on a screen whose whole point is that it leaks nothing.
 
 
 ## D2. The driver library — call it, do not re-derive it

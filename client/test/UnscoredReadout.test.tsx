@@ -11,6 +11,7 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
     sealedAt: "2026-08-25T10:00:00.000Z",
     provenance: "unaided",
     regime: { depth: 16, lines: 2 },
+    opportunities: { offered: 0, examined: 0, agreed: 0, unseen: 0 },
     severity: {
       countedMoves: 20,
       examined: 10,
@@ -62,12 +63,26 @@ describe("What the Confrontation shows without scoring it", () => {
     expect(good?.textContent).toMatch(/mérite|ne flague que|rien à opposer/i);
   });
 
-  it("says the opponent's Moves are not scored BY DECISION, not for want of means", () => {
+  /**
+   * **The reason changed, and that is the point** (US-30, slice 06).
+   *
+   * This paragraph used to say the opponent's plies go unscored *by decision*,
+   * « parce que cet outil porte sur votre propre progrès ». US-30 retired that
+   * doctrine — the verdicts on an `Opportunity` are scored now — so the block
+   * sits under a lead promising « n'entre dans aucun des chiffres ci-dessus »
+   * and may only hold the ones nothing scored. Its reason is the true one:
+   * there was no `Opportunity` measured there to compare the verdict against.
+   */
+  it("says WHY the verdicts left here are unscored — no Opportunity to compare them to", () => {
     render(<UnscoredReadout confrontation={confrontation()} />);
 
     const opponent = screen.getByText(/adversaire/i).closest("[data-unscored]");
     expect(opponent?.textContent).toMatch(/2/);
-    expect(opponent?.textContent).toMatch(/votre|vos propres|progrès/i);
+    expect(opponent?.textContent).toMatch(/Opportunity/);
+    // The retired doctrine must not survive as a sentence: it is exactly what
+    // HP-03 read back to the Player on a ply the app had just scored.
+    expect(opponent?.textContent).not.toMatch(/progrès/i);
+    expect(opponent?.textContent).not.toMatch(/jamais notés/i);
   });
 
   it("still says WHY a forced Move is not counted, which is the reason that survives", () => {

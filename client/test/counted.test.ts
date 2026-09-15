@@ -14,6 +14,7 @@ const move = (
   phase: "middlegame",
   counted,
   chancesLost: 0,
+  opportunity: null,
 });
 
 describe("Counted Move — what the move list marks", () => {

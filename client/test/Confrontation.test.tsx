@@ -19,6 +19,7 @@ function confrontation(over: Partial<GameConfrontation> = {}): GameConfrontation
     sealedAt: "2026-08-25T10:00:00.000Z",
     provenance: "unaided",
     regime: { depth: 16, lines: 2 },
+    opportunities: { offered: 0, examined: 0, agreed: 0, unseen: 0 },
     severity: {
       countedMoves: 20,
       examined: 10,

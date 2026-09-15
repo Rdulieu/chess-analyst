@@ -1,7 +1,9 @@
+import { SEVERITY_LABEL } from "../../chess/severity";
+import { opportunityGlyph, opportunityName } from "../../chess/opportunity";
 import { DECLARED_SEVERITY_LABEL } from "../personal/declaredSeverity";
 import { moveName } from "./moveName";
 import { halfMoveGap, points } from "./distance";
-import type { MoveKeyMoment, MoveReading } from "../../types";
+import type { MoveKeyMoment, MoveReading, ReadingTerm } from "../../types";
 
 /**
  * What the cartouche says about the Player's reading of the current Move, and
@@ -19,7 +21,7 @@ import type { MoveKeyMoment, MoveReading } from "../../types";
  */
 
 /** The register a case is read in. Not a colour — the sheet decides that. */
-export type ReadingTone = "agreement" | "missed" | "overcalled" | "unscored";
+export type ReadingTone = "agreement" | "missed" | "overcalled" | "unscored" | "offered";
 
 /** What the cartouche shows: a name, and the register to show it in. */
 export interface ReadingLabel {
@@ -80,12 +82,28 @@ const UNSCORED: Record<NonNullable<MoveReading["unscored"]>, ReadingLabel> = {
  * were merely imprecise.
  */
 export function readingLabel(move: MoveReading): ReadingLabel {
-  if (move.unscored) return unscoredLabel(move, move.unscored);
+  /*
+   * **The opponent's half, scored** (US-30) — and it comes FIRST, because it is
+   * the only branch that can be true at the same time as the grey used to be.
+   *
+   * The payload holds `unscored` and the term mutually exclusive on both halves
+   * of the board since slice 06, so this branch and the one below can no longer
+   * both fire. It is written in this order anyway, and stated rather than left
+   * to the server: the module the move list's column and the cartouche under
+   * the board **share** is the one place that can promise they say the same
+   * thing, and the defect HP-03 found was exactly the two disagreeing.
+   *
+   * The words come from `opportunityReadingLabel` — the same function the
+   * cartouche calls — so there is no second spelling of them here.
+   */
+  const scored = scoredOpportunity(move);
+  if (scored) return opportunityReadingLabel(scored.severity, scored.term);
+  if (move.unscored) return UNSCORED[move.unscored];
 
   if (move.term === "bonne-lecture") {
     return {
       tone: "agreement",
-      label: "Bonne lecture",
+      label: READING_TERM_LABEL["bonne-lecture"],
     };
   }
 
@@ -155,41 +173,37 @@ export function readingLabel(move: MoveReading): ReadingLabel {
 }
 
 /**
- * An unscored case, **carrying the verdict the Player placed there**.
+ * **Is this ply's reading the verdict on an `Opportunity`?** — the one predicate
+ * the three surfaces that ask it must share (US-30, slice 06).
  *
- * The verdict is what makes this case worth showing at all: *"le coup est
- * montré, sa raison d'exclusion aussi, et le verdict du joueur dessus n'est pas
- * noté"*. A forced catastrophe measures a `Blunder` and is nobody's mistake, so
- * a Player who called it `Sound` is **right** — and the screen can only say so
- * while the verdict is still on it. Dropping it would leave the case that
- * settles the whole denominator invisible, which is the one thing this screen
- * cannot afford: it is the reason the denominator is what it is.
+ * `readingLabel` above asks it to name the ply, and `MoveReadout` asks it twice
+ * — once to suppress the Player's own chip, once to render the opponent's. Three
+ * spellings of one question is how they drift, and the drift they produced here
+ * cost a blocking finding: the list said « Coup de l'adversaire » where the
+ * cartouche said « ?! Sur-lecture ». Asked in one place, they cannot disagree.
  *
- * Not appended to `good` (the label already names the verdict) nor to `silence`
- * (there is none by definition) — saying "vous aviez dit Bon" under "Correct —
- * rien à comparer" would be the screen repeating itself.
+ * It narrows as well as answers: the pair travels out non-null, so no caller has
+ * to assert what it has just tested.
  */
-function unscoredLabel(move: MoveReading, unscored: NonNullable<MoveReading["unscored"]>): ReadingLabel {
-  const base = UNSCORED[unscored];
-
-  /*
-   * A `Good` reaches here only when the engine flagged **nothing** — the one
-   * case where "rien à comparer" is true. A `Good` on a measured fault is
-   * scored now, as the strongest `Sous-lecture` there is, and never arrives.
-   */
-  return base;
+export function scoredOpportunity(
+  move: MoveReading,
+): { severity: NonNullable<MoveReading["opportunity"]>; term: ReadingTerm } | null {
+  if (move.opportunity === null || move.opportunityTerm === null) return null;
+  return { severity: move.opportunity, term: move.opportunityTerm };
 }
 
 /** The measured bands, in the Player's own words — the shared vocabulary. */
 const MEASURED_NAME: Record<MoveReading["measured"], string> = {
-  blunder: "Bévue",
-  mistake: "Erreur",
-  inaccuracy: "Imprécision",
+  // The three from the table that owns them (`chess/severity.ts`), never
+  // retyped: this file names the *case* — « ratée », « sous-estimée » — and the
+  // band's own word is not its to spell.
+  blunder: SEVERITY_LABEL.blunder,
+  mistake: SEVERITY_LABEL.mistake,
+  inaccuracy: SEVERITY_LABEL.inaccuracy,
   // Never reached by a label that names a severity: `none` is only ever the
   // false-alarm case, which has its own words.
   none: "rien",
 };
-
 
 /**
  * **The second family of cartouches** — what the Player's `Key moment`s were
@@ -263,4 +277,71 @@ export function keyMomentLabel(reading: MoveKeyMoment, ply: number): ReadingLabe
         // The 70% that had no Move to show. This is the whole point of the case.
       };
   }
+}
+
+
+/**
+ * **The third family of cartouches** — what the **opponent's** Move offered,
+ * and what the Player's verdict on it was worth (US-30, ADR-0034).
+ *
+ * Two chips rather than one, because they answer two questions and the story
+ * exists to keep them apart: *what was there to take* is a fact about the Game
+ * that holds whether or not anyone ever read it, and *how well it was read* is a
+ * fact about the reading. Fused, a Game nobody read would look like a Game with
+ * nothing in it.
+ *
+ * The family is carried by the **glyph**, as ADR-0033 requires — here the
+ * severity's own `??` / `?` / `?!`, from the table that owns it, so the Player
+ * meets on the cartouche exactly the sign they met in the list.
+ */
+export function opportunityLabel(severity: NonNullable<MoveReading["opportunity"]>): ReadingLabel {
+  return {
+    // Its own register, and deliberately not one of the three the Player's
+    // reading uses: an `Opportunity` is neither a success nor a failure of
+    // theirs, it is something that was on the table. Tinting it « missed »
+    // would be the app blaming the Player for the opponent's Move.
+    tone: "offered",
+    label: `${opportunityGlyph(severity)} ${opportunityName(severity)}`,
+  };
+}
+
+/**
+ * **The three terms, in one table** — the Player's own agreement reads it, and
+ * so does the `Opportunity`'s verdict (US-30). There is no second vocabulary for
+ * the other half of the board, and there must be no second copy of this one
+ * either: the whole point of « les trois mêmes termes » is that they are the
+ * same strings, which two literals could never promise.
+ *
+ * What the Player's verdict on an `Opportunity` was worth — **the three same
+ * terms**, so there is no second vocabulary to learn for the other half of the
+ * board (SPEC, US-13).
+ *
+ * Said plainly rather than parameterised by the case the way the Player's own
+ * cartouche is. The Player's table names a *severity* — « Bévue ratée » — and
+ * that phrasing puts one of the three reserved words in the subject position of
+ * a sentence about the opponent. The term itself carries the lesson here, and
+ * the chip beside it already says how big the `Opportunity` was.
+ */
+export const READING_TERM_LABEL: Record<ReadingTerm, string> = {
+  "bonne-lecture": "Bonne lecture",
+  "sous-lecture": "Sous-lecture",
+  "sur-lecture": "Sur-lecture",
+};
+
+const OPPORTUNITY_TERM_TONE: Record<ReadingTerm, ReadingTone> = {
+  "bonne-lecture": "agreement",
+  "sous-lecture": "missed",
+  "sur-lecture": "overcalled",
+};
+
+export function opportunityReadingLabel(
+  severity: NonNullable<MoveReading["opportunity"]>,
+  term: ReadingTerm,
+): ReadingLabel {
+  return {
+    tone: OPPORTUNITY_TERM_TONE[term],
+    // The same glyph as the chip beside it: it is what says *which* question
+    // this answer belongs to, exactly as `◆` does for the `Key moment` family.
+    label: `${opportunityGlyph(severity)} ${READING_TERM_LABEL[term]}`,
+  };
 }
