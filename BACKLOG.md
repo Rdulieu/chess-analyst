@@ -246,62 +246,6 @@
   > Du confort de liste, **pas** de l'analyse : rien ici ne touche au modèle, aux `Evaluation`s ni à la
   > `Confrontation`. À prendre **après US-26**, qui elle touche une garantie documentée.
 
-- **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
-  invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
-  > **Pas encore grillée.** Ouverte le 2026-09-02, à partir d'une demande écrite **dans une lecture**
-  > (partie 715, note du coup 17) : *« Voir les erreurs de l'adversaire me paraît important aussi. Il
-  > faut qu'on réfléchisse si on veut ajouter ce point dans l'analyse. »*
-  >
-  > ### Le constat
-  >
-  > L'`Analysis pass` évalue **toutes** les positions — les 110 demi-coups de la partie 715 sont en
-  > base — mais ne classe en sévérité **que les coups du joueur**. Les coups de l'adversaire n'ont
-  > donc jamais de verdict moteur, alors que la donnée qui permettrait de le calculer est déjà là.
-  >
-  > Côté joueur, la conséquence est plus dure : il **marque** des coups adverses (23 sur cette
-  > partie), et la `Confrontation` les jette dans `unscored.opponent`. Il travaille, et son travail
-  > n'est ni noté ni rendu.
-  >
-  > ### Ce que ça a coûté, mesuré
-  >
-  > Sur la partie 715, en recalculant hors application avec **la bande publiée du projet**
-  > (`classifyMove` : ≥ 10 imprécision, ≥ 20 erreur, ≥ 30 bévue) :
-  >
-  > > **⚠ Mesure périmée, constatée au grill du 2026-09-14.** La bande d'`Inaccuracy` est passée de
-  > > **10 à 5** depuis (`INACCURACY_DROP = 5` ; `CONTEXT.md` raconte la séparation d'avec le
-  > > plancher `DECIDED_FLOOR`, resté à 10). Les chiffres ci-dessous sont donc **sous-estimés** :
-  > > re-mesurés sur la vraie base avec la bande actuelle, la 715 porte **11** fautes adverses et
-  > > non 7, et les trois lectures scellées en portent **19** au total dont **8 jamais regardées**.
-  > > La mesure d'origine est conservée telle quelle — elle dit ce qui était vrai quand la story a
-  > > été ouverte, et le fait qu'un seuil ait bougé **sous** une mesure est exactement ce qui se
-  > > reproduira.
-  > - l'adversaire a commis **7 fautes réelles** *(11 avec la bande actuelle)* ;
-  > - le joueur en a jugé 14 coups : **8 justes, 2 manques lourds** (`20.b3` à −27,9 et `35.Qd4` à
-  >   −22,0 — deux cadeaux non ramassés), **3 fausses alertes**, 1 rangée une bande trop haut ;
-  > - **3 fautes adverses réelles** (`22.Kh1`, `23.hxg4`, `25.Ree1`, ~−12 chacune) n'ont même pas été
-  >   regardées.
-  >
-  > Ce dernier chiffre est le plus parlant : ce que le joueur ne regarde pas du tout est **invisible
-  > à l'app**, donc absent de tout futur profil de faiblesses. Un joueur qui rate systématiquement
-  > les occasions qu'on lui donne a un problème que l'agrégat d'US-15c ne verra jamais.
-  >
-  > ### Ce que le grill devra trancher
-  >
-  > - **Une sévérité adverse est-elle la même chose qu'une sévérité du joueur ?** Le vocabulaire est
-  >   partagé (`Inaccuracy`/`Mistake`/`Blunder`), mais un `Counted Move` est défini sur le joueur, et
-  >   `Drift` compte ses pertes à lui. Réutiliser les mêmes tables sans le dire mélangerait deux
-  >   comptes qui n'ont pas le même sujet.
-  > - **Un seul seuil, toujours.** `move-quality.ts` dit en toutes lettres pourquoi il ne doit pas y
-  >   en avoir un second. Un seuil adverse distinct serait exactement la divergence que ce commentaire
-  >   interdit — et la première mesure hors app est tombée dans le piège avant d'être corrigée.
-  > - **Où ça s'affiche.** Deux lectures sur un même écran, c'est le sujet d'**US-26** ; ADR-0022 dit
-  >   qu'une case ne peut pas porter deux auteurs. Ajouter un **troisième** auteur (le moteur sur
-  >   l'adversaire) est à instruire avec elle, pas contre elle.
-  > - **Le taux d'accord doit-il l'intégrer ?** Sinon la demande du joueur reste à moitié satisfaite :
-  >   il verrait les fautes adverses sans jamais savoir s'il les a bien lues.
-  >
-  > **Dépendance faible à US-26**, qui porte l'écran ; aucune au moteur, la donnée existe déjà.
-
 - **US-31**: Horodater chaque marque d'une lecture — pour savoir dans quel ordre le joueur a
   vraiment réfléchi, et pas seulement ce qu'il a conclu.
   > **Pas encore grillée. Basse priorité, explicitement** — arbitrée comme telle par le demandeur le
@@ -682,6 +626,87 @@
 ## Doing
 
 ## In review
+
+- **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
+  invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
+  > **EN REVUE le 2026-09-15 — [PR #130](https://github.com/Rdulieu/chess-analyst/pull/130), ouverte
+  > vers `develop`, jamais mergée par l'agent.** Branche d'intégration
+  > `integration/US-30-judge-the-opponent`, **six PR de sous-travail** (#122 → #129).
+  > Gate à la livraison : build OK, **628 tests serveur + 1034 client**, `lint` a **tourné et rendu
+  > 0**, **FP 01→06 vertes**, **suite HP 3/3 verte** (+ path 0), **aucun finding bloquant ouvert**.
+  >
+  > **Aucun changement de schéma, aucune migration due** (ADR-0015) : l'`Opportunity` est **dérivée**
+  > des `Evaluation`s déjà en base. Sortie de grill : `CONTEXT.md` (`Opportunity`, et l'entrée
+  > `Inaccuracy`/`Mistake`/`Blunder` amendée) et **ADR-0034** (une `Opportunity` se mesure **à côté**
+  > de la lecture du joueur, jamais dedans).
+  >
+  > **La suite HP a rendu rouge au premier passage** — trois bloquants, tous dans la surface neuve,
+  > dont un qui redisait au joueur que ses verdicts sur les coups adverses tombaient dans un gris
+  > muet : la doctrine que cette US existe pour retirer. Corrigés par la tranche 06, HP-03 rejoué en
+  > entier et vert. C'est la meilleure preuve que l'apex agentique vaut son coût : **aucun** des onze
+  > tranches-tests unitaires ne pouvait voir ces trois-là.
+  >
+  > **Décisions dues au demandeur avant le merge** — listées dans le corps de la PR.
+  >
+  > ---
+  >
+  > **Ce qui suit est l'ouverture de la story, conservée telle quelle.** Grillée le 2026-09-14 (seize
+  > décisions, frontière vide) ; ce que la section « Ce que le grill devra trancher » posait en
+  > questions est tranché dans la spec `.scratch/judge-the-opponent/SPEC.md` et dans ADR-0034.
+  >
+  > Ouverte le 2026-09-02, à partir d'une demande écrite **dans une lecture**
+  > (partie 715, note du coup 17) : *« Voir les erreurs de l'adversaire me paraît important aussi. Il
+  > faut qu'on réfléchisse si on veut ajouter ce point dans l'analyse. »*
+  >
+  > ### Le constat
+  >
+  > L'`Analysis pass` évalue **toutes** les positions — les 110 demi-coups de la partie 715 sont en
+  > base — mais ne classe en sévérité **que les coups du joueur**. Les coups de l'adversaire n'ont
+  > donc jamais de verdict moteur, alors que la donnée qui permettrait de le calculer est déjà là.
+  >
+  > Côté joueur, la conséquence est plus dure : il **marque** des coups adverses (23 sur cette
+  > partie), et la `Confrontation` les jette dans `unscored.opponent`. Il travaille, et son travail
+  > n'est ni noté ni rendu.
+  >
+  > ### Ce que ça a coûté, mesuré
+  >
+  > Sur la partie 715, en recalculant hors application avec **la bande publiée du projet**
+  > (`classifyMove` : ≥ 10 imprécision, ≥ 20 erreur, ≥ 30 bévue) :
+  >
+  > > **⚠ Mesure périmée, constatée au grill du 2026-09-14.** La bande d'`Inaccuracy` est passée de
+  > > **10 à 5** depuis (`INACCURACY_DROP = 5` ; `CONTEXT.md` raconte la séparation d'avec le
+  > > plancher `DECIDED_FLOOR`, resté à 10). Les chiffres ci-dessous sont donc **sous-estimés** :
+  > > re-mesurés sur la vraie base avec la bande actuelle, la 715 porte **11** fautes adverses et
+  > > non 7, et les trois lectures scellées en portent **19** au total dont **8 jamais regardées**.
+  > > La mesure d'origine est conservée telle quelle — elle dit ce qui était vrai quand la story a
+  > > été ouverte, et le fait qu'un seuil ait bougé **sous** une mesure est exactement ce qui se
+  > > reproduira.
+  > - l'adversaire a commis **7 fautes réelles** *(11 avec la bande actuelle)* ;
+  > - le joueur en a jugé 14 coups : **8 justes, 2 manques lourds** (`20.b3` à −27,9 et `35.Qd4` à
+  >   −22,0 — deux cadeaux non ramassés), **3 fausses alertes**, 1 rangée une bande trop haut ;
+  > - **3 fautes adverses réelles** (`22.Kh1`, `23.hxg4`, `25.Ree1`, ~−12 chacune) n'ont même pas été
+  >   regardées.
+  >
+  > Ce dernier chiffre est le plus parlant : ce que le joueur ne regarde pas du tout est **invisible
+  > à l'app**, donc absent de tout futur profil de faiblesses. Un joueur qui rate systématiquement
+  > les occasions qu'on lui donne a un problème que l'agrégat d'US-15c ne verra jamais.
+  >
+  > ### Ce que le grill devra trancher
+  >
+  > - **Une sévérité adverse est-elle la même chose qu'une sévérité du joueur ?** Le vocabulaire est
+  >   partagé (`Inaccuracy`/`Mistake`/`Blunder`), mais un `Counted Move` est défini sur le joueur, et
+  >   `Drift` compte ses pertes à lui. Réutiliser les mêmes tables sans le dire mélangerait deux
+  >   comptes qui n'ont pas le même sujet.
+  > - **Un seul seuil, toujours.** `move-quality.ts` dit en toutes lettres pourquoi il ne doit pas y
+  >   en avoir un second. Un seuil adverse distinct serait exactement la divergence que ce commentaire
+  >   interdit — et la première mesure hors app est tombée dans le piège avant d'être corrigée.
+  > - **Où ça s'affiche.** Deux lectures sur un même écran, c'est le sujet d'**US-26** ; ADR-0022 dit
+  >   qu'une case ne peut pas porter deux auteurs. Ajouter un **troisième** auteur (le moteur sur
+  >   l'adversaire) est à instruire avec elle, pas contre elle.
+  > - **Le taux d'accord doit-il l'intégrer ?** Sinon la demande du joueur reste à moitié satisfaite :
+  >   il verrait les fautes adverses sans jamais savoir s'il les a bien lues.
+  >
+  > **Dépendance faible à US-26**, qui porte l'écran ; aucune au moteur, la donnée existe déjà.
 
 ## Done
 
