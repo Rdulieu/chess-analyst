@@ -1,4 +1,10 @@
-import { readingLabel, keyMomentLabel, opportunityLabel, opportunityReadingLabel } from "./readingLabel";
+import {
+  readingLabel,
+  keyMomentLabel,
+  opportunityLabel,
+  opportunityReadingLabel,
+  scoredOpportunity,
+} from "./readingLabel";
 import type { MoveKeyMoment, MoveReading, PersonalMark } from "../../types";
 
 /**
@@ -57,9 +63,18 @@ export function MoveReadout({
         of overlapping them.
       */}
       <p data-part="reading-terms">
-        <span data-part="reading-term" data-tone={tone}>
-          {label}
-        </span>
+        {/*
+          **One chip per statement, never the same one twice.** On a ply the
+          derivation scored on the opponent's half, `readingLabel` already
+          returns that verdict — it is what the move list's column shows — and
+          `OpportunityCartouches` below renders it from the same function. So
+          the Player's own chip is rendered only where it says something else.
+        */}
+        {!scoredOpportunity(move) && (
+          <span data-part="reading-term" data-tone={tone}>
+            {label}
+          </span>
+        )}
         {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} ply={move.ply} />}
         {/*
           **The opponent's half of the board** (US-30), in the same row and
@@ -125,9 +140,10 @@ function OpportunityCartouches({ move }: { move: MoveReading }) {
   if (!severity) return null;
 
   const offered = opportunityLabel(severity);
-  const read = move.opportunityTerm
-    ? opportunityReadingLabel(severity, move.opportunityTerm)
-    : null;
+  // The SAME predicate the chip above is suppressed on, so the verdict is
+  // rendered exactly where the other site stops rendering its own.
+  const scored = scoredOpportunity(move);
+  const read = scored ? opportunityReadingLabel(scored.severity, scored.term) : null;
 
   return (
     <>

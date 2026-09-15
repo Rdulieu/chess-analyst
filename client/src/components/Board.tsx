@@ -16,7 +16,7 @@ import { TimeGraph } from "./TimeGraph";
 import { formatClock, formatDuration, formatShare } from "../chess/moveTime";
 import { reviewedMove, type LinePly } from "../chess/bestLine";
 import { SEVERITY_GLYPH } from "../chess/severity";
-import { OPPORTUNITY_TERM, opportunityGlyph, opportunityName } from "../chess/opportunity";
+import { OpportunityMark } from "../features/analysis/OpportunityMark";
 import { PHASE_START_LABEL, phaseStarts } from "../chess/phase";
 import { marksUncounted, UNCOUNTED_MARK } from "../chess/counted";
 import { moveName, plyNumber, startingPoint } from "../features/confrontation/moveName";
@@ -712,6 +712,18 @@ export function Board({
           record={record}
           phase={currentAnnotation?.phase ?? null}
           counted={currentAnnotation?.counted ?? null}
+          /*
+            **The third site, on the same opt-in as the other two** (US-30,
+            ADR-0034). The relevé used to say « Rien à signaler sur ce coup » on
+            the very plies the list beside it flagged, which is one screen
+            asserting and denying the same fact. It is the caller that decides
+            the panel may speak of the opponent — a payload that grew a field
+            never changes what an existing view is about — so the chip is gated
+            on `showOpportunities` here rather than inside the panel.
+          */
+          opportunity={
+            showOpportunities ? (currentAnnotation?.opportunity ?? null) : null
+          }
           onPreview={previewVia}
         />
       )}
@@ -871,22 +883,7 @@ function EngineMarks({
         and without any colour (ADR-0013).
       */}
       {showOpportunities && annotation.opportunity && (
-        <span
-          data-part="opportunity"
-          /*
-           * **`data-opportunity`, never `data-severity`.** The severity hook is
-           * the ENGINE's glyph's, and `_semantics` tints *any* element carrying
-           * it into a filled chip in the Player's fault colours — measured at
-           * `--tint-mistake` behind `--ink-muted`, 3.5:1 in the light theme and,
-           * worse than the contrast, the one colour on this screen that means
-           * « your fault ». Reusing the attribute for its value would have said
-           * the opposite of what this whole story is for.
-           */
-          data-opportunity={annotation.opportunity.severity}
-          aria-label={opportunityName(annotation.opportunity.severity)}
-        >
-          {opportunityGlyph(annotation.opportunity.severity)} {OPPORTUNITY_TERM}
-        </span>
+        <OpportunityMark severity={annotation.opportunity.severity} />
       )}
       <span aria-label="evaluation">{formatEvaluation(annotation.whiteEval)}</span>
     </>

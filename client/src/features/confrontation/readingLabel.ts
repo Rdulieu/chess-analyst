@@ -82,7 +82,23 @@ const UNSCORED: Record<NonNullable<MoveReading["unscored"]>, ReadingLabel> = {
  * were merely imprecise.
  */
 export function readingLabel(move: MoveReading): ReadingLabel {
-  if (move.unscored) return unscoredLabel(move, move.unscored);
+  /*
+   * **The opponent's half, scored** (US-30) — and it comes FIRST, because it is
+   * the only branch that can be true at the same time as the grey used to be.
+   *
+   * The payload holds `unscored` and the term mutually exclusive on both halves
+   * of the board since slice 06, so this branch and the one below can no longer
+   * both fire. It is written in this order anyway, and stated rather than left
+   * to the server: the module the move list's column and the cartouche under
+   * the board **share** is the one place that can promise they say the same
+   * thing, and the defect HP-03 found was exactly the two disagreeing.
+   *
+   * The words come from `opportunityReadingLabel` — the same function the
+   * cartouche calls — so there is no second spelling of them here.
+   */
+  const scored = scoredOpportunity(move);
+  if (scored) return opportunityReadingLabel(scored.severity, scored.term);
+  if (move.unscored) return UNSCORED[move.unscored];
 
   if (move.term === "bonne-lecture") {
     return {
@@ -157,29 +173,23 @@ export function readingLabel(move: MoveReading): ReadingLabel {
 }
 
 /**
- * An unscored case, **carrying the verdict the Player placed there**.
+ * **Is this ply's reading the verdict on an `Opportunity`?** — the one predicate
+ * the three surfaces that ask it must share (US-30, slice 06).
  *
- * The verdict is what makes this case worth showing at all: *"le coup est
- * montré, sa raison d'exclusion aussi, et le verdict du joueur dessus n'est pas
- * noté"*. A forced catastrophe measures a `Blunder` and is nobody's mistake, so
- * a Player who called it `Sound` is **right** — and the screen can only say so
- * while the verdict is still on it. Dropping it would leave the case that
- * settles the whole denominator invisible, which is the one thing this screen
- * cannot afford: it is the reason the denominator is what it is.
+ * `readingLabel` above asks it to name the ply, and `MoveReadout` asks it twice
+ * — once to suppress the Player's own chip, once to render the opponent's. Three
+ * spellings of one question is how they drift, and the drift they produced here
+ * cost a blocking finding: the list said « Coup de l'adversaire » where the
+ * cartouche said « ?! Sur-lecture ». Asked in one place, they cannot disagree.
  *
- * Not appended to `good` (the label already names the verdict) nor to `silence`
- * (there is none by definition) — saying "vous aviez dit Bon" under "Correct —
- * rien à comparer" would be the screen repeating itself.
+ * It narrows as well as answers: the pair travels out non-null, so no caller has
+ * to assert what it has just tested.
  */
-function unscoredLabel(move: MoveReading, unscored: NonNullable<MoveReading["unscored"]>): ReadingLabel {
-  const base = UNSCORED[unscored];
-
-  /*
-   * A `Good` reaches here only when the engine flagged **nothing** — the one
-   * case where "rien à comparer" is true. A `Good` on a measured fault is
-   * scored now, as the strongest `Sous-lecture` there is, and never arrives.
-   */
-  return base;
+export function scoredOpportunity(
+  move: MoveReading,
+): { severity: NonNullable<MoveReading["opportunity"]>; term: ReadingTerm } | null {
+  if (move.opportunity === null || move.opportunityTerm === null) return null;
+  return { severity: move.opportunity, term: move.opportunityTerm };
 }
 
 /** The measured bands, in the Player's own words — the shared vocabulary. */

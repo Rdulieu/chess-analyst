@@ -228,3 +228,85 @@ describe("Analyse — at the engine levels, the Opportunity is visible on the op
     expect(container.innerHTML).not.toMatch(/chance manquée/i);
   });
 });
+
+/**
+ * **The relevé under the board names the `Opportunity`** (US-30, story 20 —
+ * HP-03's second blocking finding, closed in slice 06).
+ *
+ * At `Détaillé` the move list flagged « ?! Opportunity » on four plies while
+ * the `Relevé du coup` under the diagram read « Rien à signaler sur ce coup »
+ * on the very same four. One screen flagged and un-flagged the same Move, and
+ * the spec names the cartouche under the board among the three sites.
+ *
+ * The record's own sentence is right about what it is about — there is no
+ * `Best line` to show on the opponent's Move — so what was missing is the
+ * `Opportunity` beside it, from the module that owns the word.
+ */
+describe("Analyse — the relevé under the board says what the list says", () => {
+  /** The panel the diagram sits above. */
+  const record = (container: HTMLElement) =>
+    container.querySelector('[data-part="record"]') as HTMLElement;
+
+  async function atDetailedOnOpponentPly() {
+    stub();
+    const view = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+    await chooseLevel(/détaillé/i);
+    await waitFor(() => expect(record(view.container)).not.toBeNull());
+    // Ply 2 is the opponent's — the one the payload gives an `Opportunity`.
+    await userEvent.click(await screen.findByRole("button", { name: "1…e5" }));
+    return view;
+  }
+
+  it("names the Opportunity instead of « Rien à signaler » on the opponent's flagged ply", async () => {
+    const { container } = await atDetailedOnOpponentPly();
+
+    await waitFor(() => {
+      const panel = record(container);
+      expect(panel.textContent).toContain(OPPORTUNITY_TERM);
+    });
+    expect(record(container).textContent).not.toContain("Rien à signaler");
+  });
+
+  it("says it with the SAME words as the list, and its own accessible name", async () => {
+    const { container } = await atDetailedOnOpponentPly();
+
+    const inRecord = await waitFor(() => {
+      const found = record(container).querySelector('[data-part="opportunity"]');
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    const inList = container.querySelector(
+      'ol [data-part="opportunity"]',
+    )!;
+
+    // One fact shown twice — so the two spellings must be one string.
+    expect(inRecord.textContent).toBe(inList.textContent);
+    expect(inRecord.getAttribute("aria-label")).toMatch(/bévue/i);
+    // Never the Player's own severity hook: the sheet tints that one « votre
+    // faute » (slice 04's blocking finding).
+    expect(inRecord.hasAttribute("data-severity")).toBe(false);
+  });
+
+  it("still says « Rien à signaler » where there is genuinely nothing", async () => {
+    stub();
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+    await chooseLevel(/détaillé/i);
+    await waitFor(() => expect(container.querySelector('[data-part="record"]')).not.toBeNull());
+
+    // Ply 0 is nobody's Move and carries no Opportunity: the panel that empties
+    // silently reads as a panel that broke, so the sentence stays.
+    expect(container.querySelector('[data-part="record"]')!.textContent).toContain(
+      "Rien à signaler",
+    );
+  });
+
+  it("leaks nothing at Unaided — the relevé is not a way around the blindfold", async () => {
+    stub();
+    const { container } = render(<GameViewer game={{ ...OPERA_GAME, analyzed: true }} />);
+    await screen.findByRole("radiogroup", { name: /niveau de revue/i });
+    await userEvent.click(await screen.findByRole("button", { name: "1…e5" }));
+
+    expect(container.innerHTML).not.toContain(OPPORTUNITY_TERM);
+    expect(container.innerHTML).not.toContain("opportunit");
+  });
+});

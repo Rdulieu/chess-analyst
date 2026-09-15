@@ -91,10 +91,17 @@ describe("the per-Move reading of a Confrontation", () => {
     it("gives every entry exactly one of a term and an unscored reason", () => {
       // The invariant that stops a Move being both scored and excused, or
       // neither — and the one a reader relies on when branching on `term`.
+      //
+      // **Stated over the whole entry, both halves of the board.** US-30 gave
+      // the opponent's half its own scorer, so "scored" is now `term` OR
+      // `opportunityTerm`; what may not happen is a ply that is scored and
+      // excused at once, or one that is neither. Weakening it to the Player's
+      // couple alone would have let the very defect this slice fixes through.
       for (const move of confronted().moves) {
+        const scored = move.term !== null || move.opportunityTerm !== null;
         expect(
-          (move.term === null) !== (move.unscored === null),
-          `ply ${move.ply} has term=${move.term} and unscored=${move.unscored}`,
+          scored !== (move.unscored !== null),
+          `ply ${move.ply}: term=${move.term} opportunityTerm=${move.opportunityTerm} unscored=${move.unscored}`,
         ).toBe(true);
       }
     });
@@ -300,10 +307,20 @@ describe("the per-Move reading of a Confrontation", () => {
    * stories about the same Game.
    */
   describe("the figures ARE the sum of the list", () => {
-    /** The entries the accuracy figures are computed over. */
+    /**
+     * The entries the accuracy figures are computed over — **named by what they
+     * are**, not by the exclusions they escaped.
+     *
+     * It used to be "declared, and not one of three unscored reasons", which
+     * read the opponent's half off `unscored: "opponent"`. Since US-30 scores
+     * that half, a scored opponent ply carries no unscored reason at all and
+     * the subtractive spelling swept it into the Player's denominator. An
+     * examined Move of the Player's is one the derivation **scored or called
+     * `Good`** — the same predicate the confusion matrix uses on the client.
+     */
     const examinedMoves = () =>
       confronted().moves.filter(
-        (move) => move.declared !== null && !["opponent", "forced", "decided"].includes(move.unscored ?? ""),
+        (move) => move.declared !== null && (move.term !== null || move.unscored === "good"),
       );
 
     it("re-derives `examined` from the list", () => {

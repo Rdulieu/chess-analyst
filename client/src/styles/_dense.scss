@@ -1138,10 +1138,38 @@ ol[data-columns="authors"] > li:not([data-part="phase-start"]) {
 // Each author's marks are ONE cell, so a row emits three grid items whatever
 // happened on that Move — between two and six children would drift the columns
 // on every line.
+//
+// **`min-width: 0` and `flex-wrap`, and at 380 px they are the whole fix.**
+// A grid item's `min-width` is `auto`, which means "never narrower than my
+// content": the engine cell's 144 px of « ?? Opportunity » plus an evaluation
+// therefore refused the 96 px its track had, pushed the row past the list, and
+// the overflow propagated to three ancestors — `problems=10, pass=false` in
+// both themes, while the page body itself never scrolled sideways, so it was
+// the *second* half of the audit's assertion that fell. Floors alone cannot
+// answer it: the four tracks' floors already fit, and a wider floor only moves
+// the overflow to a narrower phone.
 ol[data-columns="authors"] [data-cell] {
   display: flex;
   align-items: baseline;
   gap: var(--space-1);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+// **And the wrap has to reach the glyphs, not stop at their wrapper.**
+// `[data-part="move-marks"]` is ONE `inline-flex` child of the `player` cell, so
+// letting the cell wrap wrapped nothing: a ply carrying a verdict, a note and a
+// key moment (`??✎◆`) measured 67 px inside a 31 px track and overflowed — the
+// second half of the 380 px assertion, on nine plies of one Game, in both
+// themes. Found by the Feature Path after the `engine` cell was fixed, which is
+// the useful lesson: the audit names the box that overflows, and the box that
+// overflows is not always the one whose content grew.
+//
+// Scoped to this list. Everywhere else the marks sit in a wrapping flow that
+// gives them a whole line, and there the single row is right.
+ol[data-columns="authors"] [data-part="move-marks"] {
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 // The disagreement, in the list. Its FORM carries the direction — a reader who
@@ -1160,6 +1188,10 @@ ol[data-columns="authors"] [data-cell] {
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-1);
+  // It holds a sentence (« Position déjà décidée — non comptée ») in the
+  // narrowest track of a four-column row: it wraps, or it overflows.
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 [data-part="confrontation-cell"][data-tone="agreement"] { color: var(--tint-ok-ink); }
@@ -1176,7 +1208,16 @@ ol[data-columns="authors"] [data-cell] {
   font-size: var(--text-s);
   font-family: var(--mono);
   color: var(--ink-muted);
-  white-space: nowrap;
+  // **Not `nowrap`.** The glyph and the word belong on one line wherever there
+  // is one to be had, and `nowrap` was how that was said — but said as a
+  // prohibition it also forbade the only escape a 96 px track leaves, and the
+  // `Confrontation`'s four-column row at 380 px has no wider track to give.
+  // `max-content` on a flex item takes the single line when it fits and yields
+  // one break when it does not, which is the same intention without the
+  // overflow. (`Analyse`, whose list is a wrapping flow rather than a grid,
+  // measured `problems=0` throughout and keeps doing so.)
+  flex-basis: max-content;
+  min-width: 0;
 }
 
 // The severity is carried on `data-opportunity` and **not** on `data-severity`,

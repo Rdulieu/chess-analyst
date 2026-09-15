@@ -103,9 +103,12 @@ const CONFRONTATION: GameConfrontation = {
   opportunities: { offered: 3, examined: 2, agreed: 1, unseen: 1 },
   moves: [
     { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null, opportunity: null, opportunityTerm: null },
-    { ply: 2, notation: "e5", declared: "blunder", measured: "none", term: null, unscored: "opponent", keyMoment: null, opportunity: "blunder", opportunityTerm: "bonne-lecture" },
+    // **Scored, therefore NOT unscored** (slice 06). A payload carrying both
+    // was the root of HP-03's first blocking finding, and it is not a shape the
+    // server can produce any more.
+    { ply: 2, notation: "e5", declared: "blunder", measured: "none", term: null, unscored: null, keyMoment: null, opportunity: "blunder", opportunityTerm: "bonne-lecture" },
     { ply: 3, notation: "Nf3", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null, opportunity: null, opportunityTerm: null },
-    { ply: 4, notation: "Nc6", declared: "inaccuracy", measured: "none", term: null, unscored: "opponent", keyMoment: null, opportunity: "blunder", opportunityTerm: "sous-lecture" },
+    { ply: 4, notation: "Nc6", declared: "inaccuracy", measured: "none", term: null, unscored: null, keyMoment: null, opportunity: "blunder", opportunityTerm: "sous-lecture" },
     { ply: 5, notation: "Bc4", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null, opportunity: null, opportunityTerm: null },
     { ply: 6, notation: "Bc5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null, opportunity: "inaccuracy", opportunityTerm: null },
     { ply: 7, notation: "Nc3", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null, opportunity: null, opportunityTerm: null },
@@ -409,6 +412,94 @@ describe("the three prohibitions", () => {
     const text = container.textContent!.toLowerCase();
     for (const banned of ["erreur de l'adversaire", "cadeau", "chance manquée"]) {
       expect(text).not.toContain(banned);
+    }
+  });
+});
+
+/**
+ * **The column and the cartouche say the same thing about the same ply**
+ * (slice 06, HP-03's first blocking finding).
+ *
+ * The move list printed « Coup de l'adversaire » in its Confrontation column on
+ * a ply whose cartouche, three centimetres away, read « ?! Sur-lecture ». One
+ * screen said the verdict was scored and unscored at once — the pre-US-30
+ * doctrine surviving beside its own replacement.
+ *
+ * Anchored on the **rendered text of both**, from one fabricated payload: a
+ * test that checked either alone would have passed while they disagreed.
+ */
+describe("the two surfaces agree on the ply they are both describing", () => {
+  const CELL = '[data-part="confrontation-cell"]';
+
+  it("prints the verdict in the column, never the grey, on a scored opponent ply", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    const cell = rowFor(container, "1…e5").querySelector(CELL)!;
+    expect(cell.textContent).toContain("Bonne lecture");
+    expect(cell.textContent).not.toContain("Coup de l'adversaire");
+    expect(cell.getAttribute("data-tone")).toBe("agreement");
+  });
+
+  it("matches the cartouche word for word, on both scored opponent plies", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    for (const san of ["1…e5", "2…Nc6"]) {
+      fireEvent.click(screen.getByRole("button", { name: san }));
+      const chip = await waitFor(() => {
+        const found = container.querySelector(
+          '[data-part="reading-term"][data-family="opportunity-reading"]',
+        );
+        expect(found).not.toBeNull();
+        return found!;
+      });
+      const cell = rowFor(container, san).querySelector(CELL)!;
+
+      // The same string and the same register — they read one function, and
+      // this is what proves it rather than assuming it.
+      expect(cell.textContent).toContain(chip.textContent!);
+      expect(cell.getAttribute("data-tone")).toBe(chip.getAttribute("data-tone"));
+    }
+  });
+
+  it("states the verdict once under the board, not twice", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    fireEvent.click(screen.getByRole("button", { name: "1…e5" }));
+    await waitFor(() =>
+      expect(
+        container.querySelector('[data-part="reading-term"][data-family="opportunity-reading"]'),
+      ).not.toBeNull(),
+    );
+    const chips = [
+      ...container.querySelectorAll('[data-part="move-reading"] [data-part="reading-term"]'),
+    ].map((chip) => chip.textContent);
+
+    // The offered chip and the verdict chip — and no third chip repeating the
+    // verdict because the Player's own table was asked a question about the
+    // opponent's Move.
+    expect(chips).toEqual([
+      "?? Opportunity de la taille d'une bévue",
+      "?? Bonne lecture",
+    ]);
+  });
+
+  it("keeps the grey on the opponent ply nothing scored", async () => {
+    stub();
+    const { container } = renderPage();
+    await board(container);
+
+    // Ply 6 offers an `Opportunity` the Player never looked at, ply 8 offers
+    // nothing at all: neither is scored, so both keep the case that names them.
+    for (const san of ["3…Bc5", "4…Nf6"]) {
+      const cell = rowFor(container, san).querySelector(CELL)!;
+      expect(cell.textContent, san).toContain("Coup de l'adversaire");
+      expect(cell.getAttribute("data-tone"), san).toBe("unscored");
     }
   });
 });

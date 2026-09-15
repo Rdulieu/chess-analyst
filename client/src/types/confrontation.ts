@@ -61,7 +61,8 @@ export interface MoveKeyMoment {
  * screen's figures are the sum of.
  *
  * `term` and `unscored` are mutually exclusive and jointly exhaustive: exactly
- * one is non-null.
+ * one is non-null — and the same exclusion holds for `opportunityTerm` on the
+ * opponent's half: a scored opponent ply carries no `unscored` case.
  */
 export interface MoveReading {
   ply: number;
