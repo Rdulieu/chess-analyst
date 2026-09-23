@@ -2,6 +2,7 @@ import type { LinePly, ReviewedMove } from "../../chess/bestLine";
 import { SEVERITY_GLYPH } from "../../chess/severity";
 import { PHASE_LABEL, type Phase } from "../../chess/phase";
 import { COUNTED_STATEMENT, COUNTED_YES } from "../../chess/counted";
+import { OpportunityMark } from "./OpportunityMark";
 import type { MoveAnnotation } from "../../types";
 
 /**
@@ -24,6 +25,7 @@ export function MoveRecord({
   record,
   phase,
   counted,
+  opportunity,
   onPreview,
 }: {
   /** The reviewed Move's record, or `null` when there is nothing to report. */
@@ -43,6 +45,16 @@ export function MoveRecord({
    * have been.
    */
   counted: MoveAnnotation["counted"];
+  /**
+   * **What the opponent left on the table here** (US-30, ADR-0034) — `null` on
+   * the Player's own Moves, on an opponent Move that offered nothing, and
+   * wherever the caller has not asked for the opponent's half at all.
+   *
+   * The panel is one of the three sites the spec names, and it was the one that
+   * had been left out: the move list flagged « ?! Opportunity » while this
+   * panel, under the same diagram, read « Rien à signaler sur ce coup ».
+   */
+  opportunity: MoveAnnotation["opportunity"];
   /**
    * Previewing a ply of a line: the Position to show temporarily, or `null` to
    * go back, and **through which channel** — the focus and the pointer are
@@ -69,6 +81,11 @@ export function MoveRecord({
             : COUNTED_STATEMENT[counted.reason]}
         </p>
       )}
+      {opportunity && (
+        <p data-part="record-opportunity">
+          <OpportunityMark severity={opportunity.severity} />
+        </p>
+      )}
       {record ? (
         <>
           <p>
@@ -89,7 +106,16 @@ export function MoveRecord({
           />
         </>
       ) : (
-        <p>Rien à signaler sur ce coup.</p>
+        /*
+          **Nothing to report is said, not left blank** — and it is said about
+          what this panel is about: the Player's own Move, the line they should
+          have played, the refutation of the one they did. There is none of that
+          on the opponent's Move, so the sentence is not wrong; what was wrong
+          was that it was the panel's *only* word on a ply the list beside it
+          flagged. The `Opportunity` is stated above it, from the component both
+          sites read, and the sentence survives where there is genuinely nothing.
+        */
+        !opportunity && <p>Rien à signaler sur ce coup.</p>
       )}
     </section>
   );

@@ -1,4 +1,4 @@
-import type { SearchRegime } from "./annotation";
+import type { Opportunity, SearchRegime } from "./annotation";
 import type { DeclaredSeverity } from "./personal";
 
 /**
@@ -61,7 +61,8 @@ export interface MoveKeyMoment {
  * screen's figures are the sum of.
  *
  * `term` and `unscored` are mutually exclusive and jointly exhaustive: exactly
- * one is non-null.
+ * one is non-null — and the same exclusion holds for `opportunityTerm` on the
+ * opponent's half: a scored opponent ply carries no `unscored` case.
  */
 export interface MoveReading {
   ply: number;
@@ -72,6 +73,35 @@ export interface MoveReading {
   unscored: UnscoredCase | null;
   /** `null` where there is neither a marker nor a loss — most of a Game. */
   keyMoment: MoveKeyMoment | null;
+  /**
+   * The size of the `Opportunity` the **opponent's** Move offered here
+   * (CONTEXT.md, ADR-0034). `null` on the Player's own Moves, and on an
+   * opponent Move that offered nothing.
+   */
+  opportunity: Opportunity["severity"] | null;
+  /**
+   * What the Player's verdict on that `Opportunity` was worth — the **same
+   * three terms**, in a field of their own. Never in `term`, which stays the
+   * Player's reading of their own play.
+   */
+  opportunityTerm: ReadingTerm | null;
+}
+
+/**
+ * What the Player's verdicts on the **opponent's** Moves were worth, undivided
+ * — the `Confrontation`'s own pair of figures, beside the Player's couple and
+ * **never fused into it** (ADR-0034). Judging oneself and spotting what is
+ * offered are two different abilities, and their disagreement is the diagnosis.
+ */
+export interface OpportunityReading {
+  /** Every `Opportunity` the Game held — the denominator, reading or no reading. */
+  offered: number;
+  /** Those carrying a verdict — coverage numerator, accuracy denominator. */
+  examined: number;
+  /** Among the examined, those read on the band. */
+  agreed: number;
+  /** Those carrying no verdict at all — invisible to the reading, not misjudged by it. */
+  unseen: number;
 }
 
 /** Why one of the Player's Moves is not counted — the two are never melted into one. */
@@ -142,6 +172,8 @@ export interface GameConfrontation {
   provenance: Provenance;
   regime: SearchRegime | null;
   severity: SeverityReading;
+  /** The opponent's half of the board — beside `severity`, never inside it. */
+  opportunities: OpportunityReading;
   /** The reading of every half-move, from ply 1 (ADR-0032). */
   moves: MoveReading[];
   /** Where the Player looked — the `Key moment` reading. */

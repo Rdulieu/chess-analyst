@@ -83,7 +83,13 @@ describe("Confrontation — a real reading of a real Game", () => {
     expect(severity.examined).toBe(4);
     expect(severity.scorable).toBe(4);
     expect(severity.agreed).toBe(1);
-    expect(severity.unscored).toEqual({ good: 0, opponent: 1 });
+    // **Zero, and the zero is the fix of slice 06.** This reading's single
+    // opponent verdict sits on a measured `Opportunity`, so US-30 scores it —
+    // and a scored verdict is not one that "entered none of the figures above".
+    // It used to be counted here AND in the `Opportunity` couple at once, which
+    // is what made the block under the figures contradict them.
+    expect(severity.unscored).toEqual({ good: 0, opponent: 0 });
+    expect(confronted().opportunities.examined).toBe(1);
   });
 
   it("adds up: the scorable cells of the matrix ARE the accuracy denominator", () => {
@@ -103,11 +109,19 @@ describe("Confrontation — a real reading of a real Game", () => {
   });
 
   it("scores neither the opponent's Move nor the Move it excludes, and shows both", () => {
-    const { severity, uncounted } = confronted();
+    const { severity, uncounted, moves } = confronted();
 
-    // Two verdicts the Player wrote that no figure may touch — for two different
-    // reasons, and both have to remain visible or the counts look wrong.
-    expect(severity.unscored.opponent).toBe(1);
+    // The verdict on the opponent's Move is **out of the Player's figures** —
+    // it never entered `examined`, `scorable` or `agreed` — and it is scored on
+    // the opponent's own couple rather than filed as never noted.
+    expect(severity.unscored.opponent).toBe(0);
+    const onOpponent = moves.filter((move) => move.opportunityTerm !== null);
+    expect(onOpponent).toHaveLength(1);
+    expect(onOpponent[0].term).toBeNull();
+    expect(onOpponent[0].unscored).toBeNull();
+
+    // And the excluded Move, whose verdict no figure may touch — a different
+    // reason, and it too has to remain visible or the counts look wrong.
     const declaredOnExcluded = uncounted.filter((move) => move.declared !== null);
     expect(declaredOnExcluded).toHaveLength(1);
     expect(declaredOnExcluded[0].reason).toBe("decided");

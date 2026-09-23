@@ -54,6 +54,7 @@ const ANNOTATIONS: GameAnnotations = {
     chancesLost: 30,
     flaggedLoss: 30,
     drift: 0,
+    opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
     regime: { depth: 16, lines: 2 },
   },
   // A Game with no Clock recorded: the time block is not what this slice is
@@ -97,21 +98,24 @@ const CONFRONTATION: GameConfrontation = {
     unscored: { good: 0, opponent: 0 },
   },
   keyMoments: { marked: 0, damageFound: 0, damageTotal: 30, drift: 0, misses: [] },
+  // No `Opportunity` is in play on this board: US-30's figures are beside the
+  // Player's, and this file is about the Player's tint.
+  opportunities: { offered: 0, examined: 0, agreed: 0, unseen: 0 },
   // Ply 1 is the one the tint test stands on: the Player called it an
   // Inaccuracy where the engine measured a Blunder — a Sous-lecture, and a
   // disagreement, so a board painting the wrong author cannot pass by luck.
   moves: [
-    { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: { case: "missed", lost: 30, nearest: null } },
-    { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
-    { ply: 3, notation: "Nf3", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null },
-    { ply: 5, notation: "Bc4", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null },
+    { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: { case: "missed", lost: 30, nearest: null }, opportunity: null, opportunityTerm: null },
+    { ply: 2, notation: "e5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null, opportunity: null, opportunityTerm: null },
+    { ply: 3, notation: "Nf3", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null, opportunity: null, opportunityTerm: null },
+    { ply: 5, notation: "Bc4", declared: null, measured: "none", term: null, unscored: "silence", keyMoment: null, opportunity: null, opportunityTerm: null },
     // A `Good`: it FILLS its matrix cell (the server counts every examined
     // Move) while carrying `unscored: "good"`. The row the table renders and
     // never scores — and the one a naive "exclude everything unscored" filter
     // silently emptied.
-    { ply: 7, notation: "Nc3", declared: "good", measured: "none", term: null, unscored: "good", keyMoment: null },
-    { ply: 6, notation: "Bc5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
-    { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null },
+    { ply: 7, notation: "Nc3", declared: "good", measured: "none", term: null, unscored: "good", keyMoment: null, opportunity: null, opportunityTerm: null },
+    { ply: 6, notation: "Bc5", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null, opportunity: null, opportunityTerm: null },
+    { ply: 4, notation: "Nc6", declared: null, measured: "none", term: null, unscored: "opponent", keyMoment: null, opportunity: null, opportunityTerm: null },
   ],
   uncounted: [],
   posterior: [],
@@ -440,8 +444,8 @@ describe("the board on the Confrontation route", () => {
           body: {
             ...CONFRONTATION,
             moves: [
-              { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null },
-              { ply: 3, notation: "Nf3", declared: "blunder", measured: "none", term: "sur-lecture", unscored: null, keyMoment: null },
+              { ply: 1, notation: "e4", declared: "inaccuracy", measured: "blunder", term: "sous-lecture", unscored: null, keyMoment: null, opportunity: null, opportunityTerm: null },
+              { ply: 3, notation: "Nf3", declared: "blunder", measured: "none", term: "sur-lecture", unscored: null, keyMoment: null, opportunity: null, opportunityTerm: null },
             ],
           },
         },
@@ -556,11 +560,11 @@ describe("the board on the Confrontation route", () => {
           body: {
             ...CONFRONTATION,
             moves: [
-              { ply: 1, notation: "e4", declared: "sound", measured: "none", term: "bonne-lecture", unscored: null, keyMoment: null },
+              { ply: 1, notation: "e4", declared: "sound", measured: "none", term: "bonne-lecture", unscored: null, keyMoment: null, opportunity: null, opportunityTerm: null },
               // The story's central case: a forced catastrophe the Player
               // called Sound, and was right about. Putting it on the curve as
               // a divergence would accuse them of the one thing they got right.
-              { ply: 3, notation: "Nf3", declared: "sound", measured: "blunder", term: null, unscored: "forced", keyMoment: null },
+              { ply: 3, notation: "Nf3", declared: "sound", measured: "blunder", term: null, unscored: "forced", keyMoment: null, opportunity: null, opportunityTerm: null },
             ],
           },
         },

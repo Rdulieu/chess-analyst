@@ -1091,7 +1091,12 @@ $drift-inset: $drift-frame + $drift-headroom;
 // widths and the headings would sit over nothing. The comparison gets the
 // widest share because it holds a sentence («
 // Position déjà décidée — non comptée ») where the others hold a glyph or two.
-$move-authors-tracks: minmax(4.5rem, 0.8fr) 0.5fr 0.7fr minmax(7rem, 2fr);
+// **The engine's track gained a word** (US-30): on the opponent's plies it
+// carries « ?? Opportunity » where it used to carry a glyph and an evaluation,
+// and at `0.7fr` that wrapped to three lines on a narrow panel. Widened with a
+// `minmax` floor rather than switched to `auto`, for the reason above: `auto`
+// resolves per row, and per-row widths are how a column stops being one.
+$move-authors-tracks: minmax(4.5rem, 0.8fr) 0.5fr minmax(6rem, 1.1fr) minmax(7rem, 2fr);
 
 [data-part="move-list-headings"] {
   display: grid;
@@ -1133,10 +1138,38 @@ ol[data-columns="authors"] > li:not([data-part="phase-start"]) {
 // Each author's marks are ONE cell, so a row emits three grid items whatever
 // happened on that Move — between two and six children would drift the columns
 // on every line.
+//
+// **`min-width: 0` and `flex-wrap`, and at 380 px they are the whole fix.**
+// A grid item's `min-width` is `auto`, which means "never narrower than my
+// content": the engine cell's 144 px of « ?? Opportunity » plus an evaluation
+// therefore refused the 96 px its track had, pushed the row past the list, and
+// the overflow propagated to three ancestors — `problems=10, pass=false` in
+// both themes, while the page body itself never scrolled sideways, so it was
+// the *second* half of the audit's assertion that fell. Floors alone cannot
+// answer it: the four tracks' floors already fit, and a wider floor only moves
+// the overflow to a narrower phone.
 ol[data-columns="authors"] [data-cell] {
   display: flex;
   align-items: baseline;
   gap: var(--space-1);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+// **And the wrap has to reach the glyphs, not stop at their wrapper.**
+// `[data-part="move-marks"]` is ONE `inline-flex` child of the `player` cell, so
+// letting the cell wrap wrapped nothing: a ply carrying a verdict, a note and a
+// key moment (`??✎◆`) measured 67 px inside a 31 px track and overflowed — the
+// second half of the 380 px assertion, on nine plies of one Game, in both
+// themes. Found by the Feature Path after the `engine` cell was fixed, which is
+// the useful lesson: the audit names the box that overflows, and the box that
+// overflows is not always the one whose content grew.
+//
+// Scoped to this list. Everywhere else the marks sit in a wrapping flow that
+// gives them a whole line, and there the single row is right.
+ol[data-columns="authors"] [data-part="move-marks"] {
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 // The disagreement, in the list. Its FORM carries the direction — a reader who
@@ -1155,12 +1188,46 @@ ol[data-columns="authors"] [data-cell] {
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-1);
+  // It holds a sentence (« Position déjà décidée — non comptée ») in the
+  // narrowest track of a four-column row: it wraps, or it overflows.
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 [data-part="confrontation-cell"][data-tone="agreement"] { color: var(--tint-ok-ink); }
 [data-part="confrontation-cell"][data-tone="missed"] { color: var(--tint-fail-ink); }
 [data-part="confrontation-cell"][data-tone="overcalled"] { color: var(--tint-inaccuracy-ink); }
 [data-part="confrontation-cell"][data-tone="unscored"] { color: var(--ink-muted); }
+
+// **What the opponent offered, in the list** (US-30). Deliberately NOT one of
+// the severity tints: those say « your fault », and this is the opposite
+// subject. A quiet muted register plus the word itself — the tint here is
+// decoration, the word and the accessible name are the signal (ADR-0013), which
+// is exactly why no new colour token is owed for it.
+[data-part="opportunity"] {
+  font-size: var(--text-s);
+  font-family: var(--mono);
+  color: var(--ink-muted);
+  // **Not `nowrap`.** The glyph and the word belong on one line wherever there
+  // is one to be had, and `nowrap` was how that was said — but said as a
+  // prohibition it also forbade the only escape a 96 px track leaves, and the
+  // `Confrontation`'s four-column row at 380 px has no wider track to give.
+  // `max-content` on a flex item takes the single line when it fits and yields
+  // one break when it does not, which is the same intention without the
+  // overflow. (`Analyse`, whose list is a wrapping flow rather than a grid,
+  // measured `problems=0` throughout and keeps doing so.)
+  flex-basis: max-content;
+  min-width: 0;
+}
+
+// The severity is carried on `data-opportunity` and **not** on `data-severity`,
+// so nothing tints it: the attribute exists for a driver and for a future sheet,
+// and this rule's only job is to say out loud that the absence of a colour here
+// is a decision, not an omission.
+[data-part="opportunity"][data-opportunity] {
+  background: none;
+  font-weight: inherit;
+}
 
 // **The matrix's cells became controls** (US-26, slice 07), and a control is
 // given a border, a background and generous padding by `_controls`. Left as
@@ -1277,6 +1344,25 @@ ol[data-columns="authors"] [data-cell] {
   color: var(--tint-inaccuracy-ink);
 }
 
+// **The `Opportunity`'s own register** (US-30). Neither green nor red: what the
+// opponent left on the table is not a success or a failure of the Player's, and
+// tinting it as one would have the app blame them for somebody else's Move. The
+// two chips of this family are told from the other two by their **glyph** — the
+// severity's own sign — not by this background.
+[data-part="reading-term"][data-tone="offered"] {
+  background: var(--ground-sunk);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+// Both `Opportunity` chips are set a shade lighter than the Player's own
+// cartouche, as the `◆` family already is: two answers to two questions must
+// not read as one statement continued.
+[data-part="reading-term"][data-family="opportunity"],
+[data-part="reading-term"][data-family="opportunity-reading"] {
+  font-weight: 600;
+}
+
 // One neutral for the five unscored cases (ADR-0033) — which is exactly why
 // each of them carries its own words: the tone cannot tell them apart, and it
 // is not asked to.
@@ -1337,6 +1423,37 @@ ol[data-columns="authors"] [data-cell] {
   margin-block: 0;
   font-size: var(--text-s);
   color: var(--ink-muted);
+}
+
+// **The opponent's block — beside the Player's grid, never a cell of it**
+// (ADR-0034). It has its own heading and its own surface precisely so the eye
+// reads a change of subject; dropped into `confrontation-severity` it would be
+// sized as a fourth column and read as a fourth answer to the same question.
+[data-part="confrontation-opportunities"] {
+  margin-block: var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--ground-sunk);
+
+  h3 {
+    margin-block: 0 var(--space-1);
+    font-size: var(--text-m);
+  }
+}
+
+[data-part="opportunities-lede"] {
+  margin-block: 0 var(--space-2);
+  font-size: var(--text-s);
+  color: var(--ink-muted);
+}
+
+// The pair, side by side and folding rather than crushing — the same rule the
+// Player's own pair follows, because they are the same kind of figure.
+[data-part="opportunities-figures"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-3);
 }
 
 // What the comparison is worth, ABOVE the figures: a comparison with no

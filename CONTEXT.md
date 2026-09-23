@@ -160,9 +160,8 @@ _Avoid_: Advantage graph, Accuracy curve (accuracy is not something we compute)
 The three severities of a flawed Move, defined **as Lichess defines them** — by how much the Move
 drops the player's **winning chances** (a probability of winning derived from the engine's
 `Evaluation`, so a given centipawn swing weighs more near equality than when already winning or
-lost), **not** by a raw centipawn threshold. Computed only for **the player's own** Moves (never
-the opponent's — this tool is about the player's own improvement), by comparing the position
-*before* the Move (engine's best play) with the position *after* the Move actually played:
+lost), **not** by a raw centipawn threshold. Computed by comparing the position *before* the Move
+(engine's best play) with the position *after* the Move actually played:
 
 - **Inaccuracy** (`?!`): winning-chances drop of **5–20%**.
 - **Mistake** (`?`): drop of **20–30%**.
@@ -174,6 +173,10 @@ flagged either — it barely moves the chances (this is why the winning-chances 
 than raw centipawns). `Mistake` is also used as the **umbrella** for "a flaw worth counting" where a
 coarser notion is needed (e.g. `Danger position`); which severities that umbrella spans is stated
 where it is used.
+These three names name **the Player's own** Moves. The same band, applied to the opponent's,
+produces an `Opportunity` and never an `Inaccuracy`/`Mistake`/`Blunder` — one measurement, two
+subjects, and the words are reserved for the subject this tool is about (ADR-0034).
+
 The three names are a **scale with two authors**. The bands above define the **measured** value —
 the engine's, computed from the `Evaluation`s. The `Player` may also **declare** one of the same
 three, by hand, in their `Personal analysis` (see `Declared severity`), and the shared vocabulary is
@@ -351,6 +354,34 @@ still nobody's mistake. That is the case where what a Game shows and what it con
 disagree, so a reviewed Game states, for each of the Player's Moves, whether it is counted and —
 when it is not — which of the two reasons applies.
 _Avoid_: Valid move, Eligible move, Scored move
+
+**Opportunity**:
+A Move of **the opponent's** whose flaw offered the `Player` something — measured with the very
+same band as the Player's own Moves (`Inaccuracy`/`Mistake`/`Blunder`: one threshold, always), and
+named apart because the **subject** differs. An `Opportunity` is a fact about what the Player was
+given, never a verdict on the opponent: this tool is about the Player's own improvement, and the
+opponent's flaw enters only as something that was there to be taken.
+
+Its severity is a **property** of it — *an `Opportunity` the size of a `Blunder`* — rather than a
+competing vocabulary. Whether the Player **saw** it is a second property, and the two are kept
+apart: a missed `Opportunity` and one that was never looked at are different failures, and only the
+second is invisible to a reading.
+
+**A `Counted Move`'s two exclusions are mirrored only halfway, and the asymmetry is the point.**
+An **already decided** Position offers nothing real — the chances have nothing left to move, so
+there was nothing to take. But a **forced** Move is **still an `Opportunity`**: `forced` exists so
+that nobody is *blamed* for a Move they had no choice in, and here nobody is being blamed — the
+opponent's lack of choice does not make the piece they had to give any less takeable. Mirroring
+both exclusions would discard the clearest opportunities there are.
+
+**What it deliberately does not say: whether the Player *converted* it.** Converting would need a
+definition of its own — over how many Moves, and what counts as banked — and therefore a threshold
+this project would have to invent. It is also unnecessary from this side: a gain handed over and
+then given back shows up as **the Player's own weak Moves**, which are already measured in full.
+An `Opportunity` is *what was offered*; what the Player then did with the Position is their own
+play, and their own play already has all its words.
+
+_Avoid_: Opponent error, Gift, Missed chance (which prejudges the outcome), Opponent blunder
 
 **Drift**:
 The share of the winning chances a Player lost across a Game that **no flagged Move accounts for**:

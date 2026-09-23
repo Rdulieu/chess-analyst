@@ -497,6 +497,36 @@ for that edit:
 > minutes to re-check it.
 
 
+> **Update 2026-09-15 (US-30 gate).** A full suite run — path 0 alone, then HP-01 + HP-02 at the
+> derived concurrency of 2 on an 8-thread host, then HP-03 when a slot freed, then HP-03 **again**
+> after a corrective slice. What it observed, against the questions above:
+>
+> - **Every report arrived on its own**, by the subagent's `SendMessage` to `main`, and each one a
+>   second time as the completion notification. **The relance was never needed** and **transcript
+>   recovery was never needed** — consistent with the 2026-08-27 entry.
+> - **Stale idle timers are the run's real noise.** Four finished agents re-notified between one and
+>   four times each, each copy restating a report already collected. They carry no information;
+>   `TaskStop` on the agent once its report is in silences them, which §5.1 already prescribes and
+>   this run confirms is worth doing immediately rather than at the end.
+> - **Isolation held.** Three scenarios and the prerequisite on four disjoint port triples, each with
+>   its own private browser and its own `DB_FILE` copied from the shared snapshot. **No page theft,
+>   no orphan, no collision, no port shift.** HP-02 and HP-03 each *saw* a sibling's server on a
+>   neighbouring port, named it, and spared it — the rule worked as written.
+> - **Five driver false positives, none of which reached a report as a defect** — all caught by the
+>   re-measure rule. One is new and worth its own line, now in `DRIVING.md`: **on a dev server,
+>   searching for a string in `outerHTML` finds the stylesheet Vite injects**, so a "leak" check must
+>   sweep the `body` cloned without `style`/`script`/`link`. The others: a step spacing too short read
+>   as a depth cap; a regex catching a keyboard hint; a value setter and a blur in one `evaluate`
+>   losing the write; `agenticDriver.step("Start")` being a no-op on Analyse.
+> - **`theme-pass.md` assertion 6 ("no console error") is not measured by `host/theme-pass.mjs`.**
+>   Two scenarios covered it by hand via CDP. Candidate for the library — an assertion listed but not
+>   executed is the same family as the gate that never ran `lint`.
+> - **The 380 px width earned its place.** It caught a cell overflowing its column on one screen and
+>   not on another with the same content, and then caught the fix **half-done** — the named box moved
+>   from `engine` to `player`. Corollary worth keeping: *the audit names the box that overflows, and
+>   it is not always the one whose content grew.*
+
+
 ## O5b. A dispatched subagent cannot invoke a skill — inline what it needs
 
 Measured 2026-09-04, on the fresh-agent trial: a subagent given a real ticket found that

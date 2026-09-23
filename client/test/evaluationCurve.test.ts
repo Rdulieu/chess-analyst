@@ -7,7 +7,7 @@ function ply(
   whiteWinChances: number,
   severity: MoveAnnotation["severity"] = null,
 ): MoveAnnotation {
-  return { ply, whiteEval: { cp: 0, mate: null }, whiteWinChances, severity, bestLine: [], phase: "early", counted: null, chancesLost: null };
+  return { ply, whiteEval: { cp: 0, mate: null }, whiteWinChances, severity, bestLine: [], phase: "early", counted: null, chancesLost: null, opportunity: null };
 }
 
 describe("evaluationCurve", () => {

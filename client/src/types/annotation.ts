@@ -37,6 +37,26 @@ export interface MoveAnnotation {
    * what stops the cumulative trace and the total stated beside it disagreeing.
    */
   chancesLost: number | null;
+  /**
+   * What the **opponent's** Move offered (CONTEXT.md `Opportunity`, ADR-0034).
+   * `null` for ply 0, for the Player's own Moves, and for an opponent Move that
+   * offered nothing.
+   *
+   * **A field of its own, beside `severity` and never inside it.** The band is
+   * the same; the subject is not. Adding the opponent reading is opt-in per
+   * screen: a view that does not read this field says nothing about the
+   * opponent, by construction.
+   */
+  opportunity: Opportunity | null;
+}
+
+/**
+ * What one of the opponent's Moves left on the table. Its severity is a
+ * **property** of it — *an `Opportunity` the size of a `Blunder`* — read off the
+ * Player's own band, never a competing vocabulary.
+ */
+export interface Opportunity {
+  severity: "inaccuracy" | "mistake" | "blunder";
 }
 
 /** The `Search regime` a Game was analyzed under (CONTEXT.md): depth and number
@@ -70,6 +90,17 @@ export interface GameRecap {
   flaggedLoss: number;
   /** The residual: `flaggedLoss + drift === chancesLost`, on every Game. */
   drift: number;
+  /**
+   * What the **opponent** offered (CONTEXT.md `Opportunity`, ADR-0034): a total
+   * and its breakdown by severity, **beside** the Player's counts above and in
+   * none of them. A screen opts into showing it; nothing here changes subject by
+   * reading the fields it already read.
+   */
+  opportunities: {
+    total: number;
+    /** Keyed off `Opportunity`'s own severity, so the two cannot drift apart. */
+    bySeverity: Record<Opportunity["severity"], number>;
+  };
   regime: SearchRegime | null;
 }
 

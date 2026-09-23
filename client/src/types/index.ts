@@ -22,6 +22,7 @@ export type {
 export type { AnalysisStatus } from "./analysis";
 export type {
   MoveAnnotation,
+  Opportunity,
   GameAnnotations,
   GameRecap,
   SearchRegime,
@@ -53,5 +54,6 @@ export type {
   UnscoredCase,
   KeyMomentCase,
   MoveKeyMoment,
+  OpportunityReading,
 } from "./confrontation";
 export { MEASURED_LABELS } from "./confrontation";

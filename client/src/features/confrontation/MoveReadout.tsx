@@ -1,4 +1,10 @@
-import { readingLabel, keyMomentLabel } from "./readingLabel";
+import {
+  readingLabel,
+  keyMomentLabel,
+  opportunityLabel,
+  opportunityReadingLabel,
+  scoredOpportunity,
+} from "./readingLabel";
 import type { MoveKeyMoment, MoveReading, PersonalMark } from "../../types";
 
 /**
@@ -57,10 +63,27 @@ export function MoveReadout({
         of overlapping them.
       */}
       <p data-part="reading-terms">
-        <span data-part="reading-term" data-tone={tone}>
-          {label}
-        </span>
+        {/*
+          **One chip per statement, never the same one twice.** On a ply the
+          derivation scored on the opponent's half, `readingLabel` already
+          returns that verdict — it is what the move list's column shows — and
+          `OpportunityCartouches` below renders it from the same function. So
+          the Player's own chip is rendered only where it says something else.
+        */}
+        {!scoredOpportunity(move) && (
+          <span data-part="reading-term" data-tone={tone}>
+            {label}
+          </span>
+        )}
         {move.keyMoment && <KeyMomentCartouche reading={move.keyMoment} ply={move.ply} />}
+        {/*
+          **The opponent's half of the board** (US-30), in the same row and
+          never inside the Player's chip. What was offered is a fact about the
+          Game; what the Player's verdict on it was worth is a fact about their
+          reading — two questions, so two chips, and the row's own gap keeps
+          them from touching at any width.
+        */}
+        {move.opportunity && <OpportunityCartouches move={move} />}
       </p>
       {detail && <p data-part="reading-detail">{detail}</p>}
       {/* The `◆` family's own fact — today only the distance to the loss a
@@ -80,7 +103,6 @@ export function MoveReadout({
   );
 }
 
-
 /**
  * The `Key moment` cartouche, told from the reading one by its **glyph** and
  * not by its colour (ADR-0033).
@@ -99,5 +121,44 @@ function KeyMomentCartouche({ reading, ply }: { reading: MoveKeyMoment; ply: num
     <span data-part="reading-term" data-family="key-moment" data-tone={tone}>
       {label}
     </span>
+  );
+}
+
+/**
+ * **What the opponent offered here, and what the Player made of it** (US-30,
+ * ADR-0034).
+ *
+ * Two chips, told from the other two families by their **glyph** — the severity
+ * sign the move list already carries three centimetres away, never a new one.
+ * The first is always there when an `Opportunity` exists; the second only when
+ * the Player actually posed a verdict, because *missed* and *never looked at*
+ * are different failures and only the second is invisible to a reading. A
+ * cartouche invented for a silence would score one.
+ */
+function OpportunityCartouches({ move }: { move: MoveReading }) {
+  const severity = move.opportunity;
+  if (!severity) return null;
+
+  const offered = opportunityLabel(severity);
+  // The SAME predicate the chip above is suppressed on, so the verdict is
+  // rendered exactly where the other site stops rendering its own.
+  const scored = scoredOpportunity(move);
+  const read = scored ? opportunityReadingLabel(scored.severity, scored.term) : null;
+
+  return (
+    <>
+      <span data-part="reading-term" data-family="opportunity" data-tone={offered.tone}>
+        {offered.label}
+      </span>
+      {read && (
+        <span
+          data-part="reading-term"
+          data-family="opportunity-reading"
+          data-tone={read.tone}
+        >
+          {read.label}
+        </span>
+      )}
+    </>
   );
 }
