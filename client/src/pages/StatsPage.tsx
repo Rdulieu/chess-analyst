@@ -2,6 +2,7 @@ import { useCallback, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { fetchStats } from "../api";
 import { Tally } from "../components/Tally";
+import { SignatureTable } from "../features/stats/SignatureTable";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
 import {
@@ -96,6 +97,7 @@ export function StatsPage({ profile }: { profile: Profile }) {
         // of them. The former "Par cadence" / "Par côté" sub-headings are now
         // the groups' header rows, and carry the accessible names the two lists
         // used to carry.
+        <>
         <div data-scroll="x">
           <table aria-label="résultats">
             <thead>
@@ -124,6 +126,13 @@ export function StatsPage({ profile }: { profile: Profile }) {
             </Group>
           </table>
         </div>
+
+        {/* The corpus table of Endgame configurations (US-32, ADR-0036). It
+            sits under the results it is NOT a breakdown of: its currency is the
+            same — the Game's result — but a Game counts once per configuration
+            crossed, so its rows overlap and nothing here sums to the Total. */}
+        <SignatureTable table={stats.data.signatures} />
+        </>
       )}
     </section>
   );

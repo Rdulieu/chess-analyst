@@ -84,3 +84,74 @@ describe("getStats", () => {
     expect(bySide.black).toMatchObject({ games: 1, draw: 1, winRate: 0.5 });
   });
 });
+
+/**
+ * FABRICATED Endgame fixtures, and named as such (US-32 spec): a PGN that starts
+ * from a chosen Position, so a configuration can be made to recur the exact
+ * number of times the threshold is about. The base's own Games are replayed by
+ * `phase.test.ts`.
+ */
+function endgamePgn(fen: string, moves: string): string {
+  return `[SetUp "1"]\n[FEN "${fen}"]\n\n${moves} *`;
+}
+
+/** Two rooks against a bare king, held for four plies. */
+const TWO_ROOKS = endgamePgn("4k3/8/8/8/8/8/8/R3K2R w - - 0 1", "1. Rhg1 Ke7 2. Rgf1 Ke8");
+/** A single rook against a bare king. */
+const ONE_ROOK = endgamePgn("4k3/8/8/8/8/8/8/4K2R w - - 0 1", "1. Rg1 Ke7 2. Rf1 Ke8");
+/** The opening Position and two moves: no Endgame is ever reached. */
+const NO_ENDGAME = "1. e4 e5 2. Nf3 Nc6";
+
+describe("getStats — the Material signature table", () => {
+  it("counts a Game once per configuration crossed, in results", () => {
+    const db = tempDb();
+    seed(db, { result: "win", pgn: TWO_ROOKS });
+    seed(db, { result: "loss", pgn: TWO_ROOKS });
+    seed(db, { result: "draw", pgn: TWO_ROOKS });
+
+    expect(getStats(db, PROFILE).signatures.rows).toEqual([
+      { signature: "RR vs —", games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
+    ]);
+  });
+
+  it("reads the configuration from the side the Player played", () => {
+    const db = tempDb();
+    for (const result of ["win", "loss", "draw"] as const) {
+      seed(db, { result, pgn: TWO_ROOKS, playerColor: "black" });
+    }
+    expect(getStats(db, PROFILE).signatures.rows.map((r) => r.signature)).toEqual(["— vs RR"]);
+  });
+
+  it("relegates what is under the bar and announces the table's scope", () => {
+    const db = tempDb();
+    seed(db, { result: "win", pgn: TWO_ROOKS });
+    seed(db, { result: "loss", pgn: TWO_ROOKS });
+    seed(db, { result: "loss", pgn: TWO_ROOKS });
+    seed(db, { result: "win", pgn: ONE_ROOK });
+    seed(db, { result: "win", pgn: NO_ENDGAME });
+
+    const { signatures } = getStats(db, PROFILE);
+
+    expect(signatures.threshold).toBe(3);
+    expect(signatures.rows.map((r) => r.signature)).toEqual(["RR vs —"]);
+    expect(signatures.below.configurations).toBe(1);
+    expect(signatures.scope).toEqual({ games: 5, withEndgame: 4, withoutEndgame: 1 });
+  });
+
+  it("stays within the Profile asked for (ADR-0014)", () => {
+    const db = tempDb();
+    // The Profile under test exists first, so it is the one `PROFILE` names.
+    expect(seedProfile(db)).toBe(PROFILE);
+    const other = seedProfile(db, "someone-else", "lichess");
+    for (const result of ["win", "loss", "draw"] as const) {
+      seed(db, { result, pgn: TWO_ROOKS, profileId: other });
+    }
+
+    expect(getStats(db, PROFILE).signatures.scope).toEqual({
+      games: 0,
+      withEndgame: 0,
+      withoutEndgame: 0,
+    });
+    expect(getStats(db, other).signatures.rows).toHaveLength(1);
+  });
+});

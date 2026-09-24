@@ -54,6 +54,13 @@ const STATS_SUMMARY = {
     correspondence: ZERO,
   },
   bySide: { white: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, black: ZERO },
+  // One Game, no Endgame: the corpus table of US-32 has nothing to show and says so.
+  signatures: {
+    threshold: 3,
+    rows: [],
+    below: { configurations: 0 },
+    scope: { games: 1, withEndgame: 0, withoutEndgame: 1 },
+  },
 };
 
 /** The `Profile` the routed app's Games belong to (US-11). */

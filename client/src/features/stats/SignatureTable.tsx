@@ -1,0 +1,77 @@
+import { Tally } from "../../components/Tally";
+import type { SignatureTable as Table } from "../../types";
+
+const percent = (rate: number) => `${Math.round(rate * 100)} %`;
+const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
+const configurations = (n: number) => `${n} ${n > 1 ? "configurations" : "configuration"}`;
+
+/**
+ * The Endgame configurations the Player frequents, and how they fare there
+ * (US-32, ADR-0036).
+ *
+ * **Three things this block refuses to do**, each of them an instruction:
+ *
+ * - **No bare rate.** Every line carries its counts *and* its rate, side by
+ *   side. At the threshold — three Games — a rate is worth ±29 points, and the
+ *   visible denominator is the guard-rail, not the threshold.
+ * - **No erasure.** What falls under the bar is counted on one line, so the
+ *   Player knows what the table is not showing them.
+ * - **No false whole.** The table says how many Games it covers and how many
+ *   never reach an Endgame at all, because a Game sits on as many rows as it
+ *   crossed configurations and the column therefore adds up to nothing.
+ *
+ * Order comes from the server, costliest first; re-sorting here would be a
+ * second opinion on the same question. Nothing is carried by colour alone
+ * (ADR-0013) — every figure is written.
+ */
+export function SignatureTable({ table }: { table: Table }) {
+  const { scope, rows, below, threshold } = table;
+  const share = scope.games === 0 ? 0 : Math.round((scope.withoutEndgame / scope.games) * 100);
+
+  return (
+    <section aria-labelledby="signatures-heading">
+      <h3 id="signatures-heading">Configurations de finale</h3>
+
+      <p data-testid="signature-scope">
+        {scope.withEndgame === 0
+          ? `Aucune de vos ${games(scope.games)} n'atteint la finale — rien à montrer ici.`
+          : `Sur vos ${games(scope.games)}, ${scope.withEndgame} atteignent la finale ; ` +
+            `${scope.withoutEndgame} (${share} %) n'y arrivent jamais.`}
+      </p>
+
+      {rows.length === 0 ? null : (
+        <div data-scroll="x">
+          <table aria-label="configurations de finale">
+            <thead>
+              <tr>
+                <th scope="col">Configuration</th>
+                <th scope="col">Parties</th>
+                <th scope="col">Résultats</th>
+                <th scope="col">Win rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.signature}>
+                  <th scope="row">{row.signature}</th>
+                  <td>{games(row.games)}</td>
+                  <td>
+                    <Tally win={row.win} draw={row.draw} loss={row.loss} />
+                  </td>
+                  <td>{row.winRate !== null ? percent(row.winRate) : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {below.configurations === 0 ? null : (
+        <p data-testid="signature-below">
+          {configurations(below.configurations)} vues moins de {games(threshold)} ne sont pas
+          affichées.
+        </p>
+      )}
+    </section>
+  );
+}
