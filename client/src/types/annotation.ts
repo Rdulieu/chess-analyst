@@ -107,6 +107,17 @@ export interface GameRecap {
    * strength the Player never earned.
    */
   byPhase: Record<MoveAnnotation["phase"], PhaseDamage | null>;
+  /**
+   * **In which configuration** the Game was lost (US-32): the `Material
+   * signature`s its Endgame crossed, in crossing order, each with what it cost
+   * (ADR-0036). One scale below `byPhase` and the same fold — the server's, never
+   * recomputed here.
+   *
+   * **`null` on a Game that never reached the Endgame**, and not an empty list:
+   * the axis is mute on 27 % of the corpus, and the screen owes the Player a
+   * sentence there rather than a table of nothing.
+   */
+  bySignature: SignatureDamage[] | null;
   regime: SearchRegime | null;
 }
 
@@ -129,6 +140,18 @@ export interface PhaseDamage {
   drift: number;
   countedErrors: number;
   opportunities: OpportunityCount;
+}
+
+/**
+ * What one `Material signature` cost over one Game. A configuration is listed
+ * because the Game **crossed** it, so a `chancesLost` of zero means *crossed
+ * cleanly* — a real reading, and not a line to filter away.
+ */
+export interface SignatureDamage {
+  /** The configuration as it is written, `RR vs Q` (ADR-0036) — the Player's
+   *  majors and minors first, the opponent's after. */
+  signature: string;
+  chancesLost: number;
 }
 
 /**

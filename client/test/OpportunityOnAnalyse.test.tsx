@@ -58,6 +58,8 @@ const RECAP: GameRecap = {
     middlegame: null,
     endgame: null,
   },
+  // No Endgame, so no configuration at all — `null`, not an empty list (US-32).
+  bySignature: null,
   regime: { depth: 16, lines: 2 },
 };
 

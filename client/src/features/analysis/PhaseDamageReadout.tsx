@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { OPPORTUNITY_OFFERED_PHRASE, OPPORTUNITY_TERM } from "../../chess/opportunity";
 import { PHASES, PHASE_LABEL, type Phase } from "../../chess/phase";
 import { points, roundToTenth as round } from "../../chess/points";
-import type { GameRecap, PhaseDamage } from "../../types";
+import type { GameRecap, PhaseDamage, SignatureDamage } from "../../types";
 
 /**
  * What the table prints for one `Phase`, in figures that **add up on screen**.
@@ -23,42 +23,104 @@ export interface PrintedBand {
 }
 
 /**
+ * A column of figures, printed to the tenth so that it **lands exactly on the
+ * total stated above it** — the one sum this block invites the Player to make.
+ *
+ * Rounding each line on its own misses that total by a tenth, so a residual has
+ * to go somewhere. It is settled by the **largest remainder**: every line is
+ * taken down to its tenth, and the tenths still owed to the total go to the
+ * lines that were closest to rounding up, one each.
+ *
+ * That rule replaced « the heaviest line carries the whole residual », which was
+ * only safe while the lines were **three**. The `Material signature` list is
+ * unbounded: five configurations at 0,06 each print 0,1 and overshoot a 0,3
+ * total by two tenths, and one line handed the whole of that prints « −0,1 % ».
+ * Largest remainder never does: no line is printed below its own floor, so a
+ * line at zero stays at zero and nothing goes negative — which is the reading
+ * this block exists to guarantee, on the case it exists for.
+ *
+ * Non-negative in, non-negative out. Chances lost are.
+ */
+function carryResidual(values: number[], total: number): number[] {
+  const TENTH = 0.1;
+  // A hair of tolerance, because 3.3 / 0.1 is 32.99999999999999 in binary.
+  const floors = values.map((value) => Math.floor(value / TENTH + 1e-9));
+  const remainders = values.map((value, i) => value / TENTH - floors[i]);
+  let owed = Math.round(total / TENTH) - floors.reduce((sum, tenths) => sum + tenths, 0);
+
+  const order = values
+    .map((_, i) => i)
+    .sort((a, b) => remainders[b] - remainders[a] || values[b] - values[a] || a - b);
+  // Owed tenths go up that order; a debt — a total below what the floors already
+  // hold — comes off the fullest lines first, and never takes one below zero.
+  for (const i of owed >= 0 ? order : [...order].reverse()) {
+    if (owed === 0) break;
+    if (owed > 0) {
+      floors[i] += 1;
+      owed -= 1;
+    } else if (floors[i] > 0) {
+      floors[i] -= 1;
+      owed += 1;
+    }
+  }
+  return floors.map((tenths) => round(tenths * TENTH));
+}
+
+/**
  * The reached bands, printed so that their `chancesLost` sum to the Game's own
  * rounded total and their `flaggedLoss` to its rounded flagged loss. `drift` is
  * then the **difference of the two printed figures**, never a third rounding, so
  * the identity holds line by line as well as column by column.
  *
- * **Each column carries its residual on its own heaviest band**, and that is not
- * a refinement: a Phase that only bled has a `flaggedLoss` of zero, and handing
- * it a negative residual would print « −0,1 % » under *lâchées* and a `drift`
- * larger than the loss — breaking the one reading this block exists to
- * guarantee, on precisely the case the split was built for.
+ * **Each column is settled on its own**, and that is not a refinement: a Phase
+ * that only bled has a `flaggedLoss` of zero, and a residual pushed onto it would
+ * print « −0,1 % » under *lâchées* and a `drift` larger than the loss — breaking
+ * the reading the split was built for.
  */
 export function printedBands(recap: GameRecap): PrintedBand[] {
   const reached = PHASES.filter((phase) => recap.byPhase[phase] !== null);
   const band = (phase: Phase) => recap.byPhase[phase] as PhaseDamage;
 
-  const settle = (read: (damage: PhaseDamage) => number, total: number) => {
-    const printed = new Map(reached.map((phase) => [phase, round(read(band(phase)))]));
-    const drawn = [...printed.values()].reduce((sum, value) => sum + value, 0);
-    // This column's own heaviest band — on a column that is all zeroes it is the
-    // first, where the residual is zero too.
-    const carrier = reached.reduce(
-      (worst, phase) => (read(band(phase)) > read(band(worst)) ? phase : worst),
-      reached[0],
-    );
-    printed.set(carrier, round((printed.get(carrier) ?? 0) + (round(total) - drawn)));
-    return printed;
-  };
+  const lost = carryResidual(
+    reached.map((phase) => band(phase).chancesLost),
+    recap.chancesLost,
+  );
+  const flagged = carryResidual(
+    reached.map((phase) => band(phase).flaggedLoss),
+    recap.flaggedLoss,
+  );
 
-  const lost = settle((damage) => damage.chancesLost, recap.chancesLost);
-  const flagged = settle((damage) => damage.flaggedLoss, recap.flaggedLoss);
+  return reached.map((phase, i) => ({
+    phase,
+    chancesLost: lost[i],
+    flaggedLoss: flagged[i],
+    drift: round(lost[i] - flagged[i]),
+  }));
+}
 
-  return reached.map((phase) => {
-    const chancesLost = lost.get(phase) ?? 0;
-    const flaggedLoss = flagged.get(phase) ?? 0;
-    return { phase, chancesLost, flaggedLoss, drift: round(chancesLost - flaggedLoss) };
-  });
+/**
+ * The crossed configurations, printed so their column lands on the **printed**
+ * Endgame figure of the table just above — which is the sum the Player is
+ * invited to make, the two tables being one block.
+ *
+ * Settled by the same function as the bands, which is the point: one doctrine
+ * stated once cannot diverge from itself. The list here is **unbounded**, and
+ * that is exactly why the rule had to stop being « the heaviest line takes it
+ * all » (see `carryResidual`).
+ *
+ * The **crossing order is kept**: the sequence is the reading — an imbalance is
+ * born mid-Game (ADR-0036) — and sorting it by damage would turn a story into a
+ * ranking.
+ */
+export function printedSignatures(
+  crossed: SignatureDamage[],
+  endgameTotal: number,
+): SignatureDamage[] {
+  const printed = carryResidual(
+    crossed.map((line) => line.chancesLost),
+    endgameTotal,
+  );
+  return crossed.map((line, i) => ({ ...line, chancesLost: printed[i] }));
 }
 
 /** One column of the table: its header and what it prints for a reached Phase.
@@ -160,6 +222,69 @@ export function PhaseDamageReadout({
           })}
         </tbody>
       </table>
+      {/* The Endgame as the table above PRINTS it, handed over rather than
+          recomputed — two calls to `printedBands` could not disagree today, and
+          that is not a reason to let them. */}
+      <MaterialSignatureTable
+        crossed={recap.bySignature}
+        endgameTotal={bands.get("endgame")?.chancesLost ?? 0}
+      />
     </section>
+  );
+}
+
+/**
+ * **In which configuration** (US-32): the `Material signature`s the Endgame
+ * crossed, each with what it cost. Second table of the **same** block (spec §5)
+ * rather than a section of its own — the two are one question asked at two
+ * scales, and US-33 already has enough stacked under the board.
+ *
+ * A configuration is a **name**, never a balance: `RR vs Q` is +1 on any points
+ * scale and an entirely different Game to play (ADR-0036). Nothing here converts
+ * it back into a number.
+ *
+ * **A Game that never reached the Endgame is told so in a sentence**, not shown
+ * an empty table: the axis is mute on 27 % of the corpus, and an empty table
+ * reads as a failure to load rather than as an absence.
+ */
+function MaterialSignatureTable({
+  crossed,
+  endgameTotal,
+}: {
+  crossed: SignatureDamage[] | null;
+  /** The Endgame's chances lost **as the table above printed them**. */
+  endgameTotal: number;
+}) {
+  if (crossed === null) {
+    return (
+      <p data-part="no-signature">
+        Cette partie n'a pas atteint la finale : aucune configuration de pièces à lister.
+      </p>
+    );
+  }
+
+  const printed = printedSignatures(crossed, endgameTotal);
+
+  return (
+    <table data-part="material-signature">
+      <caption>
+        Les configurations de pièces traversées en finale, dans l'ordre, et ce que chacune vous a
+        coûté. Elles se rajoutent à la ligne « {PHASE_LABEL.endgame} » ci-dessus.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Configuration</th>
+          <th scope="col">Chances perdues</th>
+        </tr>
+      </thead>
+      <tbody>
+        {printed.map((line) => (
+          <tr key={line.signature} data-signature={line.signature}>
+            <th scope="row">{line.signature}</th>
+            <td>{points(line.chancesLost)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

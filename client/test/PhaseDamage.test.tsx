@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { PhaseDamageReadout, printedBands } from "../src/features/analysis/PhaseDamageReadout";
+import {
+  PhaseDamageReadout,
+  printedBands,
+  printedSignatures,
+} from "../src/features/analysis/PhaseDamageReadout";
 import type { GameRecap } from "../src/types";
 
 /** A recap whose three Phases were all reached, with the damage deliberately
@@ -40,6 +44,11 @@ const SPREAD: GameRecap = {
       opportunities: { total: 2, bySeverity: { inaccuracy: 0, mistake: 1, blunder: 1 } },
     },
   },
+  bySignature: [
+    { signature: "RR vs Q", chancesLost: 23 },
+    { signature: "RR vs —", chancesLost: 0 },
+    { signature: "R vs —", chancesLost: 7 },
+  ],
   regime: { depth: 16, lines: 2 },
 };
 
@@ -51,6 +60,7 @@ const NO_ENDGAME: GameRecap = {
   flaggedLoss: 22,
   drift: 8,
   byPhase: { ...SPREAD.byPhase, endgame: null },
+  bySignature: null,
 };
 
 const block = () => screen.getByRole("region", { name: /où cette partie s'est jouée/i });
@@ -255,5 +265,136 @@ describe("printedBands — figures that add up on screen", () => {
 
   it("leaves out a Phase the Game never reached, rather than printing it at zero", () => {
     expect(printedBands(NO_ENDGAME).map((band) => band.phase)).toEqual(["early", "middlegame"]);
+  });
+});
+
+describe("In WHICH configuration — the damage located by Material signature", () => {
+  it("lists the Endgame configurations the Game crossed, in the same block as the Phases", () => {
+    render(<PhaseDamageReadout recap={SPREAD} />);
+
+    // The same block (spec §5): one section, two tables — nothing new stacks
+    // under the board that was not already there (ADR-0021).
+    expect(within(block()).getByRole("row", { name: /^RR vs Q/ })).toBeTruthy();
+    expect(within(block()).getByRole("row", { name: /^RR vs —/ })).toBeTruthy();
+    expect(within(block()).getByRole("row", { name: /^R vs —/ })).toBeTruthy();
+  });
+
+  it("names the configuration, never a balance of points", () => {
+    // ADR-0036: `RR vs Q` is +1 on any points scale. A number here would say
+    // « level » about the very configuration that lost Game 715.
+    render(<PhaseDamageReadout recap={SPREAD} />);
+
+    const worst = within(block()).getByRole("row", { name: /^RR vs Q/ });
+    expect(worst.textContent).toContain("RR vs Q");
+    expect(worst.textContent).not.toMatch(/[+−-]\s*1\b/);
+  });
+
+  it("adds up ON SCREEN to the Endgame line just above it", () => {
+    render(<PhaseDamageReadout recap={SPREAD} />);
+
+    const listed = ["RR vs Q", "RR vs —", "R vs —"]
+      .map((name) => figure(within(within(block()).getByRole("row", { name: new RegExp(`^${name}`) })).getAllByRole("cell")[0].textContent ?? ""))
+      .reduce((sum, value) => sum + value, 0);
+
+    expect(listed).toBeCloseTo(figure(cells(/finale/i)[0]), 6);
+  });
+
+  it("keeps a configuration crossed cleanly on screen, at zero", () => {
+    render(<PhaseDamageReadout recap={SPREAD} />);
+
+    const clean = within(block()).getByRole("row", { name: /^RR vs —/ });
+    expect(clean.textContent).toMatch(/0[.,]0/);
+  });
+
+  it("SAYS that a Game without an Endgame has no configuration, rather than showing an empty table", () => {
+    render(<PhaseDamageReadout recap={NO_ENDGAME} />);
+
+    expect(within(block()).getByText(/aucune configuration/i)).toBeTruthy();
+    expect(within(block()).queryByRole("row", { name: / vs / })).toBeNull();
+  });
+
+  it("still adds up on screen when the rounding of the configurations does not", () => {
+    // Three thirds again, one scale down: the residual has to land somewhere or
+    // the column misses the Endgame line by a tenth.
+    const thirds: GameRecap = {
+      ...SPREAD,
+      bySignature: [
+        { signature: "RR vs Q", chancesLost: 10 / 3 },
+        { signature: "RR vs N", chancesLost: 10 / 3 },
+        { signature: "R vs N", chancesLost: 10 / 3 },
+      ],
+      byPhase: { ...SPREAD.byPhase, endgame: { ...SPREAD.byPhase.endgame!, chancesLost: 10 } },
+      chancesLost: 40,
+    };
+    render(<PhaseDamageReadout recap={thirds} />);
+
+    const listed = ["RR vs Q", "RR vs N", "R vs N"]
+      .map((name) => figure(within(within(block()).getByRole("row", { name: new RegExp(`^${name}`) })).getAllByRole("cell")[0].textContent ?? ""))
+      .reduce((sum, value) => sum + value, 0);
+
+    expect(listed).toBeCloseTo(figure(cells(/finale/i)[0]), 6);
+  });
+});
+
+/**
+ * The second printing seam (ADR-0027), driven directly for the same reason as
+ * the first: which line absorbs a rounding residual is invisible through the
+ * component on every Game but the one where it goes wrong.
+ */
+describe("printedSignatures — the residual lands where a tenth is least of the value", () => {
+  it("never prints a NEGATIVE figure by handing a residual to a configuration at zero", () => {
+    // The trap slice 02 hit one scale up: a line crossed cleanly must not print
+    // « −0,1 % ». The heaviest line of the column carries the residual, and the
+    // heaviest line is never the one at zero.
+    const printed = printedSignatures(
+      [
+        { signature: "RR vs Q", chancesLost: 9.96 },
+        { signature: "RR vs —", chancesLost: 0 },
+        { signature: "R vs —", chancesLost: 0.02 },
+      ],
+      9.9,
+    );
+
+    expect(printed.every((line) => line.chancesLost >= 0)).toBe(true);
+    expect(printed.find((line) => line.signature === "RR vs —")!.chancesLost).toBe(0);
+  });
+
+  it("lands the column on the figure the Endgame line prints, to the tenth", () => {
+    const printed = printedSignatures(
+      [
+        { signature: "RR vs Q", chancesLost: 10 / 3 },
+        { signature: "RR vs N", chancesLost: 10 / 3 },
+        { signature: "R vs N", chancesLost: 10 / 3 },
+      ],
+      10,
+    );
+
+    expect(printed.reduce((sum, line) => sum + line.chancesLost, 0)).toBeCloseTo(10, 6);
+  });
+
+  it("stays at or above zero when MANY thin configurations round up together", () => {
+    // The list is unbounded, unlike the three Phases: five lines at 0,06 each
+    // print 0,1 and the column overshoots a 0,3 total by two tenths. A rule that
+    // hands the whole residual to one line would print « −0,1 % » there — on a
+    // thinly-bled Endgame crossing five configurations, which is ordinary.
+    const printed = printedSignatures(
+      [0.06, 0.06, 0.06, 0.06, 0.06].map((chancesLost, i) => ({ signature: `s${i}`, chancesLost })),
+      0.3,
+    );
+
+    expect(printed.every((line) => line.chancesLost >= 0)).toBe(true);
+    expect(printed.reduce((sum, line) => sum + line.chancesLost, 0)).toBeCloseTo(0.3, 6);
+  });
+
+  it("keeps the crossing order — the sequence is the reading, not a ranking", () => {
+    const printed = printedSignatures(
+      [
+        { signature: "R vs —", chancesLost: 1 },
+        { signature: "RR vs Q", chancesLost: 9 },
+      ],
+      10,
+    );
+
+    expect(printed.map((line) => line.signature)).toEqual(["R vs —", "RR vs Q"]);
   });
 });
