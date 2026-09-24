@@ -372,6 +372,20 @@ describe("printedSignatures — the residual lands where a tenth is least of the
     expect(printed.reduce((sum, line) => sum + line.chancesLost, 0)).toBeCloseTo(10, 6);
   });
 
+  it("stays at or above zero when MANY thin configurations round up together", () => {
+    // The list is unbounded, unlike the three Phases: five lines at 0,06 each
+    // print 0,1 and the column overshoots a 0,3 total by two tenths. A rule that
+    // hands the whole residual to one line would print « −0,1 % » there — on a
+    // thinly-bled Endgame crossing five configurations, which is ordinary.
+    const printed = printedSignatures(
+      [0.06, 0.06, 0.06, 0.06, 0.06].map((chancesLost, i) => ({ signature: `s${i}`, chancesLost })),
+      0.3,
+    );
+
+    expect(printed.every((line) => line.chancesLost >= 0)).toBe(true);
+    expect(printed.reduce((sum, line) => sum + line.chancesLost, 0)).toBeCloseTo(0.3, 6);
+  });
+
   it("keeps the crossing order — the sequence is the reading, not a ranking", () => {
     const printed = printedSignatures(
       [

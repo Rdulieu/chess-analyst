@@ -503,3 +503,52 @@ describe("gameRecap — WHICH configuration cost the Game: the damage by Materia
     expect(recap.bySignature).toBeNull();
   });
 });
+
+/**
+ * The Endgame **re-entered above six pieces**, which is what makes the scope of
+ * the reading a question rather than an obvious fact. FABRICATED fixture, and
+ * the shape it fixes is real: `phases()` **latches** (ADR-0035), so a promotion
+ * puts material back on the board and an Endgame Position can carry seven majors
+ * and minors again — the same seven a pre-Endgame Position carried, and
+ * therefore the **same signature**.
+ *
+ * Six Positions: the Early game, two Middlegame Positions at `QRR vs QRRB`, the
+ * Endgame entered at `RR vs Q`, and a promotion that brings the Player's queen
+ * back to `QRR vs QRRB`. The Player (White) loses chances in the Middlegame AND
+ * in each of the two configurations, so a reading that keys on the signature
+ * alone would pour the Middlegame's damage into an Endgame bucket.
+ */
+/** Seven majors and minors: past the Middlegame boundary, short of the Endgame. */
+const SEVEN = "1rbqk2r/8/8/8/8/8/8/R2QK2R";
+/** Three: the Endgame, by a count anyone can check by eye. */
+const THREE = "3qk3/8/8/8/8/8/8/R3K2R";
+/** Back to seven, after promotions — an Endgame Position by latching. */
+const SEVEN_AGAIN = SEVEN;
+
+describe("gameRecap — the signature is read on ENDGAME half-moves, and on no others", () => {
+  const game = { playerColor: "white" as const };
+  const evals = overFens(
+    [START, SEVEN, SEVEN, THREE, THREE, SEVEN_AGAIN],
+    [0, 100, -100, 200, -200, 300],
+  );
+
+  it("does not pour a MIDDLEGAME loss into an Endgame bucket that happens to share its signature", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    // The fixture only bites if the Middlegame really lost something.
+    expect(recap.byPhase.middlegame!.chancesLost).toBeGreaterThan(0);
+    const total = recap.bySignature!.reduce((sum, entry) => sum + entry.chancesLost, 0);
+    expect(total).toBeCloseTo(recap.byPhase.endgame!.chancesLost, 9);
+  });
+
+  it("gives a configuration BORN AFTER the boundary only what was lost in it", () => {
+    // The reading ADR-0036 exists for: an imbalance is born mid-Game, and here
+    // `QRR vs QRRB` exists on both sides of the Endgame boundary.
+    const recap = gameRecap(game, evals, REGIME);
+    const reborn = recap.bySignature!.find((entry) => entry.signature === "QRR vs QRRB");
+
+    expect(reborn).toBeDefined();
+    expect(reborn!.chancesLost).toBeLessThan(recap.byPhase.middlegame!.chancesLost + reborn!.chancesLost);
+    expect(reborn!.chancesLost).toBeGreaterThan(0);
+  });
+});

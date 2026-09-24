@@ -220,10 +220,14 @@ export function gameRecap(
   // order the screen wants, and the string is the key by construction — a
   // signature has one writing and one only.
   const bySignature = new Map<string, SignatureDamage>();
-  for (const [ply, phase] of phaseOf.entries()) {
-    if (phase !== "endgame") continue;
-    const key = signature(plies[ply].fen, game.playerColor);
-    if (!bySignature.has(key)) bySignature.set(key, { signature: key, chancesLost: 0 });
+  // Read once per Endgame ply and kept, exactly as `phaseOf` is: the Player's
+  // loop below needs the same reading, and asking twice is how two readings of
+  // one Position start to differ.
+  const signatureOf = phaseOf.map((phase, ply) =>
+    phase === "endgame" ? signature(plies[ply].fen, game.playerColor) : null,
+  );
+  for (const key of signatureOf) {
+    if (key !== null && !bySignature.has(key)) bySignature.set(key, { signature: key, chancesLost: 0 });
   }
 
   const recap: GameRecap = {
@@ -285,10 +289,13 @@ export function gameRecap(
     if (lost <= 0) continue;
     recap.chancesLost += lost;
     band.chancesLost += lost;
-    // Read on Endgame half-moves only (ADR-0036), which `phaseOf` already says:
-    // the bucket exists exactly when this Move landed in the Endgame.
-    const configuration = bySignature.get(signature(plies[i].fen, game.playerColor));
-    if (configuration) configuration.chancesLost += lost;
+    // Read on Endgame half-moves only (ADR-0036), and the SCOPE is what says so —
+    // never the mere existence of a bucket. The two are not the same: `phases()`
+    // latches, so a promotion puts material back and an Endgame Position can
+    // carry the very signature a pre-Endgame Position carried. Keying on the
+    // string alone poured a Middlegame loss into an Endgame bucket and broke the
+    // fold identity in silence, which is the one thing this axis must not do.
+    if (signatureOf[i] !== null) bySignature.get(signatureOf[i]!)!.chancesLost += lost;
     if (severity) {
       recap.flaggedLoss += lost;
       band.flaggedLoss += lost;
