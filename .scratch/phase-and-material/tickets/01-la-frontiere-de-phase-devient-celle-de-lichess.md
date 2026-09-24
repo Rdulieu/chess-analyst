@@ -12,7 +12,10 @@ plus, trois fois sur quatre, sur le 15ᵉ coup.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-25 · merge `d1733f6` · gate: build vert, 630 tests serveur / 46 fichiers,
+1034 tests client / 67 fichiers, `npm run lint` sorti 0, FP 3/3 verte (parties 587 et 2429,
+division lichess concordante sur 5 parties), aucun finding bloquant
 
 Cette tranche ne livre **aucune fonctionnalité neuve** : elle répare la règle que les tranches
 suivantes vont exploiter. Sans elle, la répartition par phase naîtrait sur une frontière dont on a
