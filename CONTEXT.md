@@ -343,6 +343,26 @@ the price ADR-0035 paid, deliberately, for a boundary that agrees with an outsid
 instead of missing it by six plies.
 _Avoid_: Opening (taken, and means something else), Stage, Game stage
 
+**Material signature**:
+Which majors and minors each side still has at one half-move — the `Player`'s set against their
+opponent's: `RRB vs RRN`, `RR vs Q`, `R vs —`. It names an imbalance **of nature**, and that is the
+whole reason it is not a number. Two rooks against a queen is **+1** on any points scale and close
+to nothing on the engine's, while being an entirely different Game to play: a scalar cannot say it,
+and a signature says nothing else (ADR-0036).
+
+It is a property of the **half-move**, never of the Game. An imbalance is born mid-Game — the one
+that took 81% of Game 715's counted damage appears at its 26th move — so a signature taken once, at
+the `Endgame` boundary, misses exactly what it was invented for: on this corpus `RR vs Q` occurs in
+**0** Games as a boundary snapshot, and in **9** when every half-move carries its own.
+
+Read on **`Endgame`** half-moves only for now — a scope decision, not a property of the term.
+Followed by **two figures that are never merged**, and by the Game's `result` before anything
+else (ADR-0036): what the Player scores in a configuration is available on the whole corpus, what
+it costs them is not, and one number for both would hide which of the two is speaking.
+_Avoid_: Material (taken — `signals.ts`'s `material` is a **scalar**, the pawns the Player is down
+over one exchange; the two are different measurements and a single word for both is precisely how
+they get confused), Imbalance (reads as a quantity), Configuration, Endgame type, Piece count
+
 **Counted Move**:
 One of the Player's Moves that the analysis actually **counts** — the denominator of everything this
 tool concludes about where the Player goes wrong. A Move is **not** counted when it could say
