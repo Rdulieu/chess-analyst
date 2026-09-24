@@ -1,5 +1,13 @@
 # Lichess's division is stored as an oracle, never read as the Phase
 
+> **Précisée par [ADR-0035](./0035-the-phase-split-is-lichess-s-own-reimplemented-here.md)
+> (2026-09-24), pas renversée.** « Par nos propres règles » ci-dessous veut dire *calculée par
+> nous, la même pour toutes les `Platform`s* — pas *d'une règle inventée par nous*. Depuis
+> ADR-0035 la règle que nous calculons **est** celle de lichess, réimplémentée ici ; la colonne
+> `division_*` reste stockée et n'entre toujours dans aucun calcul. Conséquence à lire avec ce
+> texte : **l'oracle ne discrimine plus**, il s'accorde par construction, et le test qui le rejoue
+> teste une copie de notre dérivation.
+
 Without this, a competent agent building US-32 would read `division` as the `Phase` wherever it is
 present and derive it only where it is absent. That is the cheapest path, the column's very presence
 invites it, and nothing in the repo would stop it — the types fit, the tests pass, and the code reads

@@ -7,7 +7,7 @@ import {
   type GameRecap,
   type OpportunityCount,
 } from "../analysis/recap";
-import { type Phase } from "../analysis/phase";
+import type { Phase } from "../analysis/phase";
 import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, gamePlies, moveSeverities } from "../analysis/derivation";
 import type { MoveSeverity } from "../danger/move-quality";

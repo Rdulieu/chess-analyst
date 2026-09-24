@@ -15,7 +15,7 @@ import { writeFileSync } from "node:fs";
 const db = new Database("chess-analyst.db", { readonly: true });
 const rows = db
   .prepare(
-    `SELECT id, pgn, division_middle_ply AS middle, division_end_ply AS end
+    `SELECT id, pgn, division_middle_ply AS middle, division_end_ply AS endPly
        FROM games
       WHERE division_middle_ply IS NOT NULL OR division_end_ply IS NOT NULL
       ORDER BY id`,
@@ -32,8 +32,14 @@ const games = rows.map((row) => ({
     .replace(/\s+/g, " ")
     .trim(),
   middle: row.middle,
-  end: row.end,
+  end: row.endPly,
 }));
 
-writeFileSync("test/fixtures/lichess-division.json", `${JSON.stringify(games, null, 0)}\n`);
-console.log(`${games.length} games written`);
+// One Game per line: the file is committed, so a regeneration has to produce a
+// diff somebody can read. Indented JSON would double its size for nothing.
+const body = games.map((game) => `  ${JSON.stringify(game)}`).join(",\n");
+writeFileSync("test/fixtures/lichess-division.json", `[\n${body}\n]\n`);
+// The count is asserted in `test/phase.test.ts` — on purpose, so a truncated
+// extract fails loudly rather than checking fewer Games in silence. Regenerating
+// on a larger base is legitimate; update the expected count in the same commit.
+console.log(`${games.length} games written — expected by test/phase.test.ts`);
