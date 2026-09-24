@@ -4,14 +4,9 @@ import {
   OPPORTUNITY_TERM,
   opportunitySize,
 } from "../../chess/opportunity";
+import { points, roundToTenth as round } from "../../chess/points";
 import { SEVERITIES } from "../../chess/severity";
 import type { GameRecap } from "../../types";
-
-/** A chances figure, in points, always to one decimal — enough to add up on
- *  screen, not so much as to claim a precision the heuristics do not have.
- *  Always, so three figures on one line read as one precision rather than as
- *  three. */
-const points = (value: number) => `${value.toFixed(1)} %`;
 
 /**
  * What this Game **contributes** to the analysis (ADR-0017), read at the **head
@@ -48,9 +43,6 @@ const GAP_REASON: Record<UncountedReason, (count: number) => string> = {
 
 /** The order the reasons are always listed in, so two Games read alike. */
 const UNCOUNTED_REASONS: UncountedReason[] = ["forced", "decided"];
-
-/** One decimal, as a number — so the parts can be added before being printed. */
-const round = (value: number) => Math.round(value * 10) / 10;
 
 /**
  * The breakdown, **in the words the bands already own** — the size said by

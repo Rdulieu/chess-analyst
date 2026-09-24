@@ -83,3 +83,37 @@ th[scope="colgroup"] {
 tbody + tbody > tr:first-child > * {
   padding-block-start: var(--space-4);
 }
+
+// -----------------------------------------------------------------------------
+// The damage located by `Phase` (US-32), on the review route. A third tabular
+// screen inherits everything above for free; these three rules are what it does
+// NOT share with the other two.
+// -----------------------------------------------------------------------------
+
+// Every column after the Phase is a figure here, so they all align — the
+// `nth-last-child` rule above serves tables whose leading columns are words,
+// and this one has none.
+[data-part="phase-damage"] thead th:not(:first-child),
+[data-part="phase-damage"] tbody td {
+  text-align: end;
+}
+
+// Except the one cell that is a sentence. « Phase non atteinte » pushed right
+// would read as a stray figure at the end of the row, which is the one reading
+// the rule exists to prevent — and it is quieter than the figures because it is
+// an absence, said in words and never by tint alone (ADR-0013).
+[data-part="phase-damage"] td[data-part="not-reached"] {
+  text-align: start;
+  color: var(--ink-muted);
+}
+
+// The caption says what the table is FOR and what the Player can check against
+// it, so it is read after the figures rather than before them — a sentence
+// above the head would push the columns down and say nothing yet.
+[data-part="phase-damage"] caption {
+  caption-side: bottom;
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+  padding-block-start: var(--space-2);
+  text-align: start;
+}

@@ -19,3 +19,10 @@ dist/
 # Agentic HP suite scratch: scenario databases and the snapshots path 0 builds.
 # Real imported Games, rebuilt from the network by re-running path 0 — never committed.
 .agentic/
+
+# Hand-made database dumps taken before a risky step. They are multi-megabyte
+# and they hold `Evaluation`s only engine time can rebuild (ADR-0015), so a
+# `git add -A` must never sweep one into a commit.
+*.bak
+*.bak-shm
+*.bak-wal

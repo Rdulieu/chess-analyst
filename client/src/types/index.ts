@@ -25,6 +25,8 @@ export type {
   Opportunity,
   GameAnnotations,
   GameRecap,
+  PhaseDamage,
+  OpportunityCount,
   SearchRegime,
   TimeControl,
   GameTime,
