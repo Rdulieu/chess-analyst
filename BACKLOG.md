@@ -627,10 +627,12 @@
 
 ## In review
 
+## Done
+
 - **US-30**: Juger aussi les coups de l'adversaire — pour qu'une occasion offerte cesse d'être
   invisible, et qu'une lecture puisse être notée sur ce qu'elle dit de toute la partie.
-  > **EN REVUE le 2026-09-15 — [PR #130](https://github.com/Rdulieu/chess-analyst/pull/130), ouverte
-  > vers `develop`, jamais mergée par l'agent.** Branche d'intégration
+  > **LIVRÉE le 2026-09-23 — [PR #130](https://github.com/Rdulieu/chess-analyst/pull/130) MERGÉE
+  > dans `develop`** (`09b173c`), décision humaine `integration → develop`. Branche d'intégration
   > `integration/US-30-judge-the-opponent`, **six PR de sous-travail** (#122 → #129).
   > Gate à la livraison : build OK, **628 tests serveur + 1034 client**, `lint` a **tourné et rendu
   > 0**, **FP 01→06 vertes**, **suite HP 3/3 verte** (+ path 0), **aucun finding bloquant ouvert**.
@@ -707,8 +709,6 @@
   >   il verrait les fautes adverses sans jamais savoir s'il les a bien lues.
   >
   > **Dépendance faible à US-26**, qui porte l'écran ; aucune au moteur, la donnée existe déjà.
-
-## Done
 
 - **US-26**: Voir la `Confrontation` coup par coup, sur l'échiquier — pour qu'un taux cesse d'être un
   verdict qu'on doit croire sur parole, et redevienne une liste de coups qu'on peut aller regarder.
