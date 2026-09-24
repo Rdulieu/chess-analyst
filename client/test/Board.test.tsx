@@ -811,6 +811,8 @@ describe("Board — the Game's recap", () => {
       middlegame: null,
       endgame: null,
     },
+    // No Endgame, so no configuration at all — `null`, not an empty list (US-32).
+    bySignature: null,
     regime: { depth: 16, lines: 2 },
   };
   const annotated: MoveAnnotation[] = [

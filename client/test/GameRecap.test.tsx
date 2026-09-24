@@ -21,6 +21,8 @@ const RECAP: GameRecap = {
     middlegame: { chancesLost: 42.5, flaggedLoss: 34, drift: 8.5, countedErrors: 2, opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } } },
     endgame: null,
   },
+  // No Endgame, so no configuration at all — `null`, not an empty list (US-32).
+  bySignature: null,
   regime: { depth: 16, lines: 2 },
 };
 
@@ -143,6 +145,8 @@ describe("The Game's recap — what it states", () => {
             middlegame: null,
             endgame: null,
           },
+          // No Endgame, so no configuration at all — `null`, not an empty list (US-32).
+          bySignature: null,
           regime: { depth: 16, lines: 2 },
         }}
       />,

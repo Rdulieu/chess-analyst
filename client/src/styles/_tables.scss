@@ -117,3 +117,18 @@ tbody + tbody > tr:first-child > * {
   padding-block-start: var(--space-2);
   text-align: start;
 }
+
+// The two readings are one block (spec §5 of US-32): the configurations sit
+// under the Phases, in the same card, so they need the gap a second card would
+// have given them for free — and nothing more, since everything else is shared.
+[data-part="phase-damage"] [data-part="material-signature"],
+[data-part="phase-damage"] [data-part="no-signature"] {
+  margin-block-start: var(--space-4);
+}
+
+// A Game that never reached the Endgame gets a sentence where the table would
+// be, quiet for the same reason « Phase non atteinte » is: it is an absence.
+[data-part="phase-damage"] [data-part="no-signature"] {
+  color: var(--ink-muted);
+  font-size: var(--text-s);
+}

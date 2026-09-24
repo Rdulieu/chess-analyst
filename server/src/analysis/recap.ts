@@ -4,6 +4,7 @@ import { chancesLostByMove, countedMoves, type UncountedReason } from "./counted
 import { gamePlies, moveOpportunities, moveSeverities, type StoredEvaluation } from "./derivation";
 import type { MoveSeverity } from "../danger/move-quality";
 import { phases, type Phase } from "./phase";
+import { signature } from "./signature";
 
 /**
  * What one Game **contributes** to the analysis — the reconciliation point
@@ -87,6 +88,25 @@ export interface GameRecap {
    * discipline as the `Key moment` that has no score and refuses to show a zero.
    */
   byPhase: PhaseBreakdown;
+  /**
+   * **In which configuration** the Game was lost (US-32): the chances lost in
+   * each `Material signature` the Game crossed in its Endgame, in the order it
+   * crossed them (CONTEXT.md, ADR-0036).
+   *
+   * It is the same fold as `byPhase`, one scale down, and deliberately in the
+   * same producer: ADR-0017 makes the aggregate the sum of these recaps, so an
+   * axis born anywhere else would be born twice.
+   *
+   * **`null` on a Game that never reached the Endgame**, never an empty list —
+   * the axis is mute on 27 % of the corpus, and mute is said rather than printed
+   * as an empty table. Same discipline as a `Phase` never reached.
+   *
+   * Only the **Endgame** half-moves are read, a scope decision of the grill and
+   * not a property of the term. The currency is chances lost and nothing else:
+   * the result-per-configuration reading lives on the corpus, and ADR-0036
+   * forbids melting the two.
+   */
+  bySignature: SignatureDamage[] | null;
   /** The `Search regime` behind the figures — one per Game, never one per Move. */
   regime: SearchRegime | null;
 }
@@ -120,6 +140,18 @@ export interface PhaseDamage {
  * *not reached* instead of printing a zero that reads as a strength.
  */
 export type PhaseBreakdown = Record<Phase, PhaseDamage | null>;
+
+/**
+ * What one `Material signature` cost over one Game. A configuration is in the
+ * list because the Game **crossed** it, so `chancesLost` at zero means *crossed
+ * cleanly* — which is why the list is never filtered down to the ones that hurt.
+ */
+export interface SignatureDamage {
+  /** The configuration, written the one way it is written (ADR-0036). */
+  signature: string;
+  /** Winning chances lost on the Player's `Counted Move`s landing in it. */
+  chancesLost: number;
+}
 
 /** An empty band. Only ever created for a `Phase` the Game actually reached —
  *  which is what keeps "crossed cleanly" and "never reached" distinguishable. */
@@ -182,6 +214,17 @@ export function gameRecap(
   // difference between a zero and an absence.
   const byPhase: PhaseBreakdown = { early: null, middlegame: null, endgame: null };
   for (const phase of phaseOf) byPhase[phase] ??= noDamage();
+  // The same pre-pass, one scale down: a bucket per configuration the Endgame
+  // ACTUALLY crossed, in crossing order, and none for a configuration the Game
+  // never saw. A `Map` because the order of first appearance is the reading
+  // order the screen wants, and the string is the key by construction — a
+  // signature has one writing and one only.
+  const bySignature = new Map<string, SignatureDamage>();
+  for (const [ply, phase] of phaseOf.entries()) {
+    if (phase !== "endgame") continue;
+    const key = signature(plies[ply].fen, game.playerColor);
+    if (!bySignature.has(key)) bySignature.set(key, { signature: key, chancesLost: 0 });
+  }
 
   const recap: GameRecap = {
     playerMoves: 0,
@@ -195,6 +238,9 @@ export function gameRecap(
     drift: 0,
     opportunities: noOpportunities(),
     byPhase,
+    // Mute on a Game with no Endgame, and mute is `null`: an empty list would
+    // let a screen print a table of nothing where it owes the Player a sentence.
+    bySignature: byPhase.endgame === null ? null : [...bySignature.values()],
     regime,
   };
 
@@ -239,6 +285,10 @@ export function gameRecap(
     if (lost <= 0) continue;
     recap.chancesLost += lost;
     band.chancesLost += lost;
+    // Read on Endgame half-moves only (ADR-0036), which `phaseOf` already says:
+    // the bucket exists exactly when this Move landed in the Endgame.
+    const configuration = bySignature.get(signature(plies[i].fen, game.playerColor));
+    if (configuration) configuration.chancesLost += lost;
     if (severity) {
       recap.flaggedLoss += lost;
       band.flaggedLoss += lost;

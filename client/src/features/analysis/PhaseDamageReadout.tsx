@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { OPPORTUNITY_OFFERED_PHRASE, OPPORTUNITY_TERM } from "../../chess/opportunity";
 import { PHASES, PHASE_LABEL, type Phase } from "../../chess/phase";
 import { points, roundToTenth as round } from "../../chess/points";
-import type { GameRecap, PhaseDamage } from "../../types";
+import type { GameRecap, PhaseDamage, SignatureDamage } from "../../types";
 
 /**
  * What the table prints for one `Phase`, in figures that **add up on screen**.
@@ -59,6 +59,36 @@ export function printedBands(recap: GameRecap): PrintedBand[] {
     const flaggedLoss = flagged.get(phase) ?? 0;
     return { phase, chancesLost, flaggedLoss, drift: round(chancesLost - flaggedLoss) };
   });
+}
+
+/**
+ * The crossed configurations, printed so their column lands on the **printed**
+ * Endgame figure of the table just above — which is the sum the Player is
+ * invited to make, the two tables being one block.
+ *
+ * Same doctrine as `printedBands`, one scale down and with a single column: the
+ * residual of the rounding is carried by the **heaviest** line, where a tenth is
+ * least of its own value. Handing it to a configuration crossed cleanly would
+ * print « −0,1 % » under a line whose whole meaning is *this one cost nothing* —
+ * the bug slice 02's review caught, on the case the list exists to show.
+ *
+ * The **crossing order is kept**: the sequence is the reading — an imbalance is
+ * born mid-Game (ADR-0036) — and sorting it by damage would turn a story into a
+ * ranking.
+ */
+export function printedSignatures(
+  crossed: SignatureDamage[],
+  endgameTotal: number,
+): SignatureDamage[] {
+  const printed = crossed.map((line) => ({ ...line, chancesLost: round(line.chancesLost) }));
+  if (printed.length === 0) return printed;
+  const drawn = printed.reduce((sum, line) => sum + line.chancesLost, 0);
+  const carrier = printed.reduce(
+    (worst, line) => (line.chancesLost > worst.chancesLost ? line : worst),
+    printed[0],
+  );
+  carrier.chancesLost = round(carrier.chancesLost + (round(endgameTotal) - drawn));
+  return printed;
 }
 
 /** One column of the table: its header and what it prints for a reached Phase.
@@ -160,6 +190,59 @@ export function PhaseDamageReadout({
           })}
         </tbody>
       </table>
+      <MaterialSignatureTable recap={recap} />
     </section>
+  );
+}
+
+/**
+ * **In which configuration** (US-32): the `Material signature`s the Endgame
+ * crossed, each with what it cost. Second table of the **same** block (spec §5)
+ * rather than a section of its own — the two are one question asked at two
+ * scales, and US-33 already has enough stacked under the board.
+ *
+ * A configuration is a **name**, never a balance: `RR vs Q` is +1 on any points
+ * scale and an entirely different Game to play (ADR-0036). Nothing here converts
+ * it back into a number.
+ *
+ * **A Game that never reached the Endgame is told so in a sentence**, not shown
+ * an empty table: the axis is mute on 27 % of the corpus, and an empty table
+ * reads as a failure to load rather than as an absence.
+ */
+function MaterialSignatureTable({ recap }: { recap: GameRecap }) {
+  if (recap.bySignature === null) {
+    return (
+      <p data-part="no-signature">
+        Cette partie n'a pas atteint la finale : aucune configuration de pièces à lister.
+      </p>
+    );
+  }
+
+  // The Endgame as the table above PRINTS it, not as the payload holds it — the
+  // sum the Player makes is between two figures on the same screen.
+  const endgame = printedBands(recap).find((printed) => printed.phase === "endgame");
+  const crossed = printedSignatures(recap.bySignature, endgame?.chancesLost ?? 0);
+
+  return (
+    <table data-part="material-signature">
+      <caption>
+        Les configurations de pièces traversées en finale, dans l'ordre, et ce que chacune vous a
+        coûté. Elles se rajoutent à la ligne « {PHASE_LABEL.endgame} » ci-dessus.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Configuration</th>
+          <th scope="col">Chances perdues</th>
+        </tr>
+      </thead>
+      <tbody>
+        {crossed.map((line) => (
+          <tr key={line.signature} data-signature={line.signature}>
+            <th scope="row">{line.signature}</th>
+            <td>{points(line.chancesLost)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
