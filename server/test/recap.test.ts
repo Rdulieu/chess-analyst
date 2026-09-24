@@ -25,6 +25,7 @@ describe("gameRecap — what this Game contributes", () => {
 
     expect(Object.keys(recap).sort()).toEqual(
       [
+        "byPhase",
         "chancesLost",
         "countedErrors",
         "countedMoves",
@@ -272,5 +273,129 @@ describe("gameRecap — what the opponent offered, beside the Player's counts", 
       total: 0,
       bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 },
     });
+  });
+});
+
+/**
+ * The damage, **located** (US-32, ticket 02). The Game below is a **fabricated
+ * fixture** and says so: the base carries no analysed Game short enough to pin
+ * three Phases by hand, and the honesty reserve of the spec asks for the word.
+ *
+ * Nine Positions, written out rather than replayed from a PGN, because what is
+ * being fixed is the **Phase sequence** and a PGN reaching it would only hide
+ * that: three Positions in the Early game, three in the Middlegame, three in the
+ * Endgame. White is the Player, so their Moves land on the odd plies — one in
+ * the Early game, two in the Middlegame, one in the Endgame — and the
+ * opponent's on the even ones.
+ */
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+/** Seven majors and minors: past the Middlegame boundary, short of the Endgame. */
+const MIDDLE = "r2qk2r/pppppppp/2n5/8/8/8/PPPPPPPP/R2QK2R";
+/** Two: the Endgame boundary, by a count anyone can check by eye. */
+const END = "4k3/pppppppp/8/8/8/8/PPPPPPPP/R3K2R";
+
+const THREE_PHASES = [START, START, START, MIDDLE, MIDDLE, MIDDLE, END, END, END];
+
+/** Stored rows over an explicit Position sequence; `cp` is side-to-move
+ *  relative, as stored. */
+function overFens(fens: string[], cps: number[]): StoredEvaluation[] {
+  return cps.map((cp, ply) => ({
+    ply,
+    fen: `${fens[ply]} ${ply % 2 === 0 ? "w" : "b"} - - 0 ${ply + 1}`,
+    cp,
+    mate: null,
+    pv: "",
+  }));
+}
+
+/** Losses spread over the three Phases, with the opponent giving something back
+ *  in the Middlegame: White drifts early, blunders in the Middlegame, bleeds
+ *  again, and drops the Endgame. */
+const SPREAD = [0, 20, 60, 500, -400, 600, -150, 800, -900];
+
+describe("gameRecap — WHERE the Game was lost: the damage by Phase", () => {
+  const game = { playerColor: "white" as const };
+  const evals = overFens(THREE_PHASES, SPREAD);
+
+  it("holds the identity `flaggedLoss + drift = chancesLost` in EVERY Phase it reached", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    for (const phase of ["early", "middlegame", "endgame"] as const) {
+      const band = recap.byPhase[phase];
+      expect(band).not.toBeNull();
+      expect(band!.flaggedLoss + band!.drift).toBeCloseTo(band!.chancesLost, 9);
+    }
+  });
+
+  it("sums back to the totals the recap already showed — the breakdown is a FOLD, not a second reading", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const bands = Object.values(recap.byPhase).filter((band) => band !== null);
+    const sum = (read: (band: NonNullable<typeof bands[number]>) => number) =>
+      bands.reduce((total, band) => total + read(band!), 0);
+
+    expect(sum((b) => b.chancesLost)).toBeCloseTo(recap.chancesLost, 9);
+    expect(sum((b) => b.flaggedLoss)).toBeCloseTo(recap.flaggedLoss, 9);
+    expect(sum((b) => b.drift)).toBeCloseTo(recap.drift, 9);
+    expect(sum((b) => b.countedErrors)).toBe(recap.countedErrors);
+  });
+
+  it("splits what was DROPPED from what was BLED, per Phase — two opposite lessons a total would melt", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    // The Middlegame carries a flagged Move; the Early game only bleeds.
+    expect(recap.byPhase.middlegame!.flaggedLoss).toBeGreaterThan(0);
+    expect(recap.byPhase.early!.flaggedLoss).toBe(0);
+    expect(recap.byPhase.early!.drift).toBeGreaterThan(0);
+  });
+
+  it("keeps the opponent's Opportunities in a column of their own, never added to the Player's damage", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const offered = (["early", "middlegame", "endgame"] as const).reduce(
+      (total, phase) => total + (recap.byPhase[phase]?.opportunities.total ?? 0),
+      0,
+    );
+
+    // They fold to the Game's own block — and to nothing else (ADR-0034).
+    expect(offered).toBe(recap.opportunities.total);
+    expect(offered).toBeGreaterThan(0);
+    // The Player's figures on the same rows are the Player's alone.
+    const damage = (["early", "middlegame", "endgame"] as const).reduce(
+      (total, phase) => total + (recap.byPhase[phase]?.countedErrors ?? 0),
+      0,
+    );
+    expect(damage).toBe(recap.countedErrors);
+  });
+
+  it("reads the SAME Phase the annotations carry, rather than deciding a second time", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const carried = gameAnnotations(game, evals);
+
+    for (const phase of ["early", "middlegame", "endgame"] as const) {
+      const lost = carried
+        .filter((a) => a.phase === phase)
+        .reduce((total, a) => total + (a.chancesLost ?? 0), 0);
+      expect(recap.byPhase[phase]!.chancesLost).toBeCloseTo(lost, 9);
+    }
+  });
+
+  it("names a Phase the Game NEVER REACHED as not reached — never as a zero", () => {
+    // 19 of the 78 analysed Games have no Endgame: a `0` there would read as
+    // "none of your damage was in the Endgame", which is a false strength.
+    // A Game that stays in the opening: nothing traded, back ranks full, the
+    // armies never meet. FABRICATED fixture.
+    const recap = gameRecap(game, overFens([START, START, START], [0, -40, 40]), REGIME);
+
+    expect(recap.byPhase.early).not.toBeNull();
+    expect(recap.byPhase.middlegame).toBeNull();
+    expect(recap.byPhase.endgame).toBeNull();
+  });
+
+  it("distinguishes a Phase reached with no damage from one never reached", () => {
+    // The whole point of the `null`: an Endgame the Player crossed cleanly is a
+    // real zero, and it must not read like an Endgame that never happened.
+    const recap = gameRecap(game, overFens(THREE_PHASES, [0, 0, 0, 0, 0, 0, 0, 0, 0]), REGIME);
+
+    expect(recap.byPhase.endgame).not.toBeNull();
+    expect(recap.byPhase.endgame!.chancesLost).toBe(0);
   });
 });

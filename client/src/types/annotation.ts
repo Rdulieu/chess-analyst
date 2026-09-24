@@ -96,12 +96,39 @@ export interface GameRecap {
    * none of them. A screen opts into showing it; nothing here changes subject by
    * reading the fields it already read.
    */
-  opportunities: {
-    total: number;
-    /** Keyed off `Opportunity`'s own severity, so the two cannot drift apart. */
-    bySeverity: Record<Opportunity["severity"], number>;
-  };
+  opportunities: OpportunityCount;
+  /**
+   * **Where** the Game was lost (US-32): the same figures, located by `Phase`.
+   * A fold of the totals above and never a second reading — the bands sum back
+   * to them, which is what the screen invites the Player to check.
+   *
+   * A `Phase` the Game never reached is `null`, **never a band of zeroes**: 19
+   * of the 78 analysed Games have no Endgame, and a zero there would read as a
+   * strength the Player never earned.
+   */
+  byPhase: Record<MoveAnnotation["phase"], PhaseDamage | null>;
   regime: SearchRegime | null;
+}
+
+/** How many `Opportunity`s, and of what size. */
+export interface OpportunityCount {
+  total: number;
+  /** Keyed off `Opportunity`'s own severity, so the two cannot drift apart. */
+  bySeverity: Record<Opportunity["severity"], number>;
+}
+
+/**
+ * One `Phase`'s share of the damage: what was **dropped** (`flaggedLoss`) and
+ * what was **bled** (`drift`), kept apart because they are opposite lessons,
+ * with the opponent's gifts in a column of their own (ADR-0034).
+ */
+export interface PhaseDamage {
+  chancesLost: number;
+  flaggedLoss: number;
+  /** The residual: `flaggedLoss + drift === chancesLost`, in every Phase. */
+  drift: number;
+  countedErrors: number;
+  opportunities: OpportunityCount;
 }
 
 /**

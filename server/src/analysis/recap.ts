@@ -3,6 +3,7 @@ import type { SearchRegime } from "../engine/types";
 import { chancesLostByMove, countedMoves, type UncountedReason } from "./counted";
 import { gamePlies, moveOpportunities, moveSeverities, type StoredEvaluation } from "./derivation";
 import type { MoveSeverity } from "../danger/move-quality";
+import { phases, type Phase } from "./phase";
 
 /**
  * What one Game **contributes** to the analysis — the reconciliation point
@@ -74,8 +75,56 @@ export interface GameRecap {
    * record.
    */
   opportunities: OpportunityCount;
+  /**
+   * **Where** the Game was lost: the same figures again, located by `Phase`
+   * (US-32). It is a **fold of this very recap**, not a second reading — the
+   * three bands sum back to the totals above, which is the one claim the screen
+   * invites the Player to check by hand.
+   *
+   * A `Phase` the Game **never reached** is `null`, never a band of zeroes: 19
+   * of the 78 analysed Games have no Endgame, and "0 % of your damage in the
+   * Endgame" on a Game that never had one is a **false strength**. Same
+   * discipline as the `Key moment` that has no score and refuses to show a zero.
+   */
+  byPhase: PhaseBreakdown;
   /** The `Search regime` behind the figures — one per Game, never one per Move. */
   regime: SearchRegime | null;
+}
+
+/**
+ * What one `Phase` of one Game holds — the Player's damage, split the way the
+ * recap splits it, with the opponent's gifts **beside** it (ADR-0034).
+ *
+ * `flaggedLoss + drift === chancesLost` here exactly as it does on the Game, and
+ * the three bands sum back to the Game's own figures. The split is the point:
+ * "I hung a piece in the Endgame" and "I bled through the Endgame" are opposite
+ * lessons, and one total would melt them.
+ */
+export interface PhaseDamage {
+  /** Winning chances lost on the Player's `Counted Move`s played in this Phase. */
+  chancesLost: number;
+  /** The share of that the flagged Moves account for — what was **dropped**. */
+  flaggedLoss: number;
+  /** The residual — what was **bled**, that no flagged Move accounts for. */
+  drift: number;
+  /** Flawed Moves the analysis holds the Player to, in this Phase. */
+  countedErrors: number;
+  /** What the **opponent** offered here. Its own column, never summed into the
+   *  Player's damage (ADR-0034). */
+  opportunities: OpportunityCount;
+}
+
+/**
+ * The three `Phase`s of a Game, each with its damage — or `null` where the Game
+ * never got there. The `null` is load-bearing: it is what lets a screen say
+ * *not reached* instead of printing a zero that reads as a strength.
+ */
+export type PhaseBreakdown = Record<Phase, PhaseDamage | null>;
+
+/** An empty band. Only ever created for a `Phase` the Game actually reached —
+ *  which is what keeps "crossed cleanly" and "never reached" distinguishable. */
+function noDamage(): PhaseDamage {
+  return { chancesLost: 0, flaggedLoss: 0, drift: 0, countedErrors: 0, opportunities: noOpportunities() };
 }
 
 /**
@@ -124,6 +173,15 @@ export function gameRecap(
   // Moves carry and never asks the question a second time, so the block and the
   // glyphs on the Moves cannot say two different things.
   const opportunities = moveOpportunities(plies, game.playerColor);
+  // Over the whole Game at once, exactly as the annotations read it: the Phase
+  // latches, so it only exists as a sequence — and reading it here from the same
+  // function is what stops the block and the Moves naming two different Phases.
+  const phaseOf = phases(plies.map((ply) => ply.fen));
+  // A band exists for a Phase the Game REACHED, and for no other. Built from the
+  // Phases actually crossed rather than from the three names, which is the whole
+  // difference between a zero and an absence.
+  const byPhase: PhaseBreakdown = { early: null, middlegame: null, endgame: null };
+  for (const phase of phaseOf) byPhase[phase] ??= noDamage();
 
   const recap: GameRecap = {
     playerMoves: 0,
@@ -136,15 +194,17 @@ export function gameRecap(
     flaggedLoss: 0,
     drift: 0,
     opportunities: noOpportunities(),
+    byPhase,
     regime,
   };
 
   // Its own pass over the plies, deliberately: the Player's loop below is about
   // the Player's Moves and skips everything else, and threading a second subject
   // through it is how one subject ends up in the other's figures.
-  for (const offered of opportunities) {
+  for (const [ply, offered] of opportunities.entries()) {
     if (offered === null) continue;
     countOpportunity(recap.opportunities, offered.severity);
+    countOpportunity(byPhase[phaseOf[ply]]!.opportunities, offered.severity);
   }
 
   for (let i = 1; i < plies.length; i++) {
@@ -165,17 +225,33 @@ export function gameRecap(
       continue;
     }
 
+    // The Phase of the Position this Move LED TO — the very one the annotation
+    // of ply `i` carries, so the block and the Move list locate a Move alike.
+    const band = byPhase[phaseOf[i]]!;
+
     recap.countedMoves += 1;
-    if (severity) recap.countedErrors += 1;
+    if (severity) {
+      recap.countedErrors += 1;
+      band.countedErrors += 1;
+    }
 
     const lost = lostByMove[i] ?? 0;
     if (lost <= 0) continue;
     recap.chancesLost += lost;
-    if (severity) recap.flaggedLoss += lost;
+    band.chancesLost += lost;
+    if (severity) {
+      recap.flaggedLoss += lost;
+      band.flaggedLoss += lost;
+    }
   }
 
   // The residual, computed as one — never accumulated separately, which is
   // exactly how the two parts would drift apart from the total.
   recap.drift = recap.chancesLost - recap.flaggedLoss;
+  // The same residual, per band and by the same subtraction — so the identity
+  // holds in every Phase for the same reason it holds on the Game.
+  for (const band of Object.values(byPhase)) {
+    if (band) band.drift = band.chancesLost - band.flaggedLoss;
+  }
   return recap;
 }

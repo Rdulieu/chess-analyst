@@ -55,6 +55,13 @@ const ANNOTATIONS: GameAnnotations = {
     flaggedLoss: 30,
     drift: 0,
     opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+    // Every Move of this fixture is in the Early game, and the Game never
+    // leaves it: the two other Phases are NOT REACHED, not zero (US-32).
+    byPhase: {
+      early: { chancesLost: 30, flaggedLoss: 30, drift: 0, countedErrors: 1, opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } } },
+      middlegame: null,
+      endgame: null,
+    },
     regime: { depth: 16, lines: 2 },
   },
   // A Game with no Clock recorded: the time block is not what this slice is

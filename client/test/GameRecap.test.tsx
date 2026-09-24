@@ -14,6 +14,13 @@ const RECAP: GameRecap = {
   flaggedLoss: 48,
   drift: 14.5,
   opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+  // Not this panel's subject — the located figures have their own block (US-32).
+  // An Early game and a Middlegame, no Endgame: FABRICATED fixture.
+  byPhase: {
+    early: { chancesLost: 20, flaggedLoss: 14, drift: 6, countedErrors: 1, opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } } },
+    middlegame: { chancesLost: 42.5, flaggedLoss: 34, drift: 8.5, countedErrors: 2, opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } } },
+    endgame: null,
+  },
   regime: { depth: 16, lines: 2 },
 };
 
@@ -131,6 +138,11 @@ describe("The Game's recap — what it states", () => {
           flaggedLoss: 0,
           drift: 0,
           opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } },
+          byPhase: {
+            early: { chancesLost: 0, flaggedLoss: 0, drift: 0, countedErrors: 0, opportunities: { total: 0, bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 } } },
+            middlegame: null,
+            endgame: null,
+          },
           regime: { depth: 16, lines: 2 },
         }}
       />,
