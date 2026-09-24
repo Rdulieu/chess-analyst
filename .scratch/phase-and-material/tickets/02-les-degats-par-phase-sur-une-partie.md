@@ -11,23 +11,26 @@ a produit la conclusion utile du rapport sur la 715, et que l'app ne faisait pas
 
 **Blocked by:** 01 — sinon la répartition naît sur la frontière cassée et change ensuite.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-25 · merge `98e1fb9` · gate: build vert, 637 tests serveur / 46 fichiers,
+1049 tests client / 68 fichiers, `npm run lint` sorti 0, FP 5/5 verte (parties 715 et 2429), aucun
+finding bloquant
 
-- [ ] Le récapitulatif par partie porte la répartition des chances perdues par `Phase`.
-- [ ] Chaque phase distingue `flaggedLoss` (lâché d'un coup) de `drift` (saigné) — deux leçons
+- [x] Le récapitulatif par partie porte la répartition des chances perdues par `Phase`.
+- [x] Chaque phase distingue `flaggedLoss` (lâché d'un coup) de `drift` (saigné) — deux leçons
       opposées qu'un total refondrait.
-- [ ] L'identité `flaggedLoss + drift = chancesLost` tient **par phase**, et la somme des phases
+- [x] L'identité `flaggedLoss + drift = chancesLost` tient **par phase**, et la somme des phases
       redonne le total déjà affiché par le récapitulatif.
-- [ ] Le nombre de `Counted Move`s fautifs est réparti de la même façon.
-- [ ] Les `Opportunity` sont réparties **dans leur propre colonne** et **jamais additionnées** aux
+- [x] Le nombre de `Counted Move`s fautifs est réparti de la même façon.
+- [x] Les `Opportunity` sont réparties **dans leur propre colonne** et **jamais additionnées** aux
       dégâts du joueur (ADR-0034).
-- [ ] Une phase que la partie n'a **jamais atteinte** est **nommée non atteinte**, jamais rendue
+- [x] Une phase que la partie n'a **jamais atteinte** est **nommée non atteinte**, jamais rendue
       `0` — 19 des 78 parties analysées n'ont pas de finale, et un zéro y afficherait une **fausse
       force**. Même discipline que « pas de score, pas un zéro » des `Key moment`s.
-- [ ] Le bloc se range **sous les contrôles** de la route de revue : rien de ce sur quoi le joueur
+- [x] Le bloc se range **sous les contrôles** de la route de revue : rien de ce sur quoi le joueur
       agit ne se déplace quand il apparaît (ADR-0021).
-- [ ] Aucun indice uniquement chromatique (ADR-0013).
-- [ ] Aucun changement de schéma, aucune migration.
+- [x] Aucun indice uniquement chromatique (ADR-0013).
+- [x] Aucun changement de schéma, aucune migration.
 
 ### Feature Path (FP)
 
