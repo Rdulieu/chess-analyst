@@ -7,7 +7,7 @@ import {
   type GameRecap,
   type OpportunityCount,
 } from "../analysis/recap";
-import { phases, type Phase } from "../analysis/phase";
+import { type Phase } from "../analysis/phase";
 import type { SearchRegime } from "../engine/types";
 import { gameAnnotations, gamePlies, moveSeverities } from "../analysis/derivation";
 import type { MoveSeverity } from "../danger/move-quality";
@@ -41,12 +41,14 @@ export interface MoveReportRow {
   /** Which of them fire at the setting this run was given. */
   designated: SignalVerdict;
   /**
-   * The `Phase` this Move was played in, under **both** readings of the move cap
-   * — `kept` being the app's own. The two are carried side by side rather than
-   * counted here: what the requester is owed is how many Moves move, and that is
-   * a fold over these lines (D14).
+   * The `Phase` this Move was played in (ADR-0035).
+   *
+   * One reading, where there used to be two: D14 carried the move cap's other
+   * reading alongside it so the choice could be measured rather than argued, and
+   * that measure is **closed** — the cap itself is gone, and with it both
+   * readings of it.
    */
-  phase: { kept: Phase; onNumber: Phase };
+  phase: Phase;
   /**
    * How the **opponent** answered this Move — `null` when the Game ended on it.
    *
@@ -185,19 +187,12 @@ export function gameReport(
   const plies = gamePlies(evals);
   const thresholds = { ...DEFAULT_THRESHOLDS, ...options.thresholds };
   const san = gameNotations(game.pgn);
-  // The other reading of the cap, over the same FENs and through the same
-  // function: a second implementation of the Phase walk would agree by luck.
   // The opponent's own severities and denominator: the SAME two functions, the
   // other colour. Deriving them costs no engine time — `evaluations` carries one
   // row per half-move, both colours confounded.
   const opponentColor = game.playerColor === "white" ? "black" : "white";
   const opponentSeverities = moveSeverities(plies, opponentColor);
   const opponentCounted = countedMoves(plies, opponentColor);
-
-  const onNumber = phases(
-    plies.map((ply) => ply.fen),
-    "on-number",
-  );
 
   const rows: MoveReportRow[] = [];
   annotations.forEach((annotation, i) => {
@@ -213,7 +208,7 @@ export function gameReport(
       chancesLost: annotation.chancesLost ?? 0,
       signals,
       designated: designates(signals, thresholds),
-      phase: { kept: annotation.phase, onNumber: onNumber[i] },
+      phase: annotation.phase,
       opponentReply: reply(opponentSeverities, opponentCounted, i),
     });
   });
