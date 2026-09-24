@@ -14,21 +14,26 @@ joueur avait deviné en aveugle.
 de **collision**, pas de logique : la signature ne lit que les demi-coups de finale, et 01 ne touche
 pas la frontière de finale.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-25 · merge `1d9315e` · gate: build vert, 652 tests serveur / 47 fichiers,
+1059 tests client / 68 fichiers, `npm run lint` sorti 0, FP 3/3 verte (parties 715 et 2429), aucun
+finding bloquant — les deux findings bloquants de la revue indépendante corrigés avant le merge
+(un coup hors finale pouvait verser dans un seau de finale ; le résidu d'arrondi pouvait imprimer
+« −0,1 % » sur une liste non bornée).
 
-- [ ] Une `Material signature` est les **majeures et mineures restantes de chaque camp**, celles du
+- [x] Une `Material signature` est les **majeures et mineures restantes de chaque camp**, celles du
       joueur puis celles de l'adversaire : `RRB vs RRN`, `RR vs Q`, `R vs —`. Pions et rois exclus.
-- [ ] **Ordre canonique `Q R B N`** dans chaque camp — une configuration a une écriture et une
+- [x] **Ordre canonique `Q R B N`** dans chaque camp — une configuration a une écriture et une
       seule. Un camp vide s'écrit `—`.
-- [ ] Elle est relevée **à chaque demi-coup**, jamais une fois par partie : `RR vs Q` apparaît dans
+- [x] Elle est relevée **à chaque demi-coup**, jamais une fois par partie : `RR vs Q` apparaît dans
       **0** partie en instantané à la frontière et dans **9** au demi-coup (ADR-0036).
-- [ ] Une **promotion** rajoute une majeure et la signature suit.
-- [ ] Elle n'est lue que sur les demi-coups de **finale** — décision de périmètre, pas propriété du
+- [x] Une **promotion** rajoute une majeure et la signature suit.
+- [x] Elle n'est lue que sur les demi-coups de **finale** — décision de périmètre, pas propriété du
       terme.
-- [ ] Le récapitulatif porte les chances perdues **dans chaque configuration traversée**.
-- [ ] Le terme reste **distinct** du `material` de la revue, qui n'est pas touché (ADR-0036).
-- [ ] Une partie sans finale n'a **aucune** configuration, et l'écran le dit.
-- [ ] Aucun changement de schéma, aucune migration.
+- [x] Le récapitulatif porte les chances perdues **dans chaque configuration traversée**.
+- [x] Le terme reste **distinct** du `material` de la revue, qui n'est pas touché (ADR-0036).
+- [x] Une partie sans finale n'a **aucune** configuration, et l'écran le dit.
+- [x] Aucun changement de schéma, aucune migration.
 
 ### Feature Path (FP)
 
