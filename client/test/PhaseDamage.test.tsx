@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { PhaseDamageReadout } from "../src/features/analysis/PhaseDamageReadout";
+import { PhaseDamageReadout, printedBands } from "../src/features/analysis/PhaseDamageReadout";
 import type { GameRecap } from "../src/types";
 
 /** A recap whose three Phases were all reached, with the damage deliberately
@@ -191,5 +191,69 @@ describe("Where the Game was lost — the damage located by Phase", () => {
       .reduce((sum, value) => sum + value, 0);
 
     expect(lost).toBeCloseTo(10, 6);
+  });
+});
+
+/**
+ * The printing seam on its own (ADR-0027). It is declared, so it is driven
+ * directly: what it decides — which band absorbs a rounding residual — is
+ * invisible through the component on every Game but the one where it goes
+ * wrong, and that is the Game worth pinning.
+ */
+describe("printedBands — figures that add up on screen", () => {
+  it("makes each column land on the total the recap states", () => {
+    const thirds: GameRecap = {
+      ...SPREAD,
+      chancesLost: 10,
+      flaggedLoss: 4,
+      drift: 6,
+      byPhase: {
+        early: { ...SPREAD.byPhase.early!, chancesLost: 10 / 3, flaggedLoss: 4 / 3, drift: 2 },
+        middlegame: { ...SPREAD.byPhase.middlegame!, chancesLost: 10 / 3, flaggedLoss: 4 / 3, drift: 2 },
+        endgame: { ...SPREAD.byPhase.endgame!, chancesLost: 10 / 3, flaggedLoss: 4 / 3, drift: 2 },
+      },
+    };
+
+    const bands = printedBands(thirds);
+    const sum = (read: (band: (typeof bands)[number]) => number) =>
+      bands.reduce((total, printed) => total + read(printed), 0);
+
+    expect(sum((band) => band.chancesLost)).toBeCloseTo(10, 6);
+    expect(sum((band) => band.flaggedLoss)).toBeCloseTo(4, 6);
+    expect(sum((band) => band.drift)).toBeCloseTo(6, 6);
+  });
+
+  it("never prints a NEGATIVE share on a Phase that only bled", () => {
+    // The regression this seam was split out for. The heaviest Phase by
+    // `chancesLost` is the Endgame, which dropped nothing at all; handing IT the
+    // flagged column's residual printed « -0,1 % » under *lâchées* and a drift
+    // larger than the loss — on exactly the Phase the split exists to describe.
+    const bleeding: GameRecap = {
+      ...SPREAD,
+      chancesLost: 10.7,
+      flaggedLoss: 0.7,
+      drift: 10,
+      byPhase: {
+        early: { ...SPREAD.byPhase.early!, chancesLost: 0.35, flaggedLoss: 0.35, drift: 0 },
+        middlegame: { ...SPREAD.byPhase.middlegame!, chancesLost: 0.35, flaggedLoss: 0.35, drift: 0 },
+        endgame: { ...SPREAD.byPhase.endgame!, chancesLost: 10, flaggedLoss: 0, drift: 10 },
+      },
+    };
+
+    const bands = printedBands(bleeding);
+
+    for (const band of bands) {
+      expect(band.chancesLost).toBeGreaterThanOrEqual(0);
+      expect(band.flaggedLoss).toBeGreaterThanOrEqual(0);
+      expect(band.drift).toBeGreaterThanOrEqual(0);
+      expect(band.flaggedLoss + band.drift).toBeCloseTo(band.chancesLost, 6);
+    }
+    // And the columns still add up, which is the whole reason a residual moves.
+    expect(bands.reduce((sum, band) => sum + band.flaggedLoss, 0)).toBeCloseTo(0.7, 6);
+    expect(bands.reduce((sum, band) => sum + band.chancesLost, 0)).toBeCloseTo(10.7, 6);
+  });
+
+  it("leaves out a Phase the Game never reached, rather than printing it at zero", () => {
+    expect(printedBands(NO_ENDGAME).map((band) => band.phase)).toEqual(["early", "middlegame"]);
   });
 });
