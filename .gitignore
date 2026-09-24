@@ -13,6 +13,9 @@ dist/
 # Session-local worktrees (git-flow: one worktree per story, never shared)
 .claude/worktrees/
 
+# Run directories of the local orchestrator: whole checkouts, never committed.
+.pdo/
+
 # Agentic HP suite scratch: scenario databases and the snapshots path 0 builds.
 # Real imported Games, rebuilt from the network by re-running path 0 — never committed.
 .agentic/

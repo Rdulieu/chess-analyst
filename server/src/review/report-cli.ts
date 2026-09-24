@@ -109,7 +109,7 @@ function print(id: number, opponent: string, report: GameReport): void {
         row.signals.cpDrop ?? "-",
         `${row.signals.forced.move ? "M" : "-"}${row.signals.forced.reply ? "R" : "-"}`,
         row.signals.secondLine.only ? "only" : (row.signals.secondLine.gap ?? "-"),
-        row.phase.kept === row.phase.onNumber ? row.phase.kept : `${row.phase.kept}|${row.phase.onNumber}`,
+        row.phase,
         row.opponentReply === null
           ? "-"
           : `${row.opponentReply.severity ?? (row.opponentReply.counted.counted ? "ok" : row.opponentReply.counted.reason)}`,
