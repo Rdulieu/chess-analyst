@@ -51,6 +51,26 @@ solide et une mesure creuse sans que rien ne dise laquelle parle.
 C'est la discipline des trois lectures de la `Confrontation`, pour la même raison : un composite
 exigerait des poids, et il s'optimiserait.
 
+**4. Et les deux monnaies ne sont pas côte à côte : elles répondent à deux échelles.** Mesuré sur
+les parties analysées qui atteignent la finale, une partie traverse **4 signatures** (médiane ; Q3
+5, max 8) et **une seule en porte ≥ 50 % des dégâts de finale dans 41 parties sur 47 — 87 %**,
+médiane **74 %**. Les chances perdues sont donc une mesure **solide dans une partie** et creuse à
+travers le corpus ; les `result`s l'inverse. D'où la règle :
+
+| portée | monnaie |
+|---|---|
+| **une partie** | les chances perdues par signature |
+| **le corpus** | le résultat des parties par signature |
+
+C'est cette vue par partie qui aurait nommé seule la finale deux tours contre une dame de la 715,
+que le rapport d'origine a dû lire dans le PGN à la main.
+
+**Échantillon mince : on montre, et on montre le dénominateur.** Une signature entre à partir de
+**3 parties** — le demandeur veut voir, et une table qui ne montre que le solide ne montre presque
+rien (56 lignes à 30 parties, 461 à 3). Le garde-fou n'est pas le seuil, c'est l'affichage :
+**les comptes et le taux, toujours ensemble** — « 1 V – 2 D – 33 % ». À n = 3 un taux vaut ±29
+points ; affiché seul il ment, affiché avec son dénominateur il ne peut plus.
+
 ## Conséquences
 
 - **Une seconde monnaie entre dans le produit, et ce n'est pas le pli d'ADR-0017.** L'agrégat y est
