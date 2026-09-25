@@ -656,7 +656,7 @@
   > phase sur les 78 parties analysées, 12 parties sur 78 changent de phase dominante, et la part de
   > la finale ne bouge pas d'un dixième (même famille qu'US-37 et US-45) ; et le fait que la story
   > **ajoute** un bloc à l'écran qu'**US-33** doit désempiler.
-  > **PR ouverte le 2026-09-25 — [PR #PRNUM](https://github.com/Rdulieu/chess-analyst/pull/PRNUM)
+  > **PR ouverte le 2026-09-25 — [PR #131](https://github.com/Rdulieu/chess-analyst/pull/131)
   > `integration/US-32-phase-and-material` → `develop`, en attente du merge humain.** Cinq tranches,
   > toutes `done` : 01 `d1733f6` · 02 `98e1fb9` · 03 `1d9315e` · 04 `95dd707` · 05 (cette PR).
   > Gate à l'ouverture : build vert, **665 tests serveur + 1 072 client**, `lint` a **tourné et rendu
