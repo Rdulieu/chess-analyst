@@ -31,17 +31,17 @@ bloquants** : sept corrigés dans `bd85789`, trois remontés au demandeur ci-des
 
 ## Tableau A — « Où tes parties se décident » (résultats)
 
-- [ ] Une ligne par `Phase` : la phase dans laquelle la partie **s'est terminée** (la `Phase` du
+- [x] Une ligne par `Phase` : la phase dans laquelle la partie **s'est terminée** (la `Phase` du
       dernier demi-coup).
-- [ ] Colonnes : **Parties** (compte *et* part), **Résultats** (V / N / D), **Win rate**.
-- [ ] Porte sur **toutes** les parties du `Profile` courant — aucun temps moteur requis, la
+- [x] Colonnes : **Parties** (compte *et* part), **Résultats** (V / N / D), **Win rate**.
+- [x] Porte sur **toutes** les parties du `Profile` courant — aucun temps moteur requis, la
       frontière est dérivée du PGN. Une partie illisible est **comptée à part**, jamais rangée sous
       une phase (même règle que la table des configurations).
-- [ ] Jamais un taux seul : les comptes et le taux ensemble, comme partout ailleurs.
-- [ ] La table dit que ses parts **font 100 %** — une partie finit dans une phase et une seule.
+- [x] Jamais un taux seul : les comptes et le taux ensemble, comme partout ailleurs.
+- [x] La table dit que ses parts **font 100 %** — une partie finit dans une phase et une seule.
       C'est le contraire de la table des configurations juste au-dessus, dont la colonne ne
       s'additionne pas, et les deux se touchent à l'écran.
-- [ ] **Mitigation écrite** : une partie qui se termine en finale n'a pas été *perdue par* la
+- [x] **Mitigation écrite** : une partie qui se termine en finale n'a pas été *perdue par* la
       finale — elle n'a pas été décidée avant. Le tableau montre une corrélation et doit dire
       qu'il ne montre pas une cause.
 
@@ -49,51 +49,60 @@ Oracle mesuré le 2026-09-25 (à revérifier, pas à recopier) : `DudulSmash` 6 
 (3 / 19 / 77 %), win rate **67 / 64 / 48 %**, 0 illisible. `Metalyst` 27 / 103 / 236
 (7 / 28 / 64 %), win rate **67 / 62 / 40 %**, 0 illisible.
 
+> **Revérifié.** Les comptes sont exacts. Les parts affichées sont réparties au plus fort reste pour
+> faire 100 (`DudulSmash` 3 / 19 / **78**, `Metalyst` 7 / 28 / **65**), et les win rates sont ceux de
+> `bucket()` — voir le constat 2 en bas de ticket.
+
 ## Tableau B — « Où tombent tes dégâts » (parties analysées)
 
-- [ ] Une ligne par `Phase`. Colonnes : **phase dominante dans N parties** (compte *et* part), et
+- [x] Une ligne par `Phase`. Colonnes : **phase dominante dans N parties** (compte *et* part), et
       la **part moyenne des dégâts** *accompagnée de sa médiane*.
-- [ ] **Jamais une somme mise en commun** (condition 3 de l'amendement) : additionner les chances
+- [x] **Jamais une somme mise en commun** (condition 3 de l'amendement) : additionner les chances
       perdues de tout le corpus laisse les parties catastrophe décider. Le compte de parties
       dominantes est la mesure robuste, la moyenne ne va **jamais** sans la médiane.
-- [ ] Porte sur les **parties analysées seulement**. La volumétrie est annoncée en toutes lettres
+- [x] Porte sur les **parties analysées seulement**. La volumétrie est annoncée en toutes lettres
       et **mise en regard** de celle du tableau A : « 66 de tes 186 parties ont été analysées ».
-- [ ] Une partie qui n'atteint pas une phase **ne compte pas** dans le dénominateur de cette
+- [x] Une partie qui n'atteint pas une phase **ne compte pas** dans le dénominateur de cette
       phase, et ça se dit — c'est la même règle que « non atteinte » par partie, une échelle plus
       haut.
-- [ ] **Mitigation écrite**, et elle est double : (a) l'échantillon est celui des parties
+- [x] **Mitigation écrite**, et elle est double : (a) l'échantillon est celui des parties
       analysées, pas de la pratique — sur `Metalyst` c'est **11 sur 366** et le tableau ne conclut
       à peu près rien ; (b) le dénominateur **bouge à chaque passe moteur**, donc le tableau
       annonce un compte, jamais « tes parties ».
-- [ ] Quand aucune partie n'est analysée (`Monado_Boy`, 0 sur 80), une **phrase**, jamais un
+- [x] Quand aucune partie n'est analysée (`Monado_Boy`, 0 sur 80), une **phrase**, jamais un
       tableau de zéros.
 
 Oracle mesuré le 2026-09-25 sur `DudulSmash` (66 parties analysées) : phase dominante début **21**
 / milieu **33** / finale **12** ; part moyenne **34,8 / 48,3 / 16,9 %** ; médiane
 **25,1 / 46,5 / 4,2 %**.
 
+> **Revérifié, et il diffère.** Ces chiffres prennent toutes les parties analysées au dénominateur,
+> une phase non atteinte comptant 0 %. Le critère d'acceptation deux lignes plus haut demande
+> l'inverse, et c'est lui qui a été implémenté — voir le constat 1 en bas de ticket. Les comptes de
+> phase dominante, eux, sont confirmés exactement : **21 / 33 / 12**.
+
 ## Ce que les deux tableaux disent ensemble
 
-- [ ] Les deux lectures **se contredisent sur cette base**, et l'écran ne le lisse pas : les dégâts
+- [x] Les deux lectures **se contredisent sur cette base**, et l'écran ne le lisse pas : les dégâts
       désignent le milieu de partie, les résultats désignent la finale (48 % de win rate contre
       64 et 67 %). **Aucun composite, aucune colonne partagée, aucun classement commun**
       (condition 1 de l'amendement).
-- [ ] La contradiction est **nommée à l'écran**, en une ligne, comme une observation et non comme
+- [x] La contradiction est **nommée à l'écran**, en une ligne, comme une observation et non comme
       une conclusion : la finale porte peu de dégâts en médiane et coûte seize points de win rate.
       Ni l'un ni l'autre tableau ne tranche pourquoi.
 
 ## Le reste de la porte
 
-- [ ] ADR-0013 : rien porté par la couleur seule.
-- [ ] Les deux tableaux tiennent dans une fenêtre de **380 px** — `[data-scroll="x"]` autour de
+- [x] ADR-0013 : rien porté par la couleur seule.
+- [x] Les deux tableaux tiennent dans une fenêtre de **380 px** — `[data-scroll="x"]` autour de
       chaque table, **la prose en dehors**. C'est le défaut qu'US-32 a déjà payé une fois : dix
       suites HP vertes sur un débordement de 925 px, parce que `theme-pass.md` n'audite `/analyse`
       qu'en `Sans aide`. Ne pas le repayer sur `/stats`.
-- [ ] `/stats` est **déjà lent à froid** (9,5 s sur 186 parties, ~49 s sur 1 806). Le tableau A
+- [x] `/stats` est **déjà lent à froid** (9,5 s sur 186 parties, ~49 s sur 1 806). Le tableau A
       **rejoue les mêmes PGN** que la table des configurations : les replayer une seconde fois
       doublerait la note. Une seule relecture sert les deux — c'est la contrainte de conception
       principale de la tranche. Mesurer avant / après et le dire.
-- [ ] Le tableau B lit des `Evaluation`s déjà stockées : **aucun temps moteur**, aucune colonne,
+- [x] Le tableau B lit des `Evaluation`s déjà stockées : **aucun temps moteur**, aucune colonne,
       **aucune migration** (ADR-0015).
 
 
