@@ -21,7 +21,7 @@ const configurations = (n: number) => `${n} ${n > 1 ? "configurations" : "config
  *   never reach an Endgame at all, because a Game sits on as many rows as it
  *   crossed configurations and the column therefore adds up to nothing.
  *
- * Order comes from the server, costliest first; re-sorting here would be a
+ * Order comes from the server, **most played first**; re-sorting here would be a
  * second opinion on the same question. Nothing is carried by colour alone
  * (ADR-0013) — every figure is written.
  */

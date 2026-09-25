@@ -83,3 +83,58 @@ points ; affiché seul il ment, affiché avec son dénominateur il ne peut plus.
 - **La restriction à la finale est un choix de périmètre**, pris par le demandeur au grill. Hors
   finale la cardinalité monte au-delà des 808 mesurées ici, et il faudrait dire où l'on coupe.
   Le terme, lui, n'a rien qui l'y oblige.
+
+---
+
+## Amendement du 2026-09-25 — le corpus peut porter une lecture en dégâts, sur un axe de faible cardinalité
+
+Demandé par le demandeur à la revue d'US-32 : `/stats` porte **deux** tableaux par phase, l'un en
+résultats, l'autre en dégâts. Le second contredit la règle « le corpus, c'est le résultat » telle
+qu'elle est écrite plus haut. Elle est donc **restreinte, pas abrogée**.
+
+**Ce qui rendait la mesure creuse n'était pas l'échelle, c'était la cardinalité.** Les 78 parties
+analysées se dispersent sur **808 signatures** — huit parties pour la mieux dotée : creux. Les
+mêmes parties se répartissent sur **trois phases**. Sur le profil `DudulSmash`, ce sont **66
+parties analysées pour 3 seaux**, soit vingt-deux par seau. Le tableau III plus haut mesure la
+dispersion des signatures ; il ne dit rien d'un axe à trois valeurs, et c'est lui qu'on avait
+généralisé à tort.
+
+**La règle amendée :**
+
+| portée | axe | monnaie |
+|---|---|---|
+| une partie | signature *ou* phase | les chances perdues |
+| le corpus | **signature** (cardinalité 808) | le résultat, **seul** |
+| le corpus | **phase** (cardinalité 3) | le résultat **et** les chances perdues, en **deux tableaux séparés** |
+
+**Trois conditions, et elles sont la décision autant que l'autorisation :**
+
+1. **Deux tableaux, jamais un.** Aucun composite, aucune colonne partagée, aucun classement
+   commun. Les deux lectures ne désignent pas la même phase, et c'est l'information — pas un
+   défaut à lisser. Mesuré sur `DudulSmash` : les **dégâts** désignent le milieu de partie (phase
+   dominante dans 33 parties sur 66, part moyenne 48,3 %), les **résultats** désignent la finale
+   (win rate **48 %** contre 64 % et 67 % ailleurs). La finale porte peu de dégâts et coûte seize
+   points de win rate. Un chiffre unique aurait effacé ça.
+2. **Chaque tableau annonce son dénominateur, et l'écart entre les deux est dit.** Celui des
+   résultats porte sur **toutes** les parties (186 sur `DudulSmash`, aucun temps moteur requis) ;
+   celui des dégâts sur les **parties analysées seulement** (66 — et **11 sur 366** pour
+   `Metalyst`, où il ne conclut à peu près rien). Deux dénominateurs sur un même écran sont une
+   confusion à moins qu'ils ne soient écrits ; ils seront écrits.
+3. **Jamais une somme mise en commun.** Additionner les chances perdues de tout le corpus, c'est
+   laisser les parties catastrophe décider du résultat. Le tableau rend donc **le compte des
+   parties dont la phase est dominante** — robuste — et la part moyenne **accompagnée de sa
+   médiane**. Sur cette base, la finale pèse **16,9 % en moyenne et 4,2 % en médiane** : l'écart
+   du simple au quadruple *est* la dissymétrie, et le montrer vaut mieux que choisir laquelle des
+   deux on affiche.
+
+**Ce qui n'est pas amendé.** L'axe **signature** garde sa monnaie unique à l'échelle du corpus :
+les chiffres du tableau III tiennent, et rien de ce qui précède ne les touche. Et la lecture par
+partie reste celle qui a nommé la finale deux tours contre une dame de la 715 — c'est toujours
+elle qui porte la conclusion utile, l'échelle du corpus disant seulement sur quel terrain on
+revient le plus souvent.
+
+**La contrepartie à surveiller.** Le tableau des dégâts par phase se périme à l'envers des autres :
+il **s'améliore** à chaque passe moteur, et son dénominateur bouge sous le lecteur d'une visite à
+l'autre. Il annonce donc un compte, jamais « tes parties » ; et si un jour il conclut l'inverse du
+tableau des résultats de façon stable, c'est une question à poser au demandeur, pas à arbitrer dans
+le code.

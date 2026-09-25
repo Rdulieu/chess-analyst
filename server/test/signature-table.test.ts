@@ -83,7 +83,7 @@ describe("signatureTable", () => {
     expect(table.scope).toEqual({ games: 3, withEndgame: 1, withoutEndgame: 2, unreadable: 0 });
   });
 
-  it("brings what costs to the top — losses first, then the most played", () => {
+  it("brings the terrain the Player lives on to the top — most played first, then losses", () => {
     const table = signatureTable([
       crossing("loss", "RR vs Q", "R vs R"),
       crossing("loss", "RR vs Q", "R vs R"),
@@ -95,8 +95,10 @@ describe("signatureTable", () => {
       crossing("draw", "B vs N"),
     ]);
 
-    // `RR vs Q` (3 losses) above `R vs R` (2 losses of 5) above `B vs N` (none).
-    expect(table.rows.map((r) => r.signature)).toEqual(["RR vs Q", "R vs R", "B vs N"]);
+    // `R vs R` (5 Games) above the two seen 3 times; that tie breaks on defeats,
+    // so `RR vs Q` (3 losses) comes before `B vs N` (none). The costliest row is
+    // no longer first — it is the most frequent, which is the point of the order.
+    expect(table.rows.map((r) => r.signature)).toEqual(["R vs R", "RR vs Q", "B vs N"]);
   });
 
   it("is empty, and says so in its scope, on a history with no Endgame", () => {

@@ -48,7 +48,7 @@ export interface SignatureRow extends Bucket {
 export interface SignatureTable {
   /** The bar a configuration must clear to get a row — stated, not implied. */
   threshold: number;
-  /** The configurations at or above the bar, costliest first. */
+  /** The configurations at or above the bar, **most played first**. */
   rows: SignatureRow[];
   /** What stayed under the bar: counted and named, never erased. */
   below: { configurations: number };
@@ -77,7 +77,7 @@ export function signatureTable(crossings: EndgameCrossing[]): SignatureTable {
   }
 
   const all = [...bySignature].map(([signature, played]) => ({ signature, ...bucket(played) }));
-  const rows = all.filter((row) => row.games >= SIGNATURE_THRESHOLD).sort(costliestFirst);
+  const rows = all.filter((row) => row.games >= SIGNATURE_THRESHOLD).sort(mostPlayedFirst);
 
   return {
     threshold: SIGNATURE_THRESHOLD,
@@ -93,15 +93,22 @@ export function signatureTable(crossings: EndgameCrossing[]): SignatureTable {
 }
 
 /**
- * What costs comes up: **defeats first**, because that is what the Player asked
- * the table for, and hundreds of rows in alphabetical order are a corpus to
- * wade through rather than a reading.
+ * What the Player meets most comes first: **by frequency**, on the requester's
+ * decision (2026-09-25), and hundreds of rows in alphabetical order are a corpus
+ * to wade through rather than a reading.
  *
- * Ties break on how often the configuration is played — the same number of
- * defeats over more Games is the terrain the Player actually lives on — and
- * then on the signature itself, so the order is total and the table never
+ * It replaces "defeats first", and the change is a change of *question*. Defeats
+ * first answered "where do I lose?", and put a configuration seen three times and
+ * lost three times above the terrain of a hundred Games. Frequency answers "what
+ * do I actually play?" — the denominator the Player lives on, which is also the
+ * one where an improvement pays off most often. The loss count is still on every
+ * row, so the first question remains readable; it is no longer the one the order
+ * asks.
+ *
+ * Ties break on defeats — at equal frequency the costlier terrain comes up first —
+ * and then on the signature itself, so the order is total and the table never
  * reshuffles between two identical loads.
  */
-function costliestFirst(a: SignatureRow, b: SignatureRow): number {
-  return b.loss - a.loss || b.games - a.games || a.signature.localeCompare(b.signature);
+function mostPlayedFirst(a: SignatureRow, b: SignatureRow): number {
+  return b.games - a.games || b.loss - a.loss || a.signature.localeCompare(b.signature);
 }
