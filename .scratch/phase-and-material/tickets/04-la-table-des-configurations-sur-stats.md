@@ -11,21 +11,28 @@ perdues sont solides **dans** une partie et creuses à travers le corpus, les r�
 
 **Blocked by:** 03 — la table replie la `Material signature` que 03 fait naître.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-25 · merge `95dd707` · gate: build vert, 665 tests serveur / 48 fichiers,
+1069 tests client / 69 fichiers, `npm run lint` sorti 0, FP 4/4 verte à `0fe45d9` (Profiles 1, 2, 3
+et 4, chiffres conformes à l'oracle), aucun finding bloquant — le finding bloquant de la revue
+indépendante corrigé avant le merge : `GET /api/stats` bloquait la boucle d'événements pendant les
+48,9 s du rejeu, le serveur entier ne répondait plus ; `getStats` rend désormais la main toutes les
+25 parties, et la mesure de contrôle (72 sondes sur une route tierce pendant la requête lente) ne
+trouve plus aucun blocage.
 
-- [ ] `/stats` porte la table des `Material signature` du `Profile` courant (ADR-0014), sur ses
+- [x] `/stats` porte la table des `Material signature` du `Profile` courant (ADR-0014), sur ses
       parties qui atteignent la finale.
-- [ ] La monnaie est le **résultat de la partie** — victoires / nulles / défaites. Une partie compte
+- [x] La monnaie est le **résultat de la partie** — victoires / nulles / défaites. Une partie compte
       **une fois par configuration traversée**.
-- [ ] Une configuration entre dans la table à partir de **3 parties**.
-- [ ] Chaque ligne porte **les comptes et le taux ensemble** — « 1 V – 2 D – 33 % ». Jamais un taux
+- [x] Une configuration entre dans la table à partir de **3 parties**.
+- [x] Chaque ligne porte **les comptes et le taux ensemble** — « 1 V – 2 D – 33 % ». Jamais un taux
       seul : à n = 3 il vaut ±29 points, et le dénominateur affiché est le garde-fou (ADR-0036).
-- [ ] Ce qui tombe sous le seuil est **compté et nommé en une ligne**, pas effacé.
-- [ ] La table **annonce sa portée** : sur combien de parties elle porte, et combien n'atteignent
+- [x] Ce qui tombe sous le seuil est **compté et nommé en une ligne**, pas effacé.
+- [x] La table **annonce sa portée** : sur combien de parties elle porte, et combien n'atteignent
       jamais la finale (654 sur 2 438 dans la base actuelle, soit 27 %).
-- [ ] Le tri fait remonter ce qui coûte plutôt que d'imposer un parcours de centaines de lignes.
-- [ ] Aucun indice uniquement chromatique (ADR-0013). Aucun changement de schéma.
-- [ ] La table est un **second objet**, pas le pli d'ADR-0017 : un taux de résultat n'est pas la
+- [x] Le tri fait remonter ce qui coûte plutôt que d'imposer un parcours de centaines de lignes.
+- [x] Aucun indice uniquement chromatique (ADR-0013). Aucun changement de schéma.
+- [x] La table est un **second objet**, pas le pli d'ADR-0017 : un taux de résultat n'est pas la
       somme des récapitulatifs par partie et ne doit jamais être présenté comme tel.
 
 ### Feature Path (FP)
