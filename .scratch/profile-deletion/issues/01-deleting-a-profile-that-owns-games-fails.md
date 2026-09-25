@@ -66,3 +66,33 @@ Profile is normally there to hold a history.
 Deleting individual Games, re-import after deletion, or any archive/export path. The finding is only
 that deleting a `Profile` that owns rows fails, fails late (after the irreversible confirmation), and
 fails in the driver's words rather than ours.
+
+---
+
+## Reconfirmé le 2026-09-25, inchangé
+
+Redécouvert en aveugle par le path 0 de la suite HP d'US-32 (branche
+`integration/US-32-phase-and-material`, HEAD `5c3c320`) : l'agent, ayant besoin de recréer
+`Metalyst`, a tenté de le supprimer et a obtenu `Failed to delete profile 3 (500)` à l'écran, avec
+`SqliteError: FOREIGN KEY constraint failed` côté serveur. Reproduit deux fois, par l'UI et par un
+`DELETE /api/profiles/3` direct, sur un `Profile` de **351 parties**.
+
+Rien n'a bougé depuis le premier relevé : `games.profileId` (`server/src/db/schema.ts:43-45`)
+référence `profiles.id` **sans `onDelete`**, là où `personalAnalyses` (lignes 280-283) en déclare
+un — la comparaison est dans le même fichier. Et le commentaire de `deleteProfile` promet toujours
+une cascade qui n'existe pas.
+
+**Ce n'est pas un bloquant d'US-32** et ça ne doit pas retenir la PR #131 : aucune tranche de la
+story ne touche à la suppression de `Profile`, le défaut est antérieur de plus d'un mois, et la
+décision qu'il attend — **cascader ou refuser avec une raison** — appartient au demandeur. Noté ici
+plutôt que dans les tranches d'US-32 pour la même raison qu'en août : pour qu'il ne meure pas avec
+une story.
+
+Deux choses que la reconfirmation ajoute :
+
+- **Le coût de la cascade est maintenant chiffrable** et il a grossi : `Metalyst` porte 351 parties
+  dont 11 analysées, `DudulSmash` 186 dont **66**. Une cascade détruirait des `Evaluation`s que
+  seul du temps moteur reconstruit (ADR-0015) — le dialogue devra dire combien.
+- **Le défaut a un coût opérationnel, mesuré** : ne pouvant pas supprimer le `Profile`, l'agent a
+  dû effacer sa base d'essai et rejouer quatre étapes, ce qui a coûté un export Lichess
+  supplémentaire et a privé le run d'une mesure propre du total de scénario.
