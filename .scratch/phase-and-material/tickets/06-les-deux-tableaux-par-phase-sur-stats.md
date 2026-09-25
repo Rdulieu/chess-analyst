@@ -17,7 +17,12 @@
 
 **Blocked by:** 04 — les deux tableaux se posent sur le même écran et sous le même bloc.
 
-**Status:** ready-for-agent
+**Status:** done
+**Delivered:** 2026-09-25 · merge `b0b9c10` sur `integration/US-32-phase-and-material` (PR #131,
+merge humain en attente) · gate: build vert, **683 tests serveur / 49 fichiers**, **1 095 tests
+client / 70 fichiers**, `npm run lint` **sorti 0**, **Feature Path verte** sur la base réelle
+(trois `Profile`s), aucun finding bloquant. La revue indépendante en a rendu **dix non
+bloquants** : sept corrigés dans `bd85789`, trois remontés au demandeur ci-dessous.
 
 > **L'amendement d'ADR-0036 est écrit et fait foi.** Le corpus pouvait déjà porter une lecture en
 > résultats ; il porte désormais aussi une lecture en dégâts, **parce que l'axe `Phase` a une
@@ -90,3 +95,74 @@ Oracle mesuré le 2026-09-25 sur `DudulSmash` (66 parties analysées) : phase do
       principale de la tranche. Mesurer avant / après et le dire.
 - [ ] Le tableau B lit des `Evaluation`s déjà stockées : **aucun temps moteur**, aucune colonne,
       **aucune migration** (ADR-0015).
+
+
+---
+
+## Coutures déclarées (ADR-0027)
+
+En AFK l'agent choisit ses coutures et les déclare. Celles de cette tranche :
+
+1. **`phaseResultTable` / `phaseDamageTable`** (`server/src/stats/phase-tables.ts`) — deux plis
+   **purs**, hors base de données : ils prennent ce qu'une partie dit et rendent une table. C'est
+   là que vit l'arithmétique qui doit tenir (les parts à 100 %, la médiane, le dénominateur par
+   ligne), et c'est là qu'elle est testée — douze tests, sans serveur.
+2. **`phaseOf` en paramètre par défaut de `crossedSignatures` / `signatureByPly`**
+   (`server/src/analysis/crossed.ts`) — une optimisation avec une valeur par défaut, pas une
+   seconde façon de demander. C'est la couture qui fait que le tableau A coûte **0 ms** : une
+   relecture de PGN, une lecture de `phases()`, deux tables.
+3. **`GameDamage`** (`server/src/stats/phase-tables.ts`) — l'interface étroite entre le dépôt et le
+   pli. Le dépôt sait lire un `gameRecap` ; le pli ne sait que « ce que cette partie a lâché, par
+   phase ». Aucune des deux moitiés n'a besoin de l'autre pour être lue.
+4. **`phaseReading.ts`** (client) — la seule chose dite des **deux** tableaux ensemble, isolée dans
+   une fonction pure qui rend deux phases et **rien de dérivé des deux**. La condition 1 de
+   l'amendement est tenue par la forme du type de retour, pas par la discipline du rédacteur.
+5. **`counts.ts`** (client) — les accords, à côté du nombre.
+
+## Trois constats remontés au demandeur (aucun n'est bloquant)
+
+1. **L'oracle du tableau B et son critère d'acceptation ne disaient pas la même chose.** Les
+   chiffres mesurés du ticket (moyennes **34,8 / 48,3 / 16,9 %**, médianes **25,1 / 46,5 / 4,2 %**)
+   ont été calculés avec **toutes** les parties analysées au dénominateur, une phase non atteinte
+   comptant comme **0 %**. Le critère d'acceptation juste au-dessus demande l'inverse — « une
+   partie qui n'atteint pas une phase ne compte pas dans le dénominateur de cette phase ». Le
+   critère l'a emporté : c'est la discipline « non atteinte n'est pas zéro » de tout le reste du
+   produit, et une finale jamais jouée tirait la moyenne de la finale vers le bas. Mesuré sur
+   `DudulSmash` avec la règle implémentée : moyennes **34,8 / 50,6 / 22,8 %**, médianes
+   **25,1 / 47,8 / 11,9 %**, sur **66 / 63 / 49** parties. La contradiction entre les deux tableaux
+   tient toujours, et l'écart moyenne/médiane de la finale reste du simple au double.
+2. **Les win rates du tableau A sont ceux de `bucket()`**, le `Win rate` canonique
+   `(V + 0,5·N) / parties`, pas `V / parties`. L'oracle du ticket utilisait le second : le milieu de
+   partie de `DudulSmash` lit **65 %** et non 64, et la finale de `Metalyst` **43 %** et non 40.
+3. **Le tableau B n'est pas gratuit, et il ne pouvait pas l'être.** Passer par `gameRecap` — la
+   **seule** implémentation de la méthode (ADR-0017) — coûte ~250 ms par partie analysée, soit
+   **+16 s à froid** sur les 66 parties analysées de `DudulSmash`. La contrainte du ticket portait
+   sur la relecture PGN et elle est **tenue** : le tableau A coûte 0 ms, vérifié en isolant les deux
+   moitiés. Mesures (même machine, même charge) : la relecture PGN seule fait **14,1 s** sur
+   `DudulSmash`, **19,8 s** sur `Metalyst`, **90,4 s** sur `Nonomoho` ; avec le tableau B, **28,2 /
+   21,6 / 85,4 s**. Le fold est mémoïsé par partie et estampillé sur les lignes lues, donc les
+   visites suivantes sont à **50 ms**. Rendre la première visite rapide demande de stocker les
+   Positions d'une partie non analysée — un changement de schéma et une migration, donc un ticket
+   à part.
+
+## Un constat de conception, laissé tel quel et signalé
+
+Une partie analysée qui n'a **rien lâché** est comptée à part (`undamaged`) et ne désigne aucune
+phase dominante ; mais elle verse tout de même une part de **0 %** dans chaque phase qu'elle a
+atteinte. `dominant` et `meanShare` se lisent donc sur deux populations légèrement différentes. Sur
+la base réelle le cas n'existe pas — **0 partie sans dégât** sur les trois profils analysés — donc
+rien n'est visible à l'écran aujourd'hui. Le choix inverse (0/0 est indéfini, pas zéro) se défend
+aussi ; il est épinglé par un test, à confirmer plutôt qu'à corriger.
+
+## Ce que la Feature Path a trouvé
+
+Deux défauts, tous deux invisibles aux tests unitaires parce qu'ils sont dans le rendu :
+
+- « vos dégâts désignent **milieu de partie** » — un libellé de colonne posé dans une phrase. Le
+  français veut son article ; `PHASE_PHRASE` a été ajouté à côté de `PHASE_LABEL`.
+- trois accords faux au singulier et au pluriel, dont « 2 parties n'**a** pas pu être relue ».
+
+Et une confirmation, celle qui comptait : à **380 px**, dans les **deux thèmes**, la page ne défile
+**pas** latéralement (`scrollWidth` 365 pour un `clientWidth` de 365). Les quatre tables de `/stats`
+défilent chacune dans son propre `[data-scroll="x"]`, et aucun de ces conteneurs ne contient un seul
+paragraphe. Le défaut de 925 px de la tranche 05 n'a pas été repayé.
