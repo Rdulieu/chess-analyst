@@ -55,7 +55,7 @@ describe("signatureTable", () => {
     ]);
 
     expect(table.rows).toEqual([
-      { signature: "RR vs Q", games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
+      { signature: "RR vs Q", delta: 1, games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
     ]);
   });
 
@@ -106,5 +106,37 @@ describe("signatureTable", () => {
     expect(table.rows).toEqual([]);
     expect(table.below.configurations).toBe(0);
     expect(table.scope).toEqual({ games: 2, withEndgame: 0, withoutEndgame: 2, unreadable: 0 });
+  });
+});
+
+describe("signatureTable — the material disagreement, as a column (US-32 slice 07)", () => {
+  it("carries each row's delta, the founding case at +1", () => {
+    const table = signatureTable(Array.from({ length: 3 }, () => crossing("loss", "RR vs Q")));
+    expect(table.rows[0]).toMatchObject({ signature: "RR vs Q", delta: 1 });
+  });
+
+  it("does not let the delta touch the order — frequency still rules", () => {
+    // `Q vs —` is +9 and seen three times; `RR vs Q` is +1 and seen four. The
+    // most played comes first, whatever the column says (ADR-0036).
+    const table = signatureTable([
+      ...Array.from({ length: 4 }, () => crossing("loss", "RR vs Q")),
+      ...Array.from({ length: 3 }, () => crossing("win", "Q vs —")),
+    ]);
+    expect(table.rows.map((r) => r.signature)).toEqual(["RR vs Q", "Q vs —"]);
+  });
+
+  it("does not let the delta merge two configurations — they stay two rows", () => {
+    // `RR vs Q` and `RB vs RN`... both +1? No: two DIFFERENT deltas would prove
+    // nothing. `QR vs QR` and `B vs B` are both 0, and both keep their line.
+    const table = signatureTable([
+      ...Array.from({ length: 3 }, () => crossing("win", "QR vs QR")),
+      ...Array.from({ length: 3 }, () => crossing("loss", "B vs B")),
+    ]);
+    // Ordered by the table's own rule (frequency, then defeats) — not by the
+    // column, which is equal on both.
+    expect(table.rows.map((r) => [r.signature, r.delta])).toEqual([
+      ["B vs B", 0],
+      ["QR vs QR", 0],
+    ]);
   });
 });

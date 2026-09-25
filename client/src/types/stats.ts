@@ -16,6 +16,8 @@ export interface StatsSummary {
   byCategory: Record<TimeControlCategory, StatsBucket>;
   bySide: Record<"white" | "black", StatsBucket>;
   signatures: SignatureTable;
+  /** The win rate by band of material disagreement (US-32 slice 07). */
+  materialBands: MaterialBandTable;
   /** Where the Games are decided, in results, over the whole history (US-32). */
   phaseResults: PhaseResultTable;
   /** Where the damage falls, over the analysed Games only (ADR-0036 amended). */
@@ -87,6 +89,45 @@ export interface PhaseDamageTable {
 /** One Endgame configuration's line on `/stats`: its writing, then its results. */
 export interface SignatureRow extends StatsBucket {
   signature: string;
+  /**
+   * The material disagreement in points, signed — a **column**, never the key
+   * of the row nor the order of the table (ADR-0036). `RR vs Q` is `+1` here,
+   * which is the ADR's own argument shown rather than corrected.
+   */
+  delta: number;
+}
+
+/** What a band hides: the range of its own configurations' win rates. */
+export interface MaterialSpread {
+  /** Those seen at least `threshold` times — a spread of noise mitigates nothing. */
+  configurations: number;
+  lowest: number;
+  highest: number;
+}
+
+/** One band's line: its couples, its results, and the spread it covers. */
+export interface MaterialBandRow extends StatsBucket {
+  band: string;
+  spread: MaterialSpread | null;
+}
+
+/**
+ * **The material disagreement set against the win rate** (US-32, requested
+ * 2026-09-25): the same crossings as `SignatureTable`, on a second axis.
+ *
+ * A second table, never a re-grouping of the first: the configuration table
+ * keeps the signature as its key and frequency as its order. Its unit is the
+ * couple (Game, configuration), so it sums to no history either — and every row
+ * carries the spread of what the band does not determine.
+ */
+export interface MaterialBandTable {
+  rows: MaterialBandRow[];
+  /** Every couple filed — the unit, announced rather than inferred. */
+  couples: number;
+  /** The bar a configuration clears to enter a spread. */
+  threshold: number;
+  /** The band holding material equality — the one the mitigation is about. */
+  equalBand: string;
 }
 
 /**

@@ -2,6 +2,7 @@ import { useCallback, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { fetchStats } from "../api";
 import { Tally } from "../components/Tally";
+import { MaterialBandTable } from "../features/stats/MaterialBandTable";
 import { PhaseDamageTable } from "../features/stats/PhaseDamageTable";
 import { PhaseResultTable } from "../features/stats/PhaseResultTable";
 import { SignatureTable } from "../features/stats/SignatureTable";
@@ -134,6 +135,13 @@ export function StatsPage({ profile }: { profile: Profile }) {
             same — the Game's result — but a Game counts once per configuration
             crossed, so its rows overlap and nothing here sums to the Total. */}
         <SignatureTable table={stats.data.signatures} />
+
+        {/* The same crossings on a second axis — bands of points rather than
+            configurations — and the requester's own comparison (2026-09-25).
+            It sits right under the table whose `± matériel` column it explains,
+            and it carries the mitigation that keeps that column honest: the
+            band situates, it does not predict. */}
+        <MaterialBandTable table={stats.data.materialBands} />
 
         {/* The same `Phase` axis read twice, in two currencies, and NEVER
             folded into one (ADR-0036's amendment): results over the whole

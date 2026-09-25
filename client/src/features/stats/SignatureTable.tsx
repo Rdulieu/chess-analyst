@@ -1,6 +1,6 @@
 import { Tally } from "../../components/Tally";
 import type { SignatureTable as Table } from "../../types";
-import { games, percent, plural } from "./counts";
+import { games, percent, plural, signed } from "./counts";
 
 const configurations = (n: number) => `${n} ${n > 1 ? "configurations" : "configuration"}`;
 
@@ -51,6 +51,7 @@ export function SignatureTable({ table }: { table: Table }) {
             <thead>
               <tr>
                 <th scope="col">Configuration</th>
+                <th scope="col">± matériel</th>
                 <th scope="col">Parties</th>
                 <th scope="col">Résultats</th>
                 <th scope="col">Win rate</th>
@@ -60,6 +61,11 @@ export function SignatureTable({ table }: { table: Table }) {
               {rows.map((row) => (
                 <tr key={row.signature}>
                   <th scope="row">{row.signature}</th>
+                  {/* A column, never the key and never the order (ADR-0036):
+                      `RR vs Q` reads « +1 » here, which is the ADR's own
+                      argument shown rather than corrected. The band table below
+                      says what a band does NOT determine. */}
+                  <td>{signed(row.delta)}</td>
                   <td>{games(row.games)}</td>
                   <td>
                     <Tally win={row.win} draw={row.draw} loss={row.loss} />
@@ -72,6 +78,16 @@ export function SignatureTable({ table }: { table: Table }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {rows.length === 0 ? null : (
+        <p data-testid="signature-scale">
+          Le <strong>± matériel</strong> est le solde en points des majeures et mineures : les
+          vôtres moins celles de l'adversaire. Barème dame&nbsp;9, tour&nbsp;5, fou&nbsp;3,
+          cavalier&nbsp;3 ; rois et pions n'y sont pas. Il situe une configuration, il ne
+          l'identifie pas et ne trie rien : <strong>RR vs Q</strong> y vaut +1 alors que deux tours
+          contre une dame est une autre partie d'échecs.
+        </p>
       )}
 
       {below.configurations === 0 ? null : (

@@ -15,8 +15,10 @@ import {
   type PhaseEnding,
   type PhaseResultTable,
 } from "./phase-tables";
+import { materialBandTable, type MaterialBandTable } from "./material-bands";
 import {
   signatureTable,
+  SIGNATURE_THRESHOLD,
   type Crossing,
   type EndgameCrossing,
   type SignatureTable,
@@ -52,6 +54,17 @@ export interface StatsSummary {
    * the Game page shows (ADR-0017), so no column and no migration (ADR-0015).
    */
   phaseDamage: PhaseDamageTable;
+  /**
+   * **The material disagreement set against the win rate** (US-32, requested
+   * 2026-09-25): the same crossings as `signatures`, read on a second axis —
+   * bands of points rather than configurations.
+   *
+   * A second table and never a re-grouping of the first: the configuration
+   * table keeps the signature as its key and frequency as its order (ADR-0036).
+   * Its unit is the couple (Game, configuration), so it sums to no history
+   * either, and every row carries the spread of what it hides.
+   */
+  materialBands: MaterialBandTable;
 }
 
 /**
@@ -174,6 +187,7 @@ export async function getStats(db: Db, profileId: number): Promise<StatsSummary>
       black: bucket(rows.filter((r) => r.playerColor === "black")),
     },
     signatures: signatureTable(crossings),
+    materialBands: materialBandTable(crossings, SIGNATURE_THRESHOLD),
     phaseResults: phaseResultTable(
       crossings.map((c): PhaseEnding => ({ phase: c.endedIn ?? null, result: c.result })),
     ),
