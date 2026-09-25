@@ -11,11 +11,23 @@ import { bucket, type Bucket } from "../results/win-rate";
  */
 export const SIGNATURE_THRESHOLD = 3;
 
-/** One Game's contribution: its result, and the configurations it crossed. */
-export interface EndgameCrossing {
-  result: "win" | "draw" | "loss";
-  /** The SET of `Material signature`s crossed — empty when no Endgame was reached. */
+/**
+ * What one Game crossed: the SET of its Endgame `Material signature`s — empty
+ * when no Endgame was reached — and whether we failed to read it at all.
+ *
+ * The two empties are **not** the same statement and are never merged: "this
+ * Game has no Endgame" is a fact about the Player's chess, "we could not replay
+ * this PGN" is a fact about us. Printing the second as the first is the false
+ * zero the whole block exists to refuse.
+ */
+export interface Crossing {
   signatures: string[];
+  unreadable?: boolean;
+}
+
+/** One Game's contribution: its result, and what it crossed. */
+export interface EndgameCrossing extends Crossing {
+  result: "win" | "draw" | "loss";
 }
 
 /** One configuration's line: its writing, and the results over the Games that crossed it. */
@@ -42,9 +54,11 @@ export interface SignatureTable {
   below: { configurations: number };
   /**
    * What the table is about, so it is never read as the whole history: the
-   * Games it looked at, those that reached an Endgame, and those that never do.
+   * Games it looked at, those that reached an Endgame, those that never do —
+   * and those whose PGN could not be replayed, counted apart rather than filed
+   * under "no Endgame", which would be our failure told as the Player's chess.
    */
-  scope: { games: number; withEndgame: number; withoutEndgame: number };
+  scope: { games: number; withEndgame: number; withoutEndgame: number; unreadable: number };
 }
 
 /**
@@ -72,7 +86,8 @@ export function signatureTable(crossings: EndgameCrossing[]): SignatureTable {
     scope: {
       games: crossings.length,
       withEndgame: crossings.filter((c) => c.signatures.length > 0).length,
-      withoutEndgame: crossings.filter((c) => c.signatures.length === 0).length,
+      withoutEndgame: crossings.filter((c) => c.signatures.length === 0 && !c.unreadable).length,
+      unreadable: crossings.filter((c) => c.unreadable === true).length,
     },
   };
 }

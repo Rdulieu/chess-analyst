@@ -23,10 +23,28 @@ import { signature } from "./signature";
  * PGN replay for the 2 360 Games of the base that were never analysed.
  */
 export function crossedSignatures(fens: string[], playerColor: "white" | "black"): string[] {
+  return [...new Set(signatureByPly(fens, playerColor).filter((key) => key !== null))];
+}
+
+/**
+ * The `Material signature` of every ply, **`null` outside the Endgame** — the
+ * one place the scope rule of ADR-0036 ("read on Endgame plies only") is
+ * written, so widening it later is one edit rather than a hunt.
+ *
+ * Both readings of that rule go through here: the *set* the corpus table folds,
+ * and the per-ply array `gameRecap` charges chances lost against. That the two
+ * share a derivation is not a merging of the two currencies — they part company
+ * immediately after, and the currencies are what ADR-0036 keeps apart, not the
+ * reading of the board.
+ *
+ * `null` rather than an omission, because the array is **index-aligned with the
+ * FENs**: a caller walks it beside the plies and asks each one whether it
+ * counts.
+ */
+export function signatureByPly(
+  fens: string[],
+  playerColor: "white" | "black",
+): (string | null)[] {
   const phaseOf = phases(fens);
-  const crossed = new Set<string>();
-  fens.forEach((fen, ply) => {
-    if (phaseOf[ply] === "endgame") crossed.add(signature(fen, playerColor));
-  });
-  return [...crossed];
+  return fens.map((fen, ply) => (phaseOf[ply] === "endgame" ? signature(fen, playerColor) : null));
 }

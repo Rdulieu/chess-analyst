@@ -59,7 +59,7 @@ const STATS_SUMMARY = {
     threshold: 3,
     rows: [],
     below: { configurations: 0 },
-    scope: { games: 1, withEndgame: 0, withoutEndgame: 1 },
+    scope: { games: 1, withEndgame: 0, withoutEndgame: 1, unreadable: 0 },
   },
 };
 

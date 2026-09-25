@@ -28,35 +28,35 @@ function seed(db: ReturnType<typeof tempDb>, g: Partial<NewGame> & Pick<NewGame,
 }
 
 describe("getStats", () => {
-  it("totals the games and the win/draw/loss tally over all Games", () => {
+  it("totals the games and the win/draw/loss tally over all Games", async () => {
     const db = tempDb();
     seed(db, { result: "win" });
     seed(db, { result: "loss" });
     seed(db, { result: "draw" });
 
-    const stats = getStats(db, PROFILE);
+    const stats = await getStats(db, PROFILE);
 
     expect(stats.total.games).toBe(3);
     expect([stats.total.win, stats.total.draw, stats.total.loss]).toEqual([1, 1, 1]);
   });
 
-  it("computes the Win rate with standard scoring, and null when there are no Games", () => {
+  it("computes the Win rate with standard scoring, and null when there are no Games", async () => {
     const db = tempDb();
-    expect(getStats(db, PROFILE).total.winRate).toBeNull(); // empty history: no rate
+    expect((await getStats(db, PROFILE)).total.winRate).toBeNull(); // empty history: no rate
 
     seed(db, { result: "win" });
     seed(db, { result: "draw" });
     // (1 win + 0.5·1 draw) / 2 games = 0.75
-    expect(getStats(db, PROFILE).total.winRate).toBe(0.75);
+    expect((await getStats(db, PROFILE)).total.winRate).toBe(0.75);
   });
 
-  it("breaks the results down per cadence, with all four cadences always present", () => {
+  it("breaks the results down per cadence, with all four cadences always present", async () => {
     const db = tempDb();
     seed(db, { result: "win", timeControlCategory: "blitz" });
     seed(db, { result: "loss", timeControlCategory: "blitz" });
     seed(db, { result: "win", timeControlCategory: "bullet" });
 
-    const { byCategory } = getStats(db, PROFILE);
+    const { byCategory } = await getStats(db, PROFILE);
 
     expect(byCategory.blitz).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
     expect(byCategory.bullet).toMatchObject({ games: 1, win: 1, winRate: 1 });
@@ -72,13 +72,13 @@ describe("getStats", () => {
     });
   });
 
-  it("breaks the results down by the side the Player played", () => {
+  it("breaks the results down by the side the Player played", async () => {
     const db = tempDb();
     seed(db, { result: "win", playerColor: "white" });
     seed(db, { result: "loss", playerColor: "white" });
     seed(db, { result: "draw", playerColor: "black" });
 
-    const { bySide } = getStats(db, PROFILE);
+    const { bySide } = await getStats(db, PROFILE);
 
     expect(bySide.white).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
     expect(bySide.black).toMatchObject({ games: 1, draw: 1, winRate: 0.5 });
@@ -103,26 +103,26 @@ const ONE_ROOK = endgamePgn("4k3/8/8/8/8/8/8/4K2R w - - 0 1", "1. Rg1 Ke7 2. Rf1
 const NO_ENDGAME = "1. e4 e5 2. Nf3 Nc6";
 
 describe("getStats — the Material signature table", () => {
-  it("counts a Game once per configuration crossed, in results", () => {
+  it("counts a Game once per configuration crossed, in results", async () => {
     const db = tempDb();
     seed(db, { result: "win", pgn: TWO_ROOKS });
     seed(db, { result: "loss", pgn: TWO_ROOKS });
     seed(db, { result: "draw", pgn: TWO_ROOKS });
 
-    expect(getStats(db, PROFILE).signatures.rows).toEqual([
+    expect((await getStats(db, PROFILE)).signatures.rows).toEqual([
       { signature: "RR vs —", games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
     ]);
   });
 
-  it("reads the configuration from the side the Player played", () => {
+  it("reads the configuration from the side the Player played", async () => {
     const db = tempDb();
     for (const result of ["win", "loss", "draw"] as const) {
       seed(db, { result, pgn: TWO_ROOKS, playerColor: "black" });
     }
-    expect(getStats(db, PROFILE).signatures.rows.map((r) => r.signature)).toEqual(["— vs RR"]);
+    expect((await getStats(db, PROFILE)).signatures.rows.map((r) => r.signature)).toEqual(["— vs RR"]);
   });
 
-  it("relegates what is under the bar and announces the table's scope", () => {
+  it("relegates what is under the bar and announces the table's scope", async () => {
     const db = tempDb();
     seed(db, { result: "win", pgn: TWO_ROOKS });
     seed(db, { result: "loss", pgn: TWO_ROOKS });
@@ -130,15 +130,20 @@ describe("getStats — the Material signature table", () => {
     seed(db, { result: "win", pgn: ONE_ROOK });
     seed(db, { result: "win", pgn: NO_ENDGAME });
 
-    const { signatures } = getStats(db, PROFILE);
+    const { signatures } = await getStats(db, PROFILE);
 
     expect(signatures.threshold).toBe(3);
     expect(signatures.rows.map((r) => r.signature)).toEqual(["RR vs —"]);
     expect(signatures.below.configurations).toBe(1);
-    expect(signatures.scope).toEqual({ games: 5, withEndgame: 4, withoutEndgame: 1 });
+    expect(signatures.scope).toEqual({
+      games: 5,
+      withEndgame: 4,
+      withoutEndgame: 1,
+      unreadable: 0,
+    });
   });
 
-  it("stays within the Profile asked for (ADR-0014)", () => {
+  it("stays within the Profile asked for (ADR-0014)", async () => {
     const db = tempDb();
     // The Profile under test exists first, so it is the one `PROFILE` names.
     expect(seedProfile(db)).toBe(PROFILE);
@@ -147,11 +152,12 @@ describe("getStats — the Material signature table", () => {
       seed(db, { result, pgn: TWO_ROOKS, profileId: other });
     }
 
-    expect(getStats(db, PROFILE).signatures.scope).toEqual({
+    expect((await getStats(db, PROFILE)).signatures.scope).toEqual({
       games: 0,
       withEndgame: 0,
       withoutEndgame: 0,
+      unreadable: 0,
     });
-    expect(getStats(db, other).signatures.rows).toHaveLength(1);
+    expect((await getStats(db, other)).signatures.rows).toHaveLength(1);
   });
 });

@@ -29,7 +29,7 @@ const SUMMARY: StatsSummary = {
     threshold: 3,
     rows: [{ signature: "RR vs Q", ...bucket(3, 1, 0, 2) }],
     below: { configurations: 4 },
-    scope: { games: 2, withEndgame: 1, withoutEndgame: 1 },
+    scope: { games: 2, withEndgame: 1, withoutEndgame: 1, unreadable: 0 },
   },
 };
 
@@ -126,7 +126,7 @@ describe("StatsPage", () => {
         threshold: 3,
         rows: [],
         below: { configurations: 0 },
-        scope: { games: 0, withEndgame: 0, withoutEndgame: 0 },
+        scope: { games: 0, withEndgame: 0, withoutEndgame: 0, unreadable: 0 },
       },
     };
     stub(empty);

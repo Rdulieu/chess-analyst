@@ -16,7 +16,7 @@ const TABLE: Table = {
   threshold: 3,
   rows: [row("RR vs Q", 1, 0, 2), row("R vs R", 4, 2, 1)],
   below: { configurations: 12 },
-  scope: { games: 186, withEndgame: 144, withoutEndgame: 42 },
+  scope: { games: 186, withEndgame: 144, withoutEndgame: 42, unreadable: 0 },
 };
 
 function show(table: Partial<Table> = {}) {
@@ -49,6 +49,16 @@ describe("SignatureTable", () => {
     expect(screen.getByTestId("signature-below").textContent).toMatch(/12 configurations.*3 parties/);
   });
 
+  it("names a Game it could not replay apart, never as one without an Endgame", () => {
+    show({ scope: { games: 186, withEndgame: 144, withoutEndgame: 41, unreadable: 1 } });
+    expect(screen.getByTestId("signature-scope").textContent).toMatch(/n'a pas pu être relue/);
+  });
+
+  it("says nothing about unreadable Games when there are none", () => {
+    show();
+    expect(screen.getByTestId("signature-scope").textContent).not.toMatch(/relue/);
+  });
+
   it("says nothing was relegated rather than printing a zero", () => {
     show({ below: { configurations: 0 } });
     expect(screen.queryByTestId("signature-below")).toBeNull();
@@ -63,7 +73,7 @@ describe("SignatureTable", () => {
   });
 
   it("shows no table at all when no Game of the history reaches an Endgame", () => {
-    show({ rows: [], below: { configurations: 0 }, scope: { games: 5, withEndgame: 0, withoutEndgame: 5 } });
+    show({ rows: [], below: { configurations: 0 }, scope: { games: 5, withEndgame: 0, withoutEndgame: 5, unreadable: 0 } });
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByTestId("signature-scope").textContent).toMatch(/aucune/i);
   });

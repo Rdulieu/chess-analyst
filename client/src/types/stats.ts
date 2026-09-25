@@ -35,5 +35,9 @@ export interface SignatureTable {
   rows: SignatureRow[];
   /** What stayed under the bar: counted and named on one line, never erased. */
   below: { configurations: number };
-  scope: { games: number; withEndgame: number; withoutEndgame: number };
+  /**
+   * `unreadable` is counted apart from `withoutEndgame` on purpose: a PGN we
+   * could not replay is our failure, not a fact about the Player's chess.
+   */
+  scope: { games: number; withEndgame: number; withoutEndgame: number; unreadable: number };
 }

@@ -4,7 +4,7 @@ import { chancesLostByMove, countedMoves, type UncountedReason } from "./counted
 import { gamePlies, moveOpportunities, moveSeverities, type StoredEvaluation } from "./derivation";
 import type { MoveSeverity } from "../danger/move-quality";
 import { phases, type Phase } from "./phase";
-import { signature } from "./signature";
+import { signatureByPly } from "./crossed";
 
 /**
  * What one Game **contributes** to the analysis — the reconciliation point
@@ -223,8 +223,9 @@ export function gameRecap(
   // Read once per Endgame ply and kept, exactly as `phaseOf` is: the Player's
   // loop below needs the same reading, and asking twice is how two readings of
   // one Position start to differ.
-  const signatureOf = phaseOf.map((phase, ply) =>
-    phase === "endgame" ? signature(plies[ply].fen, game.playerColor) : null,
+  const signatureOf = signatureByPly(
+    plies.map((ply) => ply.fen),
+    game.playerColor,
   );
   for (const key of signatureOf) {
     if (key !== null && !bySignature.has(key)) bySignature.set(key, { signature: key, chancesLost: 0 });

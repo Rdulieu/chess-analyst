@@ -3,6 +3,7 @@ import type { SignatureTable as Table } from "../../types";
 
 const percent = (rate: number) => `${Math.round(rate * 100)} %`;
 const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
+const plural = (n: number) => (n > 1 ? "s" : "");
 const configurations = (n: number) => `${n} ${n > 1 ? "configurations" : "configuration"}`;
 
 /**
@@ -37,6 +38,13 @@ export function SignatureTable({ table }: { table: Table }) {
           ? `Aucune de vos ${games(scope.games)} n'atteint la finale — rien à montrer ici.`
           : `Sur vos ${games(scope.games)}, ${scope.withEndgame} atteignent la finale ; ` +
             `${scope.withoutEndgame} (${share} %) n'y arrivent jamais.`}
+        {/* Said, never folded into « n'y arrivent jamais » : a PGN we failed to
+            replay is our failure, and reporting it as the Player's chess is the
+            one thing this block is built not to do. */}
+        {scope.unreadable === 0
+          ? null
+          : ` ${scope.unreadable} partie${plural(scope.unreadable)} n'a pas pu être relue et ` +
+            `ne compte dans aucune ligne.`}
       </p>
 
       {rows.length === 0 ? null : (
@@ -58,7 +66,9 @@ export function SignatureTable({ table }: { table: Table }) {
                   <td>
                     <Tally win={row.win} draw={row.draw} loss={row.loss} />
                   </td>
-                  <td>{row.winRate !== null ? percent(row.winRate) : null}</td>
+                  {/* Never null here: a row exists only from three Games, and
+                      `winRate` is null only on an empty bucket. */}
+                  <td>{percent(row.winRate ?? 0)}</td>
                 </tr>
               ))}
             </tbody>

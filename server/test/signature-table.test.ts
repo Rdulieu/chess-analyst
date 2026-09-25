@@ -37,6 +37,16 @@ describe("crossedSignatures", () => {
 });
 
 describe("signatureTable", () => {
+  it("counts a Game we could not replay apart, never as one without an Endgame", () => {
+    const table = signatureTable([
+      crossing("win", "RR vs Q"),
+      { result: "loss", signatures: [], unreadable: true },
+      crossing("draw"),
+    ]);
+
+    expect(table.scope).toEqual({ games: 3, withEndgame: 1, withoutEndgame: 1, unreadable: 1 });
+  });
+
   it("counts a Game once per configuration it crossed, in results", () => {
     const table = signatureTable([
       crossing("win", "RR vs Q", "R vs Q"),
@@ -70,7 +80,7 @@ describe("signatureTable", () => {
       crossing("draw"),
     ]);
 
-    expect(table.scope).toEqual({ games: 3, withEndgame: 1, withoutEndgame: 2 });
+    expect(table.scope).toEqual({ games: 3, withEndgame: 1, withoutEndgame: 2, unreadable: 0 });
   });
 
   it("brings what costs to the top — losses first, then the most played", () => {
@@ -93,6 +103,6 @@ describe("signatureTable", () => {
     const table = signatureTable([crossing("win"), crossing("loss")]);
     expect(table.rows).toEqual([]);
     expect(table.below.configurations).toBe(0);
-    expect(table.scope).toEqual({ games: 2, withEndgame: 0, withoutEndgame: 2 });
+    expect(table.scope).toEqual({ games: 2, withEndgame: 0, withoutEndgame: 2, unreadable: 0 });
   });
 });
