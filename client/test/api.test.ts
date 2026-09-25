@@ -8,6 +8,8 @@ import {
   fetchMoveHabits,
   fetchStats,
   startImport,
+  fetchStatsDamage,
+  fetchStatsReplay,
   getSettings,
   saveSettings,
 } from "../src/api";
@@ -252,5 +254,54 @@ describe("the scoped reads name their Profile", () => {
       expect(url).toContain(path);
       expect(url).toContain("profileId=7");
     }
+  });
+});
+
+/**
+ * **Whose words the Player reads when `/stats` cannot load a block** (US-32
+ * slice 09).
+ *
+ * The damage block's failure read « Erreur : impossible de charger vos dégâts
+ * par phase (**Failed to fetch**). » — the browser's own string, in English,
+ * about a mechanism the Player has no view of. It is the exact reproach
+ * `profile-deletion/01` files against another screen: the driver's message where
+ * ours belongs. The technical cause is not lost, it moves to the console, which
+ * is where the person who can act on it looks.
+ */
+describe("what a failed /stats read says, and in whose words", () => {
+  const rejecting = (cause: unknown) => vi.fn(async () => Promise.reject(cause));
+
+  it("does not hand the browser's own string to the screen", async () => {
+    vi.stubGlobal("fetch", rejecting(new TypeError("Failed to fetch")));
+
+    const failure = await fetchStatsDamage(7).catch((e: Error) => e);
+
+    expect((failure as Error).message).not.toMatch(/Failed to fetch/);
+    expect((failure as Error).message).toMatch(/serveur/i);
+  });
+
+  it("keeps the technical cause — in the console, and on the error", async () => {
+    const cause = new TypeError("Failed to fetch");
+    vi.stubGlobal("fetch", rejecting(cause));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const failure = (await fetchStatsDamage(7).catch((e: Error) => e)) as Error;
+
+    expect(logged).toHaveBeenCalled();
+    expect(failure.cause).toBe(cause);
+    logged.mockRestore();
+  });
+
+  it("says a server that answered badly in our words too, not as a bare status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500 }) as Response),
+    );
+
+    const failure = (await fetchStatsReplay(7).catch((e: Error) => e)) as Error;
+
+    expect(failure.message).not.toMatch(/Failed to load/);
+    expect(failure.message).toMatch(/serveur/i);
+    expect(failure.message).toContain("500");
   });
 });

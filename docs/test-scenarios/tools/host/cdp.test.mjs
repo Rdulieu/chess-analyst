@@ -81,3 +81,45 @@ describe("a socket that stops answering", () => {
     await expect(session.send("Page.enable")).resolves.toEqual({});
   });
 });
+
+describe("a request that has been out longer than the staleness guard", () => {
+  /*
+   * `pendingRequests` ignores anything out for more than `staleMs`, so a stream
+   * cannot hold a walk hostage. Right, and it made a **legitimate** 12 s fold
+   * indistinguishable from a stream: `/api/stats/replay` measured up to 57.5 s
+   * on `Nonomoho` (US-32 slice 08), and the walk read the network as quiet.
+   *
+   * The guard stays. What it may not do is stay silent: a caller that gives up
+   * has to be able to say the network was not quiet, it was **dropped as stale**.
+   */
+  const withInflight = async () => {
+    const { session, socket } = await deafSession();
+    socket.emit("message", {
+      data: JSON.stringify({ method: "Network.requestWillBeSent", params: { requestId: "r1" } }),
+    });
+    // Age the request without waiting for it: the window is what is under test.
+    return { session, socket };
+  };
+
+  it("still counts a fresh request as in flight", async () => {
+    const { session } = await withInflight();
+    expect(session.pendingRequests()).toBe(1);
+    expect(session.staleRequests()).toBe(0);
+  });
+
+  it("stops counting one that outlived the window — and reports it as stale instead", async () => {
+    const { session } = await withInflight();
+    // A window of zero makes every request older than it, without a sleep.
+    expect(session.pendingRequests(0)).toBe(0);
+    expect(session.staleRequests(0)).toBe(1);
+  });
+
+  it("counts nothing as stale once the request has finished", async () => {
+    const { session, socket } = await withInflight();
+    socket.emit("message", {
+      data: JSON.stringify({ method: "Network.loadingFinished", params: { requestId: "r1" } }),
+    });
+    expect(session.pendingRequests(0)).toBe(0);
+    expect(session.staleRequests(0)).toBe(0);
+  });
+});
