@@ -1150,6 +1150,62 @@ describe("stats API", () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toEqual({ games: 0, win: 0, draw: 0, loss: 0, winRate: null });
   });
+
+  /**
+   * The split of US-32 slice 08, asserted where it can be seen: `/api/stats`
+   * carries the cheap summary and **nothing else**, so it cannot be made to
+   * wait on a fold again by a later hand adding a table back into it.
+   */
+  it("GET /api/stats carries the results summary ALONE — no table that costs a replay", async () => {
+    const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
+    db.insert(games).values(game(owner, {})).run();
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get(`/api/stats?profileId=${owner}`);
+
+    expect(Object.keys(res.body).sort()).toEqual(["bySide", "byCategory", "total"].sort());
+  });
+
+  it("GET /api/stats/replay carries the THREE tables one PGN replay feeds, together", async () => {
+    const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
+    db.insert(games).values(game(owner, {})).run();
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get(`/api/stats/replay?profileId=${owner}`);
+
+    expect(res.status).toBe(200);
+    // Together or thrice the bill: they share the crossings (slice 06).
+    expect(Object.keys(res.body).sort()).toEqual(
+      ["materialBands", "phaseResults", "signatures"].sort(),
+    );
+  });
+
+  it("GET /api/stats/recaps carries the damage table, which needs no replay", async () => {
+    const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
+    db.insert(games).values(game(owner, {})).run();
+    const app = createApp(db, fakeRegistry({}));
+
+    const res = await request(app).get(`/api/stats/recaps?profileId=${owner}`);
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body)).toEqual(["phaseDamage"]);
+    expect(res.body.phaseDamage).toMatchObject({ games: 1, analysed: 0 });
+  });
+
+  it("scopes all three stats routes to the Profile asked for, and refuses none (ADR-0014)", async () => {
+    const { db } = openDb(":memory:");
+    const owner = seedProfile(db);
+    const app = createApp(db, fakeRegistry({}));
+
+    for (const route of ["/api/stats", "/api/stats/replay", "/api/stats/recaps"]) {
+      expect((await request(app).get(route)).status).toBe(400);
+      expect((await request(app).get(`${route}?profileId=9999`)).status).toBe(404);
+      expect((await request(app).get(`${route}?profileId=${owner}`)).status).toBe(200);
+    }
+  });
 });
 
 /**

@@ -12,6 +12,8 @@ export type { Side, MoveHabitCandidate } from "./move-habit";
 export type {
   StatsBucket,
   StatsSummary,
+  StatsReplay,
+  StatsDamage,
   SignatureRow,
   SignatureTable,
   MaterialSpread,

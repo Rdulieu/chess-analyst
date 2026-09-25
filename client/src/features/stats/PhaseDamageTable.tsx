@@ -32,9 +32,14 @@ const share = (value: number) => points(roundToTenth(value * 100));
  * And it ages backwards — every engine pass improves it and moves its
  * denominator under the reader — so it announces a count, never "vos parties".
  */
-export function PhaseDamageTable({ table, results }: { table: Table; results: Results }) {
+export function PhaseDamageTable({ table, results }: { table: Table; results?: Results }) {
   const { rows, analysed, games: total, undamaged } = table;
-  const disagreement = phaseDisagreement(results, table);
+  // The results table comes from the OTHER request since US-32 slice 08, and it
+  // is the slower of the two. So the observation below waits for it while the
+  // table itself does not: half a sentence would be worse than a sentence that
+  // arrives a few seconds later, and holding the whole table hostage to it
+  // would give back the wait the slice was cut to remove.
+  const disagreement = results ? phaseDisagreement(results, table) : null;
 
   // A sentence, never a table of zeroes: nothing analysed is nothing to read,
   // and three rows of « — » would look like an answer.
