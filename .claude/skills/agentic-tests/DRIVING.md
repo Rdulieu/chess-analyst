@@ -92,8 +92,12 @@ a helper is recognised as *this* returning, not as a new mystery.
 
 - **Restore before starting.** A server creates its database when it opens it, so a copy laid
   down afterwards is overwritten by a live process.
-- **`PRAGMA wal_checkpoint(TRUNCATE)` → `.backup` → read the copy back — and the two halves
-  catch different things.** Measured 2026-08-27 against a **2 MB `-wal` held open by a writer**:
+- **`.backup` → read the copy back — and the two halves catch different things.** (The
+  **checkpoint was dropped on 2026-08-31**: `restoreSnapshot` no longer runs
+  `PRAGMA wal_checkpoint(TRUNCATE)` first, because the backup API reads *through* an unmerged WAL on
+  its own — verified against a source holding 4 152 bytes of frames with its writer connected. The
+  paragraph below is kept for what it establishes about `cp`, and "was the checkpoint refused?" is no
+  longer a question with a meaning here; `path-0-bootstrap.md` says the same.) Measured 2026-08-27 against a **2 MB `-wal` held open by a writer**:
   a `cp` without a checkpoint produced a copy that **read back clean** while having silently lost
   an entire table and its 400 rows. So the read-back is **not** what saves you from the WAL trap:
   it catches corruption (`database disk image is malformed`, a table that will not open, a file
@@ -397,12 +401,23 @@ Three things it is worth knowing it does for you, each of which cost somebody a 
   the wrong Game. Pass `openers` when your assertions depend on it:
   ```js
   import { gameRows, openGameRow } from "<repo>/docs/test-scenarios/tools/host/navigate.mjs";
+  import { atReviewMode } from "<repo>/docs/test-scenarios/tools/host/theme-pass.mjs";
   const rows = await gameRows(session, { port });            // raw; you decide which
+  const openAnalysed = (s, { port, waitOptions }) =>
+    openGameRow(s, { port, index: rows.findIndex((r) => r.text.includes("analysée")), waitOptions });
   await runThemePass({ …, openers: {
-    "/analyse/:gameId": (s, { port, waitOptions }) =>
-      openGameRow(s, { port, index: rows.findIndex((r) => r.text.includes("analysée")), waitOptions }),
+    // The Game is your choice, and so is the LEVEL it is audited at.
+    "/analyse/:gameId": atReviewMode("annotated", openAnalysed),
   } });
   ```
+- **And say which level, not only which Game** (US-32 slice 09). The `Review mode` is not remembered
+  since US-28, so the screen always lands on `Sans aide`, where the severity glyphs, the advantage
+  bar and the `Evaluation curve` have **no subject** — the cue rule is *dropped* in all 36 readings
+  and the pass reports green over nothing. `atReviewMode(mode, opener)` opens the Game, waits for the
+  screen and then asks for the level; measured 2026-09-25 on an analysed Game: **0** severity glyphs
+  and no curve as it lands, **25** glyphs and the curve present at `annotated`. A scenario that wants
+  the screen as it lands passes no opener and gets `Sans aide` — that stays a choice, not a default
+  nobody made. This is also what hid a **blocking** 925 px overflow for a whole slice (`ORCHESTRATION.md §O5`).
 - **Assertion 7 is one call, and it counts steps rather than clicking in a loop.** `walkPlyStability`
   sends **one** `step('Next')` per evaluation: a loop of clicks inside a single `evaluate` re-clicks a
   handler the framework has already replaced, which on 2026-08-24 advanced one ply while reporting
