@@ -69,8 +69,11 @@ export function TableSkeleton({
           <tbody>
             {Array.from({ length: rows }, (_, row) => (
               <tr key={row}>
-                {columns.map((column) => (
-                  <td key={column}>
+                {/* Keyed by position: these cells are decoration with no
+                    identity of their own, and two columns may one day share a
+                    label. */}
+                {columns.map((_, cell) => (
+                  <td key={cell}>
                     <span data-skeleton="cell" />
                   </td>
                 ))}

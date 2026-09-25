@@ -6,6 +6,7 @@ import { MaterialBandTable } from "../features/stats/MaterialBandTable";
 import { PhaseDamageTable } from "../features/stats/PhaseDamageTable";
 import { PhaseResultTable } from "../features/stats/PhaseResultTable";
 import { SignatureTable } from "../features/stats/SignatureTable";
+import { useLatch } from "../features/load/useLatch";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
 import { TableSkeleton } from "../features/load/TableSkeleton";
@@ -111,7 +112,15 @@ export function StatsPage({ profile }: { profile: Profile }) {
   const hasGames = stats.state === "loaded" && stats.data.total.games > 0;
 
   const damage = useLoaded(loadDamage, [profile.id], hasGames);
-  const replay = useLoaded(loadReplay, [profile.id], hasGames && damage.state !== "loading");
+
+  // **Latched**, never read live: the gate must remember that it opened. A
+  // « Réessayer » on the damage block puts that block back in `loading`, and a
+  // gate reading that state live would close behind the replay group — three
+  // loaded tables back to skeletons and a PGN replay of tens of seconds re-paid
+  // for a retry that was not theirs. A retry costs its own block and no other.
+  const damageSettled = useLatch(damage.state !== "loading", profile.id);
+
+  const replay = useLoaded(loadReplay, [profile.id], hasGames && damageSettled);
 
   return (
     <section aria-labelledby="stats-heading">

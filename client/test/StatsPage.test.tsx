@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { StatsPage } from "../src/pages/StatsPage";
 import type { StatsDamage, StatsReplay, StatsSummary } from "../src/types";
@@ -394,5 +394,27 @@ describe("StatsPage — the page arrives in pieces (US-32 slice 08)", () => {
     // opens: the gate releases when the damage read SETTLES, not when it wins.
     expect(await screen.findByRole("table", { name: /configurations de finale/i })).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toMatch(/dégâts par phase/);
+  });
+
+  it("costs a retry to its own block only, and never re-pays the PGN replay for it", async () => {
+    // The damage read fails, then succeeds on the retry. The replay group has
+    // already landed by then, and it must stay landed: a gate read live would
+    // close behind it when the damage block goes back to `loading`.
+    let recaps = 0;
+    const asked = stubRoutes({
+      summary: SUMMARY,
+      replay: REPLAY,
+      recaps: DAMAGE,
+      status: (path) => (path.includes("/recaps") ? (recaps++ === 0 ? 500 : 200) : 200),
+    });
+    page();
+
+    expect(await screen.findByRole("table", { name: /configurations de finale/i })).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: /réessayer/i }));
+
+    expect(await screen.findByText(/n'a été analysée/)).toBeTruthy();
+    // Still there, never back to a skeleton — and asked for exactly once.
+    expect(screen.getByRole("table", { name: /configurations de finale/i })).toBeTruthy();
+    expect(asked.filter((path) => path.includes("/replay"))).toHaveLength(1);
   });
 });
