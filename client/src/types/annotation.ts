@@ -96,12 +96,62 @@ export interface GameRecap {
    * none of them. A screen opts into showing it; nothing here changes subject by
    * reading the fields it already read.
    */
-  opportunities: {
-    total: number;
-    /** Keyed off `Opportunity`'s own severity, so the two cannot drift apart. */
-    bySeverity: Record<Opportunity["severity"], number>;
-  };
+  opportunities: OpportunityCount;
+  /**
+   * **Where** the Game was lost (US-32): the same figures, located by `Phase`.
+   * A fold of the totals above and never a second reading — the bands sum back
+   * to them, which is what the screen invites the Player to check.
+   *
+   * A `Phase` the Game never reached is `null`, **never a band of zeroes**: 19
+   * of the 78 analysed Games have no Endgame, and a zero there would read as a
+   * strength the Player never earned.
+   */
+  byPhase: Record<MoveAnnotation["phase"], PhaseDamage | null>;
+  /**
+   * **In which configuration** the Game was lost (US-32): the `Material
+   * signature`s its Endgame crossed, in crossing order, each with what it cost
+   * (ADR-0036). One scale below `byPhase` and the same fold — the server's, never
+   * recomputed here.
+   *
+   * **`null` on a Game that never reached the Endgame**, and not an empty list:
+   * the axis is mute on 27 % of the corpus, and the screen owes the Player a
+   * sentence there rather than a table of nothing.
+   */
+  bySignature: SignatureDamage[] | null;
   regime: SearchRegime | null;
+}
+
+/** How many `Opportunity`s, and of what size. */
+export interface OpportunityCount {
+  total: number;
+  /** Keyed off `Opportunity`'s own severity, so the two cannot drift apart. */
+  bySeverity: Record<Opportunity["severity"], number>;
+}
+
+/**
+ * One `Phase`'s share of the damage: what was **dropped** (`flaggedLoss`) and
+ * what was **bled** (`drift`), kept apart because they are opposite lessons,
+ * with the opponent's gifts in a column of their own (ADR-0034).
+ */
+export interface PhaseDamage {
+  chancesLost: number;
+  flaggedLoss: number;
+  /** The residual: `flaggedLoss + drift === chancesLost`, in every Phase. */
+  drift: number;
+  countedErrors: number;
+  opportunities: OpportunityCount;
+}
+
+/**
+ * What one `Material signature` cost over one Game. A configuration is listed
+ * because the Game **crossed** it, so a `chancesLost` of zero means *crossed
+ * cleanly* — a real reading, and not a line to filter away.
+ */
+export interface SignatureDamage {
+  /** The configuration as it is written, `RR vs Q` (ADR-0036) — the Player's
+   *  majors and minors first, the opponent's after. */
+  signature: string;
+  chancesLost: number;
 }
 
 /**

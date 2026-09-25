@@ -11,7 +11,8 @@ import { parseScreenInventory, parseWidths, passPlan, auditScript, plannedAudits
  * exactly how the suite once spent a whole run auditing eight screens while the
  * navigation had grown to nine.
  */
-const THEME_PASS_MD = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "theme-pass.md");
+const HERE = dirname(fileURLToPath(import.meta.url));
+const THEME_PASS_MD = join(HERE, "..", "..", "theme-pass.md");
 
 describe("the inventory of screens", () => {
   const screens = parseScreenInventory(readFileSync(THEME_PASS_MD, "utf8"));
@@ -220,5 +221,93 @@ describe("the panel height the pass reports (US-23, D8)", () => {
     expect(script).toContain("5237");
     // And it judges nothing: no threshold, no pass, no fail.
     expect(script).not.toMatch(/\b(pass|fail|tooTall|threshold|maxHeight)\b/i);
+  });
+});
+
+describe("asking for a reading level on the screen the pass opens", () => {
+  /*
+   * Since US-28 the `Review mode` is not remembered: every `Analyse` screen opens
+   * at `Sans aide`, where the severity glyphs, the advantage bar and the
+   * `Evaluation curve` have no subject at all. The pass audits the screen **as it
+   * lands**, so its cue rule has been *dropped* — never failed — in all 36
+   * readings since, and HP-01 and HP-03 closed the hole by hand three runs
+   * running.
+   *
+   * The level is a per-screen opener argument: the library carries the choice out,
+   * the scenario still makes it.
+   */
+  const fake = (opts = {}) => {
+    const seen = [];
+    return {
+      seen,
+      pendingRequests: () => 0,
+      staleRequests: () => 0,
+      evaluate: async (script) => {
+        seen.push(script);
+        if (script.includes("agenticDriver.where()")) {
+          return JSON.stringify({ path: "/analyse/166", text: 900, busy: 0 });
+        }
+        if (script.includes("agenticDriver.setReviewMode(")) {
+          return JSON.stringify(opts.refuses ? false : "annotated");
+        }
+        return JSON.stringify(true);
+      },
+    };
+  };
+  const FAST = { timeoutMs: 400, settleMs: 10 };
+
+  it("opens the Game, waits for the screen, then asks for the level", async () => {
+    const { atReviewMode } = await import("./theme-pass.mjs");
+    const session = fake();
+    const screen = { route: "/analyse/:gameId", name: "Analyse" };
+
+    const got = await atReviewMode("annotated")(session, { port: "5251", screen, waitOptions: FAST });
+
+    expect(got).toBe("annotated");
+    const asked = session.seen.findIndex((s) => s.includes("agenticDriver.setReviewMode("));
+    const opened = session.seen.findIndex((s) => s.includes("agenticDriver.openGameRow("));
+    expect(opened).toBeGreaterThan(-1);
+    expect(asked).toBeGreaterThan(opened);
+    expect(session.seen[asked]).toContain("annotated");
+  });
+
+  it("lets the scenario keep choosing WHICH Game — the library only carries the level", async () => {
+    const { atReviewMode } = await import("./theme-pass.mjs");
+    const session = fake();
+    let chose = 0;
+    const mine = async () => {
+      chose += 1;
+    };
+
+    await atReviewMode("detailed", mine)(session, {
+      port: "5251",
+      screen: { route: "/analyse/:gameId" },
+      waitOptions: FAST,
+    });
+
+    expect(chose).toBe(1);
+    expect(session.seen.some((s) => s.includes("agenticDriver.openGameRow("))).toBe(false);
+  });
+
+  it("fails loudly when the screen never offers the level, rather than auditing the one it got", async () => {
+    const { atReviewMode } = await import("./theme-pass.mjs");
+    const session = fake({ refuses: true });
+
+    await expect(
+      atReviewMode("annotated")(session, {
+        port: "5251",
+        screen: { route: "/analyse/:gameId" },
+        waitOptions: FAST,
+      }),
+    ).rejects.toThrow(/review level annotated/);
+  });
+
+  it("names the level by the app's value, never by its French label", async () => {
+    const source = readFileSync(join(HERE, "..", "page", "app-driver.js"), "utf8");
+    const at = source.indexOf("  setReviewMode(");
+    expect(at, "no setReviewMode() in the page half").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n  },", at));
+    expect(body).toContain('[data-part="review-mode"]');
+    expect(body).not.toMatch(/Annot|Sans aide|Détaillé/);
   });
 });

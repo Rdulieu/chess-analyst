@@ -29,7 +29,7 @@ the frame. Eight screens in two themes reported clean on a visibly broken screen
 The trigger was measured precisely, and it is worth stating because it dictates the shape of this
 step: **two rows are not enough — one of them must be the current Profile.** With two rows and
 nothing selected the list fits (625 into 625); as soon as one row reads "Profil actuel" while the
-other still offers "Sélectionner", the state track has to hold both and the list overflows (635 into
+other still offers "Sélectionner et voir mes parties", the state track has to hold both and the list overflows (635 into
 625). Every scenario selects a Profile at its step 1, so a second Profile in the snapshot is
 sufficient — and necessary — to exercise it.
 
@@ -117,6 +117,13 @@ imported, 0 already present" against a database that already holds them.
   nominal run produces.
 
 ## Journey
+
+> **The cadences are labelled on screen `Bullet, Blitz, Rapid, Classical, Correspondance`** — three
+> English words, one French. That is the app's own table (`CADENCE_LABEL`), not a slip to report,
+> and the import form's checkboxes carry exactly those words. Written down because a run hunting
+> for French names on the form found none, took the form for a different one, and **cost a whole
+> import** (2026-09-25). One line here is cheaper than that.
+
 1. Start the app on a fresh, empty database → with no `Profile` yet, the app leads to `/profiles`
    rather than to a screen about nobody.
 2. Create the `Profile` from the username `DudulSmash` → chess.com validates it, the Profile is
@@ -180,7 +187,7 @@ imported, 0 already present" against a database that already holds them.
 - Step 5, the duration: the Lichess import is **timed on its own**, separately from the scenario's
   total, and reported with its delta against the reference (see *Recorded durations*).
 - Step 6: the list holds **three** rows, `DudulSmash` marked "Profil actuel" and the other two
-  offering "Sélectionner", and **nothing overflows its container** — with a third row the list is
+  offering **"Sélectionner et voir mes parties"** — the label since US-23, and a button that also leads to "Mes parties" — and **nothing overflows its container** — with a third row the list is
   taller than the pairing that first caught the overflow, so this is the stricter version of the
   same check. `Nonomoho` reads `0 parties · 0 analysées`.
 - Step 8: the import form on the Profile's page has **no username field** — the Profile already
@@ -290,10 +297,14 @@ corpus keeps, and only the latter is assertable on screen.
   like an app defect — so the copy is **read back** before it is used.
 
   > *How* to take that copy is no longer written here. It is one call of the driver library, named
-  > in the `agentic-tests` skill (§5.8). This bullet carried the recipe until 2026-08-27, when the
-  > recipe was found to be wrong — a checkpoint can be silently refused, and a copy that reads back
-  > clean can still have lost a whole table — and a superseded instruction sitting where the copy is
-  > actually performed is the worst place for one to survive.
+  > in the `agentic-tests` skill (§5.8). This bullet carried the recipe until 2026-08-27, and a
+  > superseded instruction sitting where the copy is actually performed is the worst place for one
+  > to survive: what it taught was `PRAGMA wal_checkpoint(TRUNCATE)` followed by `.backup`, and the
+  > library **stopped checkpointing on 2026-08-31** — the backup API reads the WAL for itself, and
+  > checkpointing first had once produced *"database disk image is malformed"* where `.backup`
+  > alone worked on the same source. So **"was the checkpoint refused?" is no longer a question
+  > with a meaning here**; what remains true, and is why the bullet exists, is that the copy is
+  > **read back** before it is used.
 - The empty-history snapshot holds **three** `profiles` rows — one of them with
   `platform = 'lichess'` — `Metalyst`'s Games and **zero** Games carrying `DudulSmash`'s or
   `Nonomoho`'s id.

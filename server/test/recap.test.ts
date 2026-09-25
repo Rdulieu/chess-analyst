@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { gameRecap } from "../src/analysis/recap";
+import { signature } from "../src/analysis/signature";
 import { gamePositions } from "../src/chess/positions";
 import { gameAnnotations, type StoredEvaluation } from "../src/analysis/derivation";
 
@@ -25,6 +26,8 @@ describe("gameRecap — what this Game contributes", () => {
 
     expect(Object.keys(recap).sort()).toEqual(
       [
+        "byPhase",
+        "bySignature",
         "chancesLost",
         "countedErrors",
         "countedMoves",
@@ -272,5 +275,280 @@ describe("gameRecap — what the opponent offered, beside the Player's counts", 
       total: 0,
       bySeverity: { inaccuracy: 0, mistake: 0, blunder: 0 },
     });
+  });
+});
+
+/**
+ * The damage, **located** (US-32, ticket 02). The Game below is a **fabricated
+ * fixture** and says so: the base carries no analysed Game short enough to pin
+ * three Phases by hand, and the honesty reserve of the spec asks for the word.
+ *
+ * Nine Positions, written out rather than replayed from a PGN, because what is
+ * being fixed is the **Phase sequence** and a PGN reaching it would only hide
+ * that: three Positions in the Early game, three in the Middlegame, three in the
+ * Endgame. White is the Player, so their Moves land on the odd plies — one in
+ * the Early game, two in the Middlegame, one in the Endgame — and the
+ * opponent's on the even ones.
+ */
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+/** Seven majors and minors: past the Middlegame boundary, short of the Endgame. */
+const MIDDLE = "r2qk2r/pppppppp/2n5/8/8/8/PPPPPPPP/R2QK2R";
+/** Two: the Endgame boundary, by a count anyone can check by eye. */
+const END = "4k3/pppppppp/8/8/8/8/PPPPPPPP/R3K2R";
+
+const THREE_PHASES = [START, START, START, MIDDLE, MIDDLE, MIDDLE, END, END, END];
+
+/** Stored rows over an explicit Position sequence; `cp` is side-to-move
+ *  relative, as stored. */
+function overFens(fens: string[], cps: number[]): StoredEvaluation[] {
+  return cps.map((cp, ply) => ({
+    ply,
+    fen: `${fens[ply]} ${ply % 2 === 0 ? "w" : "b"} - - 0 ${ply + 1}`,
+    cp,
+    mate: null,
+    pv: "",
+  }));
+}
+
+/** Losses spread over the three Phases, with the opponent giving something back
+ *  in the Middlegame: White drifts early, blunders in the Middlegame, bleeds
+ *  again, and drops the Endgame. */
+const SPREAD = [0, 20, 60, 500, -400, 600, -150, 800, -900];
+
+describe("gameRecap — WHERE the Game was lost: the damage by Phase", () => {
+  const game = { playerColor: "white" as const };
+  const evals = overFens(THREE_PHASES, SPREAD);
+
+  it("holds the identity `flaggedLoss + drift = chancesLost` in EVERY Phase it reached", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    for (const phase of ["early", "middlegame", "endgame"] as const) {
+      const band = recap.byPhase[phase];
+      expect(band).not.toBeNull();
+      expect(band!.flaggedLoss + band!.drift).toBeCloseTo(band!.chancesLost, 9);
+    }
+  });
+
+  it("sums back to the totals the recap already showed — the breakdown is a FOLD, not a second reading", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const bands = Object.values(recap.byPhase).filter((band) => band !== null);
+    const sum = (read: (band: NonNullable<typeof bands[number]>) => number) =>
+      bands.reduce((total, band) => total + read(band!), 0);
+
+    expect(sum((b) => b.chancesLost)).toBeCloseTo(recap.chancesLost, 9);
+    expect(sum((b) => b.flaggedLoss)).toBeCloseTo(recap.flaggedLoss, 9);
+    expect(sum((b) => b.drift)).toBeCloseTo(recap.drift, 9);
+    expect(sum((b) => b.countedErrors)).toBe(recap.countedErrors);
+  });
+
+  it("splits what was DROPPED from what was BLED, per Phase — two opposite lessons a total would melt", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    // The Middlegame carries a flagged Move; the Early game only bleeds.
+    expect(recap.byPhase.middlegame!.flaggedLoss).toBeGreaterThan(0);
+    expect(recap.byPhase.early!.flaggedLoss).toBe(0);
+    expect(recap.byPhase.early!.drift).toBeGreaterThan(0);
+  });
+
+  it("keeps the opponent's Opportunities in a column of their own, never added to the Player's damage", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const offered = (["early", "middlegame", "endgame"] as const).reduce(
+      (total, phase) => total + (recap.byPhase[phase]?.opportunities.total ?? 0),
+      0,
+    );
+
+    // They fold to the Game's own block — and to nothing else (ADR-0034).
+    expect(offered).toBe(recap.opportunities.total);
+    expect(offered).toBeGreaterThan(0);
+    // The Player's figures on the same rows are the Player's alone.
+    const damage = (["early", "middlegame", "endgame"] as const).reduce(
+      (total, phase) => total + (recap.byPhase[phase]?.countedErrors ?? 0),
+      0,
+    );
+    expect(damage).toBe(recap.countedErrors);
+  });
+
+  it("reads the SAME Phase the annotations carry, rather than deciding a second time", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const carried = gameAnnotations(game, evals);
+
+    for (const phase of ["early", "middlegame", "endgame"] as const) {
+      const lost = carried
+        .filter((a) => a.phase === phase)
+        .reduce((total, a) => total + (a.chancesLost ?? 0), 0);
+      expect(recap.byPhase[phase]!.chancesLost).toBeCloseTo(lost, 9);
+    }
+  });
+
+  it("names a Phase the Game NEVER REACHED as not reached — never as a zero", () => {
+    // 19 of the 78 analysed Games have no Endgame: a `0` there would read as
+    // "none of your damage was in the Endgame", which is a false strength.
+    // A Game that stays in the opening: nothing traded, back ranks full, the
+    // armies never meet. FABRICATED fixture.
+    const recap = gameRecap(game, overFens([START, START, START], [0, -40, 40]), REGIME);
+
+    expect(recap.byPhase.early).not.toBeNull();
+    expect(recap.byPhase.middlegame).toBeNull();
+    expect(recap.byPhase.endgame).toBeNull();
+  });
+
+  it("distinguishes a Phase reached with no damage from one never reached", () => {
+    // The whole point of the `null`: an Endgame the Player crossed cleanly is a
+    // real zero, and it must not read like an Endgame that never happened.
+    const recap = gameRecap(game, overFens(THREE_PHASES, [0, 0, 0, 0, 0, 0, 0, 0, 0]), REGIME);
+
+    expect(recap.byPhase.endgame).not.toBeNull();
+    expect(recap.byPhase.endgame!.chancesLost).toBe(0);
+  });
+});
+
+/**
+ * **Which configuration** cost the Game (US-32, ticket 03). The Positions below
+ * are a **FABRICATED** fixture and say so: the base's analysed Games reach the
+ * Endgame through four configurations on average, none of them short enough to
+ * pin by hand, and the spec's honesty reserve asks for the word.
+ *
+ * Nine Positions again — three in the Early game, then an Endgame entered at
+ * ply 3 and crossing three configurations, two half-moves each. White is the
+ * Player, so their Moves land on the odd plies: one before the Endgame, then one
+ * in each of the three configurations.
+ */
+/** Two rooks against a queen: the configuration that opened the story. */
+const RR_VS_Q = "3qk3/pppppppp/8/8/8/8/PPPPPPPP/R3K2R";
+/** The queen gone: two rooks against nothing. */
+const RR_VS_NOTHING = "4k3/pppppppp/8/8/8/8/PPPPPPPP/R3K2R";
+/** A rook gone too. */
+const R_VS_NOTHING = "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K2R";
+
+const THREE_SIGNATURES = [
+  START,
+  START,
+  START,
+  RR_VS_Q,
+  RR_VS_Q,
+  RR_VS_NOTHING,
+  RR_VS_NOTHING,
+  R_VS_NOTHING,
+  R_VS_NOTHING,
+];
+
+/** Everything dropped in `RR vs Q`, nothing in `RR vs —`, a little in `R vs —`. */
+const IN_THE_ENDGAME = [0, 0, 0, 600, -600, 0, 0, 30, -30];
+
+describe("gameRecap — WHICH configuration cost the Game: the damage by Material signature", () => {
+  const game = { playerColor: "white" as const };
+  const evals = overFens(THREE_SIGNATURES, IN_THE_ENDGAME);
+
+  it("lists the configurations the Game actually crossed, in the order it crossed them", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    expect(recap.bySignature?.map((entry) => entry.signature)).toEqual([
+      "RR vs Q",
+      "RR vs —",
+      "R vs —",
+    ]);
+  });
+
+  it("names the configuration that cost the Game, rather than dispersing the damage", () => {
+    // One signature carries >= 50 % of the Endgame's damage in 41 of 47 Games
+    // (ADR-0036): the view is supposed to DESIGNATE one.
+    const recap = gameRecap(game, evals, REGIME);
+    const worst = [...recap.bySignature!].sort((a, b) => b.chancesLost - a.chancesLost)[0];
+
+    expect(worst.signature).toBe("RR vs Q");
+    expect(worst.chancesLost).toBeGreaterThan(0);
+  });
+
+  it("sums back to the Endgame band exactly — a FOLD of the recap, not a second reading", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const total = recap.bySignature!.reduce((sum, entry) => sum + entry.chancesLost, 0);
+
+    expect(total).toBeCloseTo(recap.byPhase.endgame!.chancesLost, 9);
+  });
+
+  it("keeps a configuration crossed cleanly, at zero — traversing is not the same as costing", () => {
+    const recap = gameRecap(game, evals, REGIME);
+    const clean = recap.bySignature!.find((entry) => entry.signature === "RR vs —");
+
+    expect(clean).toBeDefined();
+    expect(clean!.chancesLost).toBe(0);
+  });
+
+  it("reads the signature the SAME way the seam does, on the Position each Move led to", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    expect(recap.bySignature!.map((entry) => entry.signature)).toEqual([
+      signature(`${RR_VS_Q} w - - 0 1`, "white"),
+      signature(`${RR_VS_NOTHING} w - - 0 1`, "white"),
+      signature(`${R_VS_NOTHING} w - - 0 1`, "white"),
+    ]);
+  });
+
+  it("writes the OPPONENT's men second, so the same Game read from the other side reverses", () => {
+    const recap = gameRecap({ playerColor: "black" }, evals, REGIME);
+
+    expect(recap.bySignature?.map((entry) => entry.signature)).toEqual([
+      "Q vs RR",
+      "— vs RR",
+      "— vs R",
+    ]);
+  });
+
+  it("has NO configuration at all on a Game that never reached the Endgame — null, not empty", () => {
+    // 19 of the 78 analysed Games have no Endgame. An empty list would let the
+    // screen print a bare table; the absence has to be sayable. FABRICATED.
+    const recap = gameRecap(game, overFens([START, START, START], [0, -40, 40]), REGIME);
+
+    expect(recap.byPhase.endgame).toBeNull();
+    expect(recap.bySignature).toBeNull();
+  });
+});
+
+/**
+ * The Endgame **re-entered above six pieces**, which is what makes the scope of
+ * the reading a question rather than an obvious fact. FABRICATED fixture, and
+ * the shape it fixes is real: `phases()` **latches** (ADR-0035), so a promotion
+ * puts material back on the board and an Endgame Position can carry seven majors
+ * and minors again — the same seven a pre-Endgame Position carried, and
+ * therefore the **same signature**.
+ *
+ * Six Positions: the Early game, two Middlegame Positions at `QRR vs QRRB`, the
+ * Endgame entered at `RR vs Q`, and a promotion that brings the Player's queen
+ * back to `QRR vs QRRB`. The Player (White) loses chances in the Middlegame AND
+ * in each of the two configurations, so a reading that keys on the signature
+ * alone would pour the Middlegame's damage into an Endgame bucket.
+ */
+/** Seven majors and minors: past the Middlegame boundary, short of the Endgame. */
+const SEVEN = "1rbqk2r/8/8/8/8/8/8/R2QK2R";
+/** Three: the Endgame, by a count anyone can check by eye. */
+const THREE = "3qk3/8/8/8/8/8/8/R3K2R";
+/** Back to seven, after promotions — an Endgame Position by latching. */
+const SEVEN_AGAIN = SEVEN;
+
+describe("gameRecap — the signature is read on ENDGAME half-moves, and on no others", () => {
+  const game = { playerColor: "white" as const };
+  const evals = overFens(
+    [START, SEVEN, SEVEN, THREE, THREE, SEVEN_AGAIN],
+    [0, 100, -100, 200, -200, 300],
+  );
+
+  it("does not pour a MIDDLEGAME loss into an Endgame bucket that happens to share its signature", () => {
+    const recap = gameRecap(game, evals, REGIME);
+
+    // The fixture only bites if the Middlegame really lost something.
+    expect(recap.byPhase.middlegame!.chancesLost).toBeGreaterThan(0);
+    const total = recap.bySignature!.reduce((sum, entry) => sum + entry.chancesLost, 0);
+    expect(total).toBeCloseTo(recap.byPhase.endgame!.chancesLost, 9);
+  });
+
+  it("gives a configuration BORN AFTER the boundary only what was lost in it", () => {
+    // The reading ADR-0036 exists for: an imbalance is born mid-Game, and here
+    // `QRR vs QRRB` exists on both sides of the Endgame boundary.
+    const recap = gameRecap(game, evals, REGIME);
+    const reborn = recap.bySignature!.find((entry) => entry.signature === "QRR vs QRRB");
+
+    expect(reborn).toBeDefined();
+    expect(reborn!.chancesLost).toBeLessThan(recap.byPhase.middlegame!.chancesLost + reborn!.chancesLost);
+    expect(reborn!.chancesLost).toBeGreaterThan(0);
   });
 });

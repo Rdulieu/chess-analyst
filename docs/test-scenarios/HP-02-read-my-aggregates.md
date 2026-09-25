@@ -79,7 +79,9 @@ switching Profile takes them away and brings them back untouched.
     banner names `Nonomoho`, and **both are gone**: `/openings` shows its empty invitation and the
     explorer offers no candidate, because that Profile owns no Game. Not one of `DudulSmash`'s rows
     survives the switch. Then select `DudulSmash` again → both aggregates are back, unchanged.
-15. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
+15. **Theme pass (US-13)** — with `/stats` read **settled**, every block landed (it arrives in
+    three waves since US-32 slice 08, and the slowest is the one that decides when the screen is
+    done) — walk the navigation across **all nine screens** (Mes parties,
     Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening a
     Game, Profils, and the Profile's own page by opening `DudulSmash` from the list), first in the light theme, then
     again with the system's **dark preference emulated** → every screen is painted in the theme the
@@ -93,7 +95,7 @@ switching Profile takes them away and brings them back untouched.
 
 ## Checks
 ### Surface
-- Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **82** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other two still offer "Sélectionner" — and nothing on the list overflows its container, and every scoped screen afterwards carries the banner naming `DudulSmash`. No screen is read before a Profile is current.
+- Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **82** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other two still offer **"Sélectionner et voir mes parties"** (the label since US-23, and the act leads to "Mes parties") — and nothing on the list overflows its container, and every scoped screen afterwards carries the banner naming `DudulSmash`. No screen is read before a Profile is current.
 - Step 2: the explorer is a distinct page reached via navigation; a side selector is present; at least one candidate Move is shown from the starting Position (the account has real games). Since US-13 the board and the candidates sit side by side while there is room for both and **fold into one column** when there is not — in either case nothing is clipped and the page does not scroll sideways.
 - Step 3: every candidate shows a frequency, a win rate, and a per-cadence breakdown, and the exact count behind each is visible; no candidate is hidden for a small sample. **Spot-check the arithmetic on one candidate** — its win rate consistent with standard scoring `(wins + 0.5·draws)/games`, its per-cadence counts summing to its game count — and check that every rate on screen lies within 0–100%, which is a *shape* assertion and cheap. Re-deriving the formula on every candidate is `server/test/move-habits.test.ts`'s and `openings.test.ts`'s job, in milliseconds.
 - Step 4: each listed candidate has a corresponding board arrow; arrow opacity differs between a more- and a less-played candidate, and colour hue differs across the 50% win-rate threshold. On a Black-oriented board the arrows are mirrored with it — they still start and end on the squares the Moves name.
@@ -131,8 +133,19 @@ switching Profile takes them away and brings them back untouched.
   themes. On the explorer, the **arrows keep their hue and opacity between themes** — they encode win
   rate and frequency, not a theme role — and the board's squares and pieces look the same in both. On
   `/openings`, the **highlighted rows stay legible at night** — text on the review tint, not the
-  page's ink on it — and the ⚠ marker is present in both themes. Stats is read as a table here too:
-  its Total, cadence and side **row groups** each keep their header row and its accessible name.
+  page's ink on it — and the ⚠ marker is present in both themes. `/stats` is read **whole and settled** here, and it is
+  four blocks rather than one: the results table (its Total, cadence and side **row groups** each
+  keeping their header row and its accessible name), then the three tables of the replay group —
+  `Configurations de finale`, `Déséquilibre matériel et win rate`, `Où vos parties se décident` —
+  and the damage block, `Où tombent vos dégâts`. Since US-32 slice 08 they **arrive in waves**: the
+  results paint at once, the damage block follows, the replay group last (tens of seconds on a
+  large history). **Audit the screen with every block landed** — nothing left carrying `aria-busy`
+  — or the pass measures skeletons and reports them green. In *this* scenario's state — 82 Games,
+  **none analysed** — the damage block is the one that is not a table at all: it must read
+  **« Aucune de vos 82 parties n'a été analysée : ce tableau n'a rien à lire. Lancez une passe
+  d'analyse pour qu'il ait un dénominateur. »**, a sentence and never three rows of « — », which
+  would look like an answer. That sentence is the assertion this scenario holds most tightly and it
+  is checked here, in both themes, like any other rendered ink.
   `/danger` is expected **empty** here (this scenario analyses nothing) and that empty state is
   audited like any other screen. Nothing is imported and nothing is analysed by this step; a
   contrast failure outside the known-open list is **blocking**.

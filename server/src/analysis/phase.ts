@@ -2,166 +2,212 @@
  * The **`Phase`** of each Position of a Game (CONTEXT.md): how far the Game has
  * got — Early game, Middlegame or Endgame.
  *
- * **Derived, never stored** (ADR-0009, and the PRD says so in as many words): it
- * is computed from the FEN the `Analysis pass` already writes with every
- * `Evaluation`, so the thresholds below can be retuned without spending a second
- * of engine time. That is not a detail — they are **heuristics, not facts**, and
- * the whole reason the boundaries are shown to the Player is so they can look at
- * a real Game of theirs and disagree.
+ * **Derived, never stored** (ADR-0009): it is computed from the FEN the
+ * `Analysis pass` already writes with every `Evaluation`, so the rule below can
+ * change without spending a second of engine time.
  *
- * **Two boundaries, two different rules**, and that is the part a single
- * criterion gets wrong: material barely moves before move 15, so it cannot say
- * anything about the first boundary. Development and a clock say when the start
- * is over; only then does material say when the end has begun.
+ * **The rule is lichess's own** — `Divider.scala` of `lichess-org/scalachess`,
+ * reimplemented here and applied to **every** `Platform` (ADR-0035). It replaced
+ * our own "development complete, or the 15th move, whichever comes first",
+ * which agreed with theirs on **2.2 %** of the 415 Games of the base carrying a
+ * `Lichess division` and whose boundary came from the move cap **74.1 %** of the
+ * time: our documented criterion was the minority rule, and "Early game" meant
+ * "the first fifteen moves" three times out of four.
+ *
+ * What is lost with it is **explainability**, and that is the accepted trade:
+ * "development is complete" could be said to the Player, "the sum of 49
+ * overlapping 2x2 windows is above 150" cannot. The Endgame boundary, on the
+ * other hand, stays a piece count anyone can check by eye.
+ *
+ * The `Lichess division` column is still stored and is still read **nowhere** as
+ * a `Phase` (ADR-0031). It has simply stopped discriminating: our derivation
+ * being theirs, it agrees by construction, and the test that replays it checks a
+ * copy of this file.
  */
 export type Phase = "early" | "middlegame" | "endgame";
 
 /**
- * Which half-move the move cap fires on, and it is a **reading** rather than a
- * setting: `after-white` — the one this app has always used — means White's
- * `MOVE_CAP`-th Move is the first no longer in the Early game; `on-number` is the
- * naive test on the move number alone, which a FEN satisfies half a move earlier,
- * on **Black's** 14th, because the number rises on Black's Move.
- *
- * The alternative exists so the choice can be **measured** on real Games instead
- * of argued (D14 of US-15a-bis): the `Phase` enters no calculation today, and
- * knowing how many Moves the two readings disagree about is what says whether the
- * debate is empty or whether US-15c must not build on this axis yet. It is not a
- * feature and nothing in the app passes it.
+ * The three `Phase`s **in the Game's own order** — the one place that order is
+ * written server-side, so two folds cannot list them differently and a reader
+ * never has to check a local literal against this one. Its counterpart on the
+ * client (`client/src/chess/phase.ts`) holds the same order and the labels.
  */
-export type CapReading = "after-white" | "on-number";
+export const PHASES: Phase[] = ["early", "middlegame", "endgame"];
 
-/**
- * The move at which the Early game ends whatever the position looks like — a
- * backstop against a passive Game claiming to still be starting after forty
- * moves, not the usual boundary, which is development.
- *
- * Read as **White's 15th Move is the first one no longer in the Early game**.
- * The distinction is not pedantry: a FEN's move number rises on **Black's** move,
- * so `fullmove >= 15` alone fires on Black's 14th — a half-move early, and
- * visibly so on a real Game (a Player looking at 14...d5 with the king still on
- * e8 would say the opening is not over).
- */
-const MOVE_CAP = 15;
+/** Majors + minors, both sides combined, at or below which the Middlegame begins. */
+const MIDDLEGAME_PIECES = 10;
 
 /** Majors + minors, both sides combined, at or below which the Endgame begins. */
 const ENDGAME_PIECES = 6;
 
-/** Where each side's minors start, by the FEN letter that would still be there. */
-const MINOR_HOME: Record<"white" | "black", { square: string; piece: string }[]> = {
-  white: [
-    { square: "b1", piece: "N" },
-    { square: "g1", piece: "N" },
-    { square: "c1", piece: "B" },
-    { square: "f1", piece: "B" },
-  ],
-  black: [
-    { square: "b8", piece: "n" },
-    { square: "g8", piece: "n" },
-    { square: "c8", piece: "b" },
-    { square: "f8", piece: "b" },
-  ],
-};
+/** How many men a side's back rank must be down to for it to read as developed. */
+const SPARSE_BACKRANK = 4;
+
+/** The mixedness above which two armies count as interlocked. */
+const MIXEDNESS = 150;
 
 /**
  * The `Phase` of every Position of a Game, index-aligned with the FENs given
  * (ply 0 = the starting Position).
  *
- * **It latches.** A Game that has reached the Endgame stays there, and one that
- * has left the Early game never goes back. A promotion is the one thing that
- * *adds* material, and without latching it would flip a Game out of the Endgame
- * and straight back into it. So a Phase is a property of the Game's
+ * **It latches**, because both boundaries are the *first* Position that
+ * satisfies them and nothing after can take them back. A promotion is the one
+ * thing that *adds* material, and without latching it would flip a Game out of
+ * the Endgame and straight back into it. So a Phase is a property of the Game's
  * **advancement**, not a verdict on a Position in isolation — two identical
  * Positions reached in two Games can be in different Phases, and that is
  * correct.
+ *
+ * **A Game can have no Middlegame at all** — 98 of the 2 438 Games of the base,
+ * median 17 half-moves. That is lichess's `middle: None` reproduced, not a hole
+ * to fill: a Game finished inside the opening never had one. The same answer
+ * covers the Game whose two boundaries fall on the same Position, where a
+ * Middlegame of length zero would be a fiction.
  */
-export function phases(fens: string[], cap: CapReading = "after-white"): Phase[] {
-  let reached: Phase = "early";
-  return fens.map((fen) => {
-    const position = parse(fen);
-    if (reached !== "endgame" && pieceCount(position.placement) <= ENDGAME_PIECES) {
-      reached = "endgame";
-    } else if (reached === "early" && startIsOver(position, cap)) {
-      reached = "middlegame";
-    }
-    return reached;
+export function phases(fens: string[]): Phase[] {
+  const boards = fens.map(squares);
+
+  const middle = boards.findIndex(startIsOver);
+  // Searched only once the start is over, as `Divider.scala` does. It changes
+  // nothing — six or fewer pieces is also ten or fewer, so the Endgame can never
+  // come first — but the two are kept in the same order as the original.
+  const end = middle === -1 ? -1 : boards.findIndex((board) => majorsAndMinors(board) <= ENDGAME_PIECES);
+  const middleStart = middle !== -1 && (end === -1 || middle < end) ? middle : -1;
+
+  return boards.map((_, ply) => {
+    if (end !== -1 && ply >= end) return "endgame";
+    if (middleStart !== -1 && ply >= middleStart) return "middlegame";
+    return "early";
   });
 }
 
-/** The fields of a FEN this derivation reads — placement, castling, move number. */
-interface Position {
-  placement: string;
-  /** Whose Move it is here — what tells White's 15th from Black's 14th. */
-  toMove: "w" | "b";
-  castling: string;
-  fullmove: number;
-}
-
-function parse(fen: string): Position {
-  const [placement, toMove = "w", castling = "-", , , fullmove = "1"] = fen.split(" ");
-  return {
-    placement,
-    toMove: toMove === "b" ? "b" : "w",
-    castling,
-    fullmove: Number(fullmove) || 1,
-  };
-}
+/** A Position's men by square, `board[rank - 1][file]` with file 0 = the a-file. */
+type Board = (string | undefined)[][];
 
 /**
- * Whether the Early game is over: development complete for **both** sides, or
- * the move cap — whichever comes first. Both sides, because the Phase is the
- * Game's and not one Player's: a Game where White has castled and Black has not
- * yet moved a piece has not finished starting.
+ * Whether the Early game is over on this Position: **any one** of the three
+ * criteria is enough. They read the same event from three angles — pieces
+ * traded, pieces developed off the back rank, and armies interlocked where
+ * nothing has been traded or left home yet.
+ *
+ * `mixedness` is the one that earns its keep: it is the **only** criterion that
+ * decides the boundary in 152 of the 415 measured Games (36.6 %), and without it
+ * the boundary runs as late as ply 41 (ADR-0035).
  */
-function startIsOver(position: Position, cap: CapReading): boolean {
-  if (capReached(position, cap)) return true;
-  return (["white", "black"] as const).every((side) => developed(position, side));
-}
-
-/**
- * Whether White's `MOVE_CAP`-th Move has been played by the time this Position is
- * reached. A Position after White's Move has **Black** to move on the same move
- * number, which is exactly the half-move the naive `fullmove >= cap` gets wrong.
- */
-function capReached(position: Position, cap: CapReading): boolean {
-  if (position.fullmove > MOVE_CAP) return true;
-  if (position.fullmove !== MOVE_CAP) return false;
-  // On the number alone the cap fires as soon as the Position carries it, which
-  // is one half-move before White has played their `MOVE_CAP`-th Move.
-  return cap === "on-number" || position.toMove === "b";
-}
-
-/**
- * One side's development: its four minors off their home squares — a **captured**
- * minor is off its home square too, which is what the rule asks — and its king
- * castled or having lost the right (both read the same way from the FEN: the
- * castling field no longer names it).
- */
-function developed(position: Position, side: "white" | "black"): boolean {
-  const board = squares(position.placement);
-  const minorsOut = MINOR_HOME[side].every((home) => board.get(home.square) !== home.piece);
-  const rights = side === "white" ? /[KQ]/ : /[kq]/;
-  return minorsOut && !rights.test(position.castling);
+function startIsOver(board: Board): boolean {
+  return (
+    majorsAndMinors(board) <= MIDDLEGAME_PIECES ||
+    backrankSparse(board) ||
+    mixedness(board) > MIXEDNESS
+  );
 }
 
 /** Majors and minors on the board, both sides: neither kings nor pawns count. */
-function pieceCount(placement: string): number {
-  return (placement.match(/[qrbnQRBN]/g) ?? []).length;
+function majorsAndMinors(board: Board): number {
+  return board.flat().filter((piece) => piece !== undefined && /[qrbn]/i.test(piece)).length;
 }
 
-/** The placement field as a square → piece map, for the squares that hold one. */
-function squares(placement: string): Map<string, string> {
-  const board = new Map<string, string>();
-  placement.split("/").forEach((row, rank) => {
-    let file = 0;
-    for (const symbol of row) {
-      if (/\d/.test(symbol)) {
-        file += Number(symbol);
-        continue;
+/**
+ * Whether either side's home rank has been emptied below four men — pieces
+ * developed, in the form the board makes cheap to read. Every man of that colour
+ * counts, king and pawns included: it is an occupancy, not a piece census.
+ */
+function backrankSparse(board: Board): boolean {
+  const white = board[0].filter((piece) => piece !== undefined && piece === piece.toUpperCase());
+  const black = board[7].filter((piece) => piece !== undefined && piece === piece.toLowerCase());
+  return white.length < SPARSE_BACKRANK || black.length < SPARSE_BACKRANK;
+}
+
+/**
+ * How interlocked the two armies are: the **49 overlapping 2x2 windows** of the
+ * board, each scored by how many men of each colour it holds and how far up the
+ * board it sits, summed.
+ *
+ * The starting Position scores **exactly 0** — every window there is a
+ * single-colour block sitting on its own home band, and the table below sends
+ * all of those to nothing. That zero is the anchor of the transcription: it is
+ * the cheapest thing to check and the first to break if a rank index slips.
+ */
+function mixedness(board: Board): number {
+  let total = 0;
+  // `rank` is the 1-based rank of the window's LOWER row, 1..7, and it is what
+  // the score is weighted by — the same band that makes a home-row cluster
+  // worthless and the same cluster on the seventh rank worth a lot.
+  for (let rank = 1; rank <= 7; rank += 1) {
+    for (let file = 0; file <= 6; file += 1) {
+      let white = 0;
+      let black = 0;
+      for (const dr of [0, 1]) {
+        for (const df of [0, 1]) {
+          const piece = board[rank - 1 + dr][file + df];
+          if (piece === undefined) continue;
+          if (piece === piece.toUpperCase()) white += 1;
+          else black += 1;
+        }
       }
-      board.set(`${"abcdefgh"[file]}${8 - rank}`, symbol);
-      file += 1;
+      total += score(white, black, rank);
     }
+  }
+  return total;
+}
+
+/**
+ * One window's contribution, transcribed case for case from `Divider.scala`.
+ *
+ * Read it as a table, not as arithmetic: nothing here is derivable from
+ * anything else, and rewriting it into a formula would be inventing a rule
+ * lichess never wrote. The zeroes are the interesting part — a block of one
+ * colour on its own side of the board is an army that has not moved.
+ */
+function score(white: number, black: number, rank: number): number {
+  switch (`${white}${black}`) {
+    case "00":
+      return 0;
+    case "10":
+      return 1 + (8 - rank);
+    case "20":
+      return rank > 2 ? 2 + (rank - 2) : 0;
+    case "30":
+      return rank > 1 ? 3 + (rank - 1) : 0;
+    case "40":
+      return rank > 1 ? 3 + (rank - 1) : 0;
+    case "01":
+      return 1 + rank;
+    case "11":
+      return 5 + Math.abs(4 - rank);
+    case "21":
+      return 4 + (rank - 1);
+    case "31":
+      return 5 + (rank - 1);
+    case "02":
+      return rank < 6 ? 2 + (6 - rank) : 0;
+    case "12":
+      return 4 + (7 - rank);
+    case "22":
+      return 7;
+    case "03":
+      return rank < 7 ? 3 + (7 - rank) : 0;
+    case "13":
+      return 5 + (7 - rank);
+    case "04":
+      return rank < 7 ? 3 + (7 - rank) : 0;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * A FEN's placement field as a board, rank 1 first — the order the rules above
+ * read it in, where the FEN itself is written rank 8 first.
+ */
+function squares(fen: string): Board {
+  const rows = fen.split(" ")[0].split("/");
+  return rows.reverse().map((row) => {
+    const rank: (string | undefined)[] = [];
+    for (const symbol of row) {
+      if (/\d/.test(symbol)) rank.push(...Array<undefined>(Number(symbol)).fill(undefined));
+      else rank.push(symbol);
+    }
+    return rank;
   });
-  return board;
 }
