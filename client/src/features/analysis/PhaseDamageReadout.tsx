@@ -183,45 +183,58 @@ export function PhaseDamageReadout({
   return (
     <section aria-labelledby="phase-damage-heading" className="card" data-part="phase-damage">
       <h3 id="phase-damage-heading">Où cette partie s'est jouée</h3>
-      <table>
-        <caption>
-          Vos chances perdues réparties par phase. Les trois lignes se rajoutent au total du
-          récapitulatif ci-dessus.
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Phase</th>
-            {columns.map((column) => (
-              <th key={column.head} scope="col">
-                {column.head}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {PHASES.map((phase) => {
-            const damage = recap.byPhase[phase];
-            const printed = bands.get(phase);
-            return (
-              <tr key={phase} data-phase={phase}>
-                <th scope="row">{PHASE_LABEL[phase]}</th>
-                {damage === null || printed === undefined ? (
-                  /*
-                    Said once, across the row, and in words. A row of zeroes here
-                    would be a lie the Player cannot detect; one cell per column
-                    each saying "non atteinte" would be noise.
-                  */
-                  <td colSpan={columns.length} data-part="not-reached">
-                    Phase non atteinte par cette partie.
-                  </td>
-                ) : (
-                  columns.map((column) => <td key={column.head}>{column.cell(damage, printed)}</td>)
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/*
+        The CONTAINER scrolls, never the page — `_tables.scss` states it and
+        `[data-scroll="x"]` (_base) enforces it. The cells hold their width so a figure
+        stays comparable down its column, so this block IS wider than a 380 px column,
+        and without this wrapper that width was paid by the whole document: HP-03's
+        theme pass measured `scrollWidth` 925 against a 365 px client on `/analyse` at
+        `Détaillé`, both themes. Every other table in the app already had it; these two
+        were the exception.
+      */}
+      <div data-scroll="x">
+        <table>
+          <caption>
+            Vos chances perdues réparties par phase. Les trois lignes se rajoutent au total du
+            récapitulatif ci-dessus.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Phase</th>
+              {columns.map((column) => (
+                <th key={column.head} scope="col">
+                  {column.head}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PHASES.map((phase) => {
+              const damage = recap.byPhase[phase];
+              const printed = bands.get(phase);
+              return (
+                <tr key={phase} data-phase={phase}>
+                  <th scope="row">{PHASE_LABEL[phase]}</th>
+                  {damage === null || printed === undefined ? (
+                    /*
+                      Said once, across the row, and in words. A row of zeroes here
+                      would be a lie the Player cannot detect; one cell per column
+                      each saying "non atteinte" would be noise.
+                    */
+                    <td colSpan={columns.length} data-part="not-reached">
+                      Phase non atteinte par cette partie.
+                    </td>
+                  ) : (
+                    columns.map((column) => (
+                      <td key={column.head}>{column.cell(damage, printed)}</td>
+                    ))
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {/* The Endgame as the table above PRINTS it, handed over rather than
           recomputed — two calls to `printedBands` could not disagree today, and
           that is not a reason to let them. */}
@@ -258,33 +271,40 @@ function MaterialSignatureTable({
   if (crossed === null) {
     return (
       <p data-part="no-signature">
-        Cette partie n'a pas atteint la finale : aucune configuration de pièces à lister.
+        Cette partie n'a pas atteint la finale : aucune configuration de pièces à
+        lister.
       </p>
     );
   }
 
   const printed = printedSignatures(crossed, endgameTotal);
 
+  // Wrapped for the same reason as the table above, and stated there: the container
+  // scrolls, never the page. The sentence branch above is prose and is deliberately
+  // NOT wrapped — a scroller around one line is furniture, and prose reflows.
   return (
-    <table data-part="material-signature">
-      <caption>
-        Les configurations de pièces traversées en finale, dans l'ordre, et ce que chacune vous a
-        coûté. Elles se rajoutent à la ligne « {PHASE_LABEL.endgame} » ci-dessus.
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Configuration</th>
-          <th scope="col">Chances perdues</th>
-        </tr>
-      </thead>
-      <tbody>
-        {printed.map((line) => (
-          <tr key={line.signature} data-signature={line.signature}>
-            <th scope="row">{line.signature}</th>
-            <td>{points(line.chancesLost)}</td>
+    <div data-scroll="x">
+      <table data-part="material-signature">
+        <caption>
+          Les configurations de pièces traversées en finale, dans l'ordre, et ce que
+          chacune vous a coûté. Elles se rajoutent à la ligne « {PHASE_LABEL.endgame} »
+          ci-dessus.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Configuration</th>
+            <th scope="col">Chances perdues</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {printed.map((line) => (
+            <tr key={line.signature} data-signature={line.signature}>
+              <th scope="row">{line.signature}</th>
+              <td>{points(line.chancesLost)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

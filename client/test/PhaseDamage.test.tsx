@@ -398,3 +398,49 @@ describe("printedSignatures — the residual lands where a tenth is least of the
     expect(printed.map((line) => line.signature)).toEqual(["R vs —", "RR vs Q"]);
   });
 });
+
+/*
+  Found by the HP suite on the US-32 integration branch (2026-09-25, HP-03's theme
+  pass): at 380 px, `/analyse` in `Détaillé` scrolled the WHOLE PAGE sideways —
+  `scrollWidth` 925 against a 365 px client, in both themes — because this block's
+  two tables sat bare in the column, 908 px wide, with nothing to scroll them.
+
+  `_tables.scss` states the guarantee they broke, in so many words: a cell holds its
+  width so a figure stays comparable down its column, and "when the sum exceeds the
+  container it is the CONTAINER that scrolls (`[data-scroll="x"]`, _base), never the
+  page". Every other table in the app is wrapped — `GameList`, `SignatureTable`,
+  `StatsPage`, `OpeningsPage`, `ProfilesPage`. These two were the exception, and the
+  exception is what the Player felt.
+
+  Asserted on the markup and not on a width, because the width is a rendering this
+  tier cannot see. What it CAN hold is that the table carries the container the
+  stylesheet's rule keys on — which is why no unit test caught this and the agentic
+  tier did.
+*/
+describe("Neither table drags the page sideways", () => {
+  const scrollerAround = (node: Element | null) => node?.closest('[data-scroll="x"]') ?? null;
+
+  it("gives the Phase table the scrolling container the stylesheet expects", () => {
+    const { container } = render(<PhaseDamageReadout recap={SPREAD} />);
+
+    const phase = container.querySelector("section[data-part='phase-damage'] table");
+    expect(phase).toBeTruthy();
+    expect(scrollerAround(phase)).toBeTruthy();
+  });
+
+  it("gives the Material signature table the same container", () => {
+    const { container } = render(<PhaseDamageReadout recap={SPREAD} />);
+
+    const material = container.querySelector("table[data-part='material-signature']");
+    expect(material).toBeTruthy();
+    expect(scrollerAround(material)).toBeTruthy();
+  });
+
+  it("wraps no sentence — a Game with no Endgame gets prose, not an empty scroller", () => {
+    const { container } = render(<PhaseDamageReadout recap={NO_ENDGAME} />);
+
+    const said = container.querySelector("[data-part='no-signature']");
+    expect(said).toBeTruthy();
+    expect(scrollerAround(said)).toBeNull();
+  });
+});
