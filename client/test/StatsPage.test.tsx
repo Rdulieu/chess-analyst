@@ -25,6 +25,12 @@ const SUMMARY: StatsSummary = {
     white: bucket(2, 1, 0, 1),
     black: bucket(0, 0, 0, 0),
   },
+  signatures: {
+    threshold: 3,
+    rows: [{ signature: "RR vs Q", ...bucket(3, 1, 0, 2) }],
+    below: { configurations: 4 },
+    scope: { games: 2, withEndgame: 1, withoutEndgame: 1, unreadable: 0 },
+  },
 };
 
 /** The current `Profile` the page is about — every scoped page takes one. */
@@ -116,6 +122,12 @@ describe("StatsPage", () => {
     correspondence: bucket(0, 0, 0, 0),
       },
       bySide: { white: bucket(0, 0, 0, 0), black: bucket(0, 0, 0, 0) },
+      signatures: {
+        threshold: 3,
+        rows: [],
+        below: { configurations: 0 },
+        scope: { games: 0, withEndgame: 0, withoutEndgame: 0, unreadable: 0 },
+      },
     };
     stub(empty);
     render(
@@ -168,5 +180,25 @@ describe("StatsPage — the three load outcomes stay apart", () => {
 
     expect(await screen.findByText(/aucune partie/i)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("StatsPage — the Endgame configurations", () => {
+  it("carries the corpus table under the results, scope and all", async () => {
+    stub(SUMMARY);
+    render(
+      <MemoryRouter>
+        <StatsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    const table = await screen.findByRole("table", { name: /configurations de finale/i });
+    const line = within(table).getByRole("row", { name: /RR vs Q/ });
+    // Counts and rate together on the line, never a bare rate.
+    expect(within(line).getByText("3 parties")).toBeTruthy();
+    expect(within(line).getByText("33 %")).toBeTruthy();
+
+    expect(screen.getByTestId("signature-scope").textContent).toContain("1");
+    expect(screen.getByTestId("signature-below").textContent).toContain("4 configurations");
   });
 });

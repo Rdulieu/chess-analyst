@@ -11,10 +11,15 @@ import { scopedProfile } from "./scope";
 export function createStatsRouter(db: Db): Router {
   const router = Router();
 
-  router.get("/", (req, res) => {
+  // `async`, because the `Material signature` table folds every Game of the
+  // Profile and replays the PGN of the unanalysed ones — tens of seconds on a
+  // large history. `getStats` yields between batches so this route is a slow
+  // answer rather than a server that answers nothing (ADR-0012's lesson, one
+  // route over).
+  router.get("/", async (req, res) => {
     const profile = scopedProfile(db, req, res);
     if (!profile) return;
-    res.json(getStats(db, profile.id));
+    res.json(await getStats(db, profile.id));
   });
 
   return router;
