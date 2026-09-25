@@ -31,6 +31,26 @@ const SUMMARY: StatsSummary = {
     below: { configurations: 4 },
     scope: { games: 2, withEndgame: 1, withoutEndgame: 1, unreadable: 0 },
   },
+  phaseResults: {
+    rows: [
+      { phase: "early", ...bucket(0, 0, 0, 0), share: 0 },
+      { phase: "middlegame", ...bucket(1, 1, 0, 0), share: 50 },
+      { phase: "endgame", ...bucket(1, 0, 0, 1), share: 50 },
+    ],
+    games: 2,
+    filed: 2,
+    unreadable: 0,
+  },
+  phaseDamage: {
+    rows: [
+      { phase: "early", dominant: 0, reached: 0, meanShare: null, medianShare: null },
+      { phase: "middlegame", dominant: 0, reached: 0, meanShare: null, medianShare: null },
+      { phase: "endgame", dominant: 0, reached: 0, meanShare: null, medianShare: null },
+    ],
+    analysed: 0,
+    games: 2,
+    undamaged: 0,
+  },
 };
 
 /** The current `Profile` the page is about — every scoped page takes one. */
@@ -128,6 +148,8 @@ describe("StatsPage", () => {
         below: { configurations: 0 },
         scope: { games: 0, withEndgame: 0, withoutEndgame: 0, unreadable: 0 },
       },
+      phaseResults: { rows: [], games: 0, filed: 0, unreadable: 0 },
+      phaseDamage: { rows: [], analysed: 0, games: 0, undamaged: 0 },
     };
     stub(empty);
     render(

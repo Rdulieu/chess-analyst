@@ -26,6 +26,14 @@
  */
 export type Phase = "early" | "middlegame" | "endgame";
 
+/**
+ * The three `Phase`s **in the Game's own order** — the one place that order is
+ * written server-side, so two folds cannot list them differently and a reader
+ * never has to check a local literal against this one. Its counterpart on the
+ * client (`client/src/chess/phase.ts`) holds the same order and the labels.
+ */
+export const PHASES: Phase[] = ["early", "middlegame", "endgame"];
+
 /** Majors + minors, both sides combined, at or below which the Middlegame begins. */
 const MIDDLEGAME_PIECES = 10;
 
