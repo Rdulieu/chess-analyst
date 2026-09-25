@@ -1,3 +1,4 @@
+import type { Phase } from "../analysis/phase";
 import { bucket, type Bucket } from "../results/win-rate";
 
 /**
@@ -22,6 +23,15 @@ export const SIGNATURE_THRESHOLD = 3;
  */
 export interface Crossing {
   signatures: string[];
+  /**
+   * The `Phase` the Game **ended** in — the last Position's, and the axis of the
+   * results table beside this one (US-32). It rides on the same object because
+   * it comes from the same replay: reading it separately would mean walking
+   * every PGN twice, and `/stats` is already the slowest page of the app.
+   *
+   * `undefined` exactly when `unreadable` is true, and only then.
+   */
+  endedIn?: Phase;
   unreadable?: boolean;
 }
 

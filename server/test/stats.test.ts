@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
+import { eq } from "drizzle-orm";
 import { openDb } from "../src/db";
-import { games, type NewGame } from "../src/db/schema";
+import { evaluations, games, type NewGame } from "../src/db/schema";
+import { getGameAnnotations } from "../src/annotations/repository";
+import { gamePositions } from "../src/chess/positions";
+import { fixtureBestLine } from "../src/engine/fixture";
 import { getStats } from "../src/stats/repository";
 import { seedProfile } from "./fixtures";
 
@@ -159,5 +163,118 @@ describe("getStats — the Material signature table", () => {
       unreadable: 0,
     });
     expect((await getStats(db, other)).signatures.rows).toHaveLength(1);
+  });
+});
+
+/**
+ * One analysed Game the damage table can read: a FABRICATED Endgame (US-32
+ * spec) whose Evaluations make White throw a won Position away, so the Game has
+ * chances lost to attribute.
+ */
+function seedAnalysed(db: ReturnType<typeof tempDb>) {
+  seed(db, { result: "loss", pgn: TWO_ROOKS, analyzed: true });
+  const game = db.select().from(games).all().at(-1)!;
+  // A stored cp is read from the side to MOVE (see `countedMoves`), so a
+  // constant +300 means whoever is on move is winning — i.e. the mover throws
+  // it away every single half-move. All of it lands in the Endgame, which is
+  // the only Phase this fabricated Position ever has.
+  const scores = [300, 300, 300, 300, 300];
+  for (const [ply, fen] of gamePositions(game.pgn).entries()) {
+    db.insert(evaluations)
+      .values({ gameId: game.id, ply, fen, cp: scores[ply], mate: null, pv: fixtureBestLine(fen).join(" ") })
+      .run();
+  }
+  return game;
+}
+
+describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () => {
+  it("files each Game under the Phase it ENDED in, over the whole history", async () => {
+    const db = tempDb();
+    // TWO_ROOKS starts from an Endgame Position; NO_ENDGAME never leaves the start.
+    seed(db, { result: "win", pgn: TWO_ROOKS });
+    seed(db, { result: "loss", pgn: TWO_ROOKS });
+    seed(db, { result: "win", pgn: NO_ENDGAME });
+
+    const { phaseResults } = await getStats(db, PROFILE);
+
+    expect(phaseResults.games).toBe(3);
+    expect(phaseResults.unreadable).toBe(0);
+    expect(phaseResults.rows.map((r) => [r.phase, r.games])).toEqual([
+      ["early", 1],
+      ["middlegame", 0],
+      ["endgame", 2],
+    ]);
+    expect(phaseResults.rows[2]).toMatchObject({ win: 1, loss: 1, winRate: 0.5, share: 67 });
+    // One Game ends in one Phase: the column IS the whole, unlike the table above.
+    expect(phaseResults.rows.reduce((sum, r) => sum + r.share, 0)).toBe(100);
+  });
+
+  it("counts a PGN it cannot replay apart, in neither table's rows", async () => {
+    const db = tempDb();
+    seed(db, { result: "win", pgn: TWO_ROOKS });
+    seed(db, { result: "loss", pgn: "[FEN \"not a position\"]\n\n1. Zz9 *" });
+
+    const { phaseResults } = await getStats(db, PROFILE);
+
+    expect(phaseResults.unreadable).toBe(1);
+    expect(phaseResults.filed).toBe(1);
+    expect(phaseResults.games).toBe(2);
+  });
+
+  it("reads the damage table over the ANALYSED Games only, and says the gap", async () => {
+    const db = tempDb();
+    seed(db, { result: "win", pgn: TWO_ROOKS });
+    seed(db, { result: "loss", pgn: TWO_ROOKS });
+
+    const { phaseDamage } = await getStats(db, PROFILE);
+
+    expect(phaseDamage.games).toBe(2);
+    expect(phaseDamage.analysed).toBe(0);
+    expect(phaseDamage.rows.every((r) => r.meanShare === null)).toBe(true);
+  });
+
+  it("folds an analysed Game through the SAME recap the Game page shows", async () => {
+    const db = tempDb();
+    const game = seedAnalysed(db);
+
+    const { phaseDamage } = await getStats(db, PROFILE);
+    const recap = getGameAnnotations(db, game.id)!.recap!;
+
+    expect(phaseDamage.analysed).toBe(1);
+    expect(phaseDamage.undamaged).toBe(0);
+    // The share the table reads is the one the Game's own block prints.
+    const endgame = phaseDamage.rows[2];
+    expect(endgame.reached).toBe(1);
+    expect(endgame.meanShare).toBeCloseTo(recap.byPhase.endgame!.chancesLost / recap.chancesLost, 10);
+    expect(endgame.medianShare).toBe(endgame.meanShare);
+    expect(phaseDamage.rows.reduce((sum, r) => sum + r.dominant, 0)).toBe(1);
+  });
+
+  it("sees a Game re-analysed under this very process", async () => {
+    // The damage fold is remembered between calls — it costs ~250 ms a Game —
+    // and the `evaluations` rows it reads DO change in process. So the memo is
+    // stamped with what was read, and this is the test of that stamp.
+    const db = tempDb();
+    const game = seedAnalysed(db);
+    expect((await getStats(db, PROFILE)).phaseDamage.rows[2].reached).toBe(1);
+
+    db.delete(evaluations).where(eq(evaluations.gameId, game.id)).run();
+    db.insert(evaluations)
+      .values({ gameId: game.id, ply: 0, fen: gamePositions(game.pgn)[0], cp: 0, mate: null, pv: "e1e2" })
+      .run();
+
+    // One Position and no Move of the Player's: nothing left to attribute.
+    const again = await getStats(db, PROFILE);
+    expect(again.phaseDamage.undamaged).toBe(1);
+  });
+
+  it("stays within the Profile asked for (ADR-0014)", async () => {
+    const db = tempDb();
+    expect(seedProfile(db)).toBe(PROFILE);
+    const other = seedProfile(db, "someone-else", "lichess");
+    seed(db, { result: "win", pgn: TWO_ROOKS, profileId: other });
+
+    expect((await getStats(db, PROFILE)).phaseResults.games).toBe(0);
+    expect((await getStats(db, other)).phaseResults.rows[2].games).toBe(1);
   });
 });

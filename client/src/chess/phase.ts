@@ -21,6 +21,18 @@ export const PHASE_LABEL: Record<Phase, string> = {
 };
 
 /**
+ * Each `Phase` as it reads **inside a sentence**, article included. A column
+ * header is a label and takes none; « vos dégâts désignent milieu de partie »
+ * is not French. Here rather than spelled out at the one call site, so a fourth
+ * Phase — or a renamed one — is still one edit.
+ */
+export const PHASE_PHRASE: Record<Phase, string> = {
+  early: "le début de partie",
+  middlegame: "le milieu de partie",
+  endgame: "la finale",
+};
+
+/**
  * The shorter name the **ribbon** uses. A band is only as wide as its Phase's
  * share of the Game, and a middlegame lasting a dozen Moves rendered
  * "Milieu de pa…" — or, on a short one, "M…", which names nothing at all. These

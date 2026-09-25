@@ -1,4 +1,4 @@
-import { phases } from "./phase";
+import { phases, type Phase } from "./phase";
 import { signature } from "./signature";
 
 /**
@@ -21,9 +21,19 @@ import { signature } from "./signature";
  * Takes FENs rather than a PGN so it stays a pure derivation: the caller decides
  * where the Positions come from — stored `Evaluation`s for an analysed Game, a
  * PGN replay for the 2 360 Games of the base that were never analysed.
+ *
+ * `phaseOf` is an **optimisation with a default**, not a second way of asking:
+ * a caller that already holds the Game's Phases — `/stats` needs the last one
+ * for its own table (US-32) — hands them in rather than paying `phases()` a
+ * second time over the same FENs. Passing anything but this Game's own Phases
+ * would be a lie, and there is no reason to.
  */
-export function crossedSignatures(fens: string[], playerColor: "white" | "black"): string[] {
-  return [...new Set(signatureByPly(fens, playerColor).filter((key) => key !== null))];
+export function crossedSignatures(
+  fens: string[],
+  playerColor: "white" | "black",
+  phaseOf: Phase[] = phases(fens),
+): string[] {
+  return [...new Set(signatureByPly(fens, playerColor, phaseOf).filter((key) => key !== null))];
 }
 
 /**
@@ -44,7 +54,7 @@ export function crossedSignatures(fens: string[], playerColor: "white" | "black"
 export function signatureByPly(
   fens: string[],
   playerColor: "white" | "black",
+  phaseOf: Phase[] = phases(fens),
 ): (string | null)[] {
-  const phaseOf = phases(fens);
   return fens.map((fen, ply) => (phaseOf[ply] === "endgame" ? signature(fen, playerColor) : null));
 }

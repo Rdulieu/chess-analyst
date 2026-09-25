@@ -2,6 +2,8 @@ import { useCallback, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { fetchStats } from "../api";
 import { Tally } from "../components/Tally";
+import { PhaseDamageTable } from "../features/stats/PhaseDamageTable";
+import { PhaseResultTable } from "../features/stats/PhaseResultTable";
 import { SignatureTable } from "../features/stats/SignatureTable";
 import { useLoaded } from "../features/load/useLoaded";
 import { LoadFailure } from "../features/load/LoadFailure";
@@ -132,6 +134,15 @@ export function StatsPage({ profile }: { profile: Profile }) {
             same — the Game's result — but a Game counts once per configuration
             crossed, so its rows overlap and nothing here sums to the Total. */}
         <SignatureTable table={stats.data.signatures} />
+
+        {/* The same `Phase` axis read twice, in two currencies, and NEVER
+            folded into one (ADR-0036's amendment): results over the whole
+            history, damage over the analysed Games only. They disagree on this
+            base, and the screen names the disagreement rather than smoothing
+            it — the damage table carries that line, because it is the one that
+            owes the reader both denominators. */}
+        <PhaseResultTable table={stats.data.phaseResults} />
+        <PhaseDamageTable table={stats.data.phaseDamage} results={stats.data.phaseResults} />
         </>
       )}
     </section>

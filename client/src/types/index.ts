@@ -9,7 +9,16 @@ export {
 } from "./game";
 export type { Profile } from "./profile";
 export type { Side, MoveHabitCandidate } from "./move-habit";
-export type { StatsBucket, StatsSummary, SignatureRow, SignatureTable } from "./stats";
+export type {
+  StatsBucket,
+  StatsSummary,
+  SignatureRow,
+  SignatureTable,
+  PhaseResultRow,
+  PhaseResultTable,
+  PhaseDamageRow,
+  PhaseDamageTable,
+} from "./stats";
 export type { WeakOpeningEntry } from "./opening";
 export type { DangerEntry } from "./danger";
 export type {
