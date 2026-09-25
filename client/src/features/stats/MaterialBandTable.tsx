@@ -1,6 +1,6 @@
 import { Tally } from "../../components/Tally";
 import type { MaterialBandTable as Table } from "../../types";
-import { percent, plural } from "./counts";
+import { percent } from "./counts";
 
 /**
  * **Le win rate par bande de matériel** (US-32, demandé le 2026-09-25): the
@@ -74,12 +74,16 @@ export function MaterialBandTable({ table }: { table: Table }) {
 
       {spread === null ? null : (
         <p data-testid="material-bands-spread">
-          <strong>Une bande situe, elle ne prédit pas.</strong> À matériel égal ({equalBand}), les{" "}
-          {spread.configurations} configuration{plural(spread.configurations)} vues au moins{" "}
-          {threshold} fois vont de {percent(spread.lowest)} à {percent(spread.highest)} de win rate.
-          Le chiffre de la ligne est la moyenne de cet écart-là, pas une loi : deux tours contre une
-          dame et un fou contre un cavalier pèsent tous les deux « à peu près zéro » et ne se jouent
-          pas de la même façon.
+          <strong>Une bande situe, elle ne prédit pas.</strong> À matériel égal ({equalBand}),{" "}
+          {spread.configurations === 1
+            ? `la seule configuration vue au moins ${threshold} fois est à `
+            : `les ${spread.configurations} configurations vues au moins ${threshold} fois vont de `}
+          {spread.configurations === 1
+            ? percent(spread.highest)
+            : `${percent(spread.lowest)} à ${percent(spread.highest)}`}{" "}
+          de win rate. Le chiffre de la ligne agrège cet écart-là, il ne l'abolit pas : deux tours
+          contre une dame et un fou contre un cavalier pèsent tous les deux « à peu près zéro » et
+          ne se jouent pas de la même façon.
         </p>
       )}
     </section>

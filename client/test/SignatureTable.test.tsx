@@ -113,3 +113,11 @@ describe("SignatureTable — the material disagreement, as a column (US-32)", ()
     expect(headers).toEqual(["RR vs Q", "R vs R"]);
   });
 });
+
+describe("SignatureTable — a negative disagreement", () => {
+  it("writes it with a sign, never as a bare number", () => {
+    show({ rows: [{ ...row("Q vs RR", 1, 0, 2), delta: -1 }, { ...row("— vs Q", 0, 0, 3), delta: -9 }] });
+    expect(screen.getByRole("row", { name: /Q vs RR/ }).textContent).toContain("−1");
+    expect(screen.getByRole("row", { name: /— vs Q/ }).textContent).toContain("−9");
+  });
+});

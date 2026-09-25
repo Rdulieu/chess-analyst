@@ -90,11 +90,14 @@ export interface MaterialBandTable {
 }
 
 function bandOf(delta: number): MaterialBand {
-  return (
-    MATERIAL_BANDS.find(
-      (band) => (band.from === null || delta >= band.from) && (band.to === null || delta <= band.to),
-    ) ?? MATERIAL_BANDS[3]
+  const band = MATERIAL_BANDS.find(
+    (b) => (b.from === null || delta >= b.from) && (b.to === null || delta <= b.to),
   );
+  // Unreachable while the bands cover the integers with both ends open — which
+  // is the invariant, asserted here rather than papered over with a default
+  // band that would file a delta under a reading it does not belong to.
+  if (!band) throw new Error(`no material band holds ${delta}`);
+  return band;
 }
 
 /**
@@ -144,7 +147,10 @@ function spreadOf(
 ): MaterialSpread | null {
   const rates = inBand
     .filter((s) => s.played.length >= threshold)
-    .map((s) => bucket(s.played).winRate as number);
+    .map((s) => bucket(s.played).winRate)
+    // Never null past the filter — `winRate` is null on an empty bucket alone,
+    // and the threshold is at least one Game. Narrowed rather than asserted.
+    .filter((rate): rate is number => rate !== null);
   if (rates.length === 0) return null;
 
   return {

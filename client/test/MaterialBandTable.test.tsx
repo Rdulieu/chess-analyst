@@ -98,3 +98,24 @@ describe("MaterialBandTable — the win rate by band of material (US-32)", () =>
     expect(scroller?.contains(screen.getByTestId("material-bands-scope"))).toBe(false);
   });
 });
+
+describe("MaterialBandTable — the sentence agrees with its own count", () => {
+  const withSpread = (configurations: number, lowest: number, highest: number) => ({
+    ...TABLE,
+    rows: TABLE.rows.map((r: Table["rows"][number]) =>
+      r.band === TABLE.equalBand ? { ...r, spread: { configurations, lowest, highest } } : r,
+    ),
+  });
+
+  it("says « la seule configuration … est à » when there is exactly one", () => {
+    render(<MaterialBandTable table={withSpread(1, 0.4, 0.4)} />);
+    const text = screen.getByTestId("material-bands-spread").textContent ?? "";
+    expect(text).toMatch(/la seule configuration vue au moins 3 fois est à 40 %/);
+    expect(text).not.toMatch(/vont de/);
+  });
+
+  it("does not call the row's rate a mean of the configurations — it is not one", () => {
+    render(<MaterialBandTable table={withSpread(26, 0, 0.83)} />);
+    expect(screen.getByTestId("material-bands-spread").textContent).not.toMatch(/moyenne/);
+  });
+});
