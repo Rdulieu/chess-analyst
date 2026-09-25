@@ -112,9 +112,9 @@ généralisé à tort.
 1. **Deux tableaux, jamais un.** Aucun composite, aucune colonne partagée, aucun classement
    commun. Les deux lectures ne désignent pas la même phase, et c'est l'information — pas un
    défaut à lisser. Mesuré sur `DudulSmash` : les **dégâts** désignent le milieu de partie (phase
-   dominante dans 33 parties sur 66, part moyenne 48,3 %), les **résultats** désignent la finale
-   (win rate **48 %** contre 64 % et 67 % ailleurs). La finale porte peu de dégâts et coûte seize
-   points de win rate. Un chiffre unique aurait effacé ça.
+   dominante dans 33 parties sur 66, part moyenne 50,6 %), les **résultats** désignent la finale
+   (win rate **48 %** contre 65 % et 67 % ailleurs). La finale porte peu de dégâts et coûte
+   dix-sept points de win rate. Un chiffre unique aurait effacé ça.
 2. **Chaque tableau annonce son dénominateur, et l'écart entre les deux est dit.** Celui des
    résultats porte sur **toutes** les parties (186 sur `DudulSmash`, aucun temps moteur requis) ;
    celui des dégâts sur les **parties analysées seulement** (66 — et **11 sur 366** pour
@@ -123,9 +123,18 @@ généralisé à tort.
 3. **Jamais une somme mise en commun.** Additionner les chances perdues de tout le corpus, c'est
    laisser les parties catastrophe décider du résultat. Le tableau rend donc **le compte des
    parties dont la phase est dominante** — robuste — et la part moyenne **accompagnée de sa
-   médiane**. Sur cette base, la finale pèse **16,9 % en moyenne et 4,2 % en médiane** : l'écart
-   du simple au quadruple *est* la dissymétrie, et le montrer vaut mieux que choisir laquelle des
+   médiane**. Sur cette base, la finale pèse **22,8 % en moyenne et 11,9 % en médiane** : l'écart
+   du simple au double *est* la dissymétrie, et le montrer vaut mieux que choisir laquelle des
    deux on affiche.
+
+   > **Et le dénominateur de cette part est celui des parties qui ont atteint la phase**, pas celui
+   > des parties analysées. Les deux se défendent ; ils ne donnent pas les mêmes chiffres, et la
+   > première rédaction de cet amendement citait les uns (16,9 % / 4,2 % sur 66 parties) au-dessus
+   > d'une condition qui imposait les autres. Corrigé le 2026-09-25 sur relevé de l'écran : la
+   > finale est atteinte par **49** des 66 parties analysées de `DudulSmash`, d'où 22,8 % et 11,9 %.
+   > Compter une phase non atteinte comme 0 % aurait mélangé « il n'y a pas eu de finale » et « la
+   > finale n'a rien coûté » — c'est le faux zéro que tout le reste de cet ADR refuse, et il s'était
+   > glissé dans son propre amendement.
 
 **Ce qui n'est pas amendé.** L'axe **signature** garde sa monnaie unique à l'échelle du corpus :
 les chiffres du tableau III tiennent, et rien de ce qui précède ne les touche. Et la lecture par
