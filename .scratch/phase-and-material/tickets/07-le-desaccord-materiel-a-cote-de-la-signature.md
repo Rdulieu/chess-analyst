@@ -14,7 +14,7 @@ matériel et le win rate ».
 **Blocked by:** 06 — même écran, même bloc, et 06 y ajoute déjà deux tableaux. À lancer **après**.
 
 **Status:** done
-**Delivered:** 2026-09-25 · merge `MERGESHA` sur `integration/US-32-phase-and-material` (PR #131,
+**Delivered:** 2026-09-25 · merge `a6f9163` sur `integration/US-32-phase-and-material` (PR #131,
 merge humain en attente) · gate: build vert, **704 tests serveur / 51 fichiers**, **1 111 tests
 client / 71 fichiers**, `npm run lint` **sorti 0**, **Feature Path verte** sur une copie de la base
 réelle (profils `DudulSmash`, `Nonomoho`), aucun finding bloquant. La revue indépendante en a rendu
