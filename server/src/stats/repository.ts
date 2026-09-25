@@ -210,7 +210,11 @@ function damageOfGame(db: Db, game: Game, evals: AnalysedRow[]): GameDamage {
   let remembered = damageByGame.get(db);
   if (!remembered) damageByGame.set(db, (remembered = new Map()));
 
-  const stamp = `${evals.length}:${evals[evals.length - 1]?.passId ?? "—"}`;
+  // Order-INDEPENDENT on purpose: the query below has no `ORDER BY`, so "the
+  // last row" is whatever SQLite happened to hand back. A stamp built on it
+  // would miss a re-analysis that kept the row count and moved a pass that is
+  // not last — the one case the stamp exists for.
+  const stamp = `${evals.length}:${Math.max(0, ...evals.map((row) => row.passId ?? 0))}`;
   const known = remembered.get(game.id);
   if (known && known.stamp === stamp) return known.damage;
 

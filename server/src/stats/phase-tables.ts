@@ -188,10 +188,19 @@ export function phaseDamageTable(readings: GameDamage[], games: number): PhaseDa
     }
     // Ties go to the earliest Phase, which is the order the Game itself has.
     // Arbitrary, and therefore written down rather than left to sort stability.
-    const heaviest = PHASES.filter((p) => reading.byPhase[p] !== null).reduce((best, p) =>
-      (reading.byPhase[p] as number) > (reading.byPhase[best] as number) ? p : best,
+    //
+    // Seeded with `null` rather than reduced bare: a Game with chances lost and
+    // not one Phase reached is impossible by construction — the damage was lost
+    // SOMEWHERE — and an unseeded `reduce` would meet that impossibility with a
+    // `TypeError` naming an empty array instead of the Game.
+    const heaviest = PHASES.filter((phase) => reading.byPhase[phase] !== null).reduce<Phase | null>(
+      (best, phase) =>
+        best === null || (reading.byPhase[phase] as number) > (reading.byPhase[best] as number)
+          ? phase
+          : best,
+      null,
     );
-    dominant[heaviest] += 1;
+    if (heaviest !== null) dominant[heaviest] += 1;
   }
 
   return {

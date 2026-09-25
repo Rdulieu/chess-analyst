@@ -1,10 +1,7 @@
 import { PHASE_LABEL } from "../../chess/phase";
 import { Tally } from "../../components/Tally";
 import type { PhaseResultTable as Table } from "../../types";
-
-const percent = (rate: number) => `${Math.round(rate * 100)} %`;
-const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
-const plural = (n: number) => (n > 1 ? "s" : "");
+import { games, percent, plural } from "./counts";
 
 /**
  * **Où vos parties se décident** (US-32): one row per `Phase`, the Phase each
@@ -46,8 +43,11 @@ export function PhaseResultTable({ table }: { table: Table }) {
             configuration table makes, on the same replay. */}
         {unreadable === 0
           ? null
-          : ` ${unreadable} partie${plural(unreadable)} n'a pas pu être relue et ne compte dans` +
-            ` aucune ligne : ${games(filed)} sont réparties ci-dessous.`}
+          : ` ${games(unreadable)} n'${unreadable > 1 ? "ont" : "a"} pas pu être relue${plural(
+              unreadable,
+            )} et ne compte${plural(unreadable)} dans aucune ligne : ${games(filed)} ${
+              filed > 1 ? "sont réparties" : "est répartie"
+            } ci-dessous.`}
       </p>
 
       <div data-scroll="x">

@@ -1,10 +1,9 @@
-import { PHASE_LABEL } from "../../chess/phase";
+import { PHASE_LABEL, PHASE_PHRASE } from "../../chess/phase";
 import { points, roundToTenth } from "../../chess/points";
-import type { PhaseDamageTable as Table } from "../../types";
+import type { PhaseDamageTable as Table, PhaseResultTable as Results } from "../../types";
+import { games } from "./counts";
 import { phaseDisagreement } from "./phaseReading";
-import type { PhaseResultTable as Results } from "../../types";
 
-const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
 const share = (value: number) => points(roundToTenth(value * 100));
 
 /**
@@ -57,13 +56,15 @@ export function PhaseDamageTable({ table, results }: { table: Table; results: Re
 
       <p data-testid="phase-damage-scope">
         <strong>
-          {analysed} de vos {games(total)} ont été analysées
+          {analysed} de vos {games(total)} {analysed > 1 ? "ont été analysées" : "a été analysée"}
         </strong>{" "}
         — ce tableau ne porte que sur celles-là, là où celui du dessus porte sur toutes. Il annonce
         un compte, pas « vos parties » : chaque passe d'analyse déplace ce dénominateur.
         {undamaged === 0
           ? null
-          : ` ${undamaged} d'entre elles n'ont rien lâché du tout et ne désignent aucune phase.`}
+          : undamaged > 1
+            ? ` ${undamaged} d'entre elles n'ont rien lâché du tout et ne désignent aucune phase.`
+            : ` L'une d'entre elles n'a rien lâché du tout et ne désigne aucune phase.`}
       </p>
 
       <div data-scroll="x">
@@ -82,8 +83,10 @@ export function PhaseDamageTable({ table, results }: { table: Table; results: Re
               <tr key={row.phase}>
                 <th scope="row">{PHASE_LABEL[row.phase]}</th>
                 <td>
-                  {row.dominant} ({analysed === 0 ? 0 : Math.round((row.dominant / analysed) * 100)}{" "}
-                  %)
+                  {/* `analysed` is never zero here — the block above returns a
+                      sentence in that case, and a guard on it would be a branch
+                      no reader can reach. */}
+                  {row.dominant} ({Math.round((row.dominant / analysed) * 100)} %)
                 </td>
                 <td>{games(row.reached)}</td>
                 {/* « Non atteinte » rather than 0 %: a Game that never had an
@@ -109,9 +112,9 @@ export function PhaseDamageTable({ table, results }: { table: Table; results: Re
       {disagreement === null ? null : (
         <p data-testid="phase-disagreement">
           Observation : vos <strong>dégâts</strong> désignent le plus souvent{" "}
-          {PHASE_LABEL[disagreement.damage].toLowerCase()}, alors que vos <strong>résultats</strong>{" "}
-          désignent {PHASE_LABEL[disagreement.result].toLowerCase()}, la phase où vous gagnez le
-          moins. Les deux tableaux le constatent ; ni l'un ni l'autre ne dit pourquoi.
+          {PHASE_PHRASE[disagreement.damage]}, alors que vos <strong>résultats</strong> désignent{" "}
+          {PHASE_PHRASE[disagreement.result]}, la phase où vous gagnez le moins. Les deux tableaux
+          le constatent ; ni l'un ni l'autre ne dit pourquoi.
         </p>
       )}
     </section>

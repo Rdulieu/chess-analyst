@@ -150,8 +150,10 @@ describe("PhaseDamageTable — where the damage falls", () => {
   it("names the disagreement between the two readings, as an observation", () => {
     showDamage();
     const line = screen.getByTestId("phase-disagreement").textContent ?? "";
-    expect(line).toMatch(/milieu de partie/);
-    expect(line).toMatch(/finale/);
+    // With their articles: a label is not a phrase, and « désignent milieu de
+    // partie » is not French — the FP of this slice read exactly that.
+    expect(line).toMatch(/le milieu de partie/);
+    expect(line).toMatch(/la finale/);
     expect(line).toMatch(/ni l'un ni l'autre ne dit pourquoi/i);
   });
 

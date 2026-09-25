@@ -1,9 +1,7 @@
 import { Tally } from "../../components/Tally";
 import type { SignatureTable as Table } from "../../types";
+import { games, percent, plural } from "./counts";
 
-const percent = (rate: number) => `${Math.round(rate * 100)} %`;
-const games = (n: number) => `${n} ${n > 1 ? "parties" : "partie"}`;
-const plural = (n: number) => (n > 1 ? "s" : "");
 const configurations = (n: number) => `${n} ${n > 1 ? "configurations" : "configuration"}`;
 
 /**
