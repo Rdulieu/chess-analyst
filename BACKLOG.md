@@ -565,6 +565,8 @@
 
 ## Doing
 
+## In review
+
 - **US-32**: Rendre exploitables les axes **phase** et **matériel** — pour que « je m'effondre en
   finale » cesse d'être une phrase qu'on lit dans un PGN à la main.
   > **Ouverte le 2026-09-02**, **hors du grill d'US-15** : l'EPIC est grillée et
@@ -654,8 +656,20 @@
   > phase sur les 78 parties analysées, 12 parties sur 78 changent de phase dominante, et la part de
   > la finale ne bouge pas d'un dixième (même famille qu'US-37 et US-45) ; et le fait que la story
   > **ajoute** un bloc à l'écran qu'**US-33** doit désempiler.
-
-## In review
+  > **PR ouverte le 2026-09-25 — [PR #PRNUM](https://github.com/Rdulieu/chess-analyst/pull/PRNUM)
+  > `integration/US-32-phase-and-material` → `develop`, en attente du merge humain.** Cinq tranches,
+  > toutes `done` : 01 `d1733f6` · 02 `98e1fb9` · 03 `1d9315e` · 04 `95dd707` · 05 (cette PR).
+  > Gate à l'ouverture : build vert, **665 tests serveur + 1 072 client**, `lint` a **tourné et rendu
+  > 0**, **suite HP 3/3 verte** (+ path 0), **aucun finding bloquant ouvert**.
+  >
+  > **La suite HP a rendu rouge au premier passage** — un bloquant, `/analyse` en « Détaillé »
+  > faisant défiler la page de côté à 380 px (`scrollWidth` 925 pour 365), les deux tables d'US-32
+  > étant les seules de l'app sans `[data-scroll="x"]`. Corrigé (`97a0cce`, trois tests unitaires sur
+  > le markup), HP-03 rejouée en entier et verte. Aucun test du bas de la pyramide ne pouvait le
+  > voir : la largeur est un rendu que ce tiers ne regarde pas.
+  >
+  > **Décision due au demandeur, en plus du merge** : l'arbitrage **greffe vs nouvelle HP** — le
+  > plafond est à trois et les trois sont pleines. Posé dans le corps de la PR, pas tranché.
 
 ## Done
 
