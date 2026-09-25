@@ -3,8 +3,11 @@ import { render, screen, within } from "@testing-library/react";
 import { SignatureTable } from "../src/features/stats/SignatureTable";
 import type { SignatureTable as Table } from "../src/types";
 
+const DELTA: Record<string, number> = { "RR vs Q": 1, "R vs R": 0 };
+
 const row = (signature: string, win: number, draw: number, loss: number) => ({
   signature,
+  delta: DELTA[signature] ?? 0,
   games: win + draw + loss,
   win,
   draw,
@@ -76,5 +79,37 @@ describe("SignatureTable", () => {
     show({ rows: [], below: { configurations: 0 }, scope: { games: 5, withEndgame: 0, withoutEndgame: 5, unreadable: 0 } });
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByTestId("signature-scope").textContent).toMatch(/aucune/i);
+  });
+});
+
+describe("SignatureTable — the material disagreement, as a column (US-32)", () => {
+  it("shows the founding case at +1, signed, beside its signature", () => {
+    show();
+    const line = within(
+      screen.getByRole("table", { name: /configurations de finale/i }).querySelector("tbody")!,
+    ).getByRole("row", { name: /RR vs Q/ });
+    expect(within(line).getByText("+1")).toBeTruthy();
+  });
+
+  it("writes an equal configuration 0 — a value, not an absence", () => {
+    show();
+    const line = within(
+      screen.getByRole("table", { name: /configurations de finale/i }).querySelector("tbody")!,
+    ).getByRole("row", { name: /R vs R/ });
+    expect(within(line).getByText("0")).toBeTruthy();
+  });
+
+  it("writes the scale on the screen, since a +1 cannot be read without it", () => {
+    show();
+    expect(screen.getByTestId("signature-scale").textContent).toMatch(/9.*5.*3.*3/s);
+  });
+
+  it("does not reorder the table: the server's order is kept as served", () => {
+    // `R vs R` is 0 and `RR vs Q` is +1; the column sorts nothing.
+    show();
+    const headers = screen
+      .getAllByRole("rowheader")
+      .map((h) => h.textContent);
+    expect(headers).toEqual(["RR vs Q", "R vs R"]);
   });
 });

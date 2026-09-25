@@ -27,9 +27,17 @@ const SUMMARY: StatsSummary = {
   },
   signatures: {
     threshold: 3,
-    rows: [{ signature: "RR vs Q", ...bucket(3, 1, 0, 2) }],
+    rows: [{ signature: "RR vs Q", delta: 1, ...bucket(3, 1, 0, 2) }],
     below: { configurations: 4 },
     scope: { games: 2, withEndgame: 1, withoutEndgame: 1, unreadable: 0 },
+  },
+  materialBands: {
+    rows: [
+      { band: "−2..+2", ...bucket(3, 1, 0, 2), spread: { configurations: 3, lowest: 0, highest: 0.8 } },
+    ],
+    couples: 3,
+    threshold: 3,
+    equalBand: "−2..+2",
   },
   phaseResults: {
     rows: [
@@ -148,6 +156,7 @@ describe("StatsPage", () => {
         below: { configurations: 0 },
         scope: { games: 0, withEndgame: 0, withoutEndgame: 0, unreadable: 0 },
       },
+      materialBands: { rows: [], couples: 0, threshold: 3, equalBand: "−2..+2" },
       phaseResults: { rows: [], games: 0, filed: 0, unreadable: 0 },
       phaseDamage: { rows: [], analysed: 0, games: 0, undamaged: 0 },
     };
@@ -222,5 +231,30 @@ describe("StatsPage — the Endgame configurations", () => {
 
     expect(screen.getByTestId("signature-scope").textContent).toContain("1");
     expect(screen.getByTestId("signature-below").textContent).toContain("4 configurations");
+  });
+});
+
+describe("StatsPage — the material band table (US-32 slice 07)", () => {
+  it("sits under the configurations it explains, with its mitigation written", async () => {
+    stub(SUMMARY);
+    render(
+      <MemoryRouter>
+        <StatsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("table", { name: /win rate par bande de matériel/i })).toBeTruthy();
+    expect(screen.getByTestId("material-bands-spread").textContent).toMatch(/ne prédit pas/);
+
+    // The column is on the configuration table, and the founding case reads +1.
+    const configurations = screen.getByRole("table", { name: /configurations de finale/i });
+    expect(within(configurations).getByText("+1")).toBeTruthy();
+
+    // The two blocks are in the order the page promises: configurations, then
+    // the bands that read them — the band table never re-sorts the first.
+    const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    expect(headings.indexOf("Configurations de finale")).toBeLessThan(
+      headings.findIndex((h) => /Déséquilibre matériel/.test(h ?? "")),
+    );
   });
 });

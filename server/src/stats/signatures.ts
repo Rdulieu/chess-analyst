@@ -1,3 +1,4 @@
+import { materialDelta } from "../analysis/material-delta";
 import type { Phase } from "../analysis/phase";
 import { bucket, type Bucket } from "../results/win-rate";
 
@@ -43,6 +44,17 @@ export interface EndgameCrossing extends Crossing {
 /** One configuration's line: its writing, and the results over the Games that crossed it. */
 export interface SignatureRow extends Bucket {
   signature: string;
+  /**
+   * The material disagreement of that configuration, in points, signed — the
+   * scalar ADR-0036 refuses as an identity, carried here as a **column**.
+   *
+   * It is not the key of the row (the signature is), it takes no part in the
+   * order (frequency does), and it merges nothing: two configurations at the
+   * same delta stay two rows, because they are two different games of chess.
+   * `RR vs Q` reads `+1` here, which is the ADR's own argument shown rather
+   * than corrected.
+   */
+  delta: number;
 }
 
 /**
@@ -86,7 +98,11 @@ export function signatureTable(crossings: EndgameCrossing[]): SignatureTable {
     }
   }
 
-  const all = [...bySignature].map(([signature, played]) => ({ signature, ...bucket(played) }));
+  const all = [...bySignature].map(([signature, played]) => ({
+    signature,
+    delta: materialDelta(signature),
+    ...bucket(played),
+  }));
   const rows = all.filter((row) => row.games >= SIGNATURE_THRESHOLD).sort(mostPlayedFirst);
 
   return {

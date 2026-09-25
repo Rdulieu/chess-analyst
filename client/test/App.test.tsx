@@ -61,6 +61,8 @@ const STATS_SUMMARY = {
     below: { configurations: 0 },
     scope: { games: 1, withEndgame: 0, withoutEndgame: 1, unreadable: 0 },
   },
+  // No Endgame crossed, so not one couple to band: the block shows nothing.
+  materialBands: { rows: [], couples: 0, threshold: 3, equalBand: "−2..+2" },
   // The same Game, on the other axis: it ended in the Middlegame, and nothing
   // is analysed — so the damage table owes a sentence rather than a table.
   phaseResults: {

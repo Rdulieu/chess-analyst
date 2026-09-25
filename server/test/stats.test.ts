@@ -114,7 +114,7 @@ describe("getStats — the Material signature table", () => {
     seed(db, { result: "draw", pgn: TWO_ROOKS });
 
     expect((await getStats(db, PROFILE)).signatures.rows).toEqual([
-      { signature: "RR vs —", games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
+      { signature: "RR vs —", delta: 10, games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
     ]);
   });
 
@@ -276,5 +276,30 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
 
     expect((await getStats(db, PROFILE)).phaseResults.games).toBe(0);
     expect((await getStats(db, other)).phaseResults.rows[2].games).toBe(1);
+  });
+});
+
+describe("getStats — the win rate by band of material (US-32 slice 07)", () => {
+  it("files the couples of the same crossings, with no second replay", async () => {
+    const db = tempDb();
+    for (const result of ["win", "loss", "draw"] as const) seed(db, { result, pgn: TWO_ROOKS });
+
+    const { materialBands, signatures } = await getStats(db, PROFILE);
+    // `RR vs —` is +10: the richest band, and the only one touched.
+    expect(materialBands.couples).toBe(3);
+    expect(materialBands.rows[6]).toMatchObject({ band: "≥ +9", games: 3, winRate: 0.5 });
+    expect(materialBands.threshold).toBe(signatures.threshold);
+  });
+
+  it("keeps the configuration table's order untouched by the column", async () => {
+    const db = tempDb();
+    for (const result of ["win", "loss", "draw"] as const) seed(db, { result, pgn: TWO_ROOKS });
+    for (const result of ["win", "loss", "draw"] as const) seed(db, { result, pgn: ONE_ROOK });
+    // `RR vs —` (+10) is crossed by three Games, `R vs —` by six: most played
+    // first, and the richer configuration does not climb for being richer.
+    expect((await getStats(db, PROFILE)).signatures.rows.map((r) => [r.signature, r.delta])).toEqual([
+      ["R vs —", 5],
+      ["RR vs —", 10],
+    ]);
   });
 });
