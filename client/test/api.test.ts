@@ -303,5 +303,7 @@ describe("what a failed /stats read says, and in whose words", () => {
     expect(failure.message).not.toMatch(/Failed to load/);
     expect(failure.message).toMatch(/serveur/i);
     expect(failure.message).toContain("500");
+    // The technical cause rides on `cause` here too — both branches, one contract.
+    expect((failure.cause as Error).message).toContain("/api/stats/replay");
   });
 });

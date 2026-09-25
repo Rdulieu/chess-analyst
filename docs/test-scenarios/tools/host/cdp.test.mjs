@@ -97,7 +97,8 @@ describe("a request that has been out longer than the staleness guard", () => {
     socket.emit("message", {
       data: JSON.stringify({ method: "Network.requestWillBeSent", params: { requestId: "r1" } }),
     });
-    // Age the request without waiting for it: the window is what is under test.
+    /* No sleep: the ageing is done by passing `staleMs = 0` at the call site, so
+       every request is older than the window by construction. */
     return { session, socket };
   };
 

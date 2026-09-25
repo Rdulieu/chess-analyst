@@ -145,9 +145,12 @@ step 10. See step 2 for which two, and why they are deliberately **not** the sho
 
     > The rules asserted here, the nine screens, the audit tooling and the known-open findings are
     > written once in [`theme-pass.md`](./theme-pass.md) — the same step closes HP-01 and HP-02.
-    > This scenario audits the `Evaluation curve` and the advantage bar **populated** (open Game B in
-    > `Détaillé`), and it is the only one that audits the reading route and the `Confrontation` at
-    > all. It is **not** where `/danger` is audited populated, and the claim that it was is
+    > This scenario audits the `Evaluation curve` and the advantage bar **populated** — it opens
+    > **Game B** and **asks for `Détaillé`**, as an argument of the `openers` entry for the Analyse
+    > screen rather than as a gesture to remember (US-32 slice 09). Taking the level the screen lands
+    > on means auditing `Sans aide`, where none of those have a subject; that is what hid a
+    > **blocking** 925 px overflow on the phase table for a whole slice. It is also the only scenario
+    > that audits the reading route and the `Confrontation` at all. It is **not** where `/danger` is audited populated, and the claim that it was is
     > **withdrawn** (2026-08-31): HP-01 analyses two Games as well, and it picks *the two shortest
     > Games sharing a first Move* — so a Position recurs by construction and its card is there. This
     > scenario picks two **long lost Games**, one as White and one as Black, and on those nothing

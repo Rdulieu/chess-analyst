@@ -296,8 +296,8 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
     > 1–10 built, and it must run under the Profile that owns it.
 
 11. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
-    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening a
-    Game, Profils, and the Profile's own page), first in the light theme, then again with the system's **dark preference
+    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening an
+    **analysed** Game **and asking for `Annoté`**, Profils, and the Profile's own page), first in the light theme, then again with the system's **dark preference
     emulated** → every screen is painted in the theme the system asks for, and everything the Player
     must be able to read stays readable in both. **No further Import and no further analysis**: the
     pass reuses exactly the state steps 1–10 built, which is why it is the last step and not a
@@ -308,6 +308,13 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
     > three copies of an assertion list would drift. This scenario's state is the richest of the
     > three (real Games, two analysed, `/danger` populated, and a Profile page carrying real
     > counters), so this is where the pass sees the most.
+    >
+    > **Which Game, and at which level, is this scenario's decision** — and it is passed to the pass
+    > rather than re-done by hand. Since US-28 the screen always lands on `Sans aide`, where the
+    > severity glyphs `?!` `?` `??`, the advantage bar and the `Evaluation curve` have no subject at
+    > all: this scenario is the one that carries them, so it opens an **analysed** Game and asks for
+    > **`Annoté`** (the `openers` entry the pilot takes — `agentic-tests` skill §5.8/DRIVING.md). It
+    > was paid by hand three runs running before US-32 slice 09; it is an argument now.
 
 ## Checks
 ### Surface

@@ -29,8 +29,9 @@ async function read<T>(path: string, what: string): Promise<T> {
     throw new Error("le serveur n'a pas répondu", { cause });
   }
   if (!res.ok) {
-    console.error(`GET ${path} answered ${res.status} (${what})`);
-    throw new Error(`le serveur a répondu ${res.status}`);
+    const cause = new Error(`GET ${path} answered ${res.status} (${what})`);
+    console.error(cause.message);
+    throw new Error(`le serveur a répondu ${res.status}`, { cause });
   }
   return (await res.json()) as T;
 }
