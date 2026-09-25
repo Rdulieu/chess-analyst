@@ -132,3 +132,43 @@ tbody + tbody > tr:first-child > * {
   color: var(--ink-muted);
   font-size: var(--text-s);
 }
+
+// ─── Skeletons ─────────────────────────────────────────────────────────────
+//
+// A block of `/stats` whose fold is still running stands in for itself at the
+// shape of its own table (US-32 slice 08). The cells are grey bars: a visual
+// echo of the `role="status"` line that already names, in words, what is being
+// computed. Nothing here is the sole carrier of that message (ADR-0013) — the
+// bars can be invisible to a reader and the page still says what is missing.
+[data-skeleton="table"] td {
+  // The bar is the cell's content, so the ghost row is exactly one real row
+  // high and the finished table does not jump into place.
+  padding-block: var(--space-1);
+}
+
+[data-skeleton="cell"] {
+  background: var(--border);
+  block-size: 0.85em;
+  border-radius: var(--radius);
+  display: block;
+  // A share of the column rather than a fixed width: a fixed one would widen
+  // the ghost table past its real counterpart and push the page sideways at
+  // 380 px — the defect US-32 already paid once.
+  inline-size: 100%;
+  max-inline-size: 8ch;
+  opacity: 0.6;
+}
+
+// Motion is the accent, never the message: a reader who has asked for less of
+// it loses the pulse and keeps the sentence, the heading and the grey shape.
+@media (prefers-reduced-motion: no-preference) {
+  [data-skeleton="cell"] {
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    50% {
+      opacity: 0.25;
+    }
+  }
+}

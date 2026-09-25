@@ -5,7 +5,7 @@ import { evaluations, games, type NewGame } from "../src/db/schema";
 import { getGameAnnotations } from "../src/annotations/repository";
 import { gamePositions } from "../src/chess/positions";
 import { fixtureBestLine } from "../src/engine/fixture";
-import { getStats } from "../src/stats/repository";
+import { getDamageStats, getReplayStats, getResultsSummary } from "../src/stats/repository";
 import { seedProfile } from "./fixtures";
 
 function tempDb() {
@@ -31,14 +31,14 @@ function seed(db: ReturnType<typeof tempDb>, g: Partial<NewGame> & Pick<NewGame,
     .run();
 }
 
-describe("getStats", () => {
+describe("getResultsSummary", () => {
   it("totals the games and the win/draw/loss tally over all Games", async () => {
     const db = tempDb();
     seed(db, { result: "win" });
     seed(db, { result: "loss" });
     seed(db, { result: "draw" });
 
-    const stats = await getStats(db, PROFILE);
+    const stats = getResultsSummary(db, PROFILE);
 
     expect(stats.total.games).toBe(3);
     expect([stats.total.win, stats.total.draw, stats.total.loss]).toEqual([1, 1, 1]);
@@ -46,12 +46,12 @@ describe("getStats", () => {
 
   it("computes the Win rate with standard scoring, and null when there are no Games", async () => {
     const db = tempDb();
-    expect((await getStats(db, PROFILE)).total.winRate).toBeNull(); // empty history: no rate
+    expect((getResultsSummary(db, PROFILE)).total.winRate).toBeNull(); // empty history: no rate
 
     seed(db, { result: "win" });
     seed(db, { result: "draw" });
     // (1 win + 0.5·1 draw) / 2 games = 0.75
-    expect((await getStats(db, PROFILE)).total.winRate).toBe(0.75);
+    expect((getResultsSummary(db, PROFILE)).total.winRate).toBe(0.75);
   });
 
   it("breaks the results down per cadence, with all four cadences always present", async () => {
@@ -60,7 +60,7 @@ describe("getStats", () => {
     seed(db, { result: "loss", timeControlCategory: "blitz" });
     seed(db, { result: "win", timeControlCategory: "bullet" });
 
-    const { byCategory } = await getStats(db, PROFILE);
+    const { byCategory } = getResultsSummary(db, PROFILE);
 
     expect(byCategory.blitz).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
     expect(byCategory.bullet).toMatchObject({ games: 1, win: 1, winRate: 1 });
@@ -82,7 +82,7 @@ describe("getStats", () => {
     seed(db, { result: "loss", playerColor: "white" });
     seed(db, { result: "draw", playerColor: "black" });
 
-    const { bySide } = await getStats(db, PROFILE);
+    const { bySide } = getResultsSummary(db, PROFILE);
 
     expect(bySide.white).toMatchObject({ games: 2, win: 1, loss: 1, winRate: 0.5 });
     expect(bySide.black).toMatchObject({ games: 1, draw: 1, winRate: 0.5 });
@@ -106,14 +106,14 @@ const ONE_ROOK = endgamePgn("4k3/8/8/8/8/8/8/4K2R w - - 0 1", "1. Rg1 Ke7 2. Rf1
 /** The opening Position and two moves: no Endgame is ever reached. */
 const NO_ENDGAME = "1. e4 e5 2. Nf3 Nc6";
 
-describe("getStats — the Material signature table", () => {
+describe("getReplayStats — the Material signature table", () => {
   it("counts a Game once per configuration crossed, in results", async () => {
     const db = tempDb();
     seed(db, { result: "win", pgn: TWO_ROOKS });
     seed(db, { result: "loss", pgn: TWO_ROOKS });
     seed(db, { result: "draw", pgn: TWO_ROOKS });
 
-    expect((await getStats(db, PROFILE)).signatures.rows).toEqual([
+    expect((await getReplayStats(db, PROFILE)).signatures.rows).toEqual([
       { signature: "RR vs —", delta: 10, games: 3, win: 1, draw: 1, loss: 1, winRate: 0.5 },
     ]);
   });
@@ -123,7 +123,7 @@ describe("getStats — the Material signature table", () => {
     for (const result of ["win", "loss", "draw"] as const) {
       seed(db, { result, pgn: TWO_ROOKS, playerColor: "black" });
     }
-    expect((await getStats(db, PROFILE)).signatures.rows.map((r) => r.signature)).toEqual(["— vs RR"]);
+    expect((await getReplayStats(db, PROFILE)).signatures.rows.map((r) => r.signature)).toEqual(["— vs RR"]);
   });
 
   it("relegates what is under the bar and announces the table's scope", async () => {
@@ -134,7 +134,7 @@ describe("getStats — the Material signature table", () => {
     seed(db, { result: "win", pgn: ONE_ROOK });
     seed(db, { result: "win", pgn: NO_ENDGAME });
 
-    const { signatures } = await getStats(db, PROFILE);
+    const { signatures } = await getReplayStats(db, PROFILE);
 
     expect(signatures.threshold).toBe(3);
     expect(signatures.rows.map((r) => r.signature)).toEqual(["RR vs —"]);
@@ -156,13 +156,13 @@ describe("getStats — the Material signature table", () => {
       seed(db, { result, pgn: TWO_ROOKS, profileId: other });
     }
 
-    expect((await getStats(db, PROFILE)).signatures.scope).toEqual({
+    expect((await getReplayStats(db, PROFILE)).signatures.scope).toEqual({
       games: 0,
       withEndgame: 0,
       withoutEndgame: 0,
       unreadable: 0,
     });
-    expect((await getStats(db, other)).signatures.rows).toHaveLength(1);
+    expect((await getReplayStats(db, other)).signatures.rows).toHaveLength(1);
   });
 });
 
@@ -187,7 +187,7 @@ function seedAnalysed(db: ReturnType<typeof tempDb>) {
   return game;
 }
 
-describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () => {
+describe("the two Phase tables (US-32, ADR-0036's amendment)", () => {
   it("files each Game under the Phase it ENDED in, over the whole history", async () => {
     const db = tempDb();
     // TWO_ROOKS starts from an Endgame Position; NO_ENDGAME never leaves the start.
@@ -195,7 +195,7 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
     seed(db, { result: "loss", pgn: TWO_ROOKS });
     seed(db, { result: "win", pgn: NO_ENDGAME });
 
-    const { phaseResults } = await getStats(db, PROFILE);
+    const { phaseResults } = await getReplayStats(db, PROFILE);
 
     expect(phaseResults.games).toBe(3);
     expect(phaseResults.unreadable).toBe(0);
@@ -214,7 +214,7 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
     seed(db, { result: "win", pgn: TWO_ROOKS });
     seed(db, { result: "loss", pgn: "[FEN \"not a position\"]\n\n1. Zz9 *" });
 
-    const { phaseResults } = await getStats(db, PROFILE);
+    const { phaseResults } = await getReplayStats(db, PROFILE);
 
     expect(phaseResults.unreadable).toBe(1);
     expect(phaseResults.filed).toBe(1);
@@ -226,7 +226,7 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
     seed(db, { result: "win", pgn: TWO_ROOKS });
     seed(db, { result: "loss", pgn: TWO_ROOKS });
 
-    const { phaseDamage } = await getStats(db, PROFILE);
+    const { phaseDamage } = await getDamageStats(db, PROFILE);
 
     expect(phaseDamage.games).toBe(2);
     expect(phaseDamage.analysed).toBe(0);
@@ -237,7 +237,7 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
     const db = tempDb();
     const game = seedAnalysed(db);
 
-    const { phaseDamage } = await getStats(db, PROFILE);
+    const { phaseDamage } = await getDamageStats(db, PROFILE);
     const recap = getGameAnnotations(db, game.id)!.recap!;
 
     expect(phaseDamage.analysed).toBe(1);
@@ -256,7 +256,7 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
     // stamped with what was read, and this is the test of that stamp.
     const db = tempDb();
     const game = seedAnalysed(db);
-    expect((await getStats(db, PROFILE)).phaseDamage.rows[2].reached).toBe(1);
+    expect((await getDamageStats(db, PROFILE)).phaseDamage.rows[2].reached).toBe(1);
 
     db.delete(evaluations).where(eq(evaluations.gameId, game.id)).run();
     db.insert(evaluations)
@@ -264,7 +264,7 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
       .run();
 
     // One Position and no Move of the Player's: nothing left to attribute.
-    const again = await getStats(db, PROFILE);
+    const again = await getDamageStats(db, PROFILE);
     expect(again.phaseDamage.undamaged).toBe(1);
   });
 
@@ -274,17 +274,17 @@ describe("getStats — the two Phase tables (US-32, ADR-0036's amendment)", () =
     const other = seedProfile(db, "someone-else", "lichess");
     seed(db, { result: "win", pgn: TWO_ROOKS, profileId: other });
 
-    expect((await getStats(db, PROFILE)).phaseResults.games).toBe(0);
-    expect((await getStats(db, other)).phaseResults.rows[2].games).toBe(1);
+    expect((await getReplayStats(db, PROFILE)).phaseResults.games).toBe(0);
+    expect((await getReplayStats(db, other)).phaseResults.rows[2].games).toBe(1);
   });
 });
 
-describe("getStats — the win rate by band of material (US-32 slice 07)", () => {
+describe("getReplayStats — the win rate by band of material (US-32 slice 07)", () => {
   it("files the couples of the same crossings, with no second replay", async () => {
     const db = tempDb();
     for (const result of ["win", "loss", "draw"] as const) seed(db, { result, pgn: TWO_ROOKS });
 
-    const { materialBands, signatures } = await getStats(db, PROFILE);
+    const { materialBands, signatures } = await getReplayStats(db, PROFILE);
     // `RR vs —` is +10: the richest band, and the only one touched.
     expect(materialBands.couples).toBe(3);
     expect(materialBands.rows[6]).toMatchObject({ band: "≥ +9", games: 3, winRate: 0.5 });
@@ -297,7 +297,7 @@ describe("getStats — the win rate by band of material (US-32 slice 07)", () =>
     for (const result of ["win", "loss", "draw"] as const) seed(db, { result, pgn: ONE_ROOK });
     // `RR vs —` (+10) is crossed by three Games, `R vs —` by six: most played
     // first, and the richer configuration does not climb for being richer.
-    expect((await getStats(db, PROFILE)).signatures.rows.map((r) => [r.signature, r.delta])).toEqual([
+    expect((await getReplayStats(db, PROFILE)).signatures.rows.map((r) => [r.signature, r.delta])).toEqual([
       ["R vs —", 5],
       ["RR vs —", 10],
     ]);

@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { StatsPage } from "../src/pages/StatsPage";
-import type { StatsSummary } from "../src/types";
+import type { StatsDamage, StatsReplay, StatsSummary } from "../src/types";
 
 const bucket = (games: number, win: number, draw: number, loss: number): StatsSummary["total"] => ({
   games,
@@ -25,6 +25,9 @@ const SUMMARY: StatsSummary = {
     white: bucket(2, 1, 0, 1),
     black: bucket(0, 0, 0, 0),
   },
+};
+
+const REPLAY: StatsReplay = {
   signatures: {
     threshold: 3,
     rows: [{ signature: "RR vs Q", delta: 1, ...bucket(3, 1, 0, 2) }],
@@ -49,6 +52,9 @@ const SUMMARY: StatsSummary = {
     filed: 2,
     unreadable: 0,
   },
+};
+
+const DAMAGE: StatsDamage = {
   phaseDamage: {
     rows: [
       { phase: "early", dominant: 0, reached: 0, meanShare: null, medianShare: null },
@@ -71,11 +77,34 @@ const PROFILE = {
   analyzed: 0,
 };
 
+/**
+ * `/stats` reads through **three** routes since US-32 slice 08, so the double
+ * has to answer per route rather than hand the same object to every call — a
+ * stub that answered one shape everywhere would hide the split it is here to
+ * exercise. Each entry may be a body or a promise, which is what lets a test
+ * hold one block in its skeleton while another lands.
+ */
+function stubRoutes(routes: {
+  summary?: unknown | Promise<unknown>;
+  replay?: unknown | Promise<unknown>;
+  recaps?: unknown | Promise<unknown>;
+  status?: (path: string) => number;
+}) {
+  const asked: string[] = [];
+  const fetcher = vi.fn(async (path: string) => {
+    asked.push(path);
+    const which = path.includes("/replay") ? "replay" : path.includes("/recaps") ? "recaps" : "summary";
+    const status = routes.status?.(path) ?? 200;
+    const body = await routes[which];
+    return { ok: status < 400, status, json: async () => body } as Response;
+  });
+  vi.stubGlobal("fetch", fetcher);
+  return asked;
+}
+
+/** The whole page, answered at once — what most of these tests want. */
 function stub(summary: StatsSummary) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({ ok: true, status: 200, json: async () => summary }) as Response),
-  );
+  return stubRoutes({ summary, replay: REPLAY, recaps: DAMAGE });
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -147,18 +176,9 @@ describe("StatsPage", () => {
         blitz: bucket(0, 0, 0, 0),
         rapid: bucket(0, 0, 0, 0),
         classical: bucket(0, 0, 0, 0),
-    correspondence: bucket(0, 0, 0, 0),
+        correspondence: bucket(0, 0, 0, 0),
       },
       bySide: { white: bucket(0, 0, 0, 0), black: bucket(0, 0, 0, 0) },
-      signatures: {
-        threshold: 3,
-        rows: [],
-        below: { configurations: 0 },
-        scope: { games: 0, withEndgame: 0, withoutEndgame: 0, unreadable: 0 },
-      },
-      materialBands: { rows: [], couples: 0, threshold: 3, equalBand: "−2..+2" },
-      phaseResults: { rows: [], games: 0, filed: 0, unreadable: 0 },
-      phaseDamage: { rows: [], analysed: 0, games: 0, undamaged: 0 },
     };
     stub(empty);
     render(
@@ -256,5 +276,123 @@ describe("StatsPage — the material band table (US-32 slice 07)", () => {
     expect(headings.indexOf("Configurations de finale")).toBeLessThan(
       headings.findIndex((h) => /Déséquilibre matériel/.test(h ?? "")),
     );
+  });
+});
+
+/**
+ * US-32 slice 08: the page arrives in pieces. What these tests hold onto is not
+ * the animation but the three things a piecewise page can get wrong — showing
+ * nothing while it waits, asking for folds it will throw away, and letting one
+ * failed block take the others with it.
+ */
+describe("StatsPage — the page arrives in pieces (US-32 slice 08)", () => {
+  /** A promise this test decides when to settle: the wait, made observable. */
+  function pending<T>() {
+    let settle!: (value: T) => void;
+    const promise = new Promise<T>((resolve) => (settle = resolve));
+    return { promise, settle };
+  }
+
+  const page = () =>
+    render(
+      <MemoryRouter>
+        <StatsPage profile={PROFILE} />
+      </MemoryRouter>,
+    );
+
+  it("shows the results the moment they land, with a skeleton where each slow block will go", async () => {
+    stubRoutes({ summary: SUMMARY, replay: pending().promise, recaps: pending().promise });
+    page();
+
+    // The point of the slice: the figures are on screen while the folds run.
+    expect(await screen.findByRole("table", { name: /résultats/i })).toBeTruthy();
+
+    // A skeleton per awaited block, each one naming what it is waiting for and
+    // standing under the heading the finished table will carry.
+    for (const id of [
+      "signatures-heading",
+      "material-bands-heading",
+      "phase-results-heading",
+      "phase-damage-heading",
+    ]) {
+      const skeleton = screen.getByTestId(`${id}-skeleton`);
+      expect(skeleton.getAttribute("aria-busy")).toBe("true");
+      // Named in words, not by the grey bars alone (ADR-0013).
+      expect(within(skeleton).getByRole("status").textContent).toMatch(/calcul en cours/);
+    }
+  });
+
+  it("does not lie about the volume, and keeps its ghost table in its own scroller", async () => {
+    stubRoutes({ summary: SUMMARY, replay: pending().promise, recaps: pending().promise });
+    page();
+
+    const skeleton = await screen.findByTestId("phase-results-heading-skeleton");
+    const ghost = skeleton.querySelector("table")!;
+    // Three Phases in the finished table, three sketched rows — a shape, never
+    // twenty ghost lines above a table that will hold three.
+    expect(ghost.querySelectorAll("tbody tr")).toHaveLength(3);
+    expect(ghost.parentElement?.dataset.scroll).toBe("x");
+  });
+
+  it("lands the damage table without waiting for the replay group, and its observation after", async () => {
+    const replay = pending<StatsReplay>();
+    stubRoutes({ summary: SUMMARY, replay: replay.promise, recaps: DAMAGE });
+    page();
+
+    // The cheaper fold is asked for first and shows first: its block is out of
+    // its skeleton while the three replay blocks are still in theirs.
+    expect(await screen.findByText(/n'a été analysée/)).toBeTruthy();
+    expect(screen.getByTestId("signatures-heading-skeleton")).toBeTruthy();
+    expect(screen.queryByTestId("phase-damage-heading-skeleton")).toBeNull();
+
+    replay.settle(REPLAY);
+    expect(await screen.findByRole("table", { name: /configurations de finale/i })).toBeTruthy();
+  });
+
+  it("never asks for the two expensive folds when the history is empty", async () => {
+    const asked = stubRoutes({
+      summary: { ...SUMMARY, total: bucket(0, 0, 0, 0) },
+      replay: REPLAY,
+      recaps: DAMAGE,
+    });
+    page();
+
+    expect(await screen.findByText(/aucune partie/i)).toBeTruthy();
+    // The invitation is the whole answer; a fold over nothing is a request
+    // asked in order to be thrown away, and no skeleton may outlive the page.
+    expect(asked).toEqual(["/api/stats?profileId=7"]);
+    expect(screen.queryByTestId("phase-damage-heading-skeleton")).toBeNull();
+  });
+
+  it("keeps a failed block from wiping the others, and offers that block its own retry", async () => {
+    stubRoutes({
+      summary: SUMMARY,
+      replay: REPLAY,
+      recaps: DAMAGE,
+      status: (path) => (path.includes("/replay") ? 500 : 200),
+    });
+    page();
+
+    // The replay group failed; the results and the damage table are untouched.
+    const failure = await screen.findByRole("alert");
+    expect(failure.textContent).toMatch(/configurations de finale/);
+    expect(within(failure).getByRole("button", { name: /réessayer/i })).toBeTruthy();
+    expect(screen.getByRole("table", { name: /résultats/i })).toBeTruthy();
+    expect(await screen.findByText(/n'a été analysée/)).toBeTruthy();
+  });
+
+  it("releases the replay group even when the damage read fails before it", async () => {
+    stubRoutes({
+      summary: SUMMARY,
+      replay: REPLAY,
+      recaps: DAMAGE,
+      status: (path) => (path.includes("/recaps") ? 500 : 200),
+    });
+    page();
+
+    // A broken first fold must not strand the second behind a gate that never
+    // opens: the gate releases when the damage read SETTLES, not when it wins.
+    expect(await screen.findByRole("table", { name: /configurations de finale/i })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toMatch(/dégâts par phase/);
   });
 });

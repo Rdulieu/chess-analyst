@@ -10,16 +10,37 @@ export interface StatsBucket {
   winRate: number | null;
 }
 
-/** History-wide results summary as served by `GET /api/stats`. */
+/**
+ * The results summary as served by `GET /api/stats` — and **only** that
+ * (US-32 slice 08). The three tables that used to travel with it now come from
+ * their own routes, split by what they cost: this one is three folds over rows
+ * already in hand, so it answers in milliseconds and the page paints on it.
+ */
 export interface StatsSummary {
   total: StatsBucket;
   byCategory: Record<TimeControlCategory, StatsBucket>;
   bySide: Record<"white" | "black", StatsBucket>;
+}
+
+/**
+ * What `GET /api/stats/replay` serves: the three tables **one** PGN replay
+ * feeds. They travel together because they share that replay — asking for them
+ * separately would replay every PGN three times (slice 06's decision, kept).
+ */
+export interface StatsReplay {
   signatures: SignatureTable;
   /** The win rate by band of material disagreement (US-32 slice 07). */
   materialBands: MaterialBandTable;
   /** Where the Games are decided, in results, over the whole history (US-32). */
   phaseResults: PhaseResultTable;
+}
+
+/**
+ * What `GET /api/stats/recaps` serves: the damage table, folded from stored
+ * `Evaluation`s and needing no PGN replay — which is why it is its own request
+ * rather than something queued behind one.
+ */
+export interface StatsDamage {
   /** Where the damage falls, over the analysed Games only (ADR-0036 amended). */
   phaseDamage: PhaseDamageTable;
 }

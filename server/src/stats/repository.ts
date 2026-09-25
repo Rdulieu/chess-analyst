@@ -24,36 +24,38 @@ import {
   type SignatureTable,
 } from "./signatures";
 
-/** History-wide results summary (see PRD / CONTEXT.md `Win rate`). */
-export interface StatsSummary {
+/**
+ * **What the results summary costs: nothing.** Three `bucket()` folds over rows
+ * SQLite has already handed back — sub-millisecond on the base's largest
+ * `Profile`. It is the cheapest thing `/stats` shows and, until US-32 slice 08,
+ * it waited tens of seconds behind the two folds below before reaching the
+ * screen. It no longer does: the three groups travel in three requests, and
+ * this is the one that answers first (see PRD / CONTEXT.md `Win rate`).
+ */
+export interface ResultsSummary {
   total: Bucket;
   byCategory: Record<TimeControlCategory, Bucket>;
   bySide: Record<"white" | "black", Bucket>;
+}
+
+/**
+ * **What ONE PGN replay pays for** — ~25 ms per Game, 14 s cold on a 186-Game
+ * `Profile` and 49 s on the 1 806-Game one.
+ *
+ * The three tables here are one group and not three, and that is a decision
+ * rather than a packaging convenience: they read the **same** `crossings`
+ * (slice 06). Splitting them into a request each would replay every PGN three
+ * times and triple a bill that is already the page's largest. They travel
+ * together or they cost triple; there is no third option.
+ */
+export interface ReplayStats {
   /**
    * The corpus table of `Material signature`s (ADR-0036) — the **second** scale,
-   * in its own currency. Deliberately not folded into the three buckets above:
-   * a Game sits on as many rows as it crossed configurations, so these rows do
+   * in its own currency. Deliberately not folded into the results buckets: a
+   * Game sits on as many rows as it crossed configurations, so these rows do
    * not add up to `total` and never should.
    */
   signatures: SignatureTable;
-  /**
-   * **Where the Games are decided** — one row per `Phase`, in results, over the
-   * whole history (US-32). It reads the same PGN replay as `signatures`, and
-   * that sharing is a design constraint rather than a nicety: `/stats` is
-   * already 9.8 s cold on a 186-Game `Profile` and 68 s on the 1 806-Game one,
-   * and a second replay would double both.
-   */
-  phaseResults: PhaseResultTable;
-  /**
-   * **Where the damage falls** — the same axis, the other currency, over the
-   * **analysed** Games only (ADR-0036's amendment). Two tables and never one:
-   * on the requester's base they do not designate the same `Phase`, and that
-   * disagreement is the information.
-   *
-   * Free of engine time: it reads stored `Evaluation`s through the very recap
-   * the Game page shows (ADR-0017), so no column and no migration (ADR-0015).
-   */
-  phaseDamage: PhaseDamageTable;
   /**
    * **The material disagreement set against the win rate** (US-32, requested
    * 2026-09-25): the same crossings as `signatures`, read on a second axis —
@@ -65,40 +67,33 @@ export interface StatsSummary {
    * either, and every row carries the spread of what it hides.
    */
   materialBands: MaterialBandTable;
+  /**
+   * **Where the Games are decided** — one row per `Phase`, in results, over the
+   * whole history (US-32). It reads the same PGN replay as `signatures`, which
+   * is the sharing this whole interface exists to state.
+   */
+  phaseResults: PhaseResultTable;
 }
 
 /**
- * Which Endgame configurations one Game crossed, **remembered for the life of
- * the process**.
+ * **What the `gameRecap` fold pays for** — ~250 ms per *analysed* Game, 14 s
+ * over the 66 of the requester's largest analysed `Profile`.
  *
- * The derivation itself is free (ADR-0009); its *input* is not. Only 78 of the
- * base's 2 438 Games are analysed, so the FENs `evaluations` stores (ADR-0012)
- * cover almost none of this table and the rest must be replayed from the PGN —
- * measured at **25 ms per Game**, i.e. 46 s over the largest `Profile` of the
- * base. That is the very cost ADR-0012 removed from `/danger` by storing the
- * FEN, and no column may be added here (US-32: no schema change, no migration).
- *
- * So the replay is paid **once per Game per process** instead of once per view.
- *
- * **Keying on the Game's id is sound because a PGN does not change within a
- * process** — which is a weaker claim than "a PGN is immutable", and the weaker
- * one is the true one: `repair/refresh-clocks.ts` *does* rewrite `games.pgn` in
- * place. It runs as its own CLI (`repair:clocks`), so no `Db` object of the
- * server outlives it. Anyone adding an **in-process** PGN rewrite owes this map
- * an eviction; that is the invariant, not immutability.
- *
- * The map hangs off the `Db` so two databases — every test opens its own
- * `:memory:` one — never see each other's Games. Ids are never reused
- * (`autoIncrement`), so a deleted Game cannot inherit another's crossings.
- *
- * What it does **not** fix is the first view, which still pays the whole replay
- * — 7.9 s on a 186-Game `Profile`, 48.8 s on the 1 806-Game one, measured
- * through the browser on 2026-09-25. The screen announces that wait
- * (`role="status"`); what the wait must not do is **take the whole server with
- * it**, which is why `crossingsOf` yields (below). Removing the wait itself
- * needs the Positions of an unanalysed Game to be stored — a schema change and
- * a migration, so a ticket of its own, named rather than smuggled in here.
+ * Its own group, because it needs **no PGN replay**: it reads stored
+ * `Evaluation`s and nothing else, so making it wait behind the replay above
+ * would be a cascade with no cause. Free of engine time, no column and no
+ * migration (ADR-0015).
  */
+export interface DamageStats {
+  /**
+   * **Where the damage falls** — the `Phase` axis in the other currency, over
+   * the **analysed** Games only (ADR-0036's amendment). Two tables and never
+   * one: on the requester's base they do not designate the same `Phase`, and
+   * that disagreement is the information.
+   */
+  phaseDamage: PhaseDamageTable;
+}
+
 const crossedByGame = new WeakMap<Db, Map<number, Crossing>>();
 
 function crossedOf(db: Db, game: Game): Crossing {
@@ -169,14 +164,21 @@ async function crossingsOf(db: Db, rows: Game[]): Promise<EndgameCrossing[]> {
   return crossings;
 }
 
+/** One `Profile`'s Games, the row set all three readings below start from. */
+function gamesOf(db: Db, profileId: number): Game[] {
+  return db.select().from(games).where(eq(games.profileId, profileId)).all();
+}
+
 /**
- * Aggregates **one `Profile`'s** Games on the fly into that player's summary
- * (ADR-0014). The `Win rate` this returns is one player's win rate; averaging
- * two histories into it would produce a figure that is nobody's.
+ * Aggregates **one `Profile`'s** Games on the fly into that player's results
+ * summary (ADR-0014). The `Win rate` this returns is one player's win rate;
+ * averaging two histories into it would produce a figure that is nobody's.
+ *
+ * Synchronous, and that is the point of slice 08: nothing here yields because
+ * nothing here is slow.
  */
-export async function getStats(db: Db, profileId: number): Promise<StatsSummary> {
-  const rows = db.select().from(games).where(eq(games.profileId, profileId)).all();
-  const crossings = await crossingsOf(db, rows);
+export function getResultsSummary(db: Db, profileId: number): ResultsSummary {
+  const rows = gamesOf(db, profileId);
   return {
     total: bucket(rows),
     byCategory: Object.fromEntries(
@@ -186,13 +188,28 @@ export async function getStats(db: Db, profileId: number): Promise<StatsSummary>
       white: bucket(rows.filter((r) => r.playerColor === "white")),
       black: bucket(rows.filter((r) => r.playerColor === "black")),
     },
+  };
+}
+
+/**
+ * The three tables **one** PGN replay feeds (see `ReplayStats`). One call, one
+ * replay, three folds over the crossings it produced.
+ */
+export async function getReplayStats(db: Db, profileId: number): Promise<ReplayStats> {
+  const crossings = await crossingsOf(db, gamesOf(db, profileId));
+  return {
     signatures: signatureTable(crossings),
     materialBands: materialBandTable(crossings, SIGNATURE_THRESHOLD),
     phaseResults: phaseResultTable(
       crossings.map((c): PhaseEnding => ({ phase: c.endedIn ?? null, result: c.result })),
     ),
-    phaseDamage: phaseDamageTable(await damageOf(db, rows), rows.length),
   };
+}
+
+/** The damage table, folded from stored `Evaluation`s alone (see `DamageStats`). */
+export async function getDamageStats(db: Db, profileId: number): Promise<DamageStats> {
+  const rows = gamesOf(db, profileId);
+  return { phaseDamage: phaseDamageTable(await damageOf(db, rows), rows.length) };
 }
 
 /**
