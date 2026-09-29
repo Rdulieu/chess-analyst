@@ -199,6 +199,67 @@ settle any of it.
 
 Answer these, and write the answers down:
 
+> **Audit of 2026-09-25 (US-32, five dispatches: path 0, the three HPs at concurrency 2, then a
+> replay of HP-03).** The suite went **red on the first pass and green on the replay**, and the
+> blocking finding was in the **application**, not the run — the first time since US-30 that the
+> apex tier earned its cost on an app defect rather than on the driver.
+>
+> **Delivery: 5 of 5 unprompted, each arriving twice** — `SendMessage` then the completion
+> notification, identical content. §O1 stays closed across **eleven** consecutive suites, and §O2
+> stays **unexercised a twelfth time**. The relance was not needed once. On this evidence, the
+> dispatch checklist's first item is doing its job and nothing here needs loosening.
+>
+> **The concurrency rule was derived, not carried over**: `nproc` read as 8 → `min(3, floor(8/4))`
+> = **2**. Path 0 alone first (118,5 s), then **HP-01 + HP-03 together**, then HP-02 in the slot
+> HP-01 freed.
+>
+> **And that pairing is worth a note, because it contradicts the previous two audits' habit.** Both
+> the 2026-09-04 and 2026-09-11 entries record deliberately *not* pairing the two engine-spending
+> scenarios. This run paired them — HP-01 (29 Positions) beside HP-03 (71 Positions), both at depth
+> 16 — and nothing suffered: no port collision, no page theft, no timeout, and HP-01's engine pass
+> took ~30 s against the 14–32,9 s the scenario records. **The cap of 2 is what protects the
+> machine; which two is not load-bearing at this engine cost.** Said as one observation, not as a
+> rule — a longer pair on a busier machine has not been tried.
+>
+> **The app defect the pass found, and why no earlier pass could.** HP-03's theme pass measured
+> `/analyse` at 380 px with `scrollWidth` **925** against a 365 px client, in both themes: US-32's
+> new phase table was the only table in the app without `[data-scroll="x"]`, and the page paid its
+> 908 px. The reason ten previous suites missed the *screen* is recorded in `theme-pass.md` as a
+> known hole — the pass audits Analyse **as it lands**, which is `Sans aide` since US-28, and the
+> table is not rendered there. HP-03 passed an `openers` entry asking for **`Détaillé`**; HP-01 did
+> not, and HP-01's pass was green on the same defect. **The documented hole is not cosmetic: it hid
+> a real, blocking, user-visible defect for a whole slice.** Closing it properly belongs to
+> `theme-pass.md`, not to a dispatch prompt that remembers to ask.
+>
+> **A warning carried into three dispatches did not reproduce, and is corrected rather than kept.**
+> All three scenarios were told `followNav(…, {route:"/stats"})` "never returns" (measured twice on
+> slice 04). It returned every time: cold `/stats` at 82 Games measured **4,3 s** (HP-01), **4,9 s**
+> (HP-02) and **658 ms** (HP-03), and the pass crossed it four times per scenario. HP-02's reading is
+> the one to keep: the slice-04 wedge is a **timeout** symptom against `waitForScreen`'s 20 s
+> default, not a structural one, and it would fire on a 351- or 1 806-Game Profile. All three raised
+> `waitOptions.timeoutMs`, so none of them can say whether the default would have held. **Raise the
+> wait; never drop the screen.**
+>
+> **A sixth and a seventh wrong-node near-finding**, same family as the five §O5 already counts:
+> HP-01 probed the board with `[data-square] img` (the pieces are `[data-piece]`, there is no `img`)
+> and nearly filed "the Position does not change on Previous"; HP-03 built a `gotoPly` helper on
+> `step('Start')`, which **silently returns `false`** because the reading route's stepper holds only
+> `Previous` and `Next`, and posed four marks on plies it had not chosen. Both re-measured and
+> dropped. Seven now. The family is no longer a pattern, it is the suite's dominant failure mode.
+>
+> **One thing the dispatcher got wrong, recorded because it cost a revert.** Fixing the blocking
+> finding, the dispatcher reached for `npx prettier --write` on the two edited files. **This repo has
+> no prettier** — no config, no dependency — so npx fetched 3.9.9 and reformatted both files at its
+> default 80 columns against the repo's 100, turning a twelve-line change into a 279-line diff. It
+> was reverted and the edit redone by hand. `lint` would have passed either way, which is the point:
+> **a formatter the repo does not declare is not a formatter, it is a rewrite.**
+>
+> **Honest limit of this run.** The `Material signature` table was **never audited populated**. Both
+> of HP-03's Games are mates in the middlegame, and its selection rule — ordinary-length losses,
+> which is what a `Confrontation` needs — does not reach an endgame. No HP currently selects a Game
+> that does. The table's empty-state sentence is covered; its populated form is covered by unit tests
+> only, and saying so is better than letting the 36/36 imply otherwise.
+
 > **Audit of 2026-09-11 (US-26, four dispatches: path 0, then the three HPs at concurrency 2).**
 > The suite is **3/3 plus its prerequisite**, and **no scenario found a defect in the app** — every
 > finding raised was about the run or the driver. Two things this run settles, and one it costs.

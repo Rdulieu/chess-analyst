@@ -259,3 +259,100 @@ describe("how the page half reads a marked board square", () => {
     expect(body).not.toMatch(/--square-(blunder|mistake|inaccuracy|sound|good)/);
   });
 });
+
+describe("a screen that is still computing is not a rendered screen", () => {
+  /*
+   * US-32 slice 08 made `/stats` arrive in three waves: the summary paints in
+   * milliseconds, the damage table and the replay group land seconds later. The
+   * instrument did not know. `pendingRequests` stops counting a request that has
+   * been out for more than 5 s — a guard that is right for a stream and wrong for
+   * a fold — and `/api/stats/replay` measures 4.87 s, 5.58 s, 11.6 s and up to
+   * **57.5 s** depending on the Profile. So the network went "quiet" while three
+   * skeletons were still on the page, and the theme pass audited `/stats` as a
+   * settled screen by luck of corpus.
+   *
+   * The fix is not a longer staleness window, and it is not `/stats` wired into
+   * the library: **the screen declares what it is waiting for**. A block that is
+   * still being computed carries `aria-busy="true"` (that is what
+   * `TableSkeleton` renders), and a screen with one left is not settled.
+   */
+  const FAST = { timeoutMs: 500, settleMs: 10 };
+
+  /**
+   * A session whose page answers `where()` from a script, and whose network is
+   * silent — which is exactly the hole: a 12 s fetch reads as no fetch at all.
+   */
+  const computingFor = (busyReadings) => {
+    const readings = [...busyReadings];
+    return {
+      pendingRequests: () => 0,
+      staleRequests: () => 1,
+      evaluate: async (script) => {
+        if (script.includes("agenticDriver.where()")) {
+          const busy = readings.length > 1 ? readings.shift() : readings[0];
+          return JSON.stringify({ path: "/stats", text: 400, busy });
+        }
+        return JSON.stringify(null);
+      },
+    };
+  };
+
+  it("refuses to call a page settled while a block of it is still being computed", async () => {
+    const { waitForScreen, matcherFor: at } = await import("./navigate.mjs");
+    // Never stops computing, and the network says nothing the whole time.
+    const session = computingFor([3]);
+
+    await expect(waitForScreen(session, "5251", at("/stats"), FAST)).rejects.toThrow(
+      /still being computed|aria-busy|3/,
+    );
+  });
+
+  it("settles once the last block has landed, and says so on what it waited for", async () => {
+    const { waitForScreen, matcherFor: at } = await import("./navigate.mjs");
+    const session = computingFor([3, 2, 1, 0]);
+
+    const state = await waitForScreen(session, "5251", at("/stats"), FAST);
+    expect(state.busy).toBe(0);
+    expect(state.path).toBe("/stats");
+  });
+
+  it("does not hard-wire /stats: any screen that declares itself busy is waited for", async () => {
+    const { waitForScreen, ANY_SCREEN } = await import("./navigate.mjs");
+    /* Prose may cite the measurement that motivated this — the code may not act
+       on it. So the CODE is what is read, comments stripped. */
+    const code = readFileSync(join(HERE, "navigate.mjs"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    expect(code, "the library acts on a route it has no business knowing").not.toContain("/stats");
+    expect(code).not.toMatch(/damage|replay|skeleton/i);
+
+    // The same mechanism, on a screen that is not /stats at all.
+    const session = computingFor([1]);
+    await expect(waitForScreen(session, "5251", ANY_SCREEN, FAST)).rejects.toThrow(/computed|busy/i);
+  });
+
+  it("a wait that ran out says it ran out, and names what was still outstanding", async () => {
+    /* CLAUDE.md's silent zero, one layer up: a wait that hands back on a timeout
+       must not be indistinguishable from a wait whose condition was met. */
+    const { waitForScreen, matcherFor: at } = await import("./navigate.mjs");
+    const session = computingFor([2]);
+
+    const failure = await waitForScreen(session, "5251", at("/stats"), FAST).catch((e) => e);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.message).toMatch(/500 ms/);
+    expect(failure.message).toMatch(/2/);
+    // The stale-request guard is the reason the network looked quiet: say so,
+    // rather than letting the reader conclude the app simply never answered.
+    expect(failure.message).toMatch(/stale|longer than/i);
+  });
+
+  it("asks the page for the busy regions generically, through an attribute the app already uses", () => {
+    const source = readFileSync(join(HERE, "..", "page", "app-driver.js"), "utf8");
+    const at = source.indexOf("  where(");
+    expect(at, "no where() in the page half").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n  },", at));
+    expect(body).toMatch(/aria-busy/);
+    // A screen declares what it waits for; the driver names no route of the app.
+    expect(body).not.toMatch(/stats|damage|replay/i);
+  });
+});

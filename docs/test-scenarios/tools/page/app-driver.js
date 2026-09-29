@@ -33,10 +33,28 @@
 // `const` makes the second injection a `SyntaxError` — which is not how a file that
 // advertises "paste or inject the whole file" should behave.
 var agenticDriver = {
-  /** Where we are and how much the main landmark currently holds. */
+  /**
+   * Where we are, how much the main landmark currently holds, and **how many
+   * regions of it are still being computed**.
+   *
+   * `busy` is the screen's own declaration, read through `aria-busy` — the
+   * attribute a block already carries while it waits for its data, for the
+   * reader as much as for us. It names no route and no feature: a screen says
+   * what it is waiting for, and the driver believes it.
+   *
+   * It exists because the network cannot answer this question. A fetch out for
+   * more than the host half's staleness window stops being counted as in flight
+   * (a stream must not hold a walk hostage), and since US-32 slice 08 this app
+   * has legitimate folds that take 5, 12 and up to 57 seconds — so "the network
+   * is quiet" was true over a page holding three skeletons.
+   */
   where() {
     const main = document.querySelector("main") || document.body;
-    return { path: location.pathname, text: main.innerText.length };
+    return {
+      path: location.pathname,
+      text: main.innerText.length,
+      busy: main.querySelectorAll('[aria-busy="true"]').length,
+    };
   },
 
   /** The routes the navigation offers, as the navigation itself declares them. */
@@ -135,6 +153,30 @@ var agenticDriver = {
   currentMove() {
     const readout = document.querySelector('[aria-label="current move"]');
     return readout ? readout.textContent.trim() : null;
+  },
+
+  /**
+   * Ask the reading level the pass wants, by clicking the radio a Player clicks.
+   *
+   * Since US-28 every `Analyse` screen opens at `Sans aide` — the level is not
+   * remembered any more — so a pass that audits the screen **as it lands** audits
+   * a page where `?!` `?` `??`, the advantage bar and the `Evaluation curve` have
+   * no subject at all. Three HP runs paid that by hand. The level is a **choice**
+   * now, so it has to be made.
+   *
+   * The value is the app's own (`unaided`, `annotated`, `detailed`), never the
+   * screen's label: the labels are French prose and would drag a translation into
+   * the driver. Returns false when this screen offers no such control — a Game
+   * read blind has none, and that is an answer, not a failure.
+   */
+  setReviewMode(mode) {
+    const control = document.querySelector('[data-part="review-mode"]');
+    if (!control) return false;
+    const radio = control.querySelector('input[type="radio"][value="' + mode + '"]');
+    if (!radio) return false;
+    if (radio.checked) return mode;
+    radio.click();
+    return radio.checked ? mode : false;
   },
 
   /** The Profiles this screen currently offers, so a miss can say what it saw. */

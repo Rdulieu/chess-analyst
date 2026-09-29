@@ -3,6 +3,14 @@ import type { MoveAnnotation } from "../types";
 /** A `Phase`, as the server derives it (CONTEXT.md). */
 export type Phase = MoveAnnotation["phase"];
 
+/**
+ * The three `Phase`s **in the Game's own order** — the one place that order is
+ * written, so two screens cannot list them differently and a reader never has
+ * to check whether a local literal agrees with this one. Same role `SEVERITIES`
+ * plays for the bands.
+ */
+export const PHASES: Phase[] = ["early", "middlegame", "endgame"];
+
 /** Each `Phase` in words. The Phase is never carried by a colour: it is read on
  *  the Move being studied and scanned in the move list, and both have to work
  *  aloud (ADR-0013 — no meaning by tint alone). */
@@ -10,6 +18,18 @@ export const PHASE_LABEL: Record<Phase, string> = {
   early: "Début de partie",
   middlegame: "Milieu de partie",
   endgame: "Finale",
+};
+
+/**
+ * Each `Phase` as it reads **inside a sentence**, article included. A column
+ * header is a label and takes none; « vos dégâts désignent milieu de partie »
+ * is not French. Here rather than spelled out at the one call site, so a fourth
+ * Phase — or a renamed one — is still one edit.
+ */
+export const PHASE_PHRASE: Record<Phase, string> = {
+  early: "le début de partie",
+  middlegame: "le milieu de partie",
+  endgame: "la finale",
 };
 
 /**

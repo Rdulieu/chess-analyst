@@ -309,28 +309,59 @@ How far a Game has got: **Early game**, **Middlegame**, or **Endgame**. Delibera
 "opening" — `Opening` already names the ECO-classified line the Game followed, which is a different
 claim: a Game can leave its `Opening` at move 6 and still be in the Early game at move 12.
 
-- **Early game** ends at the earlier of **development complete** (all four minors off their home
-  squares and the king castled or having lost the right) or a hard cap at **move 15**, so a passive
-  Game cannot claim to still be starting after forty moves.
+The two boundaries are **Lichess's own**, reimplemented here and applied to every `Platform` alike
+(ADR-0035) — not read from their data, which we still never do.
+
+- **Middlegame** begins at the first Position where the two armies have **engaged**: majors and
+  minors down to **ten or fewer**, *or* one side's back rank holding **fewer than four** pieces,
+  *or* the two sides sufficiently interlocked across the board. Any one of the three is enough.
 - **Endgame** begins when the majors and minors on the board — both sides combined — drop to **six
   or fewer**.
-- **Middlegame** is everything in between, defined by exclusion on purpose (same discipline as
-  `Drift`).
+- **Early game** is what precedes the first of them, defined by exclusion (same discipline as
+  `Drift`). A Game that ends before the armies engage has **no** Middlegame, and that is an answer
+  rather than a gap — it finished in the opening.
 
 **Lichess division**:
 Lichess's own opinion of where a Game's middlegame and endgame begin, two ply numbers stored exactly
 as that Platform gave them. It is **not** our `Phase` and is never read as one: `Phase` is derived by
 our own rules for every `Platform` alike, while this exists for Lichess Games only — so using it
-where it exists and deriving elsewhere would make two `Profile`s silently incomparable. It is kept as
-an **outside oracle**, to test our own derivation against (ADR-0031).
+where it exists and deriving elsewhere would make two `Profile`s silently incomparable (ADR-0031).
+It was kept as an **outside oracle**, and **it no longer discriminates**: since ADR-0035 our rule
+*is* theirs, so the column agrees with our derivation by construction, on both boundaries. It is
+still stored — it costs nothing and reproduces their `middle: None` for a Game that ended in the
+opening — but a test that reads it now tests a copy of itself.
 _Avoid_: Division, Phase, Game phase, Middlegame start
 
 A Phase is a property of a Position **in its Game's sequence**, not of the Position alone: it
 **latches**, so a Game that has reached the Endgame stays there. Without latching a promotion —
-the one thing that *adds* material — would flip a Game out of the Endgame and back in. These
-boundaries are heuristics, not facts, which is why the Phase is shown on every Move of a reviewed
-Game: the Player can see where the boundaries fell in a real Game of theirs and disagree.
+the one thing that *adds* material — would flip a Game out of the Endgame and back in. The two
+boundaries are **not equally checkable**, and since ADR-0035 they are no longer ours to retune. The
+Endgame one is a piece count: the Phase is shown on every Move of a reviewed Game precisely so the
+Player can see where it fell and disagree. The Middlegame one cannot be met that way — one of its
+three criteria is a score summed over the whole position, unverifiable by eye. That asymmetry is
+the price ADR-0035 paid, deliberately, for a boundary that agrees with an outside implementation
+instead of missing it by six plies.
 _Avoid_: Opening (taken, and means something else), Stage, Game stage
+
+**Material signature**:
+Which majors and minors each side still has at one half-move — the `Player`'s set against their
+opponent's: `RRB vs RRN`, `RR vs Q`, `R vs —`. It names an imbalance **of nature**, and that is the
+whole reason it is not a number. Two rooks against a queen is **+1** on any points scale and close
+to nothing on the engine's, while being an entirely different Game to play: a scalar cannot say it,
+and a signature says nothing else (ADR-0036).
+
+It is a property of the **half-move**, never of the Game. An imbalance is born mid-Game — the one
+that took 81% of Game 715's counted damage appears at its 26th move — so a signature taken once, at
+the `Endgame` boundary, misses exactly what it was invented for: on this corpus `RR vs Q` occurs in
+**0** Games as a boundary snapshot, and in **9** when every half-move carries its own.
+
+Read on **`Endgame`** half-moves only for now — a scope decision, not a property of the term.
+Followed by **two figures that are never merged**, and by the Game's `result` before anything
+else (ADR-0036): what the Player scores in a configuration is available on the whole corpus, what
+it costs them is not, and one number for both would hide which of the two is speaking.
+_Avoid_: Material (taken — `signals.ts`'s `material` is a **scalar**, the pawns the Player is down
+over one exchange; the two are different measurements and a single word for both is precisely how
+they get confused), Imbalance (reads as a quantity), Configuration, Endgame type, Piece count
 
 **Counted Move**:
 One of the Player's Moves that the analysis actually **counts** — the denominator of everything this

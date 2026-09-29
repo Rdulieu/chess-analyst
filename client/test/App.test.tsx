@@ -54,6 +54,37 @@ const STATS_SUMMARY = {
     correspondence: ZERO,
   },
   bySide: { white: { games: 1, win: 1, draw: 0, loss: 0, winRate: 1 }, black: ZERO },
+  // One Game, no Endgame: the corpus table of US-32 has nothing to show and says so.
+  signatures: {
+    threshold: 3,
+    rows: [],
+    below: { configurations: 0 },
+    scope: { games: 1, withEndgame: 0, withoutEndgame: 1, unreadable: 0 },
+  },
+  // No Endgame crossed, so not one couple to band: the block shows nothing.
+  materialBands: { rows: [], couples: 0, threshold: 3, equalBand: "−2..+2" },
+  // The same Game, on the other axis: it ended in the Middlegame, and nothing
+  // is analysed — so the damage table owes a sentence rather than a table.
+  phaseResults: {
+    rows: [
+      { phase: "early", ...ZERO, share: 0 },
+      { phase: "middlegame", games: 1, win: 1, draw: 0, loss: 0, winRate: 1, share: 100 },
+      { phase: "endgame", ...ZERO, share: 0 },
+    ],
+    games: 1,
+    filed: 1,
+    unreadable: 0,
+  },
+  phaseDamage: {
+    rows: [
+      { phase: "early", dominant: 0, reached: 0, meanShare: null, medianShare: null },
+      { phase: "middlegame", dominant: 0, reached: 0, meanShare: null, medianShare: null },
+      { phase: "endgame", dominant: 0, reached: 0, meanShare: null, medianShare: null },
+    ],
+    analysed: 0,
+    games: 1,
+    undamaged: 0,
+  },
 };
 
 /** The `Profile` the routed app's Games belong to (US-11). */

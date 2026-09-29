@@ -366,7 +366,23 @@ export async function attach(wsUrl, crash = { seen: null }) {
     return [...inflight.values()].filter((started) => now - started < staleMs).length;
   };
 
-  return { send, on, once, close, evaluate, pendingRequests };
+  /**
+   * The other half of that sentence: how many requests are out and **no longer
+   * counted**, having outlived the window.
+   *
+   * The guard above stays — it is right about streams — but it may not stay
+   * silent. Since US-32 slice 08 this app has legitimate folds measured at 4.87,
+   * 5.58, 11.6 and 57.5 seconds, so "the network is quiet" and "a fold has been
+   * running for a minute" are now the same reading. A caller that gives up can
+   * say which of the two it saw, instead of reporting a silence that never
+   * happened (CLAUDE.md's silent zero, one layer up).
+   */
+  const staleRequests = (staleMs = 5000) => {
+    const now = Date.now();
+    return [...inflight.values()].filter((started) => now - started >= staleMs).length;
+  };
+
+  return { send, on, once, close, evaluate, pendingRequests, staleRequests };
 }
 
 /**

@@ -11,6 +11,7 @@ import { phaseBands } from "../chess/phaseBands";
 import { ErrorTallyReadout } from "./ErrorTallyReadout";
 import { MoveRecord } from "../features/analysis/MoveRecord";
 import { GameRecapReadout } from "../features/analysis/GameRecapReadout";
+import { PhaseDamageReadout } from "../features/analysis/PhaseDamageReadout";
 import { TimeReadingReadout } from "../features/analysis/TimeReadingReadout";
 import { TimeGraph } from "./TimeGraph";
 import { formatClock, formatDuration, formatShare } from "../chess/moveTime";
@@ -706,6 +707,17 @@ export function Board({
       */}
       {annotations && detailed && recap && (
         <GameRecapReadout recap={recap} showOpportunities={showOpportunities} />
+      )}
+      {/*
+        WHERE the Game was lost (US-32), directly under the recap it breaks down
+        — and therefore below the row, far under the controls: a block whose
+        height depends on the Game must never sit above anything the Player
+        clicks (ADR-0021). It rides the recap's own gates, being the same figures
+        located, and the opponent's column rides the same opt-in as everywhere
+        else (ADR-0034).
+      */}
+      {annotations && detailed && recap && (
+        <PhaseDamageReadout recap={recap} showOpportunities={showOpportunities} />
       )}
       {annotations && detailed && (
         <MoveRecord

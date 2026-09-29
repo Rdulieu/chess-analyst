@@ -17,12 +17,17 @@ export default tseslint.config(
       "**/*.db",
       "**/*.db-*",
       ".claude/**",
+      // `.pdo/` is the same trap by another name: a run directory holding whole
+      // checkouts, each with its own tsconfig.json. It is untracked scratch, and
+      // left in scope it took the whole linter down again (966 parsing errors,
+      // 340 of them about files that ARE ours).
+      ".pdo/**",
     ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["server/**/*.ts", "server/**/*.mts"],
+    files: ["server/**/*.ts", "server/**/*.mts", "server/**/*.mjs"],
     languageOptions: { globals: { ...globals.node } },
   },
   {

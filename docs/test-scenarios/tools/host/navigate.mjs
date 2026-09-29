@@ -109,13 +109,27 @@ export function matcherFor(route) {
 }
 
 /**
- * Wait until a screen has actually rendered, which takes **two** conditions.
+ * Wait until a screen has actually rendered, which takes **three** conditions.
  *
  * Text stability alone is satisfied instantly by a loading placeholder: measured
  * 2026-08-27, `/confrontation` was audited at ~300 ms while its content landed at
  * ~600, reporting thirteen text nodes out of seventy and calling itself a pass. So the
  * app must have **stopped fetching** as well. There is no soft fallback for a session
  * that cannot report requests in flight — that would be the way back to the defect.
+ *
+ * And network quiet is not enough either, which is the third condition. A request out
+ * for longer than `cdp.mjs`'s staleness window stops being counted — right for a
+ * stream, wrong for a fold — and since US-32 slice 08 this app answers `/stats` in
+ * three waves whose slowest has been measured at **57.5 s**. The network therefore
+ * went quiet over a page holding three skeletons, and the theme pass audited a
+ * half-drawn screen believing it was reading the page. So the wait asks **the
+ * subject**: a screen with a region still declaring `aria-busy` is not settled. The
+ * mechanism is the screen's, not the library's — no route of the app is named here,
+ * and a screen that grows a fourth wave tomorrow is waited for without a line moving.
+ *
+ * **And it never returns on the clock.** Running out throws, with what was still
+ * outstanding — including the requests the staleness guard had stopped counting, so
+ * "the network was quiet" is not read as "the app answered nothing".
  */
 export async function waitForScreen(session, port, matches, { timeoutMs = 20000, settleMs = 180 } = {}) {
   if (typeof session.pendingRequests !== "function") {
@@ -129,14 +143,25 @@ export async function waitForScreen(session, port, matches, { timeoutMs = 20000,
   while (Date.now() < until) {
     const quiet = session.pendingRequests() === 0;
     const state = JSON.parse(await session.evaluate(driverCall(port, "where()")));
-    last = { ...state, quiet };
-    if (matches(state.path) && state.text > 0 && quiet && previous && previous.text === state.text) {
-      return state;
-    }
-    previous = matches(state.path) && quiet ? state : null;
+    /* An older page half answers no `busy` at all. Treat that as "it did not say",
+       not as "nothing is computing": zero would be a claim the page never made. */
+    const busy = typeof state.busy === "number" ? state.busy : 0;
+    last = { ...state, busy, quiet };
+    const rendered = matches(state.path) && state.text > 0 && quiet && busy === 0;
+    if (rendered && previous && previous.text === state.text) return last;
+    previous = rendered ? state : null;
     await new Promise((r) => setTimeout(r, settleMs));
   }
-  throw new Error(`the screen never rendered within ${timeoutMs} ms — last seen ${JSON.stringify(last)}`);
+  const stale = typeof session.staleRequests === "function" ? session.staleRequests() : 0;
+  const stillComputing = last && last.busy > 0
+    ? ` — ${last.busy} region(s) of it still being computed (aria-busy)`
+    : "";
+  const stillOut = stale
+    ? ` — ${stale} request(s) out longer than the staleness window, so the quiet above is the guard, not the app`
+    : "";
+  throw new Error(
+    `the screen never rendered within ${timeoutMs} ms${stillComputing}${stillOut} — last seen ${JSON.stringify(last)}`,
+  );
 }
 
 const ANY_SCREEN = () => true;
@@ -201,6 +226,17 @@ export async function selectProfile(session, { port, username, waitOptions }) {
     waitOptions,
   );
   return picked;
+}
+
+/**
+ * Put the reading level the caller wants on the `Analyse` screen the walk is on.
+ *
+ * Waited for rather than looked up once, like every other act: the control arrives
+ * with the Game's data. A screen that offers no such control makes `act` run out,
+ * which is the right answer — the caller asked for a level on a screen that has none.
+ */
+export async function setReviewMode(session, { port, mode, waitOptions }) {
+  return act(session, port, `setReviewMode(${JSON.stringify(mode)})`, `the review level ${mode}`, waitOptions);
 }
 
 /**

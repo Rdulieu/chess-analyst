@@ -9,7 +9,21 @@ export {
 } from "./game";
 export type { Profile } from "./profile";
 export type { Side, MoveHabitCandidate } from "./move-habit";
-export type { StatsBucket, StatsSummary } from "./stats";
+export type {
+  StatsBucket,
+  StatsSummary,
+  StatsReplay,
+  StatsDamage,
+  SignatureRow,
+  SignatureTable,
+  MaterialSpread,
+  MaterialBandRow,
+  MaterialBandTable,
+  PhaseResultRow,
+  PhaseResultTable,
+  PhaseDamageRow,
+  PhaseDamageTable,
+} from "./stats";
 export type { WeakOpeningEntry } from "./opening";
 export type { DangerEntry } from "./danger";
 export type {
@@ -25,6 +39,9 @@ export type {
   Opportunity,
   GameAnnotations,
   GameRecap,
+  PhaseDamage,
+  SignatureDamage,
+  OpportunityCount,
   SearchRegime,
   TimeControl,
   GameTime,

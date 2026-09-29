@@ -207,25 +207,16 @@ describe("The five signals, on every Player Move", () => {
   });
 });
 
-describe("The Phase, under both readings of the cap", () => {
-  /** A deliberately passive Game: only the move cap can end its Early game. */
-  const PASSIVE = `1. h4 h5 ${Array.from(
-    { length: 15 },
-    (_, i) => `${i + 2}. ${["Rh3 Rh6", "Rg3 Rg6"][i % 2]}`,
-  ).join(" ")}`;
+describe("The Phase a review line carries", () => {
+  it("states the ONE Phase of each Move, the cap's second reading being retired", () => {
+    // A real opening cut at the boundary lichess publishes (ADR-0035): the line
+    // carries a Phase, singular. D14 carried two readings of a move cap so the
+    // choice could be measured; the measure is closed and the cap is gone.
+    const pgn = "1. e4 e5 2. Nf3 Qf6 3. d4 exd4 4. Nxd4 Bc5 5. c3 Nc6 6. Be3 d6 7. Bd3 Bxd4 8. cxd4 Qg6 9. O-O Nb4 10. f4 Nxd3";
+    const report = gameReport({ playerColor: "white", pgn }, level(pgn));
 
-  it("carries both readings on every line, so the review can COUNT the difference", () => {
-    const report = gameReport({ playerColor: "black", pgn: PASSIVE }, level(PASSIVE));
-
-    // Ply 28 is Black's 14th Move — the one half-move the two readings disagree
-    // about. The Phase enters no calculation today (D14); what the story owes the
-    // requester is the count, not a verdict, and a line that carries both
-    // readings is what makes the count a fold rather than a second derivation.
-    expect(report.rows.find((row) => row.ply === 28)!.phase).toEqual({
-      kept: "early",
-      onNumber: "middlegame",
-    });
-    expect(report.rows.filter((row) => row.phase.kept !== row.phase.onNumber)).toHaveLength(1);
+    expect(report.rows.find((row) => row.ply === 17)!.phase).toBe("early");
+    expect(report.rows.find((row) => row.ply === 19)!.phase).toBe("middlegame");
   });
 });
 

@@ -45,7 +45,7 @@ minutes the same walk cost when each agent re-derived it.
 | 2 | Explorateur (`/explorer`) | navigation |
 | 3 | Ouvertures (`/openings`) | navigation |
 | 4 | Positions dangereuses (`/danger`) | navigation |
-| 5 | Stats (`/stats`) | navigation |
+| 5 | Stats (`/stats`) | navigation — **audited settled, and that has to be waited for** (US-32 slice 08). The screen arrives in **three waves**: the results summary paints in milliseconds, the damage table follows, and the replay group (configurations, bands, results by `Phase`) lands last — measured at 4.87 s, 11.6 s and up to **57.5 s** depending on the `Profile`. Until slice 09 the pass audited whichever wave had landed: network quiet is not a settled screen here, because a fetch out for more than five seconds stops being counted as in flight at all. What is audited is the screen with **every block landed** — no region left declaring `aria-busy` — so the skeletons are not what gets measured. |
 | 6 | Mes lectures (`/confrontation`) | navigation — the `Confrontation` summary (US-16b). **Added 2026-08-25**, and it went one run un-audited: the passes said "eight screens" while the navigation had grown to nine, so a screen reachable from the nav belonged to no scenario. A count in prose does not follow a `Nav` on its own — when a route joins the navigation, this table is what has to change. |
 | 7 | Analyse (`/analyse/:gameId`) | selecting a Game in "Mes parties" — it is Game-scoped and deliberately absent from the navigation. **The Game row is a `button`, not a link**: a driver hunting for an `href` matching `/analyse/` finds nothing and wrongly records the screen as unreachable (measured on the 2026-08-19 run). Click the row's button, or navigate to the URL directly. |
 | 8 | Profils (`/profiles`) | navigation — where the current `Profile` is chosen |
@@ -66,7 +66,8 @@ stays, it merely lost the import form, which now lives on screen 8. The two addi
 more audits per scenario**, two screens in two themes.
 
 **Screens 7 and 8 are audited with TWO Profiles, one of them current.** Not decoration: the row's
-constant tracks have to fit "Profil actuel" on one row and "Sélectionner" on another at the same
+constant tracks have to fit "Profil actuel" on one row and "Sélectionner et voir mes parties" (the
+label since US-23) on another at the same
 time, and that pairing is what overflowed the list by 10 to 24px until 2026-08-21 — on a screen this
 very pass had been reporting clean, because every scenario had held exactly one Profile. Two rows
 with none selected fits (625 into 625); two rows with one current does not (635 into 625). Path 0
@@ -187,22 +188,23 @@ three passes together, and read `subjects` before reading `failures`.
 > rather than pretending the cue is covered; closing it means changing a selection rule, and a
 > selection rule tuned for cost is exactly what this suite warns about tuning.
 
-> **The severity glyphs on Analyse have been carried by nobody since US-28, measured 2026-09-09.**
-> The sentence above says HP-01 "is the scenario that carries the severity glyphs" — and it no
-> longer does. The `Review mode` is not remembered any more (US-28: every review starts Unaided),
-> so the pass, which opens a Game and audits it **as it lands**, always audits Analyse at
-> **Unaided** — where `?!` `?` `??`, the advantage bar and the `Evaluation curve` have no subject at
-> all. The rule is **dropped, not failed**, in all 36 readings, and HP-01's own step 11 asks for
-> exactly what nobody is checking.
+> **The severity glyphs on Analyse were carried by nobody from US-28 to US-32 slice 09 — closed,
+> and worth keeping written down.** The `Review mode` is not remembered any more (US-28: every
+> review starts Unaided), so the pass, which opened a Game and audited it **as it landed**, always
+> audited Analyse at **Unaided** — where `?!` `?` `??`, the advantage bar and the `Evaluation curve`
+> have no subject at all. The rule was **dropped, not failed**, in all 36 readings, while HP-01's own
+> step 11 asked for exactly what nobody was checking. HP-01 and HP-03 closed it **by hand** three
+> runs running — four extra readings each time, all clean.
 >
-> Same shape as the danger ⚠ hole above, and unlike it this one is **cheap to close**: the pass has
-> to ask for `Annoté` on the Game it opens, rather than take the level it is given. Until it does,
-> the US-15b run closed it **by hand** — four extra readings of `/analyse/<analysed game>` at
-> `Annoté`, both themes, both widths, all clean, the glyphs legible at night and at 380 px. That is
-> evidence the tints are fine; it is not evidence the suite is watching them.
+> **The pass now asks for the level rather than taking the one it is given**: the scenario that
+> needs the engine's marks audited passes the `Analyse` screen an opener carrying a **review level**,
+> and the screen is reached, then set to `Annoté`, before it is audited. It is an argument of the
+> opener and not a dispatch instruction on purpose — the third hand-payment is what showed that an
+> instruction a human re-reads each run is one that gets paid three times and then forgotten. Which
+> level, and on which Game, stays the **scenario's** decision: a scenario that wants the screen as it
+> lands passes nothing, and gets Unaided.
 >
-> Recorded here rather than fixed in passing: changing what the pass drives is a change to the
-> instrument, and it belongs to a slice that can measure the result.
+> Read this beside the danger ⚠ hole above, which is **not** closed and is not cheap to close.
 
 Assertions 1 to 5 are **measured, not eyeballed**: one browser-side function returns a report per
 screen, and the two themes are compared on the `constants` block for assertion 5. The theme itself is

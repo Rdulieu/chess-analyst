@@ -296,8 +296,8 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
     > 1–10 built, and it must run under the Profile that owns it.
 
 11. **Theme pass (US-13)** — walk the navigation across **all nine screens** (Mes parties,
-    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening a
-    Game, Profils, and the Profile's own page), first in the light theme, then again with the system's **dark preference
+    Explorateur, Ouvertures, Positions dangereuses, Stats, **Mes lectures**, Analyse by opening an
+    **analysed** Game **and asking for `Annoté`**, Profils, and the Profile's own page), first in the light theme, then again with the system's **dark preference
     emulated** → every screen is painted in the theme the system asks for, and everything the Player
     must be able to read stays readable in both. **No further Import and no further analysis**: the
     pass reuses exactly the state steps 1–10 built, which is why it is the last step and not a
@@ -308,10 +308,17 @@ US-9 from a single month to a range and pointed at a `Profile` by US-11.
     > three copies of an assertion list would drift. This scenario's state is the richest of the
     > three (real Games, two analysed, `/danger` populated, and a Profile page carrying real
     > counters), so this is where the pass sees the most.
+    >
+    > **Which Game, and at which level, is this scenario's decision** — and it is passed to the pass
+    > rather than re-done by hand. Since US-28 the screen always lands on `Sans aide`, where the
+    > severity glyphs `?!` `?` `??`, the advantage bar and the `Evaluation curve` have no subject at
+    > all: this scenario is the one that carries them, so it opens an **analysed** Game and asks for
+    > **`Annoté`** (the `openers` entry the pilot takes — `agentic-tests` skill §5.8/DRIVING.md). It
+    > was paid by hand three runs running before US-32 slice 09; it is an argument now.
 
 ## Checks
 ### Surface
-- Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **0** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers "Sélectionner". Every scoped screen afterwards carries the banner naming `DudulSmash`. Nothing on the list overflows its container — the pairing of those two states in one column is what used to.
+- Step 1: `/profiles` lists **three** Profiles — two on chess.com and `Metalyst` on lichess.org, each row naming its own site; `DudulSmash` reads **0** Games imported and **0** analyzed, and selecting it marks its row "Profil actuel" in words while the other still offers **"Sélectionner et voir mes parties"** — the button has carried that longer label since US-23, and the act is composed: it records the current Profile *and* leads to "Mes parties". Every scoped screen afterwards carries the banner naming `DudulSmash`. Nothing on the list overflows its container — the pairing of those two states in one column is what used to.
 - Step 2: "Mes parties" carries its own heading, shows an invitation to import and **no import form** — the form is not on this screen since US-11, and the invitation leads to the Profile's page. With the restored empty history no Games are listed.
 - Step 3: the Profile's page (`/profiles/:id`) names the Profile and carries the import form: a first and a last month, category checkboxes and an Import button, and **no username field** at all. Both month fields default to the current month; each field is labelled above it (US-13's skeleton) and the Import button is the form's primary action, visibly distinguished from the secondary controls. The progress readout is visible during the run, is **determinate** (n/N, counted in months, N = 2 for this range), advances to N/N, and is gone once the Import completes.
 - Step 4: the import landed on `DudulSmash` and nowhere else — `Nonomoho` still reads `0 parties · 0 analysées` on `/profiles` (ADR-0014). On a clean run the consolidated summary reports **82** games fetched, **82** imported, **0** already present, a breakdown of **Blitz 72 / Bullet 10**, and a tally of **45 W · 0 D · 37 L** (parts summing to 82).

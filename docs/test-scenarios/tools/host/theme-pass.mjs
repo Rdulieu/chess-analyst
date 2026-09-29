@@ -26,7 +26,16 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { emulateTheme, open, setViewport } from "./cdp.mjs";
-import { ANY_SCREEN, guarded, matcherFor, reachScreen, selectProfile, waitForScreen } from "./navigate.mjs";
+import {
+  ANY_SCREEN,
+  guarded,
+  matcherFor,
+  openGameRow,
+  reachScreen,
+  selectProfile,
+  setReviewMode,
+  waitForScreen,
+} from "./navigate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const THEME_PASS_DOC = join(HERE, "..", "..", "theme-pass.md");
@@ -275,6 +284,37 @@ export async function runThemePass({
 }
 
 /**
+ * An opener that reaches the `Analyse` screen **and asks for a reading level**.
+ *
+ * The pass audits the screen it is given, and since US-28 the screen it is given is
+ * always `Sans aide` — the level is not remembered any more, so every Game opens
+ * volunteering nothing of the engine. On that screen the severity glyphs `?!` `?`
+ * `??`, the advantage bar and the `Evaluation curve` **have no subject**, so the cue
+ * rule that watches them is *dropped* in all 36 readings: the pass reports what it
+ * exercised, and it exercised nothing. HP-01 and HP-03 closed the hole **by hand**
+ * three runs running, with four extra readings each time.
+ *
+ * It belongs here rather than in a dispatch instruction for exactly that reason: an
+ * instruction a human re-reads each run is a thing that gets paid three times and
+ * then forgotten. **It is still the scenario's decision** — which level, on which
+ * Game — and the library only carries it out: the default of no opener at all is
+ * unchanged, and a scenario that wants the screen as it lands says nothing.
+ *
+ * `mode` is the app's own value (`unaided`, `annotated`, `detailed`), and `open` is
+ * the opener that chooses the Game — the first row when the caller has no opinion,
+ * which is a judgement the library must not make for a scenario whose assertions
+ * depend on it (see `openerFor`).
+ */
+export function atReviewMode(mode, open) {
+  return async (session, { port, screen, waitOptions }) => {
+    if (open) await open(session, { port, screen, waitOptions });
+    else await openGameRow(session, { port, index: 0, waitOptions });
+    await waitForScreen(session, port, matcherFor(screen.route), waitOptions);
+    return setReviewMode(session, { port, mode, waitOptions });
+  };
+}
+
+/**
  * How tall the reading panel is, and the verdict control inside it — measured, and
  * judged by nobody here (ADR-0020: the library drives, it never judges).
  *
@@ -299,4 +339,4 @@ export function panelHeightScript({ port }) {
 }
 
 /** Re-exported so a caller reaching one screen does not need two imports. */
-export { matcherFor, reachScreen, selectProfile, waitForScreen };
+export { matcherFor, reachScreen, selectProfile, setReviewMode, waitForScreen };

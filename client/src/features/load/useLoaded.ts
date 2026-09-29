@@ -25,6 +25,22 @@ export type Loaded<T> =
 export function useLoaded<T>(
   load: () => Promise<T>,
   deps: readonly unknown[],
+  /**
+   * Whether the load may run **yet**. It defaults to true, and the two reasons
+   * to pass false are both US-32 slice 08's:
+   *
+   * - the answer is already known to be pointless — an empty history must not
+   *   fire the expensive folds at all, and the cheap summary knows that before
+   *   they would have started;
+   * - the answer is worth having but **later** — Node is single-threaded, and
+   *   two long folds fired together slow each other down (measured: the damage
+   *   table lands at 8.5 s sequenced and 15.5 s fired alongside the replay, for
+   *   a replay that finishes no sooner either way).
+   *
+   * A gated hook stays in `loading`, which is what it honestly is: the block is
+   * pending and its skeleton says so.
+   */
+  when = true,
 ): Loaded<T> & { retry: () => void; reload: () => void } {
   const [result, setResult] = useState<Loaded<T>>({ state: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -33,6 +49,7 @@ export function useLoaded<T>(
   useEffect(() => {
     let live = true;
     setResult({ state: "loading" });
+    if (!when) return;
     load()
       .then((data) => live && setResult({ state: "loaded", data }))
       .catch((cause: Error) => live && setResult({ state: "failed", error: cause.message }));
@@ -42,7 +59,7 @@ export function useLoaded<T>(
     // `load` is rebuilt on every render by its caller; the deps the caller
     // declares are what the load actually depends on.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, attempt]);
+  }, [...deps, attempt, when]);
 
   return { ...result, retry: again, reload: again };
 }
